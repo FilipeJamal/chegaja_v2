@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "767588494857",
+    "project_id": "chegaja-ac88d",
+    "storage_bucket": "chegaja-ac88d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767588494857:android:630e1b985adfdb715252d8",
+        "android_client_info": {
+          "package_name": "com.example.chegaja"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfLgIdf5fJ_wnFbLuB_So8oX9JpgM-7Og"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "767588494857-on2upqqake520m1bips6s7ahrorhqedr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.chegaja"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:767588494857:android:f31e72877260a7555252d8",
+        "android_client_info": {
+          "package_name": "com.example.chegaja_v2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfLgIdf5fJ_wnFbLuB_So8oX9JpgM-7Og"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "767588494857-on2upqqake520m1bips6s7ahrorhqedr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.chegaja"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
