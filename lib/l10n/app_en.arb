@@ -1,0 +1,690 @@
+{
+  "@@locale": "en",
+  "appTitle": "ChegaJa",
+  "roleSelectorWelcome": "Welcome to ChegaJa",
+  "roleSelectorPrompt": "Choose how you want to use the app:",
+  "roleCustomerTitle": "I'm a customer",
+  "roleCustomerDescription": "I want to find service providers near me.",
+  "roleProviderTitle": "I'm a provider",
+  "roleProviderDescription": "I want to receive customer requests and earn more.",
+  "invalidSession": "Invalid session.",
+  "paymentsTitle": "Payments (Stripe)",
+  "paymentsHeading": "Receive online payments",
+  "paymentsDescription": "To receive payments via the app, you need to create a Stripe account (Connect Express).\nThe onboarding opens in your browser and takes 2–3 minutes.",
+  "paymentsActive": "Online payments ACTIVE.",
+  "paymentsInactive": "Online payments are not active yet. Complete onboarding.",
+  "stripeAccountLabel": "Stripe account: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "Onboarding opened. After finishing, come back to check the status.",
+  "onboardingStartError": "Error starting onboarding: {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "Manage Stripe account",
+  "activatePayments": "Activate payments",
+  "technicalNotesTitle": "Technical notes",
+  "technicalNotesBody": "• Stripe is configured via Cloud Functions (server-side).\n• The platform commission is applied automatically in the PaymentIntent.\n• In production, add the Stripe webhook and store the webhook secret in Functions.",
+  "kycTitle": "Identity verification: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "Send a document (photo or PDF). Full validation comes in v2.6.",
+  "kycSendDocument": "Send document",
+  "kycAddDocument": "Add document",
+  "kycStatusApproved": "Approved",
+  "kycStatusRejected": "Rejected",
+  "kycStatusInReview": "In review",
+  "kycStatusNotStarted": "Not started",
+  "kycFileReadError": "Could not read the file.",
+  "kycFileTooLarge": "File too large (max. 10MB).",
+  "kycUploading": "Uploading document...",
+  "kycUploadSuccess": "Document sent for review.",
+  "kycUploadError": "Error sending document: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "Cancelled by you",
+  "statusCancelledByProvider": "Cancelled by provider",
+  "statusCancelled": "Cancelled",
+  "statusLookingForProvider": "Looking for provider",
+  "statusProviderPreparingQuote": "Provider found (preparing quote)",
+  "statusQuoteToDecide": "You have a quote to decide",
+  "statusProviderFound": "Provider found",
+  "statusServiceInProgress": "Service in progress",
+  "statusAwaitingValueConfirmation": "Awaiting your value confirmation",
+  "statusServiceCompleted": "Service completed",
+  "valueToConfirm": "{value} (to confirm)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (proposed)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} to {max} (estimated)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "From {min} (estimated)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "Up to {max} (estimated)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "Fixed price",
+  "priceByQuote": "By quote",
+  "priceToArrange": "To be arranged",
+  "paymentOnlineBefore": "Online payment (before)",
+  "paymentOnlineAfter": "Online payment (after)",
+  "paymentCash": "Cash payment",
+  "pendingActionQuoteToReview": "You have a quote/proposal to review.",
+  "pendingActionValueToConfirm": "The provider sent the final value. You need to confirm.",
+  "pendingActionProviderPreparingQuote": "Provider found. They are preparing the quote.",
+  "pendingActionProviderChat": "Provider found. You can chat with them.",
+  "roleLabelCustomer": "Customer",
+  "navHome": "Home",
+  "navMyOrders": "My Orders",
+  "navMessages": "Messages",
+  "navProfile": "Profile",
+  "homeGreeting": "Hello",
+  "homeSubtitle": "What do you need today?",
+  "homePendingTitle": "You have something to decide",
+  "homePendingCta": "Tap here to open the next order and decide.",
+  "servicesLoadError": "Error loading services: {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "No services configured yet.\\nYou'll see categories here soon 🙂",
+  "availableServicesTitle": "Available services",
+  "serviceTabImmediate": "Immediate",
+  "serviceTabScheduled": "Scheduled",
+  "serviceTabQuote": "By quote",
+  "unreadMessagesTitle": "You have new messages",
+  "unreadMessagesCta": "Tap here to open the chat.",
+  "serviceSearchHint": "Search service...",
+  "serviceSearchEmpty": "No services found for this search.",
+  "serviceModeImmediateDescription": "A provider comes today as quickly as possible.",
+  "serviceModeScheduledDescription": "Schedule a day and time for the service.",
+  "serviceModeQuoteDescription": "Request a quote (provider sends a min/max range).",
+  "userNotAuthenticatedError": "Error: user not authenticated.",
+  "myOrdersTitle": "My orders",
+  "ordersTabPending": "Pending",
+  "ordersTabCompleted": "Completed",
+  "ordersTabCancelled": "Cancelled",
+  "ordersLoadError": "Error loading orders: {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "You have no pending orders.\\nCreate a new order from Home.",
+  "ordersEmptyCompleted": "You don't have completed orders yet.",
+  "ordersEmptyCancelled": "You don't have cancelled orders yet.",
+  "orderQuoteScheduled": "Quote (scheduled)",
+  "orderQuoteImmediate": "Quote (immediate)",
+  "orderScheduled": "Scheduled service",
+  "orderImmediate": "Immediate service",
+  "categoryNotDefined": "Category not defined",
+  "orderStateLabel": "State: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "Price model: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "Payment: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "Value: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "Account ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "Your name",
+  "accountProfileSubtitle": "Profile",
+  "accountSettings": "Settings",
+  "accountHelpSupport": "Help and support",
+  "navMyJobs": "My Jobs",
+  "roleLabelProvider": "Provider",
+  "enableLocationToGoOnline": "Enable location to go online.",
+  "nearbyOrdersTitle": "Orders near you",
+  "noOrdersAvailableMessage": "No orders available right now.",
+  "configureServiceAreaMessage": "Set your service area and services to start receiving orders.",
+  "configureAction": "Configure",
+  "offlineEnableOnlineMessage": "You're offline. Enable online status to receive orders.",
+  "noMatchingOrdersMessage": "No matching orders for your services and area.",
+  "orderAcceptedMessage": "Order accepted.",
+  "orderAcceptedCanSendQuote": "Order accepted. You can send the quote later.",
+  "orderAcceptError": "Error accepting order: {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "Order accepted",
+  "orderAcceptedBudgetPrompt": "This order is by quote.\\n\\nDo you want to send the quote range now?",
+  "actionLater": "Later",
+  "actionSendNow": "Send now",
+  "actionCancel": "Cancel",
+  "actionSend": "Send",
+  "actionIgnore": "Ignore",
+  "actionAccept": "Accept",
+  "actionNo": "No",
+  "actionYesCancel": "Yes, cancel",
+  "proposalDialogTitle": "Send a quote",
+  "proposalDialogDescription": "Set a price range for this service.\\nInclude travel and labor.",
+  "proposalMinValueLabel": "Minimum value ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "Ex.: 20",
+  "proposalMaxValueLabel": "Maximum value ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "Ex.: 35",
+  "proposalMessageLabel": "Message to the customer (optional)",
+  "proposalMessageHint": "Ex.: Includes travel. Large materials are extra.",
+  "proposalInvalidValues": "Enter valid minimum and maximum values.",
+  "proposalMinGreaterThanMax": "The minimum can't be greater than the maximum.",
+  "proposalSent": "Proposal sent to the customer.",
+  "proposalSendError": "Error sending proposal: {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "Hello, provider",
+  "providerHomeSubtitle": "Go online to receive new orders.",
+  "providerStatusOnline": "You're ONLINE",
+  "providerStatusOffline": "You're OFFLINE",
+  "providerKpiEarningsToday": "Earnings today (net)",
+  "providerKpiServicesThisMonth": "Services this month",
+  "providerKpiGrossFeeSubtitle": "Gross: {gross} - Fee: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "You have a job to manage",
+  "providerHighlightCta": "Tap here to open the next job.",
+  "providerPendingActionAccepted": "You have an accepted job, ready to start.",
+  "providerPendingActionInProgress": "You have a job in progress. Mark it completed when you finish.",
+  "providerPendingActionSetFinalValue": "Set and send the final service value.",
+  "providerUnreadMessagesTitle": "You have new messages from customers",
+  "providerUnreadMessagesJob": "In job: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "My jobs",
+  "providerJobsTabOpen": "Open",
+  "providerJobsTabCompleted": "Completed",
+  "providerJobsTabCancelled": "Cancelled",
+  "providerJobsLoadError": "Error loading jobs: {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "You don't have open jobs yet.\\nGo to Home and accept an order.",
+  "providerJobsEmptyCompleted": "You don't have completed jobs yet.",
+  "providerJobsEmptyCancelled": "You don't have cancelled jobs yet.",
+  "scheduledForDate": "Scheduled: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "View details",
+  "clientPaidValueLabel": "Customer paid: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "You receive: {value} - Fee: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "Service value: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "Cancel job",
+  "cancelJobPrompt": "Are you sure you want to cancel this job?\\nThe order may become available to other providers.",
+  "cancelJobReasonLabel": "Cancellation reason (optional):",
+  "cancelJobReasonFieldLabel": "Reason",
+  "cancelJobSuccess": "Job cancelled.",
+  "cancelJobError": "Error cancelling job: {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "View my profile",
+  "providerAccountProfileSubtitle": "Provider profile",
+  "activateOnlinePaymentsSubtitle": "Enable online payments",
+  "statusProviderWaiting": "New request",
+  "statusQuoteWaitingCustomer": "Waiting for customer response",
+  "statusAcceptedToStart": "Accepted (ready to start)",
+  "statusInProgress": "In progress",
+  "statusCompleted": "Completed",
+  "orderDefaultImmediateTitle": "Urgent service",
+  "locationServiceDisabled": "Location service is disabled on the device.",
+  "locationPermissionDenied": "Location permission denied.\\nCouldn't get the current location.",
+  "locationPermissionDeniedForever": "Location permission permanently denied.\\nEnable location in device settings.",
+  "locationFetchError": "Error getting location: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "The form isn't ready yet. Try again.",
+  "missingRequiredFieldsError": "Required fields are missing. Check the fields in red.",
+  "scheduleDateTimeRequiredError": "Choose the service date and time.",
+  "scheduleDateTimeFutureError": "Choose a future date/time.",
+  "categoryRequiredError": "Choose a category.",
+  "orderUpdatedSuccess": "Order updated successfully!",
+  "orderCreatedSuccess": "Order created! Looking for a provider...",
+  "orderUpdateError": "Error updating order: {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "Error creating order: {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "Ex.: Plumbing leak under the sink",
+  "orderTitleExampleElectric": "Ex.: Outlet doesn't work in the living room + install ceiling light",
+  "orderTitleExampleCleaning": "Ex.: Full cleaning of a 2-bedroom apartment (kitchen, WC, windows, floor).",
+  "orderTitleHintImmediate": "Briefly explain what's happening and what you need.",
+  "orderTitleHintScheduled": "Say when you want the service, location details, and what needs to be done.",
+  "orderTitleHintQuote": "Describe the service you want to receive proposals for.",
+  "orderTitleHintDefault": "Describe the service you need.",
+  "orderDescriptionExampleCleaning": "Ex.: Full cleaning of a 2-bedroom apartment (kitchen, WC, windows, floor).",
+  "orderDescriptionHintImmediate": "Briefly explain what's happening and what you need.",
+  "orderDescriptionHintScheduled": "Say when you want the service, location details, and what needs to be done.",
+  "orderDescriptionHintQuote": "Describe the service you want, approximate budget (if you have one), and important details.",
+  "orderDescriptionHintDefault": "Explain in a bit more detail what you need.",
+  "priceModelTitle": "Price model",
+  "priceModelQuoteInfo": "This service is by quote. The provider will propose the final price.",
+  "priceTypeLabel": "Price type",
+  "paymentTypeLabel": "Payment type",
+  "orderHeaderQuoteTitle": "Quote request",
+  "orderHeaderQuoteSubtitle": "Describe what you need and the provider can send a range (min/max).",
+  "orderHeaderImmediateTitle": "Immediate service",
+  "orderHeaderImmediateSubtitle": "An available provider will be called as soon as possible.",
+  "orderHeaderScheduledTitle": "Scheduled service",
+  "orderHeaderScheduledSubtitle": "Choose the day and time for the provider to come to you.",
+  "orderHeaderDefaultTitle": "New order",
+  "orderHeaderDefaultSubtitle": "Describe the service you need.",
+  "orderEditTitle": "Edit order",
+  "orderNewTitle": "New order",
+  "whenServiceNeededLabel": "When do you need the service?",
+  "categoryLabel": "Category",
+  "categoryHint": "Choose the service category",
+  "orderTitleLabel": "Order title",
+  "orderTitleRequiredError": "Write a title for the order.",
+  "orderDescriptionOptionalLabel": "Description (optional)",
+  "locationApproxLabel": "Approximate location",
+  "locationSelectedLabel": "Location selected.",
+  "locationSelectPrompt": "Choose where the service will be performed (approximate).",
+  "locationAddressHint": "Street, number, floor, reference (optional, but helps a lot)",
+  "locationGetting": "Getting location...",
+  "locationUseCurrent": "Use current location",
+  "locationChooseOnMap": "Choose on map",
+  "serviceDateTimeLabel": "Service date and time",
+  "serviceDateTimePick": "Choose day and time",
+  "saveChangesButton": "Save changes",
+  "submitOrderButton": "Request service",
+  "mapSelectTitle": "Choose location on map",
+  "mapSelectInstruction": "Drag the map to the approximate service location, then confirm.",
+  "mapSelectConfirm": "Confirm location",
+  "orderDetailsTitle": "Order details",
+  "orderLoadError": "Error loading order: {error}",
+  "orderNotFound": "Order not found.",
+  "scheduledNoDate": "Scheduled (no date set)",
+  "orderValueRejectedTitle": "The customer rejected the proposed value.",
+  "orderValueRejectedBody": "Chat with the customer and propose a new value when aligned.",
+  "actionProposeNewValue": "Propose new value",
+  "noShowReportedTitle": "No-show reported",
+  "noShowReportedBy": "Reported by: {role}",
+  "noShowReportedAt": "At: {date}",
+  "noShowTitle": "No-show",
+  "noShowDescription": "If the other person didn't show up, you can report it.",
+  "noShowReportAction": "Report no-show",
+  "orderInfoTitle": "Order information",
+  "orderInfoIdLabel": "Order ID",
+  "orderInfoCreatedAtLabel": "Created at",
+  "orderInfoStatusLabel": "Status",
+  "orderInfoModeLabel": "Mode",
+  "orderInfoValueLabel": "Value",
+  "orderLocationTitle": "Order location",
+  "orderDescriptionTitle": "Order description",
+  "providerMessageTitle": "Provider message",
+  "actionEditOrder": "Edit order",
+  "actionCancelOrder": "Cancel order",
+  "cancelOrderTitle": "Cancel order",
+  "orderCancelInProgressWarning": "The service is already in progress.\nCanceling now may result in a partial refund.",
+  "orderCancelConfirmPrompt": "Are you sure you want to cancel this order?",
+  "orderCancelReasonLabel": "Cancellation reason",
+  "orderCancelReasonOptionalLabel": "Reason (optional)",
+  "orderCancelledSnack": "Order cancelled. {message}.",
+  "orderCancelError": "Error cancelling order: {error}",
+  "noShowReportDialogTitle": "Report no-show",
+  "noShowReportDialogDescription": "Use this only if the other person didn't show up.",
+  "noShowReasonOptionalLabel": "Reason (optional)",
+  "actionReport": "Report",
+  "noShowReportSuccess": "No-show reported.",
+  "noShowReportError": "Error reporting no-show: {error}",
+  "orderFinalValueTitle": "Propose new final value",
+  "orderFinalValueLabel": "Value",
+  "orderFinalValueInvalid": "Enter a valid value.",
+  "orderFinalValueSent": "New value sent to the customer.",
+  "orderFinalValueSendError": "Error sending new value: {error}",
+  "ratingSentTitle": "Rating sent",
+  "ratingProviderTitle": "Provider rating",
+  "ratingPrompt": "Leave a rating from 1 to 5.",
+  "ratingCommentLabel": "Comment (optional)",
+  "ratingSendAction": "Send rating",
+  "ratingSelectError": "Choose a rating.",
+  "ratingSentSnack": "Rating sent.",
+  "ratingSendError": "Error sending rating: {error}",
+  "timelineCreated": "Created",
+  "timelineAccepted": "Accepted",
+  "timelineInProgress": "In progress",
+  "timelineCancelled": "Cancelled",
+  "timelineCompleted": "Completed",
+  "lookingForProviderBanner": "We're still looking for a provider for this order.",
+  "actionView": "View",
+  "chatNoMessagesSubtitle": "No messages yet",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 message} other{{count} messages}}",
+  "actionClose": "Close",
+  "actionOpen": "Open",
+  "chatAuthRequired": "You need to be authenticated to send messages.",
+  "chatSendError": "Error sending message: {error}",
+  "todayLabel": "Today",
+  "yesterdayLabel": "Yesterday",
+  "chatLoadError": "Error loading messages: {error}",
+  "chatEmptyMessage": "No messages yet.\nSend the first one!",
+  "chatInputHint": "Write a message...",
+  "chatLoginHint": "Sign in to send messages",
+  "roleLabelSystem": "System",
+  "youLabel": "You",
+  "distanceMeters": "{meters} m",
+  "distanceKilometers": "{kilometers} km",
+  "etaLessThanMinute": "<1 min",
+  "etaMinutes": "{minutes} min",
+  "etaHours": "{hours} h",
+  "etaHoursMinutes": "{hours} h {minutes} m",
+  "mapEtaLabel": "ETA {eta} - {distance}",
+  "mapOpenAction": "Open map",
+  "orderMapTitle": "Order map",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "Chat about this order",
+  "messagesTitle": "Messages",
+  "messagesSearchHint": "Search messages",
+  "messagesLoadError": "Error loading conversations: {error}",
+  "messagesEmpty": "You don't have any conversations yet.\nOnce you chat with a provider/customer, they'll appear here.",
+  "chatPresenceOnline": "online",
+  "chatPresenceLastSeenAt": "last seen at {time}",
+  "chatPresenceLastSeenYesterdayAt": "last seen yesterday at {time}",
+  "chatPresenceLastSeenOn": "last seen on {date} at {time}",
+  "chatImageTooLarge": "Image too large (max 15MB).",
+  "chatImageSendError": "Error sending image: {error}",
+  "chatFileReadError": "Couldn't read the file.",
+  "chatFileTooLarge": "File too large (max 20MB).",
+  "chatFileSendError": "Error sending file: {error}",
+  "chatAudioReadError": "Couldn't read the audio.",
+  "chatAudioTooLarge": "Audio too large (max 20MB).",
+  "chatAudioSendError": "Error sending audio: {error}",
+  "chatAttachFile": "Send file",
+  "chatAttachGallery": "Send photo (gallery)",
+  "chatAttachCamera": "Take photo (camera)",
+  "chatAttachAudio": "Send audio (file)",
+  "chatAttachAudioSubtitle": "Choose an audio file (mp3/m4a/wav/...).",
+  "chatOpenLink": "Open link",
+  "chatAttachTooltip": "Attach",
+  "chatSendTooltip": "Send",
+  "chatSearchAction": "Search",
+  "chatSearchHint": "Search messages",
+  "chatSearchEmpty": "Type something to search.",
+  "chatSearchNoResults": "No messages found.",
+  "chatMediaAction": "Media, links and files",
+  "chatMediaTitle": "Media, links and files",
+  "chatMediaPhotosTab": "Photos",
+  "chatMediaLinksTab": "Links",
+  "chatMediaAudioTab": "Audio",
+  "chatMediaFilesTab": "Files",
+  "chatMediaEmptyPhotos": "No photos yet.",
+  "chatMediaEmptyLinks": "No links yet.",
+  "chatMediaEmptyAudio": "No audio yet.",
+  "chatMediaEmptyFiles": "No files yet.",
+  "chatFavoritesAction": "Starred",
+  "chatFavoritesTitle": "Starred messages",
+  "chatFavoritesEmpty": "You have no starred messages yet.",
+  "chatStarAction": "Add to favorites",
+  "chatUnstarAction": "Remove from favorites",
+  "chatViewProviderProfileAction": "View provider profile",
+  "chatViewCustomerProfileAction": "View customer profile",
+  "chatIncomingCall": "Incoming call",
+  "chatCallStartedVideo": "Video call started",
+  "chatCallStartedVoice": "Voice call started",
+  "chatImageLabel": "Image",
+  "chatAudioLabel": "Audio",
+  "chatFileLabel": "File",
+  "chatCallEntryLabel": "Call",
+  "chatNoSession": "No active session. Sign in to access the chat.",
+  "chatTitleFallback": "Chat",
+  "chatVideoCallAction": "Video call",
+  "chatVoiceCallAction": "Call",
+  "chatMarkReadAction": "Mark as read",
+  "chatCallMissingParticipant": "The other participant isn't assigned to this order yet.",
+  "chatCallStartError": "Couldn't start the call.",
+  "chatCallMessageVideo": "Video call: {url}",
+  "chatCallMessageVoice": "Call: {url}",
+  "profileProviderTitle": "Provider profile",
+  "profileCustomerTitle": "Customer profile",
+  "profileAboutTitle": "About",
+  "profileLocationTitle": "Location",
+  "profileServicesTitle": "Services",
+  "profilePortfolioTitle": "Portfolio",
+  "chatOpenFullAction": "Open full chat",
+  "chatOpenFullUnavailable": "The other participant hasn't been assigned to this order yet.",
+  "@messagesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPresenceLastSeenAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  }
+}

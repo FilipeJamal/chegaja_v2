@@ -1,0 +1,690 @@
+{
+  "@@locale": "pt",
+  "appTitle": "ChegaJá",
+  "roleSelectorWelcome": "Bem-vindo ao ChegaJá",
+  "roleSelectorPrompt": "Escolhe como queres usar o app:",
+  "roleCustomerTitle": "Sou cliente",
+  "roleCustomerDescription": "Quero encontrar prestadores de serviço perto de mim.",
+  "roleProviderTitle": "Sou prestador",
+  "roleProviderDescription": "Quero receber pedidos de clientes e ganhar mais.",
+  "invalidSession": "Sessão inválida.",
+  "paymentsTitle": "Pagamentos (Stripe)",
+  "paymentsHeading": "Receber pagamentos online",
+  "paymentsDescription": "Para receber pagamentos via app, precisas criar uma conta Stripe (Connect Express).\nO onboarding abre no teu browser e demora 2–3 minutos.",
+  "paymentsActive": "Pagamentos online ATIVOS.",
+  "paymentsInactive": "Pagamentos ainda não ativos. Faz o onboarding.",
+  "stripeAccountLabel": "Stripe account: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "Onboarding aberto. Depois de concluíres, volta aqui para ver o estado.",
+  "onboardingStartError": "Erro ao iniciar onboarding: {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "Gerir conta Stripe",
+  "activatePayments": "Ativar pagamentos",
+  "technicalNotesTitle": "Notas técnicas",
+  "technicalNotesBody": "• O Stripe é configurado via Cloud Functions (server-side).\n• A comissão da plataforma é aplicada automaticamente no PaymentIntent.\n• Em produção, adiciona o webhook do Stripe e guarda a webhook secret nas Functions.",
+  "kycTitle": "Verificação de identidade: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "Envia um documento (foto ou PDF). A validação completa fica para v2.6.",
+  "kycSendDocument": "Enviar documento",
+  "kycAddDocument": "Adicionar documento",
+  "kycStatusApproved": "Aprovado",
+  "kycStatusRejected": "Rejeitado",
+  "kycStatusInReview": "Em análise",
+  "kycStatusNotStarted": "Não iniciado",
+  "kycFileReadError": "Não consegui ler o ficheiro.",
+  "kycFileTooLarge": "Ficheiro muito grande (máx. 10MB).",
+  "kycUploading": "A enviar documento...",
+  "kycUploadSuccess": "Documento enviado para análise.",
+  "kycUploadError": "Erro ao enviar documento: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "Cancelado por ti",
+  "statusCancelledByProvider": "Cancelado pelo prestador",
+  "statusCancelled": "Cancelado",
+  "statusLookingForProvider": "A procurar prestador",
+  "statusProviderPreparingQuote": "Prestador encontrado (a preparar orçamento)",
+  "statusQuoteToDecide": "Tens um orçamento para decidir",
+  "statusProviderFound": "Prestador encontrado",
+  "statusServiceInProgress": "Serviço em andamento",
+  "statusAwaitingValueConfirmation": "A aguardar tua confirmação de valor",
+  "statusServiceCompleted": "Serviço concluído",
+  "valueToConfirm": "{value} (a confirmar)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (proposto)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} a {max} (estimado)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "Desde {min} (estimado)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "Até {max} (estimado)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "Preço fixo",
+  "priceByQuote": "Por orçamento",
+  "priceToArrange": "Preço a combinar",
+  "paymentOnlineBefore": "Pagamento online (antes)",
+  "paymentOnlineAfter": "Pagamento online (depois)",
+  "paymentCash": "Pagamento em dinheiro",
+  "pendingActionQuoteToReview": "Tens um orçamento/proposta para analisar.",
+  "pendingActionValueToConfirm": "O prestador lançou o valor final. Falta confirmares.",
+  "pendingActionProviderPreparingQuote": "Prestador encontrado. Ele está a preparar o orçamento.",
+  "pendingActionProviderChat": "Prestador encontrado. Podes falar com ele no chat.",
+  "roleLabelCustomer": "Cliente",
+  "navHome": "Início",
+  "navMyOrders": "Meus pedidos",
+  "navMessages": "Mensagens",
+  "navProfile": "Perfil",
+  "homeGreeting": "Olá",
+  "homeSubtitle": "Do que precisas hoje?",
+  "homePendingTitle": "Tens algo para decidir",
+  "homePendingCta": "Toca aqui para abrir o próximo pedido e decidir.",
+  "servicesLoadError": "Erro ao carregar serviços: {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "Ainda não há serviços configurados.\\nEm breve vais ver aqui categorias para escolher 😉",
+  "availableServicesTitle": "Serviços disponíveis",
+  "serviceTabImmediate": "Imediato",
+  "serviceTabScheduled": "Agendado",
+  "serviceTabQuote": "Por orçamento",
+  "unreadMessagesTitle": "Tens novas mensagens",
+  "unreadMessagesCta": "Toca aqui para abrir o chat.",
+  "serviceSearchHint": "Procurar serviço...",
+  "serviceSearchEmpty": "Não encontrámos serviços para esta pesquisa.",
+  "serviceModeImmediateDescription": "Um prestador vem já hoje, o mais rápido possível.",
+  "serviceModeScheduledDescription": "Marca dia e hora para o serviço.",
+  "serviceModeQuoteDescription": "Pede orçamento (o prestador envia faixa min/max).",
+  "userNotAuthenticatedError": "Erro: utilizador não autenticado.",
+  "myOrdersTitle": "Meus pedidos",
+  "ordersTabPending": "Pendentes",
+  "ordersTabCompleted": "Concluídos",
+  "ordersTabCancelled": "Cancelados",
+  "ordersLoadError": "Erro a carregar pedidos: {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "Não tens pedidos pendentes.\\nCria um novo pedido no Início.",
+  "ordersEmptyCompleted": "Ainda não tens pedidos concluídos.",
+  "ordersEmptyCancelled": "Ainda não tens pedidos cancelados.",
+  "orderQuoteScheduled": "Orçamento (agendado)",
+  "orderQuoteImmediate": "Orçamento (imediato)",
+  "orderScheduled": "Serviço agendado",
+  "orderImmediate": "Serviço imediato",
+  "categoryNotDefined": "Categoria não definida",
+  "orderStateLabel": "Estado: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "Modelo de preço: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "Pagamento: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "Valor: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "Conta ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "O teu nome",
+  "accountProfileSubtitle": "Perfil",
+  "accountSettings": "Definições",
+  "accountHelpSupport": "Ajuda e suporte",
+  "navMyJobs": "Meus trabalhos",
+  "roleLabelProvider": "Prestador",
+  "enableLocationToGoOnline": "Ativa a localização para ficar online.",
+  "nearbyOrdersTitle": "Pedidos perto de ti",
+  "noOrdersAvailableMessage": "Não há pedidos disponíveis agora.",
+  "configureServiceAreaMessage": "Configura a tua área e serviços para começar a receber pedidos.",
+  "configureAction": "Configurar",
+  "offlineEnableOnlineMessage": "Estás offline. Fica online para receber pedidos.",
+  "noMatchingOrdersMessage": "Sem pedidos compatíveis com os teus serviços e área.",
+  "orderAcceptedMessage": "Pedido aceite.",
+  "orderAcceptedCanSendQuote": "Pedido aceite. Podes enviar o orçamento mais tarde.",
+  "orderAcceptError": "Erro ao aceitar pedido: {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "Pedido aceite",
+  "orderAcceptedBudgetPrompt": "Este pedido é por orçamento.\\n\\nQueres enviar o orçamento (faixa min/max) agora?",
+  "actionLater": "Mais tarde",
+  "actionSendNow": "Enviar agora",
+  "actionCancel": "Cancelar",
+  "actionSend": "Enviar",
+  "actionIgnore": "Ignorar",
+  "actionAccept": "Aceitar",
+  "actionNo": "Não",
+  "actionYesCancel": "Sim, cancelar",
+  "proposalDialogTitle": "Propor serviço",
+  "proposalDialogDescription": "Define uma faixa de preço para este serviço.\\nInclui deslocação e mão de obra.",
+  "proposalMinValueLabel": "Valor mínimo ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "Ex.: 20",
+  "proposalMaxValueLabel": "Valor máximo ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "Ex.: 35",
+  "proposalMessageLabel": "Mensagem para o cliente (opcional)",
+  "proposalMessageHint": "Ex.: Inclui deslocação. Materiais grandes à parte.",
+  "proposalInvalidValues": "Preenche valores mínimo e máximo válidos.",
+  "proposalMinGreaterThanMax": "O mínimo não pode ser maior que o máximo.",
+  "proposalSent": "Proposta enviada ao cliente.",
+  "proposalSendError": "Erro ao enviar proposta: {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "Olá, prestador",
+  "providerHomeSubtitle": "Fica online para receber novos pedidos.",
+  "providerStatusOnline": "Estás ONLINE",
+  "providerStatusOffline": "Estás OFFLINE",
+  "providerKpiEarningsToday": "Ganhos hoje (líquido)",
+  "providerKpiServicesThisMonth": "Serviços este mês",
+  "providerKpiGrossFeeSubtitle": "Bruto: {gross} - Taxa: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "Tens um trabalho para gerir",
+  "providerHighlightCta": "Toca aqui para abrir o próximo trabalho.",
+  "providerPendingActionAccepted": "Tens um trabalho aceite, pronto para iniciar.",
+  "providerPendingActionInProgress": "Tens um serviço em andamento. Marca como concluído quando terminares.",
+  "providerPendingActionSetFinalValue": "Define e envia o valor final do serviço.",
+  "providerUnreadMessagesTitle": "Tens novas mensagens de clientes",
+  "providerUnreadMessagesJob": "No trabalho: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "Meus trabalhos",
+  "providerJobsTabOpen": "Em aberto",
+  "providerJobsTabCompleted": "Concluídos",
+  "providerJobsTabCancelled": "Cancelados",
+  "providerJobsLoadError": "Erro a carregar trabalhos: {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "Ainda não tens trabalhos em aberto.\\nVai à aba Início e aceita um pedido.",
+  "providerJobsEmptyCompleted": "Ainda não tens trabalhos concluídos.",
+  "providerJobsEmptyCancelled": "Ainda não tens trabalhos cancelados.",
+  "scheduledForDate": "Agendado: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "Ver detalhe",
+  "clientPaidValueLabel": "Valor pago pelo cliente: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "Tu recebes: {value} - Taxa: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "Valor do serviço: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "Cancelar trabalho",
+  "cancelJobPrompt": "Tens a certeza que queres cancelar este trabalho?\\nO pedido pode voltar a ficar disponível para outros prestadores.",
+  "cancelJobReasonLabel": "Motivo do cancelamento (opcional):",
+  "cancelJobReasonFieldLabel": "Motivo",
+  "cancelJobSuccess": "Trabalho cancelado.",
+  "cancelJobError": "Erro ao cancelar trabalho: {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "Ver o meu perfil",
+  "providerAccountProfileSubtitle": "Perfil de Prestador",
+  "activateOnlinePaymentsSubtitle": "Ativar recebimentos online",
+  "statusProviderWaiting": "Novo pedido",
+  "statusQuoteWaitingCustomer": "Aguarda resposta do cliente",
+  "statusAcceptedToStart": "Aceite (pronto a iniciar)",
+  "statusInProgress": "Em andamento",
+  "statusCompleted": "Concluído",
+  "orderDefaultImmediateTitle": "Serviço urgente",
+  "locationServiceDisabled": "O serviço de localização está desativado no dispositivo.",
+  "locationPermissionDenied": "Permissão de localização negada.\\nNão foi possível obter a localização atual.",
+  "locationPermissionDeniedForever": "Permissão de localização negada permanentemente.\\nAtiva a localização nas definições do dispositivo.",
+  "locationFetchError": "Erro ao obter localização: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "O formulário ainda não está pronto. Tenta novamente.",
+  "missingRequiredFieldsError": "Faltam campos obrigatórios. Verifica os campos em vermelho.",
+  "scheduleDateTimeRequiredError": "Escolhe a data e hora do serviço.",
+  "scheduleDateTimeFutureError": "Escolhe uma data/hora no futuro.",
+  "categoryRequiredError": "Escolhe uma categoria.",
+  "orderUpdatedSuccess": "Pedido atualizado com sucesso!",
+  "orderCreatedSuccess": "Pedido criado! A procurar um prestador...",
+  "orderUpdateError": "Erro ao atualizar pedido: {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "Erro ao criar pedido: {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "Ex.: Canalização a verter debaixo do lava-louça",
+  "orderTitleExampleElectric": "Ex.: Tomada não funciona na sala + ligar candeeiro de teto",
+  "orderTitleExampleCleaning": "Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).",
+  "orderTitleHintImmediate": "Explica rapidamente o que está a acontecer e o que precisas.",
+  "orderTitleHintScheduled": "Indica para quando queres o serviço, detalhes do local e o que deve ser feito.",
+  "orderTitleHintQuote": "Descreve o serviço desejado para receber propostas.",
+  "orderTitleHintDefault": "Descreve o serviço que precisas.",
+  "orderDescriptionExampleCleaning": "Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).",
+  "orderDescriptionHintImmediate": "Explica rapidamente o que está a acontecer e o que precisas.",
+  "orderDescriptionHintScheduled": "Indica para quando queres o serviço, detalhes do local e o que deve ser feito.",
+  "orderDescriptionHintQuote": "Descreve o serviço desejado, orçamento aproximado (se tiveres) e detalhes importantes.",
+  "orderDescriptionHintDefault": "Explica com algum detalhe o que precisas.",
+  "priceModelTitle": "Modelo de preço",
+  "priceModelQuoteInfo": "Este serviço é por orçamento. O prestador vai propor o valor final.",
+  "priceTypeLabel": "Tipo de preço",
+  "paymentTypeLabel": "Tipo de pagamento",
+  "orderHeaderQuoteTitle": "Pedido por orçamento",
+  "orderHeaderQuoteSubtitle": "Descreve o que precisas e o prestador pode enviar uma faixa (mín/máx).",
+  "orderHeaderImmediateTitle": "Serviço imediato",
+  "orderHeaderImmediateSubtitle": "Um prestador disponível será chamado o mais rápido possível.",
+  "orderHeaderScheduledTitle": "Serviço por agendamento",
+  "orderHeaderScheduledSubtitle": "Escolhe o dia e hora para o prestador ir até ti.",
+  "orderHeaderDefaultTitle": "Novo pedido",
+  "orderHeaderDefaultSubtitle": "Descreve o serviço que precisas.",
+  "orderEditTitle": "Editar pedido",
+  "orderNewTitle": "Novo pedido",
+  "whenServiceNeededLabel": "Quando precisas do serviço?",
+  "categoryLabel": "Categoria",
+  "categoryHint": "Escolhe a categoria do serviço",
+  "orderTitleLabel": "Título do pedido",
+  "orderTitleRequiredError": "Escreve um título para o pedido.",
+  "orderDescriptionOptionalLabel": "Descrição (opcional)",
+  "locationApproxLabel": "Localização aproximada",
+  "locationSelectedLabel": "Localização selecionada.",
+  "locationSelectPrompt": "Escolhe onde o serviço será feito (aproximado).",
+  "locationAddressHint": "Rua, nº, andar, referência (opcional, mas ajuda muito)",
+  "locationGetting": "A obter localização...",
+  "locationUseCurrent": "Usar localização atual",
+  "locationChooseOnMap": "Escolher no mapa",
+  "serviceDateTimeLabel": "Data e hora do serviço",
+  "serviceDateTimePick": "Escolhe dia e hora",
+  "saveChangesButton": "Guardar alterações",
+  "submitOrderButton": "Pedir serviço",
+  "mapSelectTitle": "Escolher localização no mapa",
+  "mapSelectInstruction": "Arrasta o mapa até ao local aproximado do serviço, depois confirma.",
+  "mapSelectConfirm": "Confirmar localização",
+  "orderDetailsTitle": "Detalhe do pedido",
+  "orderLoadError": "Erro a carregar pedido: {error}",
+  "orderNotFound": "Pedido não encontrado.",
+  "scheduledNoDate": "Agendado (sem data definida)",
+  "orderValueRejectedTitle": "O cliente rejeitou o valor proposto.",
+  "orderValueRejectedBody": "Conversem pelo chat e propõe um novo valor quando estiverem alinhados.",
+  "actionProposeNewValue": "Propor novo valor",
+  "noShowReportedTitle": "No-show reportado",
+  "noShowReportedBy": "Reportado por: {role}",
+  "noShowReportedAt": "Em: {date}",
+  "noShowTitle": "No-show",
+  "noShowDescription": "Se a outra pessoa não apareceu, podes reportar.",
+  "noShowReportAction": "Reportar no-show",
+  "orderInfoTitle": "Informações do pedido",
+  "orderInfoIdLabel": "ID do pedido",
+  "orderInfoCreatedAtLabel": "Criado em",
+  "orderInfoStatusLabel": "Estado",
+  "orderInfoModeLabel": "Modo",
+  "orderInfoValueLabel": "Valor",
+  "orderLocationTitle": "Localização do pedido",
+  "orderDescriptionTitle": "Descrição do pedido",
+  "providerMessageTitle": "Mensagem do prestador",
+  "actionEditOrder": "Editar pedido",
+  "actionCancelOrder": "Cancelar pedido",
+  "cancelOrderTitle": "Cancelar pedido",
+  "orderCancelInProgressWarning": "O serviço já está em andamento.\nAo cancelar agora, o reembolso pode não ser total.",
+  "orderCancelConfirmPrompt": "Tens a certeza que queres cancelar este pedido?",
+  "orderCancelReasonLabel": "Motivo do cancelamento",
+  "orderCancelReasonOptionalLabel": "Motivo (opcional)",
+  "orderCancelledSnack": "Pedido cancelado. {message}.",
+  "orderCancelError": "Erro ao cancelar pedido: {error}",
+  "noShowReportDialogTitle": "Reportar no-show",
+  "noShowReportDialogDescription": "Usa esta opção apenas se a outra pessoa não apareceu.",
+  "noShowReasonOptionalLabel": "Motivo (opcional)",
+  "actionReport": "Reportar",
+  "noShowReportSuccess": "No-show registado.",
+  "noShowReportError": "Erro ao reportar no-show: {error}",
+  "orderFinalValueTitle": "Propor novo valor final",
+  "orderFinalValueLabel": "Valor",
+  "orderFinalValueInvalid": "Insere um valor válido.",
+  "orderFinalValueSent": "Novo valor enviado ao cliente.",
+  "orderFinalValueSendError": "Erro ao enviar novo valor: {error}",
+  "ratingSentTitle": "Avaliação enviada",
+  "ratingProviderTitle": "Avaliação do prestador",
+  "ratingPrompt": "Deixa uma nota de 1 a 5.",
+  "ratingCommentLabel": "Comentário (opcional)",
+  "ratingSendAction": "Enviar avaliação",
+  "ratingSelectError": "Escolhe uma nota.",
+  "ratingSentSnack": "Avaliação enviada.",
+  "ratingSendError": "Erro ao enviar avaliação: {error}",
+  "timelineCreated": "Criado",
+  "timelineAccepted": "Aceito",
+  "timelineInProgress": "Em andamento",
+  "timelineCancelled": "Cancelado",
+  "timelineCompleted": "Concluído",
+  "lookingForProviderBanner": "Ainda estamos a procurar um prestador para este pedido.",
+  "actionView": "Ver",
+  "chatNoMessagesSubtitle": "Sem mensagens ainda",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 mensagem} other{{count} mensagens}}",
+  "actionClose": "Fechar",
+  "actionOpen": "Abrir",
+  "chatAuthRequired": "Precisas estar autenticado para enviar mensagens.",
+  "chatSendError": "Erro ao enviar mensagem: {error}",
+  "todayLabel": "Hoje",
+  "yesterdayLabel": "Ontem",
+  "chatLoadError": "Erro ao carregar mensagens: {error}",
+  "chatEmptyMessage": "Ainda não há mensagens.\nEnvia a primeira!",
+  "chatInputHint": "Escreve uma mensagem...",
+  "chatLoginHint": "Inicia sessão para enviar mensagens",
+  "roleLabelSystem": "Sistema",
+  "youLabel": "Tu",
+  "distanceMeters": "{meters} m",
+  "distanceKilometers": "{kilometers} km",
+  "etaLessThanMinute": "<1 min",
+  "etaMinutes": "{minutes} min",
+  "etaHours": "{hours} h",
+  "etaHoursMinutes": "{hours} h {minutes} m",
+  "mapEtaLabel": "ETA {eta} - {distance}",
+  "mapOpenAction": "Abrir mapa",
+  "orderMapTitle": "Mapa do pedido",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "Chat sobre este pedido",
+  "messagesTitle": "Mensagens",
+  "messagesSearchHint": "Pesquisar mensagens",
+  "messagesLoadError": "Erro ao carregar conversas: {error}",
+  "messagesEmpty": "Ainda não tens conversas.\nQuando falares com um prestador/cliente, aparece aqui.",
+  "chatPresenceOnline": "online",
+  "chatPresenceLastSeenAt": "visto por último às {time}",
+  "chatPresenceLastSeenYesterdayAt": "visto por último ontem às {time}",
+  "chatPresenceLastSeenOn": "visto por último em {date} às {time}",
+  "chatImageTooLarge": "Imagem muito grande (máx. 15MB).",
+  "chatImageSendError": "Erro ao enviar imagem: {error}",
+  "chatFileReadError": "Não consegui ler o ficheiro.",
+  "chatFileTooLarge": "Ficheiro muito grande (máx. 20MB).",
+  "chatFileSendError": "Erro ao enviar ficheiro: {error}",
+  "chatAudioReadError": "Não consegui ler o áudio.",
+  "chatAudioTooLarge": "Áudio muito grande (máx. 20MB).",
+  "chatAudioSendError": "Erro ao enviar áudio: {error}",
+  "chatAttachFile": "Enviar ficheiro",
+  "chatAttachGallery": "Enviar foto (galeria)",
+  "chatAttachCamera": "Tirar foto (câmara)",
+  "chatAttachAudio": "Enviar áudio (ficheiro)",
+  "chatAttachAudioSubtitle": "Escolhe um áudio (mp3/m4a/wav/...).",
+  "chatOpenLink": "Abrir link",
+  "chatAttachTooltip": "Anexar",
+  "chatSendTooltip": "Enviar",
+  "chatSearchAction": "Pesquisar",
+  "chatSearchHint": "Pesquisar mensagens",
+  "chatSearchEmpty": "Escreve algo para pesquisar.",
+  "chatSearchNoResults": "Nenhuma mensagem encontrada.",
+  "chatMediaAction": "Mídia, links e arquivos",
+  "chatMediaTitle": "Mídia, links e arquivos",
+  "chatMediaPhotosTab": "Fotos",
+  "chatMediaLinksTab": "Links",
+  "chatMediaAudioTab": "Áudios",
+  "chatMediaFilesTab": "Arquivos",
+  "chatMediaEmptyPhotos": "Sem fotos ainda.",
+  "chatMediaEmptyLinks": "Sem links ainda.",
+  "chatMediaEmptyAudio": "Sem áudios ainda.",
+  "chatMediaEmptyFiles": "Sem arquivos ainda.",
+  "chatFavoritesAction": "Favoritos",
+  "chatFavoritesTitle": "Mensagens favoritas",
+  "chatFavoritesEmpty": "Ainda não tens mensagens favoritas.",
+  "chatStarAction": "Adicionar aos favoritos",
+  "chatUnstarAction": "Remover dos favoritos",
+  "chatViewProviderProfileAction": "Ver perfil do prestador",
+  "chatViewCustomerProfileAction": "Ver perfil do cliente",
+  "chatIncomingCall": "Chamada a entrar",
+  "chatCallStartedVideo": "Videochamada iniciada",
+  "chatCallStartedVoice": "Chamada de voz iniciada",
+  "chatImageLabel": "Imagem",
+  "chatAudioLabel": "Áudio",
+  "chatFileLabel": "Ficheiro",
+  "chatCallEntryLabel": "Chamada",
+  "chatNoSession": "Sem sessão ativa. Faz login para aceder ao chat.",
+  "chatTitleFallback": "Chat",
+  "chatVideoCallAction": "Videochamada",
+  "chatVoiceCallAction": "Chamada",
+  "chatMarkReadAction": "Marcar como lidas",
+  "chatCallMissingParticipant": "Ainda não há outro utilizador neste pedido.",
+  "chatCallStartError": "Não foi possível abrir a chamada.",
+  "chatCallMessageVideo": "Videochamada: {url}",
+  "chatCallMessageVoice": "Chamada: {url}",
+  "profileProviderTitle": "Perfil do prestador",
+  "profileCustomerTitle": "Perfil do cliente",
+  "profileAboutTitle": "Sobre",
+  "profileLocationTitle": "Localização",
+  "profileServicesTitle": "Serviços",
+  "profilePortfolioTitle": "Portfólio",
+  "chatOpenFullAction": "Abrir chat completo",
+  "chatOpenFullUnavailable": "Ainda não existe outro utilizador associado a este pedido.",
+  "@messagesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPresenceLastSeenAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  }
+}

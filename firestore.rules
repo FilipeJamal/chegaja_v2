@@ -1,0 +1,360 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------
+    // Helpers
+    // -------------------------
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+
+    // Admin claim SAFE: se nÃ£o existir, devolve false
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token != null
+        && request.auth.token.keys().hasAny(['admin'])
+        && request.auth.token['admin'] == true;
+    }
+
+    // DEV MODE (manual):
+    // - deixa true enquanto estÃ¡s a desenvolver / emuladores
+    // - muda para false antes de fazer deploy para produÃ§Ã£o
+    function devMode() { return false; }
+
+    function isSelf(userId) { return signedIn() && uid() == userId; }
+    function clienteIdFromData(data) {
+      return data is map
+        ? (data.keys().hasAny(['clienteId'])
+          ? data['clienteId']
+          : (data.keys().hasAny(['clientId']) ? data['clientId'] : null))
+        : null;
+    }
+
+
+    // -------------------------
+    // Pedido helpers
+    // -------------------------
+    function pedidoSnap(pedidoId) {
+      return get(/databases/$(database)/documents/pedidos/$(pedidoId));
+    }
+
+    // âœ… Quando estamos fora do match /pedidos, precisamos ler o pedido por ID.
+    function isPedidoParticipantById(pedidoId) {
+      let p = pedidoSnap(pedidoId);
+      return signedIn()
+        && p.data != null
+        && p.data is map
+        && (
+          clienteIdFromData(p.data) == uid() ||
+          (p.data.keys().hasAny(['prestadorId']) &&
+            p.data['prestadorId'] == uid())
+        );
+    }
+
+    // âœ… Quando jÃ¡ temos o doc (resource.data), NÃƒO uses get()
+    function isPedidoParticipantByData(data) {
+      return signedIn()
+        && data is map
+        && (
+          clienteIdFromData(data) == uid() ||
+          (data.keys().hasAny(['prestadorId']) &&
+            data['prestadorId'] == uid())
+        );
+    }
+
+    function isPrestador() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/prestadores/$(uid()));
+    }
+
+    function pedidoEstado(data) {
+      return !(data is map)
+        ? null
+        : (data.keys().hasAny(['status'])
+          ? data['status']
+          : (data.keys().hasAny(['estado']) ? data['estado'] : null));
+    }
+
+    function isValidPedidoEstadoValue(value) {
+      return value is string
+        && value in [
+          'criado',
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+          'concluido',
+          'cancelado'
+        ];
+    }
+
+    function hasValidPedidoEstado(data) {
+      return data is map
+        && data.keys().hasAny(['status', 'estado'])
+        && (!data.keys().hasAny(['status']) ||
+          isValidPedidoEstadoValue(data['status']))
+        && (!data.keys().hasAny(['estado']) ||
+          isValidPedidoEstadoValue(data['estado']));
+    }
+
+    // Pedido â€œabertoâ€ = visÃ­vel para prestadores na lista
+    function pedidoAberto(data) {
+      return data is map
+        && pedidoEstado(data) == 'criado'
+        && (!data.keys().hasAny(['prestadorId']) ||
+          data['prestadorId'] == null);
+    }
+
+    function immutableField(field) {
+      return !resource.data.keys().hasAny([field]) ||
+        request.resource.data[field] == resource.data[field];
+    }
+
+    // -------------------------
+    // Chat helpers
+    // -------------------------
+    function isChatParticipantByData(chatData) {
+      return signedIn()
+        && chatData is map
+        && (
+          clienteIdFromData(chatData) == uid() ||
+          (chatData.keys().hasAny(['prestadorId']) &&
+            chatData['prestadorId'] == uid())
+        );
+    }
+
+    function chatSnap(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId));
+    }
+
+    // Ãštil para subcoleÃ§Ãµes (messages)
+    function isChatParticipant(chatId) {
+      let c = chatSnap(chatId);
+      return signedIn()
+        && c.data != null
+        && c.data is map
+        && (
+          clienteIdFromData(c.data) == uid() ||
+          (c.data.keys().hasAny(['prestadorId']) &&
+            c.data['prestadorId'] == uid())
+        );
+    }
+
+    function hasTextField(data) {
+      return data is map
+        && (
+          (data.keys().hasAny(['text']) && data['text'] is string) ||
+          (data.keys().hasAny(['texto']) && data['texto'] is string) ||
+          (data.keys().hasAny(['message']) && data['message'] is string) ||
+          (data.keys().hasAny(['conteudo']) && data['conteudo'] is string)
+        );
+    }
+
+    function hasMediaField(data) {
+      return data is map
+        && (
+          (data.keys().hasAny(['mediaUrl']) && data['mediaUrl'] is string) ||
+          (data.keys().hasAny(['fileUrl']) && data['fileUrl'] is string) ||
+          (data.keys().hasAny(['url']) && data['url'] is string)
+        );
+    }
+
+    function hasValidMessageType(data) {
+      return data is map
+        && (
+          !data.keys().hasAny(['type']) ||
+          data['type'] in ['text', 'image', 'audio', 'file', 'location', 'call', 'sticker', 'gif']
+        );
+    }
+
+    // -------------------------
+    // Call helpers
+    // -------------------------
+    function callSnap(callId) {
+      return get(/databases/$(database)/documents/calls/$(callId));
+    }
+
+    function isCallParticipantByData(callData) {
+      return signedIn()
+        && callData is map
+        && (
+          (callData.keys().hasAny(['callerId']) && callData['callerId'] == uid()) ||
+          (callData.keys().hasAny(['calleeId']) && callData['calleeId'] == uid())
+        );
+    }
+
+    function isCallParticipantById(callId) {
+      let c = callSnap(callId);
+      return signedIn()
+        && c.data != null
+        && c.data is map
+        && (
+          (c.data.keys().hasAny(['callerId']) && c.data['callerId'] == uid()) ||
+          (c.data.keys().hasAny(['calleeId']) && c.data['calleeId'] == uid())
+        );
+    }
+
+    // -------------------------
+    // USERS
+    // -------------------------
+    match /users/{userId} {
+      allow read: if signedIn() || isAdmin();
+      allow create: if isSelf(userId);
+      allow update: if isSelf(userId) || isAdmin();
+      allow delete: if isAdmin() || devMode();
+
+      match /fcmTokens/{tokenId} {
+        allow read, write: if isSelf(userId) || isAdmin();
+      }
+
+      match /notifications/{notificationId} {
+        allow read, update: if isSelf(userId) || isAdmin();
+        allow create: if false; // sÃ³ backend/admin
+        allow delete: if isAdmin() || devMode();
+      }
+    }
+
+    // -------------------------
+    // PRESTADORES
+    // -------------------------
+    match /prestadores/{prestadorId} {
+      allow read: if true; // perfis precisam ser visÃ­veis
+      allow create, update: if isSelf(prestadorId) || isAdmin();
+      allow delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // AVALIACOES
+    // -------------------------
+    match /avaliacoes/{avaliacaoId} {
+      allow read: if isPedidoParticipantById(resource.data['pedidoId'])
+        || isAdmin();
+
+      allow create: if signedIn()
+        && request.resource.data['pedidoId'] is string
+        && clienteIdFromData(request.resource.data) == uid()
+        && request.resource.data['prestadorId'] is string
+        && request.resource.data['estrelas'] is int
+        && request.resource.data['estrelas'] >= 1
+        && request.resource.data['estrelas'] <= 5
+        && isPedidoParticipantById(request.resource.data['pedidoId'])
+        && (
+          pedidoSnap(request.resource.data['pedidoId']).data['estado'] == 'concluido' ||
+          pedidoSnap(request.resource.data['pedidoId']).data['status'] == 'concluido'
+        )
+        && pedidoSnap(request.resource.data['pedidoId']).data['prestadorId']
+          == request.resource.data['prestadorId'];
+
+      allow update, delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // SERVICOS (catÃ¡logo)
+    // -------------------------
+    match /servicos/{servicoId} {
+      allow read: if true;
+      allow create, update, delete: if devMode() || isAdmin();
+    }
+
+    // -------------------------
+    // PEDIDOS
+    // -------------------------
+    match /pedidos/{pedidoId} {
+
+      // Criar pedido: tem de ser o cliente
+      allow create: if signedIn()
+        && clienteIdFromData(request.resource.data) == uid()
+        && hasValidPedidoEstado(request.resource.data);
+
+      // Ler (get + list):
+      // - cliente e prestador (quando atribuÃ­do)
+      // - prestadores podem ler pedidos abertos (Pedidos perto de ti)
+      allow read: if devMode()
+        ? true
+        : (isPedidoParticipantByData(resource.data)
+          || (isPrestador() && pedidoAberto(resource.data)));
+
+      // Atualizar:
+      // - cliente/prestador participantes
+      // - prestador pode aceitar/agir num pedido aberto
+      allow update: if (isPedidoParticipantByData(resource.data)
+        || (isPrestador() && pedidoAberto(resource.data)))
+        && hasValidPedidoEstado(request.resource.data)
+        && immutableField('clienteId')
+        && immutableField('clientId')
+        && immutableField('createdAt');
+
+      allow delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // CHATS (chatId == pedidoId)
+    // -------------------------
+    match /chats/{chatId} {
+
+      // âœ… GET (doc especÃ­fico): participante via pedido OU via chat
+      allow get: if isPedidoParticipantById(chatId) || isChatParticipantByData(resource.data);
+
+      // âœ… LIST (queries): usa sÃ³ os campos do prÃ³prio chat
+      allow list: if isChatParticipantByData(resource.data);
+
+      // Criar meta do chat
+      allow create: if isPedidoParticipantById(chatId)
+        && request.resource.data['pedidoId'] == chatId;
+
+      // Update: participante via pedido ou via chat
+      allow update: if isPedidoParticipantById(chatId) || isChatParticipantByData(resource.data);
+
+      allow delete: if isAdmin() || devMode();
+
+      match /messages/{messageId} {
+        allow get, list: if isPedidoParticipantById(chatId) || isChatParticipant(chatId);
+
+        // Criar mensagem: participante e senderId tem de ser o prÃ³prio
+        allow create: if (isPedidoParticipantById(chatId) || isChatParticipant(chatId))
+          && request.resource.data['senderId'] == uid()
+          && (
+            hasTextField(request.resource.data) ||
+            (hasMediaField(request.resource.data) && hasValidMessageType(request.resource.data))
+          );
+
+        // delivered/seen/etc.
+        allow update: if isPedidoParticipantById(chatId) || isChatParticipant(chatId);
+
+        allow delete: if isAdmin() || devMode();
+      }
+    }
+
+    // -------------------------
+    // CALLS (audio/video)
+    // -------------------------
+    match /calls/{callId} {
+      allow create: if signedIn()
+        && request.resource.data['callerId'] == uid()
+        && request.resource.data['calleeId'] is string;
+
+      allow get: if isCallParticipantByData(resource.data);
+      allow list: if signedIn();
+      allow update: if isCallParticipantByData(resource.data);
+      allow delete: if isAdmin() || devMode();
+
+      match /offerCandidates/{candidateId} {
+        allow read, write: if isCallParticipantById(callId);
+      }
+
+      match /answerCandidates/{candidateId} {
+        allow read, write: if isCallParticipantById(callId);
+      }
+    }
+
+    // -------------------------
+    // Default deny
+    // -------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+
