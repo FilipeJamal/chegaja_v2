@@ -166,6 +166,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         Navigator.of(context).pop(); // volta ao detalhe ou home
       } else {
         // Criação de novo pedido → ir para o ecrã "Aguardando prestador"
+        // (D2) Sem localização por enquanto para não sujar a base com dados falsos.
+        // Futuramente, implementar Geolocator.getCurrentPosition() real.
         final String pedidoId = await PedidosRepo.criarPedido(
           clienteId: user.uid,
           titulo: titulo,
@@ -173,6 +175,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           modo: _modo,
           agendadoPara: agendadoPara,
           categoria: _categoriaNome,
+          latitude: null, // Evitar dados falsos em produção
+          longitude: null,
         );
 
         if (!mounted) return;

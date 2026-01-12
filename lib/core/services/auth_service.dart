@@ -39,5 +39,17 @@ class AuthService {
     return user;
   }
 
+  /// Atualiza a localização do utilizador (D2).
+  static Future<void> updateLocation(double lat, double lng) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _db.collection('users').doc(user.uid).update({
+      'latitude': lat,
+      'longitude': lng,
+      'locationUpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   static User? get currentUser => _auth.currentUser;
 }

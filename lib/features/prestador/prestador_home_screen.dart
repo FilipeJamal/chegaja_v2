@@ -137,6 +137,38 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
   /// ids que este prestador escolheu IGNORAR (só local na sessão)
   final Set<String> _ignorados = <String>{};
 
+  /// Localização simulada do prestador para testes de distância (D2).
+  /// Futuramente deve vir do GPS real (Geolocator) ou do perfil do user.
+  double? _latPrestador;
+  double? _lngPrestador;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPrestadorLocation();
+  }
+
+  Future<void> _fetchPrestadorLocation() async {
+    // (D2) Tenta buscar do perfil gravado no AuthService
+    // Se não tiver, não filtra por distância (ou usa default se quiseres forçar).
+    // Aqui vamos deixar null se não tiver, e o Repo decide o que fazer (ou a UI avisa).
+
+    // Simulação: para já não forçamos Lisboa hardcoded aqui na UI,
+    // mas se o user tiver gravado no perfil, usamos.
+    final user = AuthService.currentUser;
+    if (user != null) {
+       // Buscaria do Firestore users/{uid} se quiséssemos persistência real.
+       // Para este MVP/Protótipo, se não temos GPS real, deixamos null
+       // ou definimos um "ponto de partida" se quisermos testar o filtro.
+
+       // Exemplo: se quisermos testar o filtro, descomentar:
+       // setState(() {
+       //   _latPrestador = 38.7223;
+       //   _lngPrestador = -9.1393;
+       // });
+    }
+  }
+
   Future<void> _proporServico(
     BuildContext context,
     Pedido pedido,
@@ -429,7 +461,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
               Expanded(
                 child: StreamBuilder<List<Pedido>>(
-                  stream: PedidosRepo.streamPedidosDisponiveis(),
+                  // (D2) Usar stream filtrada por distância se tivermos local.
+                  // Caso contrário, usa stream normal (todos).
+                  stream: (_latPrestador != null && _lngPrestador != null)
+                      ? PedidosRepo.streamPedidosDisponiveisProximos(
+                          latPrestador: _latPrestador!,
+                          lngPrestador: _lngPrestador!,
+                          raioKm: 50,
+                        )
+                      : PedidosRepo.streamPedidosDisponiveis(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState ==
                         ConnectionState.waiting) {

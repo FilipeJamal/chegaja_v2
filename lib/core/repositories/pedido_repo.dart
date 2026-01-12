@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../models/pedido.dart';
 
@@ -15,6 +16,8 @@ class PedidosRepo {
     required String modo, // 'IMEDIATO' ou 'AGENDADO'
     DateTime? agendadoPara,
     String? categoria,
+    double? latitude,
+    double? longitude,
   }) async {
     final docRef = await _db.collection('pedidos').add({
       'clienteId': clienteId,
@@ -26,6 +29,8 @@ class PedidosRepo {
       'createdAt': FieldValue.serverTimestamp(),
       'agendadoPara': agendadoPara,
       'categoria': categoria,
+      'latitude': latitude,
+      'longitude': longitude,
       'preco': null,
       'concluidoEm': null,
     });
@@ -97,6 +102,36 @@ class PedidosRepo {
               )
               .toList(),
         );
+  }
+
+  /// (D2) Stream de pedidos disponíveis, filtrados por distância (client-side).
+  ///
+  /// Como não temos GeoHash no backend (ainda), fazemos a query normal e filtramos aqui.
+  static Stream<List<Pedido>> streamPedidosDisponiveisProximos({
+    required double latPrestador,
+    required double lngPrestador,
+    double raioKm = 50.0,
+  }) {
+    // Para simplificar, usamos a mesma query base (todos os 'criados')
+    // e filtramos na lista recebida.
+    // NOTA: Em produção com muitos pedidos, isto deve passar para geoqueries no backend.
+    final distance = const Distance();
+
+    return streamPedidosDisponiveis().map((lista) {
+      return lista.where((p) {
+        // Se o pedido não tiver local, decidimos se mostramos ou não.
+        // Vamos assumir que mostramos (pode ser serviço remoto ou sem local definido).
+        if (p.latitude == null || p.longitude == null) return true;
+
+        final dist = distance.as(
+          LengthUnit.Kilometer,
+          LatLng(latPrestador, lngPrestador),
+          LatLng(p.latitude!, p.longitude!),
+        );
+
+        return dist <= raioKm;
+      }).toList();
+    });
   }
 
   /// Stream de pedidos "disponíveis" para prestadores:

@@ -107,6 +107,10 @@ class Pedido {
   /// Data/hora marcada para pedidos AGENDADOS (pode ser null noutros modos).
   final DateTime? dataAgendada;
 
+  // ---------------------- Localização (D2) ----------------------
+  final double? latitude;
+  final double? longitude;
+
   /// Datas de criação/atualização
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -137,6 +141,8 @@ class Pedido {
     this.motivoCancelamento,
     this.tipoReembolso,
     this.dataAgendada,
+    this.latitude,
+    this.longitude,
     required this.createdAt,
     this.updatedAt,
   });
@@ -170,6 +176,8 @@ class Pedido {
       motivoCancelamento: null,
       tipoReembolso: null,
       dataAgendada: null,
+      latitude: null,
+      longitude: null,
       createdAt: now,
       updatedAt: now,
     );
@@ -244,6 +252,10 @@ class Pedido {
       motivoCancelamento: data['motivoCancelamento'] as String?,
       tipoReembolso: data['tipoReembolso'] as String?,
 
+      // Localização
+      latitude: _toDouble(data['latitude']),
+      longitude: _toDouble(data['longitude']),
+
       // Datas: novo/antigo
       dataAgendada: _tsToDate(data['dataAgendada'] ?? data['agendadoPara']),
       createdAt:
@@ -298,6 +310,9 @@ class Pedido {
       motivoCancelamento: data['motivoCancelamento'] as String?,
       tipoReembolso: data['tipoReembolso'] as String?,
 
+      latitude: _toDouble(data['latitude']),
+      longitude: _toDouble(data['longitude']),
+
       dataAgendada: _tsToDate(data['dataAgendada'] ?? data['agendadoPara']),
       createdAt:
           _tsToDate(data['createdAt'] ?? data['criadoEm']) ?? DateTime.now(),
@@ -349,6 +364,10 @@ class Pedido {
       // Campo de preco “geral” para UIs antigas
       'preco': precoValor,
 
+      // Localização
+      'latitude': latitude,
+      'longitude': longitude,
+
       // Datas novas + antigas
       'dataAgendada':
           dataAgendada != null ? Timestamp.fromDate(dataAgendada!) : null,
@@ -392,6 +411,8 @@ class Pedido {
     String? motivoCancelamento,
     String? tipoReembolso,
     DateTime? dataAgendada,
+    double? latitude,
+    double? longitude,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -427,6 +448,8 @@ class Pedido {
       motivoCancelamento: motivoCancelamento ?? this.motivoCancelamento,
       tipoReembolso: tipoReembolso ?? this.tipoReembolso,
       dataAgendada: dataAgendada ?? this.dataAgendada,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
