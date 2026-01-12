@@ -67,3 +67,8 @@ x86/
 *.[Cc]ache
 # but keep track of directories ending in .cache
 !*.[Cc]ache/
+
+# --- IGNORAR COISAS LOCAIS ---
+/tools/
+lib/core/models/.gitignore
+
