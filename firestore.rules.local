@@ -277,7 +277,8 @@ service cloud.firestore {
       allow read: if devMode()
         ? true
         : (isPedidoParticipantByData(resource.data)
-          || (isPrestador() && pedidoAberto(resource.data)));
+          || (isPrestador() && pedidoAberto(resource.data))
+          || isAdmin());
 
       // Atualizar:
       // - cliente/prestador participantes
@@ -350,6 +351,47 @@ service cloud.firestore {
       match /answerCandidates/{candidateId} {
         allow read, write: if isCallParticipantById(callId);
       }
+    }
+
+    // -------------------------
+    // SUPPORT TICKETS
+    // -------------------------
+    match /support_tickets/{ticketId} {
+      allow create: if signedIn()
+        && request.resource.data['uid'] == uid();
+      allow read, update, delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // PAYMENTS (admin/backoffice read-only)
+    // -------------------------
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // PAYMENT LEDGER (immutable)
+    // -------------------------
+    match /payment_ledger/{entryId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // SUBSCRIPTIONS (owner + admin read-only)
+    // -------------------------
+    match /subscriptions/{subUid} {
+      allow read: if (signedIn() && uid() == subUid) || isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // REMINDER LOGS (scheduler dedup)
+    // -------------------------
+    match /scheduled_reminder_logs/{logId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
     }
 
     // -------------------------

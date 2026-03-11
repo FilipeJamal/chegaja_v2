@@ -1,0 +1,822 @@
+{
+  "@@locale": "de",
+  "appTitle": "ChegaJa",
+  "roleSelectorWelcome": "Willkommen bei ChegaJa",
+  "roleSelectorPrompt": "Wählen Sie, wie Sie die App nutzen möchten:",
+  "roleCustomerTitle": "Ich bin Kunde",
+  "roleCustomerDescription": "Ich möchte Dienstleister in meiner Nähe finden.",
+  "roleProviderTitle": "Ich bin ein Anbieter",
+  "roleProviderDescription": "Ich möchte Kundenanfragen erhalten und mehr verdienen.",
+  "invalidSession": "Ungültige Sitzung.",
+  "paymentsTitle": "Zahlungen (Stripe)",
+  "paymentsHeading": "Erhalten Sie Online-Zahlungen",
+  "paymentsDescription": "Um Zahlungen über die App zu erhalten, müssen Sie ein Stripe-Konto (Connect Express) erstellen.\nDas Onboarding öffnet sich in Ihrem Browser und dauert 2–3 Minuten.",
+  "paymentsActive": "Online-Zahlungen AKTIV.",
+  "paymentsInactive": "Online-Zahlungen sind noch nicht aktiv. Komplettes Onboarding.",
+  "stripeAccountLabel": "Stripe-Konto: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "Onboarding eröffnet. Kommen Sie nach Abschluss noch einmal zurück, um den Status zu überprüfen.",
+  "onboardingStartError": "Fehler beim Starten des Onboardings: {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "Stripe-Konto verwalten",
+  "activatePayments": "Zahlungen aktivieren",
+  "technicalNotesTitle": "Technische Hinweise",
+  "technicalNotesBody": "• Stripe wird über Cloud Functions (serverseitig) konfiguriert.\n• Die Plattformprovision wird automatisch im PaymentIntent angewendet.\n• Fügen Sie in der Produktion den Stripe-Webhook hinzu und speichern Sie das Webhook-Geheimnis in den Funktionen.",
+  "kycTitle": "Identitätsüberprüfung: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "Senden Sie ein Dokument (Foto oder PDF). Die vollständige Validierung erfolgt in Version 2.6.",
+  "kycSendDocument": "Dokument senden",
+  "kycAddDocument": "Dokument hinzufügen",
+  "kycStatusApproved": "Genehmigt",
+  "kycStatusRejected": "Abgelehnt",
+  "kycStatusInReview": "Im Rückblick",
+  "kycStatusNotStarted": "Nicht gestartet",
+  "kycFileReadError": "Die Datei konnte nicht gelesen werden.",
+  "kycFileTooLarge": "Datei zu groß (max. 10 MB).",
+  "kycUploading": "Dokument wird hochgeladen...",
+  "kycUploadSuccess": "Dokument zur Überprüfung gesendet.",
+  "kycUploadError": "Fehler beim Senden des Dokuments: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "Von Ihnen storniert",
+  "statusCancelledByProvider": "Vom Anbieter storniert",
+  "statusCancelled": "Abgesagt",
+  "statusLookingForProvider": "Anbieter gesucht",
+  "statusProviderPreparingQuote": "Anbieter gefunden (Angebot wird erstellt)",
+  "statusQuoteToDecide": "Sie müssen über ein Angebot entscheiden",
+  "statusProviderFound": "Anbieter gefunden",
+  "statusServiceInProgress": "Dienst läuft",
+  "statusAwaitingValueConfirmation": "Warten auf Ihre Wertbestätigung",
+  "statusServiceCompleted": "Service abgeschlossen",
+  "valueToConfirm": "{value} (zur Bestätigung)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (vorgeschlagen)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} bis {max} (geschätzt)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "Ab {min} (geschätzt)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "Bis zu {max} (geschätzt)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "Festpreis",
+  "priceByQuote": "Durch Zitat",
+  "priceToArrange": "Zu vereinbaren",
+  "paymentOnlineBefore": "Online-Zahlung (vorher)",
+  "paymentOnlineAfter": "Online-Zahlung (nachher)",
+  "paymentCash": "Barzahlung",
+  "pendingActionQuoteToReview": "Sie möchten ein Angebot/einen Vorschlag prüfen.",
+  "pendingActionValueToConfirm": "Der Anbieter hat den Endwert gesendet. Sie müssen bestätigen.",
+  "pendingActionProviderPreparingQuote": "Anbieter gefunden. Sie bereiten das Angebot vor.",
+  "pendingActionProviderChat": "Anbieter gefunden. Sie können mit ihnen chatten.",
+  "roleLabelCustomer": "Kunde",
+  "navHome": "Heim",
+  "navMyOrders": "Meine Bestellungen",
+  "navMessages": "Nachrichten",
+  "navProfile": "Profil",
+  "homeGreeting": "Hallo",
+  "homeSubtitle": "Was brauchen Sie heute?",
+  "homePendingTitle": "Sie müssen etwas entscheiden",
+  "homePendingCta": "Tippen Sie hier, um die nächste Bestellung zu öffnen und zu entscheiden.",
+  "servicesLoadError": "Fehler beim Laden der Dienste: {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "Noch keine Dienste konfiguriert.\\nHier werden bald Kategorien angezeigt 🙂",
+  "availableServicesTitle": "Verfügbare Dienste",
+  "serviceTabImmediate": "Sofort",
+  "serviceTabScheduled": "Geplant",
+  "serviceTabQuote": "Durch Zitat",
+  "unreadMessagesTitle": "Sie haben neue Nachrichten",
+  "unreadMessagesCta": "Tippen Sie hier, um den Chat zu öffnen.",
+  "serviceSearchHint": "Suchdienst...",
+  "serviceSearchEmpty": "Für diese Suche wurden keine Dienste gefunden.",
+  "serviceModeImmediateDescription": "Ein Anbieter kommt heute schnellstmöglich.",
+  "serviceModeScheduledDescription": "Planen Sie einen Tag und eine Uhrzeit für den Gottesdienst.",
+  "serviceModeQuoteDescription": "Fordern Sie ein Angebot an (Anbieter sendet einen Min/Max-Bereich).",
+  "userNotAuthenticatedError": "Fehler: Benutzer nicht authentifiziert.",
+  "myOrdersTitle": "Meine Bestellungen",
+  "ordersTabPending": "Ausstehend",
+  "ordersTabCompleted": "Vollendet",
+  "ordersTabCancelled": "Abgesagt",
+  "ordersLoadError": "Fehler beim Laden der Bestellungen: {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "Sie haben keine ausstehenden Bestellungen.\\nErstellen Sie eine neue Bestellung von der Startseite aus.",
+  "ordersEmptyCompleted": "Sie haben noch keine Bestellungen abgeschlossen.",
+  "ordersEmptyCancelled": "Sie haben noch keine Bestellungen storniert.",
+  "orderQuoteScheduled": "Angebot (geplant)",
+  "orderQuoteImmediate": "Angebot (sofort)",
+  "orderScheduled": "Geplanter Service",
+  "orderImmediate": "Sofortiger Service",
+  "categoryNotDefined": "Kategorie nicht definiert",
+  "orderStateLabel": "Status: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "Preismodell: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "Zahlung: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "Wert: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "Konto ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "Ihr Name",
+  "accountProfileSubtitle": "Profil",
+  "accountSettings": "Einstellungen",
+  "accountHelpSupport": "Hilfe und Unterstützung",
+  "navMyJobs": "Meine Jobs",
+  "roleLabelProvider": "Anbieter",
+  "enableLocationToGoOnline": "Aktivieren Sie den Standort, um online zu gehen.",
+  "nearbyOrdersTitle": "Bestellungen in Ihrer Nähe",
+  "noOrdersAvailableMessage": "Derzeit sind keine Bestellungen verfügbar.",
+  "configureServiceAreaMessage": "Legen Sie Ihren Servicebereich und Ihre Dienste fest, um mit dem Empfang von Bestellungen zu beginnen.",
+  "configureAction": "Konfigurieren",
+  "offlineEnableOnlineMessage": "Du bist offline. Aktivieren Sie den Online-Status, um Bestellungen zu erhalten.",
+  "noMatchingOrdersMessage": "Keine passenden Bestellungen für Ihre Dienste und Region.",
+  "orderAcceptedMessage": "Bestellung angenommen.",
+  "orderAcceptedCanSendQuote": "Bestellung angenommen. Sie können das Angebot später senden.",
+  "orderAcceptError": "Fehler beim Akzeptieren der Bestellung: {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "Bestellung angenommen",
+  "orderAcceptedBudgetPrompt": "Diese Bestellung erfolgt nach Angebot.\\n\\nMöchten Sie den Angebotsbereich jetzt senden?",
+  "actionLater": "Später",
+  "actionSendNow": "Jetzt senden",
+  "actionCancel": "Stornieren",
+  "actionSend": "Schicken",
+  "actionIgnore": "Ignorieren",
+  "actionAccept": "Akzeptieren",
+  "actionNo": "NEIN",
+  "actionYesCancel": "Ja, stornieren",
+  "proposalDialogTitle": "Senden Sie ein Angebot",
+  "proposalDialogDescription": "Legen Sie eine Preisspanne für diesen Service fest.\\nBerücksichtigen Sie Reise- und Arbeitskosten.",
+  "proposalMinValueLabel": "Mindestwert ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "Bsp.: 20",
+  "proposalMaxValueLabel": "Maximalwert ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "Bsp.: 35",
+  "proposalMessageLabel": "Nachricht an den Kunden (optional)",
+  "proposalMessageHint": "Bsp.: Reisen inklusive. Große Materialien sind extra.",
+  "proposalInvalidValues": "Geben Sie gültige Mindest- und Höchstwerte ein.",
+  "proposalMinGreaterThanMax": "Das Minimum kann nicht größer als das Maximum sein.",
+  "proposalSent": "Angebot an den Kunden gesendet.",
+  "proposalSendError": "Fehler beim Senden des Vorschlags: {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "Hallo Anbieter",
+  "providerHomeSubtitle": "Gehen Sie online, um neue Bestellungen zu erhalten.",
+  "providerStatusOnline": "Du bist ONLINE",
+  "providerStatusOffline": "Du bist OFFLINE",
+  "providerSettingsLoadError": "Fehler beim Laden der Einstellungen: {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "Fehler beim Speichern der Einstellungen: {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "Servicebereich",
+  "serviceAreaHeading": "Wo möchten Sie Bestellungen erhalten?",
+  "serviceAreaSubtitle": "Legen Sie die von Ihnen angebotenen Dienste und den maximalen Umkreis um Ihre Basisstadt fest.",
+  "serviceAreaBaseLocation": "Basisstandort",
+  "serviceAreaRadius": "Serviceradius",
+  "serviceAreaSaved": "Servicebereich erfolgreich gespeichert.",
+  "serviceAreaInfoNote": "In Zukunft werden wir diese Einstellungen verwenden, um Bestellungen nach Nähe und Servicetyp zu filtern. Dies hilft uns vorerst bei der Vorbereitung der passenden Engine.",
+  "availabilityTitle": "Verfügbarkeit",
+  "servicesYouProvideTitle": "Von Ihnen bereitgestellte Dienstleistungen",
+  "servicesCatalogEmpty": "Im Katalog sind noch keine Dienste konfiguriert.",
+  "servicesSearchPrompt": "Geben Sie ein, um Dienste zu suchen und hinzuzufügen.",
+  "servicesSearchNoResults": "Keine Dienste gefunden.",
+  "servicesSelectedTitle": "Ausgewählte Dienstleistungen",
+  "serviceUnnamed": "Unbenannter Dienst",
+  "serviceModeQuote": "Zitat",
+  "serviceModeScheduled": "Geplant",
+  "serviceModeImmediate": "Sofort",
+  "providerServicesSelectAtLeastOne": "Wählen Sie mindestens einen Dienst aus, den Sie anbieten.",
+  "countryLabel": "Land",
+  "cityLabel": "Stadt",
+  "stateLabelDistrict": "Bezirk",
+  "stateLabelProvince": "Provinz",
+  "stateLabelState": "Zustand",
+  "stateLabelRegion": "Region",
+  "stateLabelCounty": "County",
+  "stateLabelRegionOrState": "Region/Bundesland",
+  "searchHint": "Suchen...",
+  "searchCountryHint": "Geben Sie ein, um nach Ländern zu suchen",
+  "searchGenericHint": "Geben Sie ein, um zu suchen",
+  "searchServicesHint": "Suchdienste",
+  "openCountriesListTooltip": "Länderliste anzeigen",
+  "openListTooltip": "Liste anzeigen",
+  "selectCountryTitle": "Land auswählen",
+  "selectCityTitle": "Stadt auswählen",
+  "selectFieldTitle": "Wählen Sie {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "Änderungen speichern",
+  "supportTitle": "Hilfe und Support",
+  "supportSubtitle": "Haben Sie Fragen? Kontaktieren Sie uns.",
+  "myScheduleTitle": "Mein Zeitplan",
+  "myScheduleSubtitle": "Legen Sie freie Stunden und Tage fest",
+  "languageTitle": "Sprache",
+  "languageModeManual": "Handbuch",
+  "languageModeAuto": "Auto",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "Auto (System)",
+  "providerCategoriesTitle": "Servicekategorien",
+  "providerCategoriesSubtitle": "Wir verwenden Kategorien, um kompatible Bestellungen zu filtern.",
+  "providerCategoriesEmpty": "Keine Kategorie ausgewählt.",
+  "providerCategoriesSelect": "Wählen Sie Kategorien aus",
+  "providerCategoriesEdit": "Kategorien hinzufügen oder bearbeiten",
+  "providerCategoriesRequiredMessage": "Wählen Sie Ihre Kategorien aus, um passende Bestellungen zu erhalten.",
+  "providerKpiEarningsToday": "Verdienst heute (netto)",
+  "providerKpiServicesThisMonth": "Gottesdienste diesen Monat",
+  "providerKpiGrossFeeSubtitle": "Brutto: {gross} - Gebühr: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "Sie haben einen Job zu bewältigen",
+  "providerHighlightCta": "Tippen Sie hier, um den nächsten Job zu öffnen.",
+  "providerPendingActionAccepted": "Sie haben einen angenommenen Job und können loslegen.",
+  "providerPendingActionInProgress": "Sie haben einen Auftrag in Bearbeitung. Markieren Sie es als erledigt, wenn Sie fertig sind.",
+  "providerPendingActionSetFinalValue": "Legen Sie den endgültigen Servicewert fest und senden Sie ihn.",
+  "providerUnreadMessagesTitle": "Sie haben neue Nachrichten von Kunden",
+  "providerUnreadMessagesJob": "Im Job: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "Meine Jobs",
+  "providerJobsTabOpen": "Offen",
+  "providerJobsTabCompleted": "Vollendet",
+  "providerJobsTabCancelled": "Abgesagt",
+  "providerJobsLoadError": "Fehler beim Laden von Jobs: {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "Sie haben noch keine offenen Stellen.\\nGehen Sie zur Startseite und nehmen Sie eine Bestellung an.",
+  "providerJobsEmptyCompleted": "Sie haben noch keine abgeschlossenen Aufträge.",
+  "providerJobsEmptyCancelled": "Sie haben noch keine Jobs storniert.",
+  "scheduledForDate": "Geplant: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "Details anzeigen",
+  "clientPaidValueLabel": "Vom Kunden bezahlt: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "Sie erhalten: {value} - Gebühr: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "Servicewert: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "Auftrag abbrechen",
+  "cancelJobPrompt": "Sind Sie sicher, dass Sie diesen Auftrag stornieren möchten?\\nDie Bestellung wird möglicherweise für andere Anbieter verfügbar.",
+  "cancelJobReasonLabel": "Stornierungsgrund (optional):",
+  "cancelJobReasonFieldLabel": "Grund",
+  "cancelJobDetailLabel": "Stornierungsdetails",
+  "cancelJobDetailRequired": "Bitte fügen Sie ein Detail hinzu.",
+  "cancelJobSuccess": "Auftrag abgebrochen.",
+  "cancelJobError": "Fehler beim Abbrechen des Jobs: {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "Sehen Sie sich mein Profil an",
+  "providerAccountProfileSubtitle": "Anbieterprofil",
+  "activateOnlinePaymentsSubtitle": "Aktivieren Sie Online-Zahlungen",
+  "statusProviderWaiting": "Neue Anfrage",
+  "statusQuoteWaitingCustomer": "Warten auf die Antwort des Kunden",
+  "statusAcceptedToStart": "Akzeptiert (bereit zum Start)",
+  "statusInProgress": "Im Gange",
+  "statusCompleted": "Vollendet",
+  "orderDefaultImmediateTitle": "Dringender Service",
+  "locationServiceDisabled": "Der Standortdienst ist auf dem Gerät deaktiviert.",
+  "locationPermissionDenied": "Standortberechtigung verweigert.\\nDer aktuelle Standort konnte nicht abgerufen werden.",
+  "locationPermissionDeniedForever": "Die Standortberechtigung wurde dauerhaft verweigert.\\nStandort in den Geräteeinstellungen aktivieren.",
+  "locationFetchError": "Fehler beim Abrufen des Standorts: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "Das Formular ist noch nicht fertig. Versuchen Sie es erneut.",
+  "missingRequiredFieldsError": "Erforderliche Felder fehlen. Überprüfen Sie die rot markierten Felder.",
+  "scheduleDateTimeRequiredError": "Wählen Sie Datum und Uhrzeit des Service aus.",
+  "scheduleDateTimeFutureError": "Wählen Sie ein Datum/eine Uhrzeit in der Zukunft.",
+  "categoryRequiredError": "Wählen Sie eine Kategorie.",
+  "orderUpdatedSuccess": "Bestellung erfolgreich aktualisiert!",
+  "orderCreatedSuccess": "Auftrag erstellt! Auf der Suche nach einem Anbieter...",
+  "orderUpdateError": "Fehler beim Aktualisieren der Bestellung: {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "Fehler beim Erstellen der Bestellung: {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "Bsp.: Wasserleck unter der Spüle",
+  "orderTitleExampleElectric": "Bsp.: Steckdose funktioniert im Wohnzimmer nicht + Deckenleuchte installieren",
+  "orderTitleExampleCleaning": "Bsp.: Vollständige Reinigung einer 2-Zimmer-Wohnung (Küche, WC, Fenster, Boden).",
+  "orderTitleHintImmediate": "Erklären Sie kurz, was passiert und was Sie brauchen.",
+  "orderTitleHintScheduled": "Sagen Sie, wann Sie den Service wünschen, geben Sie Standortdetails an und sagen Sie, was zu tun ist.",
+  "orderTitleHintQuote": "Beschreiben Sie den Service, für den Sie Vorschläge erhalten möchten.",
+  "orderTitleHintDefault": "Beschreiben Sie den Service, den Sie benötigen.",
+  "orderDescriptionExampleCleaning": "Bsp.: Vollständige Reinigung einer 2-Zimmer-Wohnung (Küche, WC, Fenster, Boden).",
+  "orderDescriptionHintImmediate": "Erklären Sie kurz, was passiert und was Sie brauchen.",
+  "orderDescriptionHintScheduled": "Sagen Sie, wann Sie den Service wünschen, geben Sie Standortdetails an und sagen Sie, was zu tun ist.",
+  "orderDescriptionHintQuote": "Beschreiben Sie den gewünschten Service, das ungefähre Budget (falls vorhanden) und wichtige Details.",
+  "orderDescriptionHintDefault": "Erklären Sie etwas genauer, was Sie brauchen.",
+  "priceModelTitle": "Preismodell",
+  "priceModelQuoteInfo": "Dieser Service erfolgt nach Angebot. Der Anbieter schlägt Ihnen den Endpreis vor.",
+  "priceTypeLabel": "Preistyp",
+  "paymentTypeLabel": "Zahlungsart",
+  "orderHeaderQuoteTitle": "Angebotsanfrage",
+  "orderHeaderQuoteSubtitle": "Beschreiben Sie, was Sie benötigen, und der Anbieter kann einen Bereich (Min./Max.) senden.",
+  "orderHeaderImmediateTitle": "Sofortiger Service",
+  "orderHeaderImmediateSubtitle": "Ein verfügbarer Anbieter wird schnellstmöglich angerufen.",
+  "orderHeaderScheduledTitle": "Geplanter Service",
+  "orderHeaderScheduledSubtitle": "Wählen Sie den Tag und die Uhrzeit, zu der der Anbieter zu Ihnen kommen soll.",
+  "orderHeaderDefaultTitle": "Neue Ordnung",
+  "orderHeaderDefaultSubtitle": "Beschreiben Sie den Service, den Sie benötigen.",
+  "orderEditTitle": "Bestellung bearbeiten",
+  "orderNewTitle": "Neue Ordnung",
+  "whenServiceNeededLabel": "Wann benötigen Sie den Service?",
+  "categoryLabel": "Kategorie",
+  "categoryHint": "Wählen Sie die Servicekategorie",
+  "orderTitleLabel": "Bestelltitel",
+  "orderTitleRequiredError": "Geben Sie einen Titel für die Bestellung ein.",
+  "orderDescriptionOptionalLabel": "Beschreibung (optional)",
+  "locationApproxLabel": "Ungefährer Standort",
+  "locationSelectedLabel": "Standort ausgewählt.",
+  "locationSelectPrompt": "Wählen Sie den Ort aus, an dem die Dienstleistung erbracht werden soll (ungefähr).",
+  "locationAddressHint": "Straße, Hausnummer, Stockwerk, Referenz (optional, hilft aber sehr)",
+  "locationGetting": "Standort ermitteln...",
+  "locationUseCurrent": "Aktuellen Standort verwenden",
+  "locationChooseOnMap": "Wählen Sie auf der Karte",
+  "serviceDateTimeLabel": "Datum und Uhrzeit des Service",
+  "serviceDateTimePick": "Wählen Sie Tag und Uhrzeit",
+  "saveChangesButton": "Änderungen speichern",
+  "submitOrderButton": "Service anfordern",
+  "mapSelectTitle": "Wählen Sie den Standort auf der Karte",
+  "mapSelectInstruction": "Ziehen Sie die Karte zum ungefähren Servicestandort und bestätigen Sie dann.",
+  "mapSelectConfirm": "Standort bestätigen",
+  "orderDetailsTitle": "Bestelldetails",
+  "orderLoadError": "Fehler beim Laden der Reihenfolge: {error}",
+  "orderNotFound": "Bestellung nicht gefunden.",
+  "scheduledNoDate": "Geplant (kein Datum festgelegt)",
+  "orderValueRejectedTitle": "Der Kunde lehnte den vorgeschlagenen Wert ab.",
+  "orderValueRejectedBody": "Chatten Sie mit dem Kunden und schlagen Sie bei Abstimmung einen neuen Wert vor.",
+  "actionProposeNewValue": "Schlagen Sie einen neuen Wert vor",
+  "noShowReportedTitle": "Nichterscheinen gemeldet",
+  "noShowReportedBy": "Gemeldet von: {role}",
+  "noShowReportedAt": "Um: {date}",
+  "noShowTitle": "No-Show",
+  "noShowDescription": "Wenn die andere Person nicht erschienen ist, können Sie dies melden.",
+  "noShowReportAction": "Nichterscheinen melden",
+  "orderInfoTitle": "Bestellinformationen",
+  "orderInfoIdLabel": "Bestell-ID",
+  "orderInfoCreatedAtLabel": "Erstellt bei",
+  "orderInfoStatusLabel": "Status",
+  "orderInfoModeLabel": "Modus",
+  "orderInfoValueLabel": "Wert",
+  "orderLocationTitle": "Bestellort",
+  "orderDescriptionTitle": "Bestellbeschreibung",
+  "providerMessageTitle": "Anbieternachricht",
+  "actionEditOrder": "Bestellung bearbeiten",
+  "actionCancelOrder": "Bestellung stornieren",
+  "cancelOrderTitle": "Bestellung stornieren",
+  "orderCancelInProgressWarning": "Der Dienst ist bereits in Bearbeitung.\nWenn Sie jetzt stornieren, kann es zu einer teilweisen Rückerstattung kommen.",
+  "orderCancelConfirmPrompt": "Sind Sie sicher, dass Sie diese Bestellung stornieren möchten?",
+  "orderCancelReasonLabel": "Stornierungsgrund",
+  "orderCancelReasonOptionalLabel": "Grund (optional)",
+  "orderCancelledSnack": "Bestellung storniert. {message}.",
+  "orderCancelError": "Fehler beim Stornieren der Bestellung: {error}",
+  "noShowReportDialogTitle": "Nichterscheinen melden",
+  "noShowReportDialogDescription": "Verwenden Sie dies nur, wenn die andere Person nicht erschienen ist.",
+  "noShowReasonOptionalLabel": "Grund (optional)",
+  "actionReport": "Bericht",
+  "noShowReportSuccess": "Nichterscheinen gemeldet.",
+  "noShowReportError": "Fehler bei der Meldung von Nichterscheinen: {error}",
+  "orderFinalValueTitle": "Schlagen Sie einen neuen Endwert vor",
+  "orderFinalValueLabel": "Wert",
+  "orderFinalValueInvalid": "Geben Sie einen gültigen Wert ein.",
+  "orderFinalValueSent": "Neuer Wert an den Kunden gesendet.",
+  "orderFinalValueSendError": "Fehler beim Senden des neuen Werts: {error}",
+  "ratingSentTitle": "Bewertung gesendet",
+  "ratingProviderTitle": "Anbieterbewertung",
+  "ratingPrompt": "Hinterlassen Sie eine Bewertung von 1 bis 5.",
+  "ratingCommentLabel": "Kommentar (optional)",
+  "ratingSendAction": "Bewertung senden",
+  "ratingSelectError": "Wählen Sie eine Bewertung.",
+  "ratingSentSnack": "Bewertung gesendet.",
+  "ratingSendError": "Fehler beim Senden der Bewertung: {error}",
+  "timelineCreated": "Erstellt",
+  "timelineAccepted": "Akzeptiert",
+  "timelineInProgress": "Im Gange",
+  "timelineCancelled": "Abgesagt",
+  "timelineCompleted": "Vollendet",
+  "lookingForProviderBanner": "Für diesen Auftrag suchen wir noch einen Anbieter.",
+  "actionView": "Sicht",
+  "chatNoMessagesSubtitle": "Noch keine Nachrichten",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 Nachricht} other{{count} Nachrichten}}",
+  "actionClose": "Schließen",
+  "actionOpen": "Offen",
+  "chatAuthRequired": "Sie müssen authentifiziert sein, um Nachrichten senden zu können.",
+  "chatSendError": "Fehler beim Senden der Nachricht: {error}",
+  "todayLabel": "Heute",
+  "yesterdayLabel": "Gestern",
+  "chatLoadError": "Fehler beim Laden der Nachrichten: {error}",
+  "chatEmptyMessage": "Noch keine Nachrichten.\nSchicken Sie den ersten!",
+  "chatInputHint": "Nachricht schreiben...",
+  "chatLoginHint": "Melden Sie sich an, um Nachrichten zu senden",
+  "roleLabelSystem": "System",
+  "youLabel": "Du",
+  "distanceMeters": "{meters} m",
+  "distanceKilometers": "{kilometers} km",
+  "etaLessThanMinute": "<1 Min",
+  "etaMinutes": "{minutes} min",
+  "etaHours": "{hours} Std",
+  "etaHoursMinutes": "{hours} h {minutes} m",
+  "mapEtaLabel": "Voraussichtliche Ankunftszeit {eta} - {distance}",
+  "mapOpenAction": "Karte öffnen",
+  "orderMapTitle": "Karte bestellen",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "Chatten Sie über diese Bestellung",
+  "messagesTitle": "Nachrichten",
+  "messagesSearchHint": "Nachrichten durchsuchen",
+  "messagesLoadError": "Fehler beim Laden der Konversationen: {error}",
+  "messagesEmpty": "Sie führen noch keine Gespräche.\nSobald Sie mit einem Anbieter/Kunden chatten, wird dieser hier angezeigt.",
+  "messagesNewConversationTitle": "Neues Gespräch",
+  "messagesNewConversationBody": "Um ein Gespräch mit einem Anbieter oder Kunden zu beginnen, gehen Sie zu Ihren „Bestellungen“ oder nehmen Sie eine neue Bestellung an.",
+  "messagesFilterAll": "Alle",
+  "messagesFilterUnread": "Ungelesen",
+  "messagesFilterFavorites": "Favoriten",
+  "messagesFilterGroups": "Gruppen",
+  "messagesFilterEmpty": "Nichts in „{filter}“",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "Keine Gespräche gefunden.",
+  "messagesPinConversation": "Konversation anpinnen",
+  "messagesUnpinConversation": "Konversation lösen",
+  "chatPresenceOnline": "online",
+  "chatPresenceLastSeenAt": "zuletzt gesehen am {time}",
+  "chatPresenceLastSeenYesterdayAt": "zuletzt gesehen gestern um {time}",
+  "chatPresenceLastSeenOn": "zuletzt gesehen am {date} um {time}",
+  "chatImageTooLarge": "Bild zu groß (maximal 15 MB).",
+  "chatImageSendError": "Fehler beim Senden des Bildes: {error}",
+  "chatFileReadError": "Die Datei konnte nicht gelesen werden.",
+  "chatFileTooLarge": "Datei zu groß (maximal 20 MB).",
+  "chatFileSendError": "Fehler beim Senden der Datei: {error}",
+  "chatAudioReadError": "Der Ton konnte nicht gelesen werden.",
+  "chatAudioTooLarge": "Audio zu groß (maximal 20 MB).",
+  "chatAudioSendError": "Fehler beim Senden von Audio: {error}",
+  "chatAttachFile": "Datei senden",
+  "chatAttachGallery": "Foto senden (Galerie)",
+  "chatAttachCamera": "Foto machen (Kamera)",
+  "chatAttachAudio": "Audio (Datei) senden",
+  "chatAttachAudioSubtitle": "Wählen Sie eine Audiodatei (mp3/m4a/wav/...).",
+  "chatOpenLink": "Link öffnen",
+  "chatAttachTooltip": "Befestigen",
+  "chatSendTooltip": "Schicken",
+  "chatSearchAction": "Suchen",
+  "chatSearchHint": "Nachrichten durchsuchen",
+  "chatSearchEmpty": "Geben Sie etwas ein, nach dem gesucht werden soll.",
+  "chatSearchNoResults": "Keine Nachrichten gefunden.",
+  "chatMediaAction": "Medien, Links und Dateien",
+  "chatMediaTitle": "Medien, Links und Dateien",
+  "chatMediaPhotosTab": "Fotos",
+  "chatMediaLinksTab": "Links",
+  "chatMediaAudioTab": "Audio",
+  "chatMediaFilesTab": "Dateien",
+  "chatMediaEmptyPhotos": "Noch keine Fotos.",
+  "chatMediaEmptyLinks": "Noch keine Links.",
+  "chatMediaEmptyAudio": "Noch kein Ton.",
+  "chatMediaEmptyFiles": "Noch keine Dateien.",
+  "chatFavoritesAction": "Mit einem Stern versehen",
+  "chatFavoritesTitle": "Markierte Nachrichten",
+  "chatFavoritesEmpty": "Sie haben noch keine markierten Nachrichten.",
+  "chatStarAction": "Zu Favoriten hinzufügen",
+  "chatUnstarAction": "Aus Favoriten entfernen",
+  "chatViewProviderProfileAction": "Anbieterprofil ansehen",
+  "chatViewCustomerProfileAction": "Kundenprofil ansehen",
+  "chatIncomingCall": "Eingehender Anruf",
+  "chatCallStartedVideo": "Videoanruf gestartet",
+  "chatCallStartedVoice": "Sprachanruf gestartet",
+  "chatImageLabel": "Bild",
+  "chatAudioLabel": "Audio",
+  "chatFileLabel": "Datei",
+  "chatCallEntryLabel": "Anruf",
+  "chatNoSession": "Keine aktive Sitzung. Melden Sie sich an, um auf den Chat zuzugreifen.",
+  "chatTitleFallback": "Chatten",
+  "chatVideoCallAction": "Videoanruf",
+  "chatVoiceCallAction": "Anruf",
+  "chatMarkReadAction": "Als gelesen markieren",
+  "chatCallMissingParticipant": "Der andere Teilnehmer ist dieser Bestellung noch nicht zugeordnet.",
+  "chatCallStartError": "Der Anruf konnte nicht gestartet werden.",
+  "chatCallMessageVideo": "Videoanruf: {url}",
+  "chatCallMessageVoice": "Anruf: {url}",
+  "profileProviderTitle": "Anbieterprofil",
+  "profileCustomerTitle": "Kundenprofil",
+  "profileAboutTitle": "Um",
+  "profileLocationTitle": "Standort",
+  "profileServicesTitle": "Dienstleistungen",
+  "profilePortfolioTitle": "Portfolio",
+  "chatOpenFullAction": "Vollständigen Chat öffnen",
+  "chatOpenFullUnavailable": "Der andere Teilnehmer ist diesem Auftrag noch nicht zugeordnet.",
+  "chatReplyAction": "Antwort",
+  "chatCopyAction": "Kopie",
+  "chatDeleteAction": "Löschen",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "Neue Geschichte",
+  "storyPublishing": "Veröffentlichungsgeschichte...",
+  "storyPublished": "Geschichte veröffentlicht! Läuft in 24 Stunden ab.",
+  "storyPublishError": "Fehler beim Veröffentlichen der Story: {error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "Bildunterschrift (optional)",
+  "actionPublish": "Veröffentlichen",
+  "snackOrderRemoved": "Bestellung entfernt.",
+  "snackClientCancelledOrder": "Der Kunde hat die Bestellung storniert.",
+  "snackOrderCancelled": "Bestellung storniert.",
+  "snackOrderAcceptedByAnother": "Ein anderer Anbieter hat die Bestellung angenommen.",
+  "snackOrderUpdated": "Bestellung aktualisiert.",
+  "snackUserNotAuthenticated": "Benutzer nicht authentifiziert.",
+  "snackOrderAcceptedCanQuote": "Bestellung angenommen. Sie können das Angebot in den Bestelldetails senden.",
+  "snackOrderAcceptedSuccess": "Bestellung angenommen.",
+  "snackErrorAcceptingOrder": "Fehler beim Akzeptieren der Bestellung: {error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "Bestellung angenommen",
+  "dialogContentQuotePrompt": "Diese Bestellung erfolgt nach Angebot.\n\nMöchten Sie den Angebotsbereich jetzt senden?",
+  "dialogTitleProposeService": "Service vorschlagen",
+  "dialogContentProposeService": "Legen Sie eine Preisspanne für diesen Service fest.\nBerücksichtigen Sie Reise- und Arbeitskosten.",
+  "labelMinValue": "Mindestwert",
+  "labelMaxValue": "Maximalwert",
+  "labelMessageOptional": "Nachricht an den Kunden (optional)",
+  "hintExampleValue": "Bsp.: {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "Bsp.: Reisen inklusive. Große Materialien sind extra.",
+  "snackFillValidValues": "Geben Sie gültige Mindest- und Höchstwerte ein.",
+  "snackMinCannotBeGreaterThanMax": "Das Minimum kann nicht größer als das Maximum sein.",
+  "snackProposalSent": "Angebot an den Kunden gesendet.",
+  "snackErrorSendingProposal": "Fehler beim Senden des Vorschlags: {error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

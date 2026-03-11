@@ -1,0 +1,9 @@
+Início Guia 1 de 4
+Meus pedidos Guia 2 de 4
+Mensagens Guia 3 de 4
+Perfil Guia 4 de 4
+Olá
+Pesquisar Prestadores
+Do que precisas hoje?
+
+Running in emulator mode. Do not use with production credentials.

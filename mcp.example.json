@@ -1,0 +1,11 @@
+{
+  "_instructions": "Exemplo de MCP (Stitch). Copie/mescle este conteudo no seu arquivo local de MCP e substitua YOUR_API_KEY. Nunca commite a chave no repo.",
+  "mcpServers": {
+    "stitch": {
+      "serverUrl": "https://stitch.googleapis.com/mcp",
+      "headers": {
+        "X-Goog-Api-Key": "YOUR_API_KEY"
+      }
+    }
+  }
+}

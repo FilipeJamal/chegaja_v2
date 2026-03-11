@@ -1,5 +1,6 @@
 // lib/core/models/pedido.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chegaja_v2/core/models/pedido_historico_item.dart';
 
 /// Modelo principal de Pedido do ChegaJá v2.
 ///
@@ -12,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// - informação de cancelamento: canceladoPor / motivoCancelamento / tipoReembolso
 /// - compatibilidade com campos ANTIGOS: estado, categoria, agendadoPara, preco, concluidoEm
 /// - localização: latitude / longitude / enderecoTexto
+/// - anexos: URLs de fotos/arquivos anexados ao pedido (B5)
 class Pedido {
   final String id;
 
@@ -60,7 +62,11 @@ class Pedido {
   /// "pendente_cliente"   → proposta enviada, cliente ainda não respondeu
   /// "aceita_cliente"     → cliente aceitou este prestador/proposta
   /// "rejeitada_cliente"  → cliente rejeitou esta proposta
+  /// "rejeitada_timeout"  → proposta expirou
   final String statusProposta;
+
+  /// Data/hora em que a proposta expira (se statusProposta == 'pendente_cliente').
+  final DateTime? propostaExpiresAt;
 
   // ------------- Valor final + confirmação (pós-serviço) -------------
 
@@ -129,6 +135,14 @@ class Pedido {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  // ---------------------- Anexos (B5) ----------------------
+  /// URLs de imagens/ficheiros associados ao pedido (não no chat).
+  final List<String> anexos;
+
+  // ---------------------- Histórico (B3) ----------------------
+  /// Log de eventos do pedido (Audit Trail).
+  final List<PedidoHistoricoItem> historico;
+
   const Pedido({
     required this.id,
     required this.clienteId,
@@ -145,6 +159,7 @@ class Pedido {
     this.valorMaxEstimadoPrestador,
     this.mensagemPropostaPrestador,
     required this.statusProposta,
+    this.propostaExpiresAt,
     this.precoPropostoPrestador,
     this.precoFinal,
     required this.statusConfirmacaoValor,
@@ -163,6 +178,8 @@ class Pedido {
     this.dataAgendada,
     required this.createdAt,
     this.updatedAt,
+    this.anexos = const [],
+    this.historico = const [],
   });
 
   /// Construtor vazio de conveniência (se precisares em algum sítio).
@@ -184,6 +201,7 @@ class Pedido {
       valorMaxEstimadoPrestador: null,
       mensagemPropostaPrestador: null,
       statusProposta: 'nenhuma',
+      propostaExpiresAt: null,
       precoPropostoPrestador: null,
       precoFinal: null,
       statusConfirmacaoValor: 'nenhum',
@@ -202,6 +220,8 @@ class Pedido {
       dataAgendada: null,
       createdAt: now,
       updatedAt: now,
+      anexos: const [],
+      historico: const [],
     );
   }
 
@@ -227,6 +247,14 @@ class Pedido {
       return double.tryParse(value.replaceAll(',', '.'));
     }
     return null;
+  }
+
+  static List<String> _toStringList(dynamic value) {
+    if (value == null) return [];
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    return [];
   }
 
   // ---------- Lê do Firestore: DocumentSnapshot (SUPORTA CAMPOS ANTIGOS) ----------
@@ -264,6 +292,7 @@ class Pedido {
           data['mensagemPropostaPrestador'] as String?,
 
       statusProposta: data['statusProposta'] as String? ?? 'nenhuma',
+      propostaExpiresAt: _tsToDate(data['propostaExpiresAt']),
 
       // Valor final e confirmação (pode ter 'precoFinal' ou só 'preco')
       precoPropostoPrestador: _toDouble(data['precoPropostoPrestador']),
@@ -294,6 +323,13 @@ class Pedido {
       createdAt:
           _tsToDate(data['createdAt'] ?? data['criadoEm']) ?? DateTime.now(),
       updatedAt: _tsToDate(data['updatedAt'] ?? data['concluidoEm']),
+
+      anexos: _toStringList(data['anexos']),
+      historico: (data['historico'] as List?)
+              ?.map((e) =>
+                  PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),)
+              .toList() ??
+          [],
     );
   }
 
@@ -327,6 +363,7 @@ class Pedido {
           data['mensagemPropostaPrestador'] as String?,
 
       statusProposta: data['statusProposta'] as String? ?? 'nenhuma',
+      propostaExpiresAt: _tsToDate(data['propostaExpiresAt']),
 
       // Valor final e confirmação
       precoPropostoPrestador: _toDouble(data['precoPropostoPrestador']),
@@ -356,6 +393,13 @@ class Pedido {
       createdAt:
           _tsToDate(data['createdAt'] ?? data['criadoEm']) ?? DateTime.now(),
       updatedAt: _tsToDate(data['updatedAt'] ?? data['concluidoEm']),
+
+      anexos: _toStringList(data['anexos']),
+      historico: (data['historico'] as List?)
+              ?.map((e) =>
+                  PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),)
+              .toList() ??
+          [],
     );
   }
 
@@ -384,6 +428,9 @@ class Pedido {
       'valorMaxEstimadoPrestador': valorMaxEstimadoPrestador,
       'mensagemPropostaPrestador': mensagemPropostaPrestador,
       'statusProposta': statusProposta,
+      'propostaExpiresAt': propostaExpiresAt != null
+          ? Timestamp.fromDate(propostaExpiresAt!)
+          : null,
 
       // Valor final e confirmação
       'precoPropostoPrestador': precoPropostoPrestador,
@@ -423,6 +470,9 @@ class Pedido {
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
       'concluidoEm':
           updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      
+      'anexos': anexos,
+      'historico': historico.map((e) => e.toMap()).toList(),
     };
   }
 
@@ -444,6 +494,7 @@ class Pedido {
     double? valorMaxEstimadoPrestador,
     String? mensagemPropostaPrestador,
     String? statusProposta,
+    DateTime? propostaExpiresAt,
     double? precoPropostoPrestador,
     double? precoFinal,
     String? statusConfirmacaoValor,
@@ -462,6 +513,8 @@ class Pedido {
     DateTime? dataAgendada,
     DateTime? createdAt,
     DateTime? updatedAt,
+    List<String>? anexos,
+    List<PedidoHistoricoItem>? historico,
   }) {
     return Pedido(
       id: id ?? this.id,
@@ -482,6 +535,7 @@ class Pedido {
       mensagemPropostaPrestador:
           mensagemPropostaPrestador ?? this.mensagemPropostaPrestador,
       statusProposta: statusProposta ?? this.statusProposta,
+      propostaExpiresAt: propostaExpiresAt ?? this.propostaExpiresAt,
       precoPropostoPrestador:
           precoPropostoPrestador ?? this.precoPropostoPrestador,
       precoFinal: precoFinal ?? this.precoFinal,
@@ -503,6 +557,8 @@ class Pedido {
       dataAgendada: dataAgendada ?? this.dataAgendada,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      anexos: anexos ?? this.anexos,
+      historico: historico ?? this.historico,
     );
   }
 

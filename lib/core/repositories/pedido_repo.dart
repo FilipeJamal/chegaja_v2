@@ -1,4 +1,6 @@
 // lib/core/repositories/pedido_repo.dart
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pedido.dart';
 import '../services/analytics_service.dart';
@@ -25,16 +27,16 @@ class PedidosRepo {
     String? enderecoTexto,
     String? tipoPreco,
     String? tipoPagamento,
+    List<String>? anexos,
   }) async {
     final categoriaFinal =
         (servicoNome != null && servicoNome.trim().isNotEmpty)
             ? servicoNome.trim()
             : (categoria ?? '').trim();
 
-    final Timestamp? agTs =
-        (modo == 'AGENDADO' && agendadoPara != null)
-            ? Timestamp.fromDate(agendadoPara)
-            : null;
+    final Timestamp? agTs = (modo == 'AGENDADO' && agendadoPara != null)
+        ? Timestamp.fromDate(agendadoPara)
+        : null;
 
     final geo = (latitude != null && longitude != null)
         ? GeoHashUtils.toGeoData(latitude: latitude, longitude: longitude)
@@ -48,30 +50,24 @@ class PedidosRepo {
     final docRef = await _db.collection('pedidos').add({
       'clienteId': clienteId,
       'prestadorId': prestadorId,
-
       'servicoId': servicoId,
       'servicoNome': categoriaFinal.isEmpty ? null : categoriaFinal,
       'categoria': categoriaFinal.isEmpty ? null : categoriaFinal,
-
       'titulo': titulo,
       'descricao': descricao,
       'modo': modo,
       'agendadoPara': agTs,
-
       'tipoPreco': tipoPreco ?? 'a_combinar',
       'tipoPagamento': tipoPagamento ?? 'dinheiro',
-
       'estado': statusFinal,
       'status': statusFinal,
-
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-
       'latitude': latitude,
       'longitude': longitude,
       if (geo != null) 'geo': geo,
       'enderecoTexto': enderecoTexto,
-
+      if (anexos != null) 'anexos': anexos,
       'statusProposta': 'nenhuma',
       'statusConfirmacaoValor': 'nenhum',
     });
@@ -102,16 +98,16 @@ class PedidosRepo {
     String? enderecoTexto,
     String? tipoPreco,
     String? tipoPagamento,
+    List<String>? anexos,
   }) async {
     final categoriaFinal =
         (servicoNome != null && servicoNome.trim().isNotEmpty)
             ? servicoNome.trim()
             : (categoria ?? '').trim();
 
-    final Timestamp? agTs =
-        (modo == 'AGENDADO' && agendadoPara != null)
-            ? Timestamp.fromDate(agendadoPara)
-            : null;
+    final Timestamp? agTs = (modo == 'AGENDADO' && agendadoPara != null)
+        ? Timestamp.fromDate(agendadoPara)
+        : null;
 
     final geo = (latitude != null && longitude != null)
         ? GeoHashUtils.toGeoData(latitude: latitude, longitude: longitude)
@@ -132,6 +128,7 @@ class PedidosRepo {
       // mantém geo consistente com lat/lng
       'geo': geo ?? FieldValue.delete(),
       'enderecoTexto': enderecoTexto,
+      if (anexos != null) 'anexos': anexos,
 
       'updatedAt': FieldValue.serverTimestamp(),
     };
@@ -165,15 +162,20 @@ class PedidosRepo {
     return _db
         .collection('pedidos')
         .where('clienteId', isEqualTo: clienteId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
+        .map((s) {
+      final pedidos =
+          s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList();
+      pedidos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return pedidos;
+    });
   }
 
   static Stream<List<Pedido>> streamPedidosDisponiveis() {
     return _db
         .collection('pedidos')
-        .where('estado', isEqualTo: 'criado')
+        // Usa "status" para alinhar com as regras (pedidoAberto usa status quando existe)
+        .where('status', isEqualTo: 'criado')
         .where('prestadorId', isNull: true)
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -273,5 +275,74 @@ class PedidosRepo {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Cancela o pedido (Cliente ou Prestador).
+  /// Cancela o pedido com motivo e detalhe.
+  static Future<void> cancelarPedido({
+    required String pedidoId,
+    required String userId,
+    required String role,
+    required String motivo,
+    String? motivoDetalhe,
+    String? tipoReembolso,
+  }) async {
+    final docRef = _db.collection('pedidos').doc(pedidoId);
+
+    return _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(docRef);
+      if (!snapshot.exists) {
+        throw Exception('Pedido não encontrado para cancelar.');
+      }
+
+      final data = snapshot.data()!;
+      final currentStatus = data['status'] as String? ?? 'criado';
+
+      // 1. Validar transição
+      PedidoStateMachine.assertTransition(
+        role: role,
+        from: currentStatus,
+        to: PedidoStateMachine.cancelado,
+      );
+
+      // 2. Updates
+      final updates = <String, dynamic>{
+        'status': PedidoStateMachine.cancelado,
+        'estado': PedidoStateMachine.cancelado, // Manter consistência
+        'updatedAt': FieldValue.serverTimestamp(),
+        'canceladoPor': role,
+        'motivoCancelamento': motivo,
+      };
+
+      if (tipoReembolso != null) {
+        updates['tipoReembolso'] = tipoReembolso;
+      }
+
+      // Adicionar evento ao histórico
+      // Precisamos importar PedidoHistoricoItem se não estiver importado,
+      // mas como estava no código anterior, assumo que está ok ou vou usar Map direto para evitar erros de import.
+      final novoEvento = <String, dynamic>{
+        'evento': PedidoStateMachine.cancelado,
+        'timestamp': Timestamp.now(),
+        'userId': userId,
+        'descricao': motivoDetalhe != null ? '$motivo: $motivoDetalhe' : motivo,
+      };
+
+      updates['historico'] = FieldValue.arrayUnion([novoEvento]);
+
+      transaction.update(docRef, updates);
+
+      // Analytics
+      unawaited(
+        AnalyticsService.instance.logPedidoEvent(
+          name: 'pedido_cancelado',
+          pedidoId: pedidoId,
+          estado: 'cancelado',
+          role: role,
+          modo: data['modo'] ?? '?',
+          tipoPreco: data['tipoPreco'] ?? '?',
+        ),
+      );
+    });
   }
 }

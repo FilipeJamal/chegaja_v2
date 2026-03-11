@@ -1,10 +1,14 @@
 // lib/features/cliente/widgets/cliente_pedido_acoes.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/payment_service.dart';
+import 'package:chegaja_v2/core/services/auth_service.dart'; // import AuthService
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
 
 /// Widget principal de ações do cliente num pedido.
 ///
@@ -49,15 +53,29 @@ class _PropostaPrestadorCard extends StatelessWidget {
     final min = pedido.valorMinEstimadoPrestador;
     final max = pedido.valorMaxEstimadoPrestador;
     final mensagem = pedido.mensagemPropostaPrestador?.trim();
+    final expires = pedido.propostaExpiresAt;
+
+    String expiresTxt = '';
+    if (expires != null) {
+      final now = DateTime.now();
+      if (expires.isBefore(now)) {
+        expiresTxt = 'Proposta expirada';
+      } else {
+        final diff = expires.difference(now);
+        expiresTxt = diff.inHours > 0
+            ? 'Válida por mais ${diff.inHours}h'
+            : 'Válida por mais ${diff.inMinutes}min';
+      }
+    }
 
     String faixaTexto;
     if (min != null && max != null) {
       faixaTexto =
-          'Estimativa: € ${min.toStringAsFixed(2)} a € ${max.toStringAsFixed(2)}';
+          'Estimativa: ${CurrencyUtils.format(min)} a ${CurrencyUtils.format(max)}';
     } else if (min != null) {
-      faixaTexto = 'Estimativa: desde € ${min.toStringAsFixed(2)}';
+      faixaTexto = 'Estimativa: desde ${CurrencyUtils.format(min)}';
     } else if (max != null) {
-      faixaTexto = 'Estimativa: até € ${max.toStringAsFixed(2)}';
+      faixaTexto = 'Estimativa: até ${CurrencyUtils.format(max)}';
     } else {
       faixaTexto = 'Sem valor estimado.';
     }
@@ -89,6 +107,19 @@ class _PropostaPrestadorCard extends StatelessWidget {
               color: Colors.black87,
             ),
           ),
+          if (expiresTxt.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              expiresTxt,
+              style: TextStyle(
+                fontSize: 12,
+                color: expiresTxt.contains('expirada')
+                    ? Colors.red
+                    : Colors.deepOrange,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           if (mensagem != null && mensagem.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
@@ -124,7 +155,13 @@ class _PropostaPrestadorCard extends StatelessWidget {
 
   Future<void> _aceitarPrestador(BuildContext context) async {
     try {
-      await PedidoService.instance.aceitarProposta(pedido: pedido);
+      final user = AuthService.currentUser; // Get user
+      if (user == null) return; // Guard
+
+      await PedidoService.instance.aceitarProposta(
+        pedido: pedido,
+        clienteId: user.uid,
+      );
 
       if (!context.mounted) return;
 
@@ -146,7 +183,13 @@ class _PropostaPrestadorCard extends StatelessWidget {
 
   Future<void> _recusarPrestador(BuildContext context) async {
     try {
-      await PedidoService.instance.rejeitarProposta(pedido: pedido);
+      final user = AuthService.currentUser; // Get user
+      if (user == null) return; // Guard
+
+      await PedidoService.instance.rejeitarProposta(
+        pedido: pedido,
+        clienteId: user.uid,
+      );
 
       if (!context.mounted) return;
 
@@ -195,13 +238,13 @@ class _ValorFinalPendenteCard extends StatelessWidget {
     final max = pedido.valorMaxEstimadoPrestador;
 
     if (min != null && max != null) {
-      return 'Faixa estimada: € ${min.toStringAsFixed(2)} a € ${max.toStringAsFixed(2)}';
+      return 'Faixa estimada: ${CurrencyUtils.format(min)} a ${CurrencyUtils.format(max)}';
     }
     if (min != null) {
-      return 'Faixa estimada: desde € ${min.toStringAsFixed(2)}';
+      return 'Faixa estimada: desde ${CurrencyUtils.format(min)}';
     }
     if (max != null) {
-      return 'Faixa estimada: até € ${max.toStringAsFixed(2)}';
+      return 'Faixa estimada: até ${CurrencyUtils.format(max)}';
     }
     return null;
   }
@@ -233,7 +276,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Total cobrado: € ${valor.toStringAsFixed(2)}',
+            'Total cobrado: ${CurrencyUtils.format(valor)}',
             style: const TextStyle(
               fontSize: 13,
               color: Colors.black87,
@@ -306,16 +349,21 @@ class _ValorFinalPendenteCard extends StatelessWidget {
       // Se o tipo de pagamento for online, cobramos primeiro via Stripe.
       if (pedido.tipoPagamento != 'dinheiro') {
         // UI simples de loading
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const AlertDialog(
-            content: Row(
-              children: [
-                SizedBox(width: 20, height: 20, child: CircularProgressIndicator()),
-                SizedBox(width: 12),
-                Expanded(child: Text('A iniciar pagamento...')),
-              ],
+        unawaited(
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const AlertDialog(
+              content: Row(
+                children: [
+                  SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator()),
+                  SizedBox(width: 12),
+                  Expanded(child: Text('A iniciar pagamento...')),
+                ],
+              ),
             ),
           ),
         );
@@ -342,8 +390,12 @@ class _ValorFinalPendenteCard extends StatelessWidget {
       // - estado = concluido
       // - statusConfirmacaoValor = confirmado_cliente
       // - earnings / comissão atualizados
+      final user = AuthService.currentUser; // Get user
+      if (user == null) return; // Guard
+
       await PedidoService.instance.confirmarValorFinal(
         pedido: pedido,
+        clienteId: user.uid,
         valorFinal: valor,
       );
 

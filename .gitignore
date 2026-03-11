@@ -70,5 +70,7 @@ x86/
 
 # --- IGNORAR COISAS LOCAIS ---
 /tools/
+web/google_maps_config.js
 lib/core/models/.gitignore
 
+node_modules

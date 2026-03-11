@@ -30,8 +30,8 @@ class LocationDataService {
     }
 
     // mantém letras/números/espaço
-    final cleaned = b.toString().replaceAll(RegExp(r"[^a-z0-9 ]"), ' ');
-    return cleaned.replaceAll(RegExp(r"\s+"), ' ').trim();
+    final cleaned = b.toString().replaceAll(RegExp(r'[^a-z0-9 ]'), ' ');
+    return cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   static String _replaceDiacriticsChar(String ch) {

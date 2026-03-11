@@ -22,6 +22,18 @@ class ChatMessage {
   final int? fileSize;
   final String? mimeType;
   final int? durationMs;
+  final String? callType;
+  final String? callDuration;
+  
+  // Novos campos (E3 - Ultimate Chat)
+  final Map<String, List<String>> reactions; // {'❤️': ['uid1', 'uid2']}
+  final String? replyToId;
+  final String? replyToText;
+  final bool isDeleted;
+  final bool isEdited;
+  final DateTime? editedAt;
+  final double? locationLat;
+  final double? locationLng;
 
   final String senderRole;
   final String senderId;
@@ -50,6 +62,16 @@ class ChatMessage {
     this.fileSize,
     this.mimeType,
     this.durationMs,
+    this.callType,
+    this.callDuration,
+    this.reactions = const {},
+    this.replyToId,
+    this.replyToText,
+    this.isDeleted = false,
+    this.isEdited = false,
+    this.editedAt,
+    this.locationLat,
+    this.locationLng,
   });
 
   bool get hasMedia => (mediaUrl ?? '').trim().isNotEmpty;
@@ -59,6 +81,7 @@ class ChatMessage {
   bool get isGif => type == 'gif' && hasMedia;
   bool get isFile => type == 'file' && hasMedia;
   bool get isAudio => type == 'audio' && hasMedia;
+  bool get isLocation => locationLat != null && locationLng != null;
   bool isStarredBy(String uid) => starredBy.contains(uid);
 
   factory ChatMessage.fromFirestore(
@@ -86,9 +109,22 @@ class ChatMessage {
     final durationRaw = data['durationMs'];
     final durationMs = (durationRaw is num) ? durationRaw.toInt() : null;
 
+    final callType = data['callType']?.toString();
+    final callDuration = data['callDuration']?.toString();
+
     final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final starredRaw = (data['starredBy'] as List?) ?? const <dynamic>[];
     final starredBy = starredRaw.map((e) => e.toString()).toList();
+
+    // Parse Reactions
+    final Map<String, List<String>> reactionsParsed = {};
+    if (data['reactions'] is Map) {
+      (data['reactions'] as Map).forEach((k, v) {
+        if (v is List) {
+          reactionsParsed[k.toString()] = v.map((e) => e.toString()).toList();
+        }
+      });
+    }
 
     return ChatMessage(
       id: doc.id,
@@ -100,6 +136,16 @@ class ChatMessage {
       fileSize: fileSize,
       mimeType: mimeType,
       durationMs: durationMs,
+      callType: callType,
+      callDuration: callDuration,
+      reactions: reactionsParsed,
+      replyToId: data['replyToId']?.toString(),
+      replyToText: data['replyToText']?.toString(),
+      isDeleted: data['isDeleted'] == true,
+      isEdited: data['isEdited'] == true,
+      editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
+      locationLat: (data['locationLat'] as num?)?.toDouble(),
+      locationLng: (data['locationLng'] as num?)?.toDouble(),
       senderRole: (data['senderRole'] ?? '').toString(),
       senderId: (data['senderId'] ?? '').toString(),
       createdAt: createdAt,
@@ -121,6 +167,18 @@ class ChatMessage {
       if (fileSize != null) 'fileSize': fileSize,
       if (mimeType != null) 'mimeType': mimeType,
       if (durationMs != null) 'durationMs': durationMs,
+      if (callType != null) 'callType': callType,
+      if (callDuration != null) 'callDuration': callDuration,
+      if (locationLat != null) 'locationLat': locationLat,
+      if (locationLng != null) 'locationLng': locationLng,
+      
+      'reactions': reactions,
+      if (replyToId != null) 'replyToId': replyToId,
+      if (replyToText != null) 'replyToText': replyToText,
+      'isDeleted': isDeleted,
+      'isEdited': isEdited,
+      if (editedAt != null) 'editedAt': Timestamp.fromDate(editedAt!),
+
       'senderRole': senderRole,
       'senderId': senderId,
       'createdAt': Timestamp.fromDate(createdAt),

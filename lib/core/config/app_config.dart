@@ -1,83 +1,73 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Configuração central do app.
-///
-/// Ordem de prioridade (por chave):
-/// 1) `.env` (flutter_dotenv)
-/// 2) `--dart-define` (String.fromEnvironment)
-/// 3) valores por defeito
-class AppConfig {
-  AppConfig._();
+enum Flavor { dev, staging, prod }
 
-  static String? _env(String key) {
-    final v = dotenv.env[key];
-    if (v == null) return null;
-    final t = v.trim();
-    return t.isEmpty ? null : t;
+class AppConfig extends InheritedWidget {
+  final Flavor flavor;
+  final String appName;
+  final String apiBaseUrl;
+
+  const AppConfig({
+    super.key,
+    required this.flavor,
+    required this.appName,
+    required this.apiBaseUrl,
+    required super.child,
+  });
+
+  static AppConfig? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<AppConfig>();
   }
 
-  /// Web Push (FCM) — chave VAPID pública.
-  static String? get fcmVapidKey {
-    return _env('FCM_VAPID_KEY') ?? const String.fromEnvironment('FCM_VAPID_KEY');
+  bool get isDev => flavor == Flavor.dev;
+  bool get isProd => flavor == Flavor.prod;
+
+  @override
+  bool updateShouldNotify(covariant AppConfig oldWidget) {
+    return false;
   }
 
-  /// Stripe publishable key (pk_...).
-  static String? get stripePublishableKey {
-    return _env('STRIPE_PUBLISHABLE_KEY') ??
-        const String.fromEnvironment('STRIPE_PUBLISHABLE_KEY');
-  }
+  // --- Static Configuration (Restored & Enhanced) ---
 
-  /// Usa emuladores Firebase no dev.
+  // Emuladores: Ativos se estivermos em Debug ou se .env forçar
   static bool get useFirebaseEmulators {
-    final v = _env('USE_FIREBASE_EMULATORS') ??
-        const String.fromEnvironment('USE_FIREBASE_EMULATORS');
-    return v.trim().toLowerCase() == 'true';
-  }
-
-  /// Região das Cloud Functions.
-  ///
-  /// Mantém igual à definida em `functions/index.js`.
-  static String get functionsRegion {
-    final v = _env('FUNCTIONS_REGION')?.trim();
-    if (v != null && v.isNotEmpty) return v;
-    const d = String.fromEnvironment('FUNCTIONS_REGION', defaultValue: 'europe-west1');
-    return d.trim().isNotEmpty ? d.trim() : 'europe-west1';
+     final raw = dotenv.env['USE_FIREBASE_EMULATORS'];
+     if (raw != null && raw.trim().isNotEmpty) {
+       return raw.trim().toLowerCase() == 'true';
+     }
+     return kDebugMode;
   }
 
   static String get emulatorHost {
-    return _env('FIREBASE_EMULATOR_HOST') ??
-        const String.fromEnvironment('FIREBASE_EMULATOR_HOST', defaultValue: 'localhost');
+    final envHost = dotenv.env['FIREBASE_EMULATOR_HOST'];
+    if (envHost != null && envHost.trim().isNotEmpty) {
+      return envHost.trim();
+    }
+    return defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : '127.0.0.1';
   }
 
-  /// Comissão da plataforma (fallback). Pode ser sobrescrita por Remote Config.
-  static double get defaultCommissionRate {
-    final v = _env('DEFAULT_COMMISSION_RATE') ??
-        const String.fromEnvironment('DEFAULT_COMMISSION_RATE', defaultValue: '0.15');
-    return double.tryParse(v.replaceAll(',', '.')) ?? 0.15;
+  static String get functionsRegion {
+    final envRegion = dotenv.env['FIREBASE_FUNCTIONS_REGION'];
+    if (envRegion != null && envRegion.trim().isNotEmpty) {
+      return envRegion.trim();
+    }
+    return 'europe-west1';
   }
 
-  /// URL base do domínio (para App Links/Universal Links). Ex.: https://app.chegaja.pt
-  static String? get appBaseUrl {
-    return _env('APP_BASE_URL') ?? const String.fromEnvironment('APP_BASE_URL');
-  }
+  static String? get appCheckWebRecaptchaSiteKey => dotenv.env['APP_CHECK_WEB_KEY'];
+  
+  static String? get stripePublishableKey => dotenv.env['STRIPE_PUBLISHABLE_KEY'];
 
-  /// Base URL for calls (Jitsi). Override with CALL_BASE_URL if needed.
-  static String get callBaseUrl {
-    final v = _env('CALL_BASE_URL') ?? const String.fromEnvironment('CALL_BASE_URL');
-    final trimmed = v.trim();
-    return trimmed.isNotEmpty ? trimmed : 'https://meet.jit.si';
-  }
-
-  /// App Check (Web) — reCAPTCHA v3 site key (opcional).
-  static String? get appCheckWebRecaptchaSiteKey {
-    return _env('APPCHECK_WEB_RECAPTCHA_SITE_KEY') ??
-        const String.fromEnvironment('APPCHECK_WEB_RECAPTCHA_SITE_KEY');
-  }
+  static String? get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
 
   static void debugPrintConfig() {
-    if (!kDebugMode) return;
-    // ignore: avoid_print
-    print('[AppConfig] useEmulators=$useFirebaseEmulators host=$emulatorHost');
+    if (kDebugMode) {
+      print('--- AppConfig ---');
+      print('Flavor: (Dynamic)');
+      print('Emulators: $useFirebaseEmulators ($emulatorHost)');
+      print('-----------------');
+    }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:file_picker/file_picker.dart';
@@ -6,6 +8,7 @@ import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/payment_service.dart';
+import 'package:chegaja_v2/features/prestador/prestador_subscription_screen.dart';
 
 /// Configuração de pagamentos para o prestador (Stripe Connect Express).
 ///
@@ -42,7 +45,8 @@ class PrestadorPagamentosScreen extends StatelessWidget {
             children: [
               Text(
                 l10n.paymentsHeading,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -50,7 +54,6 @@ class PrestadorPagamentosScreen extends StatelessWidget {
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 16),
-
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -67,8 +70,12 @@ class PrestadorPagamentosScreen extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      onboardingComplete ? Icons.check_circle : Icons.info_outline,
-                      color: onboardingComplete ? Colors.green[700] : Colors.orange[700],
+                      onboardingComplete
+                          ? Icons.check_circle
+                          : Icons.info_outline,
+                      color: onboardingComplete
+                          ? Colors.green[700]
+                          : Colors.orange[700],
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -82,14 +89,12 @@ class PrestadorPagamentosScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 12),
               if (stripeAccountId.isNotEmpty)
                 Text(
                   l10n.stripeAccountLabel(stripeAccountId),
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
-
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () async {
@@ -117,7 +122,18 @@ class PrestadorPagamentosScreen extends StatelessWidget {
                       : l10n.activatePayments,
                 ),
               ),
-
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PrestadorSubscriptionScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Gerir assinatura'),
+              ),
               const SizedBox(height: 12),
               _kycSection(
                 context,
@@ -206,17 +222,16 @@ class PrestadorPagamentosScreen extends StatelessWidget {
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed:
-                    canUpload ? () => _pickAndUploadKycDoc(context, prestadorId) : null,
-                icon: const Icon(Icons.upload_file),
-                label: Text(
-                docNames.isEmpty
-                    ? l10n.kycSendDocument
-                    : l10n.kycAddDocument,
-                ),
+            child: OutlinedButton.icon(
+              onPressed: canUpload
+                  ? () => _pickAndUploadKycDoc(context, prestadorId)
+                  : null,
+              icon: const Icon(Icons.upload_file),
+              label: Text(
+                docNames.isEmpty ? l10n.kycSendDocument : l10n.kycAddDocument,
               ),
             ),
+          ),
         ],
       ),
     );
@@ -284,33 +299,35 @@ class PrestadorPagamentosScreen extends StatelessWidget {
         return;
       }
 
-      final fileName = _safeFileName(file.name.isNotEmpty ? file.name : 'documento');
+      final fileName =
+          _safeFileName(file.name.isNotEmpty ? file.name : 'documento');
       final contentType = _contentTypeForName(fileName);
 
       if (context.mounted) {
         loadingShown = true;
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(),
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Text(l10n.kycUploading)),
-              ],
+        unawaited(
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              content: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(l10n.kycUploading)),
+                ],
+              ),
             ),
           ),
         );
       }
 
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('kyc/$prestadorId/${DateTime.now().millisecondsSinceEpoch}_$fileName');
+      final storageRef = FirebaseStorage.instance.ref().child(
+          'kyc/$prestadorId/${DateTime.now().millisecondsSinceEpoch}_$fileName',);
 
       await storageRef.putData(
         bytes,
@@ -318,7 +335,10 @@ class PrestadorPagamentosScreen extends StatelessWidget {
       );
       final url = await storageRef.getDownloadURL();
 
-      await FirebaseFirestore.instance.collection('prestadores').doc(prestadorId).set(
+      await FirebaseFirestore.instance
+          .collection('prestadores')
+          .doc(prestadorId)
+          .set(
         {
           'kycStatus': 'em_analise',
           'kycSubmittedAt': FieldValue.serverTimestamp(),

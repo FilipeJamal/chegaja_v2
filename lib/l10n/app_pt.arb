@@ -243,6 +243,80 @@
   "providerHomeSubtitle": "Fica online para receber novos pedidos.",
   "providerStatusOnline": "Estás ONLINE",
   "providerStatusOffline": "Estás OFFLINE",
+  "providerSettingsLoadError": "Erro ao carregar definições: {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "Erro ao guardar definições: {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "Área de atuação",
+  "serviceAreaHeading": "Onde queres receber pedidos?",
+  "serviceAreaSubtitle": "Define os serviços que fazes e o raio máximo em torno da tua cidade base.",
+  "serviceAreaBaseLocation": "Localização base",
+  "serviceAreaRadius": "Raio de atuação",
+  "serviceAreaSaved": "Área de atuação guardada com sucesso.",
+  "serviceAreaInfoNote": "No futuro vamos usar estas definições para filtrar pedidos por proximidade e tipo de serviço. Por agora, isto ajuda-nos a preparar o motor de matching.",
+  "availabilityTitle": "Disponibilidade",
+  "servicesYouProvideTitle": "Serviços que realizas",
+  "servicesCatalogEmpty": "Ainda não há serviços configurados no catálogo.",
+  "servicesSearchPrompt": "Escreve para pesquisar e adicionar serviços.",
+  "servicesSearchNoResults": "Nenhum serviço encontrado.",
+  "servicesSelectedTitle": "Serviços selecionados",
+  "serviceUnnamed": "Serviço sem nome",
+  "serviceModeQuote": "Orçamento",
+  "serviceModeScheduled": "Agendado",
+  "serviceModeImmediate": "Imediato",
+  "providerServicesSelectAtLeastOne": "Escolhe pelo menos um serviço que realizas.",
+  "countryLabel": "País",
+  "cityLabel": "Cidade",
+  "stateLabelDistrict": "Distrito",
+  "stateLabelProvince": "Província",
+  "stateLabelState": "Estado",
+  "stateLabelRegion": "Região",
+  "stateLabelCounty": "Condado",
+  "stateLabelRegionOrState": "Região/Estado",
+  "searchHint": "Pesquisar...",
+  "searchCountryHint": "Escreve para pesquisar países",
+  "searchGenericHint": "Escreve para pesquisar",
+  "searchServicesHint": "Pesquisar serviços",
+  "openCountriesListTooltip": "Ver lista de países",
+  "openListTooltip": "Ver lista",
+  "selectCountryTitle": "Escolher país",
+  "selectCityTitle": "Escolher cidade",
+  "selectFieldTitle": "Escolher {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "Guardar alterações",
+  "supportTitle": "Ajuda e suporte",
+  "supportSubtitle": "Tens dúvidas? Contacta-nos.",
+  "myScheduleTitle": "Minha Agenda",
+  "myScheduleSubtitle": "Definir horários e dias de folga",
+  "languageTitle": "Idioma",
+  "languageModeManual": "Manual",
+  "languageModeAuto": "Auto",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "Auto (Sistema)",
+  "providerCategoriesTitle": "Categorias de atuação",
+  "providerCategoriesSubtitle": "Usamos as categorias para filtrar pedidos compatíveis.",
+  "providerCategoriesEmpty": "Nenhuma categoria selecionada.",
+  "providerCategoriesSelect": "Selecionar categorias",
+  "providerCategoriesEdit": "Adicionar ou editar categorias",
+  "providerCategoriesRequiredMessage": "Seleciona categorias para receber pedidos compatíveis.",
   "providerKpiEarningsToday": "Ganhos hoje (líquido)",
   "providerKpiServicesThisMonth": "Serviços este mês",
   "providerKpiGrossFeeSubtitle": "Bruto: {gross} - Taxa: {fee}",
@@ -307,6 +381,8 @@
   "cancelJobPrompt": "Tens a certeza que queres cancelar este trabalho?\\nO pedido pode voltar a ficar disponível para outros prestadores.",
   "cancelJobReasonLabel": "Motivo do cancelamento (opcional):",
   "cancelJobReasonFieldLabel": "Motivo",
+  "cancelJobDetailLabel": "Detalhe do motivo",
+  "cancelJobDetailRequired": "Informe um detalhe.",
   "cancelJobSuccess": "Trabalho cancelado.",
   "cancelJobError": "Erro ao cancelar trabalho: {error}",
   "@cancelJobError": {
@@ -576,6 +652,21 @@
   "messagesSearchHint": "Pesquisar mensagens",
   "messagesLoadError": "Erro ao carregar conversas: {error}",
   "messagesEmpty": "Ainda não tens conversas.\nQuando falares com um prestador/cliente, aparece aqui.",
+  "messagesNewConversationTitle": "Nova conversa",
+  "messagesNewConversationBody": "Para iniciar uma conversa com um prestador ou cliente, vai até aos teus \"Pedidos\" ou aceita um pedido novo.",
+  "messagesFilterAll": "Tudo",
+  "messagesFilterUnread": "Não lidas",
+  "messagesFilterFavorites": "Favoritos",
+  "messagesFilterGroups": "Grupos",
+  "messagesFilterEmpty": "Nada em \"{filter}\"",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "Nenhuma conversa encontrada.",
+  "messagesPinConversation": "Fixar conversa",
+  "messagesUnpinConversation": "Desfixar conversa",
   "chatPresenceOnline": "online",
   "chatPresenceLastSeenAt": "visto por último às {time}",
   "chatPresenceLastSeenYesterdayAt": "visto por último ontem às {time}",
@@ -641,6 +732,58 @@
   "profilePortfolioTitle": "Portfólio",
   "chatOpenFullAction": "Abrir chat completo",
   "chatOpenFullUnavailable": "Ainda não existe outro utilizador associado a este pedido.",
+  "chatReplyAction": "Responder",
+  "chatCopyAction": "Copiar",
+  "chatDeleteAction": "Apagar",
+  "storyNewTitle": "Novo Story",
+  "storyPublishing": "A publicar story...",
+  "storyPublished": "Story publicado! Expira em 24h.",
+  "storyPublishError": "Erro ao publicar: {error}",
+  "@storyPublishError": {
+      "placeholders": {
+          "error": {}
+      }
+  },
+  "storyCaptionHint": "Legenda (opcional)",
+  "actionPublish": "Publicar",
+  "navJobs": "Meus Trabalhos",
+  "snackOrderRemoved": "Pedido removido.",
+  "snackClientCancelledOrder": "Cliente cancelou o pedido.",
+  "snackOrderCancelled": "Pedido cancelado.",
+  "snackOrderAcceptedByAnother": "Outro prestador aceitou o pedido.",
+  "snackOrderUpdated": "Pedido atualizado.",
+  "snackUserNotAuthenticated": "Utilizador não autenticado.",
+  "snackOrderAcceptedSuccess": "Pedido aceite.",
+  "snackOrderAcceptedCanQuote": "Pedido aceite. Podes enviar o orçamento no detalhe do pedido.",
+  "snackErrorAcceptingOrder": "Erro ao aceitar pedido: {error}",
+  "@snackErrorAcceptingOrder": {
+      "placeholders": {
+          "error": {}
+      }
+  },
+  "snackFillValidValues": "Preenche valores mínimo e máximo válidos.",
+  "snackMinCannotBeGreaterThanMax": "O mínimo não pode ser maior que o máximo.",
+  "snackProposalSent": "Proposta enviada ao cliente.",
+  "snackErrorSendingProposal": "Erro ao enviar proposta: {error}",
+  "@snackErrorSendingProposal": {
+      "placeholders": {
+          "error": {}
+      }
+  },
+  "dialogTitleOrderAccepted": "Pedido aceite ✅",
+  "dialogContentQuotePrompt": "Este pedido é por orçamento.\n\nQueres enviar o orçamento (faixa min/max) agora?",
+  "dialogTitleProposeService": "Propor serviço",
+  "dialogContentProposeService": "Define uma faixa de preço para este serviço.\nInclui deslocação e mão de obra.",
+  "labelMinValue": "Valor mínimo",
+  "labelMaxValue": "Valor máximo",
+  "labelMessageOptional": "Mensagem para o cliente (opcional)",
+  "hintExampleValue": "Ex.: {value}",
+  "@hintExampleValue": {
+      "placeholders": {
+          "value": {}
+      }
+  },
+  "hintProposalMessage": "Ex.: Inclui deslocação. Materiais grandes à parte.",
   "@messagesLoadError": {
     "placeholders": {
       "error": {}

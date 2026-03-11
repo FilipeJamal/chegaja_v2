@@ -64,7 +64,7 @@ class PoliticaReembolso {
       );
     }
 
-    // 1) Ainda NÃO há prestador atribuído → reembolso TOTAL sempre.
+    // 1) Ainda NÁO há prestador atribuído → reembolso TOTAL sempre.
     //
     // Isto cobre:
     // - Pedido novo ainda à procura de prestador,

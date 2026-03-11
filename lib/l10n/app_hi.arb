@@ -1,0 +1,822 @@
+{
+  "@@locale": "hi",
+  "appTitle": "चेगाजा",
+  "roleSelectorWelcome": "चेगाजा में आपका स्वागत है",
+  "roleSelectorPrompt": "चुनें कि आप ऐप का उपयोग कैसे करना चाहते हैं:",
+  "roleCustomerTitle": "मैं एक ग्राहक हूं",
+  "roleCustomerDescription": "मैं अपने आस-पास सेवा प्रदाताओं को ढूंढना चाहता हूं।",
+  "roleProviderTitle": "मैं एक प्रदाता हूँ",
+  "roleProviderDescription": "मैं ग्राहकों के अनुरोध प्राप्त करना और अधिक कमाना चाहता हूं।",
+  "invalidSession": "अमान्य सत्र.",
+  "paymentsTitle": "भुगतान (पट्टी)",
+  "paymentsHeading": "ऑनलाइन भुगतान प्राप्त करें",
+  "paymentsDescription": "ऐप के माध्यम से भुगतान प्राप्त करने के लिए, आपको एक स्ट्राइप खाता (कनेक्ट एक्सप्रेस) बनाना होगा।\nऑनबोर्डिंग आपके ब्राउज़र में खुलती है और इसमें 2-3 मिनट लगते हैं।",
+  "paymentsActive": "ऑनलाइन भुगतान सक्रिय।",
+  "paymentsInactive": "ऑनलाइन भुगतान अभी सक्रिय नहीं हैं. पूर्ण ऑनबोर्डिंग.",
+  "stripeAccountLabel": "स्ट्राइप खाता: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "ऑनबोर्डिंग खोली गई. समाप्त करने के बाद, स्थिति की जाँच करने के लिए वापस आएँ।",
+  "onboardingStartError": "ऑनबोर्डिंग प्रारंभ करने में त्रुटि: {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "स्ट्राइप खाता प्रबंधित करें",
+  "activatePayments": "भुगतान सक्रिय करें",
+  "technicalNotesTitle": "तकनीकी नोट्स",
+  "technicalNotesBody": "• स्ट्राइप को क्लाउड फ़ंक्शंस (सर्वर-साइड) के माध्यम से कॉन्फ़िगर किया गया है।\n• पेमेंटइंटेंट में प्लेटफ़ॉर्म कमीशन स्वचालित रूप से लागू होता है।\n• उत्पादन में, स्ट्राइप वेबहुक जोड़ें और वेबहुक रहस्य को फ़ंक्शंस में संग्रहीत करें।",
+  "kycTitle": "पहचान सत्यापन: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "एक दस्तावेज़ (फोटो या पीडीएफ) भेजें। पूर्ण सत्यापन v2.6 में आता है।",
+  "kycSendDocument": "दस्तावेज़ भेजें",
+  "kycAddDocument": "दस्तावेज़ जोड़ें",
+  "kycStatusApproved": "अनुमत",
+  "kycStatusRejected": "अस्वीकार कर दिया",
+  "kycStatusInReview": "समीक्षा में",
+  "kycStatusNotStarted": "शुरू नहीं",
+  "kycFileReadError": "फ़ाइल को पढ़ा नहीं जा सका.",
+  "kycFileTooLarge": "फ़ाइल बहुत बड़ी है (अधिकतम 10 एमबी)।",
+  "kycUploading": "दस्तावेज़ अपलोड हो रहा है...",
+  "kycUploadSuccess": "दस्तावेज़ समीक्षा के लिए भेजा गया.",
+  "kycUploadError": "दस्तावेज़ भेजने में त्रुटि: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "आपके द्वारा रद्द कर दिया गया",
+  "statusCancelledByProvider": "प्रदाता द्वारा रद्द कर दिया गया",
+  "statusCancelled": "रद्द कर दिया गया",
+  "statusLookingForProvider": "प्रदाता की तलाश है",
+  "statusProviderPreparingQuote": "प्रदाता मिल गया (उद्धरण तैयार किया जा रहा है)",
+  "statusQuoteToDecide": "आपके पास निर्णय लेने के लिए एक उद्धरण है",
+  "statusProviderFound": "प्रदाता मिल गया",
+  "statusServiceInProgress": "सेवा प्रगति पर है",
+  "statusAwaitingValueConfirmation": "आपके मूल्य की पुष्टि की प्रतीक्षा है",
+  "statusServiceCompleted": "सेवा पूर्ण हुई",
+  "valueToConfirm": "{value} (पुष्टि करने के लिए)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (प्रस्तावित)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} से {max} (अनुमानित)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "{min} से (अनुमानित)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "{max} तक (अनुमानित)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "एक ही दाम",
+  "priceByQuote": "उद्धरण से",
+  "priceToArrange": "व्यवस्थित किया जाना है",
+  "paymentOnlineBefore": "ऑनलाइन भुगतान (पहले)",
+  "paymentOnlineAfter": "ऑनलाइन भुगतान (बाद में)",
+  "paymentCash": "नकद भुगतान",
+  "pendingActionQuoteToReview": "आपके पास समीक्षा के लिए एक उद्धरण/प्रस्ताव है।",
+  "pendingActionValueToConfirm": "प्रदाता ने अंतिम मूल्य भेजा. आपको पुष्टि करनी होगी.",
+  "pendingActionProviderPreparingQuote": "प्रदाता मिल गया. वे कोटेशन तैयार कर रहे हैं.",
+  "pendingActionProviderChat": "प्रदाता मिल गया. आप उनसे चैट कर सकते हैं.",
+  "roleLabelCustomer": "ग्राहक",
+  "navHome": "घर",
+  "navMyOrders": "मेरे आदेश",
+  "navMessages": "संदेशों",
+  "navProfile": "प्रोफ़ाइल",
+  "homeGreeting": "नमस्ते",
+  "homeSubtitle": "आज तुम्हें क्या चाहिए?",
+  "homePendingTitle": "आपको कुछ निर्णय लेना है",
+  "homePendingCta": "अगला ऑर्डर खोलने और निर्णय लेने के लिए यहां टैप करें।",
+  "servicesLoadError": "सेवाएँ लोड करने में त्रुटि: {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "अभी तक कोई सेवा कॉन्फ़िगर नहीं की गई है।\\nआप जल्द ही यहां श्रेणियां देखेंगे 🙂",
+  "availableServicesTitle": "उपलब्ध सेवाएँ",
+  "serviceTabImmediate": "तुरंत",
+  "serviceTabScheduled": "अनुसूचित",
+  "serviceTabQuote": "उद्धरण से",
+  "unreadMessagesTitle": "आपके पास नए संदेश हैं",
+  "unreadMessagesCta": "चैट खोलने के लिए यहां टैप करें.",
+  "serviceSearchHint": "खोज सेवा...",
+  "serviceSearchEmpty": "इस खोज के लिए कोई सेवाएँ नहीं मिलीं.",
+  "serviceModeImmediateDescription": "एक प्रदाता आज यथाशीघ्र आये।",
+  "serviceModeScheduledDescription": "सेवा के लिए एक दिन और समय निर्धारित करें।",
+  "serviceModeQuoteDescription": "कोटेशन का अनुरोध करें (प्रदाता न्यूनतम/अधिकतम सीमा भेजता है)।",
+  "userNotAuthenticatedError": "त्रुटि: उपयोगकर्ता प्रमाणित नहीं है.",
+  "myOrdersTitle": "मेरे आदेश",
+  "ordersTabPending": "लंबित",
+  "ordersTabCompleted": "पुरा होना।",
+  "ordersTabCancelled": "रद्द कर दिया गया",
+  "ordersLoadError": "ऑर्डर लोड करने में त्रुटि: {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "आपके पास कोई लंबित ऑर्डर नहीं है।\\nहोम से एक नया ऑर्डर बनाएं।",
+  "ordersEmptyCompleted": "आपने अभी तक ऑर्डर पूरे नहीं किए हैं.",
+  "ordersEmptyCancelled": "आपने अभी तक ऑर्डर रद्द नहीं किया है.",
+  "orderQuoteScheduled": "उद्धरण (अनुसूचित)",
+  "orderQuoteImmediate": "उद्धरण (तत्काल)",
+  "orderScheduled": "अनुसूचित सेवा",
+  "orderImmediate": "तत्काल सेवा",
+  "categoryNotDefined": "श्रेणी परिभाषित नहीं",
+  "orderStateLabel": "राज्य: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "मूल्य मॉडल: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "भुगतान: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "मान: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "खाता ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "आपका नाम",
+  "accountProfileSubtitle": "प्रोफ़ाइल",
+  "accountSettings": "सेटिंग्स",
+  "accountHelpSupport": "सहायता और समर्थन",
+  "navMyJobs": "मेरे काम",
+  "roleLabelProvider": "प्रदाता",
+  "enableLocationToGoOnline": "ऑनलाइन जाने के लिए स्थान सक्षम करें.",
+  "nearbyOrdersTitle": "आपके पास ऑर्डर",
+  "noOrdersAvailableMessage": "अभी कोई ऑर्डर उपलब्ध नहीं है.",
+  "configureServiceAreaMessage": "ऑर्डर प्राप्त करना शुरू करने के लिए अपना सेवा क्षेत्र और सेवाएँ निर्धारित करें।",
+  "configureAction": "कॉन्फ़िगर",
+  "offlineEnableOnlineMessage": "आप ऑफ़लाइन हैं. ऑर्डर प्राप्त करने के लिए ऑनलाइन स्थिति सक्षम करें।",
+  "noMatchingOrdersMessage": "आपकी सेवाओं और क्षेत्र के लिए कोई मिलान आदेश नहीं।",
+  "orderAcceptedMessage": "आदेश स्वीकार किया गया.",
+  "orderAcceptedCanSendQuote": "आदेश स्वीकार किया गया. आप उद्धरण बाद में भेज सकते हैं.",
+  "orderAcceptError": "आदेश स्वीकार करने में त्रुटि: {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "आदेश स्वीकार कर लिया गया",
+  "orderAcceptedBudgetPrompt": "यह ऑर्डर कोटेशन द्वारा है.\\n\\nक्या आप कोटेशन रेंज अभी भेजना चाहते हैं?",
+  "actionLater": "बाद में",
+  "actionSendNow": "अब भेजें",
+  "actionCancel": "रद्द करना",
+  "actionSend": "भेजना",
+  "actionIgnore": "अनदेखा करना",
+  "actionAccept": "स्वीकार करना",
+  "actionNo": "नहीं",
+  "actionYesCancel": "हाँ, रद्द करें",
+  "proposalDialogTitle": "एक उद्धरण भेजें",
+  "proposalDialogDescription": "इस सेवा के लिए एक मूल्य सीमा निर्धारित करें।\\nयात्रा और श्रम शामिल करें।",
+  "proposalMinValueLabel": "न्यूनतम मान ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "उदाहरण: 20",
+  "proposalMaxValueLabel": "अधिकतम मान ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "उदाहरण: 35",
+  "proposalMessageLabel": "ग्राहक को संदेश (वैकल्पिक)",
+  "proposalMessageHint": "उदाहरण: यात्रा शामिल है। बड़ी सामग्री अतिरिक्त हैं.",
+  "proposalInvalidValues": "मान्य न्यूनतम और अधिकतम मान दर्ज करें.",
+  "proposalMinGreaterThanMax": "न्यूनतम अधिकतम से अधिक नहीं हो सकता.",
+  "proposalSent": "ग्राहक को प्रस्ताव भेजा गया.",
+  "proposalSendError": "प्रस्ताव भेजने में त्रुटि: {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "नमस्ते, प्रदाता",
+  "providerHomeSubtitle": "नए ऑर्डर प्राप्त करने के लिए ऑनलाइन जाएँ।",
+  "providerStatusOnline": "आप ऑनलाइन हैं",
+  "providerStatusOffline": "आप ऑफ़लाइन हैं",
+  "providerSettingsLoadError": "सेटिंग लोड करने में त्रुटि: {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "सेटिंग सहेजने में त्रुटि: {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "सेवा क्षेत्र",
+  "serviceAreaHeading": "आप कहां से ऑर्डर प्राप्त करना चाहते हैं?",
+  "serviceAreaSubtitle": "आपके द्वारा प्रदान की जाने वाली सेवाएँ और अपने आधार शहर के आसपास का अधिकतम दायरा निर्धारित करें।",
+  "serviceAreaBaseLocation": "आधार स्थान",
+  "serviceAreaRadius": "सेवा त्रिज्या",
+  "serviceAreaSaved": "सेवा क्षेत्र सफलतापूर्वक सहेजा गया.",
+  "serviceAreaInfoNote": "भविष्य में हम निकटता और सेवा प्रकार के आधार पर ऑर्डर फ़िल्टर करने के लिए इन सेटिंग्स का उपयोग करेंगे। अभी के लिए, इससे हमें मिलान इंजन तैयार करने में मदद मिलती है।",
+  "availabilityTitle": "उपलब्धता",
+  "servicesYouProvideTitle": "आपके द्वारा प्रदान की जाने वाली सेवाएँ",
+  "servicesCatalogEmpty": "कैटलॉग में अभी तक कोई सेवा कॉन्फ़िगर नहीं की गई है.",
+  "servicesSearchPrompt": "खोजने और सेवाएँ जोड़ने के लिए टाइप करें।",
+  "servicesSearchNoResults": "कोई सेवा नहीं मिली.",
+  "servicesSelectedTitle": "चयनित सेवाएँ",
+  "serviceUnnamed": "अनाम सेवा",
+  "serviceModeQuote": "उद्धरण",
+  "serviceModeScheduled": "अनुसूचित",
+  "serviceModeImmediate": "तुरंत",
+  "providerServicesSelectAtLeastOne": "आपके द्वारा प्रदान की जाने वाली कम से कम एक सेवा का चयन करें।",
+  "countryLabel": "देश",
+  "cityLabel": "शहर",
+  "stateLabelDistrict": "ज़िला",
+  "stateLabelProvince": "प्रांत",
+  "stateLabelState": "राज्य",
+  "stateLabelRegion": "क्षेत्र",
+  "stateLabelCounty": "काउंटी",
+  "stateLabelRegionOrState": "क्षेत्र/राज्य",
+  "searchHint": "खोज...",
+  "searchCountryHint": "देश खोजने के लिए टाइप करें",
+  "searchGenericHint": "खोजने के लिए टाइप करें",
+  "searchServicesHint": "सेवाएँ खोजें",
+  "openCountriesListTooltip": "देश सूची देखें",
+  "openListTooltip": "सूची देखें",
+  "selectCountryTitle": "देश चुनें",
+  "selectCityTitle": "शहर चुनें",
+  "selectFieldTitle": "{field} चुनें",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "परिवर्तनों को सुरक्षित करें",
+  "supportTitle": "सहायता एवं समर्थन",
+  "supportSubtitle": "प्रश्न हैं? हमसे संपर्क करें.",
+  "myScheduleTitle": "मेरी अनुसूची",
+  "myScheduleSubtitle": "छुट्टी के घंटे और दिन निर्धारित करें",
+  "languageTitle": "भाषा",
+  "languageModeManual": "नियमावली",
+  "languageModeAuto": "ऑटो",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "ऑटो (सिस्टम)",
+  "providerCategoriesTitle": "सेवा श्रेणियाँ",
+  "providerCategoriesSubtitle": "हम संगत ऑर्डर फ़िल्टर करने के लिए श्रेणियों का उपयोग करते हैं।",
+  "providerCategoriesEmpty": "कोई श्रेणी चयनित नहीं.",
+  "providerCategoriesSelect": "श्रेणियां चुनें",
+  "providerCategoriesEdit": "श्रेणियां जोड़ें या संपादित करें",
+  "providerCategoriesRequiredMessage": "मिलान आदेश प्राप्त करने के लिए अपनी श्रेणियां चुनें।",
+  "providerKpiEarningsToday": "आज की कमाई (शुद्ध)",
+  "providerKpiServicesThisMonth": "इस महीने सेवाएं",
+  "providerKpiGrossFeeSubtitle": "सकल: {gross} - शुल्क: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "आपके पास प्रबंधन करने का काम है",
+  "providerHighlightCta": "अगला कार्य खोलने के लिए यहां टैप करें।",
+  "providerPendingActionAccepted": "आपके पास एक स्वीकृत नौकरी है, जो शुरू करने के लिए तैयार है।",
+  "providerPendingActionInProgress": "आपका कोई कार्य प्रगति पर है. जब आप समाप्त कर लें तो इसे पूर्ण चिह्नित करें।",
+  "providerPendingActionSetFinalValue": "अंतिम सेवा मूल्य सेट करें और भेजें।",
+  "providerUnreadMessagesTitle": "आपके पास ग्राहकों से नए संदेश हैं",
+  "providerUnreadMessagesJob": "नौकरी में: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "मेरे काम",
+  "providerJobsTabOpen": "खुला",
+  "providerJobsTabCompleted": "पुरा होना।",
+  "providerJobsTabCancelled": "रद्द कर दिया गया",
+  "providerJobsLoadError": "कार्य लोड करने में त्रुटि: {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "आपके पास अभी तक खुली नौकरियां नहीं हैं।\\nहोम पर जाएं और ऑर्डर स्वीकार करें।",
+  "providerJobsEmptyCompleted": "आपने अभी तक कार्य पूरे नहीं किए हैं.",
+  "providerJobsEmptyCancelled": "आपने अभी तक नौकरियाँ रद्द नहीं की हैं.",
+  "scheduledForDate": "शेड्यूल: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "विवरण देखें",
+  "clientPaidValueLabel": "ग्राहक को भुगतान: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "आपको प्राप्त होता है: {value} - शुल्क: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "सेवा मूल्य: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "नौकरी रद्द करें",
+  "cancelJobPrompt": "क्या आप वाकई यह कार्य रद्द करना चाहते हैं?\\nआदेश अन्य प्रदाताओं के लिए उपलब्ध हो सकता है।",
+  "cancelJobReasonLabel": "रद्द करने का कारण (वैकल्पिक):",
+  "cancelJobReasonFieldLabel": "कारण",
+  "cancelJobDetailLabel": "रद्दीकरण विवरण",
+  "cancelJobDetailRequired": "कृपया विवरण जोड़ें.",
+  "cancelJobSuccess": "नौकरी रद्द कर दी गई.",
+  "cancelJobError": "कार्य रद्द करने में त्रुटि: {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "मेरी प्रोफ़ाइल देखें",
+  "providerAccountProfileSubtitle": "प्रदाता प्रोफ़ाइल",
+  "activateOnlinePaymentsSubtitle": "ऑनलाइन भुगतान सक्षम करें",
+  "statusProviderWaiting": "नया अनुरोध",
+  "statusQuoteWaitingCustomer": "ग्राहक की प्रतिक्रिया का इंतजार है",
+  "statusAcceptedToStart": "स्वीकृत (शुरू करने के लिए तैयार)",
+  "statusInProgress": "प्रगति पर है",
+  "statusCompleted": "पुरा होना।",
+  "orderDefaultImmediateTitle": "तत्काल सेवा",
+  "locationServiceDisabled": "डिवाइस पर स्थान सेवा अक्षम है.",
+  "locationPermissionDenied": "स्थान की अनुमति अस्वीकृत.\\nवर्तमान स्थान प्राप्त नहीं किया जा सका.",
+  "locationPermissionDeniedForever": "स्थान की अनुमति स्थायी रूप से अस्वीकृत.\\nडिवाइस सेटिंग में स्थान सक्षम करें.",
+  "locationFetchError": "स्थान प्राप्त करने में त्रुटि: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "फॉर्म अभी तैयार नहीं है. पुनः प्रयास करें।",
+  "missingRequiredFieldsError": "आवश्यक फ़ील्ड अनुपलब्ध हैं. फ़ील्ड को लाल रंग से जांचें.",
+  "scheduleDateTimeRequiredError": "सेवा दिनांक और समय चुनें.",
+  "scheduleDateTimeFutureError": "भविष्य की तारीख/समय चुनें.",
+  "categoryRequiredError": "एक श्रेणी चुनें.",
+  "orderUpdatedSuccess": "ऑर्डर सफलतापूर्वक अपडेट किया गया!",
+  "orderCreatedSuccess": "ऑर्डर बनाया गया! एक प्रदाता की तलाश है...",
+  "orderUpdateError": "ऑर्डर अपडेट करने में त्रुटि: {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "ऑर्डर बनाने में त्रुटि: {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "उदाहरण: सिंक के नीचे पाइपलाइन का रिसाव",
+  "orderTitleExampleElectric": "उदाहरण: लिविंग रूम में आउटलेट काम नहीं करता + सीलिंग लाइट स्थापित करें",
+  "orderTitleExampleCleaning": "उदाहरण: 2-बेडरूम अपार्टमेंट (रसोईघर, शौचालय, खिड़कियां, फर्श) की पूरी सफाई।",
+  "orderTitleHintImmediate": "संक्षेप में बताएं कि क्या हो रहा है और आपको क्या चाहिए।",
+  "orderTitleHintScheduled": "बताएं कि आपको कब सेवा चाहिए, स्थान का विवरण और क्या करने की आवश्यकता है।",
+  "orderTitleHintQuote": "उस सेवा का वर्णन करें जिसके लिए आप प्रस्ताव प्राप्त करना चाहते हैं।",
+  "orderTitleHintDefault": "आपको जिस सेवा की आवश्यकता है उसका वर्णन करें.",
+  "orderDescriptionExampleCleaning": "उदाहरण: 2-बेडरूम अपार्टमेंट (रसोईघर, शौचालय, खिड़कियां, फर्श) की पूरी सफाई।",
+  "orderDescriptionHintImmediate": "संक्षेप में बताएं कि क्या हो रहा है और आपको क्या चाहिए।",
+  "orderDescriptionHintScheduled": "बताएं कि आपको कब सेवा चाहिए, स्थान का विवरण और क्या करने की आवश्यकता है।",
+  "orderDescriptionHintQuote": "आप जो सेवा चाहते हैं, उसका अनुमानित बजट (यदि आपके पास है), और महत्वपूर्ण विवरण बताएं।",
+  "orderDescriptionHintDefault": "आपको जो चाहिए उसे थोड़ा और विस्तार से बताएं।",
+  "priceModelTitle": "मूल्य मॉडल",
+  "priceModelQuoteInfo": "यह सेवा उद्धरण द्वारा है. प्रदाता अंतिम कीमत प्रस्तावित करेगा.",
+  "priceTypeLabel": "मूल्य प्रकार",
+  "paymentTypeLabel": "भुगतान प्रकार",
+  "orderHeaderQuoteTitle": "बोली का अनुरोध",
+  "orderHeaderQuoteSubtitle": "बताएं कि आपको क्या चाहिए और प्रदाता एक सीमा (न्यूनतम/अधिकतम) भेज सकता है।",
+  "orderHeaderImmediateTitle": "तत्काल सेवा",
+  "orderHeaderImmediateSubtitle": "यथाशीघ्र उपलब्ध प्रदाता को बुलाया जाएगा।",
+  "orderHeaderScheduledTitle": "अनुसूचित सेवा",
+  "orderHeaderScheduledSubtitle": "प्रदाता के आपके पास आने का दिन और समय चुनें।",
+  "orderHeaderDefaultTitle": "नए आदेश",
+  "orderHeaderDefaultSubtitle": "आपको जिस सेवा की आवश्यकता है उसका वर्णन करें.",
+  "orderEditTitle": "आदेश संपादित करें",
+  "orderNewTitle": "नए आदेश",
+  "whenServiceNeededLabel": "आपको सेवा की आवश्यकता कब होगी?",
+  "categoryLabel": "वर्ग",
+  "categoryHint": "सेवा श्रेणी चुनें",
+  "orderTitleLabel": "आदेश का शीर्षक",
+  "orderTitleRequiredError": "ऑर्डर के लिए एक शीर्षक लिखें.",
+  "orderDescriptionOptionalLabel": "विवरण (वैकल्पिक)",
+  "locationApproxLabel": "अनुमानित स्थान",
+  "locationSelectedLabel": "स्थान चयनित.",
+  "locationSelectPrompt": "चुनें कि सेवा कहाँ निष्पादित की जाएगी (अनुमानित)।",
+  "locationAddressHint": "सड़क, नंबर, फर्श, संदर्भ (वैकल्पिक, लेकिन बहुत मदद करता है)",
+  "locationGetting": "स्थान प्राप्त हो रहा है...",
+  "locationUseCurrent": "वर्तमान स्थान का उपयोग करें",
+  "locationChooseOnMap": "मानचित्र पर चुनें",
+  "serviceDateTimeLabel": "सेवा दिनांक और समय",
+  "serviceDateTimePick": "दिन और समय चुनें",
+  "saveChangesButton": "परिवर्तनों को सुरक्षित करें",
+  "submitOrderButton": "सेवा का अनुरोध करें",
+  "mapSelectTitle": "मानचित्र पर स्थान चुनें",
+  "mapSelectInstruction": "मानचित्र को अनुमानित सेवा स्थान पर खींचें, फिर पुष्टि करें।",
+  "mapSelectConfirm": "स्थान की पुष्टि करें",
+  "orderDetailsTitle": "ऑर्डर का विवरण",
+  "orderLoadError": "ऑर्डर लोड करने में त्रुटि: {error}",
+  "orderNotFound": "ऑर्डर नहीं मिला.",
+  "scheduledNoDate": "निर्धारित (कोई तिथि निर्धारित नहीं)",
+  "orderValueRejectedTitle": "ग्राहक ने प्रस्तावित मूल्य को अस्वीकार कर दिया.",
+  "orderValueRejectedBody": "ग्राहक के साथ चैट करें और संरेखित होने पर एक नया मान प्रस्तावित करें।",
+  "actionProposeNewValue": "नया मान प्रस्तावित करें",
+  "noShowReportedTitle": "नो-शो की सूचना दी गई",
+  "noShowReportedBy": "रिपोर्टकर्ता: {role}",
+  "noShowReportedAt": "यहां: {date}",
+  "noShowTitle": "कोई शो नहीं",
+  "noShowDescription": "यदि दूसरा व्यक्ति नहीं आया, तो आप इसकी रिपोर्ट कर सकते हैं।",
+  "noShowReportAction": "रिपोर्ट नो-शो",
+  "orderInfoTitle": "आदेश की जानकारी",
+  "orderInfoIdLabel": "आदेश कामतत्व",
+  "orderInfoCreatedAtLabel": "पर बनाया गया",
+  "orderInfoStatusLabel": "स्थिति",
+  "orderInfoModeLabel": "तरीका",
+  "orderInfoValueLabel": "कीमत",
+  "orderLocationTitle": "ऑर्डर स्थान",
+  "orderDescriptionTitle": "आदेश विवरण",
+  "providerMessageTitle": "प्रदाता संदेश",
+  "actionEditOrder": "आदेश संपादित करें",
+  "actionCancelOrder": "आदेश रद्द",
+  "cancelOrderTitle": "आदेश रद्द",
+  "orderCancelInProgressWarning": "सेवा पहले से ही प्रगति पर है.\nअभी रद्द करने पर आंशिक धनवापसी हो सकती है।",
+  "orderCancelConfirmPrompt": "क्या आप वाकई यह ऑर्डर रद्द करना चाहते हैं?",
+  "orderCancelReasonLabel": "रद्दीकरण का कारण",
+  "orderCancelReasonOptionalLabel": "कारण (वैकल्पिक)",
+  "orderCancelledSnack": "आदेश रद्द किया गया। {message}.",
+  "orderCancelError": "ऑर्डर रद्द करने में त्रुटि: {error}",
+  "noShowReportDialogTitle": "रिपोर्ट नो-शो",
+  "noShowReportDialogDescription": "इसका उपयोग केवल तभी करें जब दूसरा व्यक्ति उपस्थित न हो।",
+  "noShowReasonOptionalLabel": "कारण (वैकल्पिक)",
+  "actionReport": "प्रतिवेदन",
+  "noShowReportSuccess": "नो-शो की सूचना दी गई।",
+  "noShowReportError": "नो-शो रिपोर्ट करने में त्रुटि: {error}",
+  "orderFinalValueTitle": "नया अंतिम मान प्रस्तावित करें",
+  "orderFinalValueLabel": "कीमत",
+  "orderFinalValueInvalid": "एक मान्य मान दर्ज करें.",
+  "orderFinalValueSent": "ग्राहक को नया मूल्य भेजा गया.",
+  "orderFinalValueSendError": "नया मान भेजने में त्रुटि: {error}",
+  "ratingSentTitle": "रेटिंग भेजी गई",
+  "ratingProviderTitle": "प्रदाता रेटिंग",
+  "ratingPrompt": "1 से 5 तक रेटिंग छोड़ें।",
+  "ratingCommentLabel": "टिप्पणी (वैकल्पिक)",
+  "ratingSendAction": "रेटिंग भेजें",
+  "ratingSelectError": "एक रेटिंग चुनें.",
+  "ratingSentSnack": "रेटिंग भेजी गई.",
+  "ratingSendError": "रेटिंग भेजने में त्रुटि: {error}",
+  "timelineCreated": "बनाया था",
+  "timelineAccepted": "स्वीकृत",
+  "timelineInProgress": "प्रगति पर है",
+  "timelineCancelled": "रद्द कर दिया गया",
+  "timelineCompleted": "पुरा होना।",
+  "lookingForProviderBanner": "हम अभी भी इस ऑर्डर के लिए प्रदाता की तलाश कर रहे हैं।",
+  "actionView": "देखना",
+  "chatNoMessagesSubtitle": "अभी तक कोई संदेश नहीं",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 ?????} other{{count} ?????}}",
+  "actionClose": "बंद करना",
+  "actionOpen": "खुला",
+  "chatAuthRequired": "संदेश भेजने के लिए आपको प्रमाणित होना आवश्यक है.",
+  "chatSendError": "संदेश भेजने में त्रुटि: {error}",
+  "todayLabel": "आज",
+  "yesterdayLabel": "कल",
+  "chatLoadError": "संदेश लोड करने में त्रुटि: {error}",
+  "chatEmptyMessage": "अभी तक कोई संदेश नहीं.\nसबसे पहले भेजें!",
+  "chatInputHint": "एक सन्देश लिखिए...",
+  "chatLoginHint": "संदेश भेजने के लिए साइन इन करें",
+  "roleLabelSystem": "प्रणाली",
+  "youLabel": "आप",
+  "distanceMeters": "{meters} मी",
+  "distanceKilometers": "{kilometers} किमी",
+  "etaLessThanMinute": "<1 मिनट",
+  "etaMinutes": "{minutes} मिनट",
+  "etaHours": "{hours} घंटा",
+  "etaHoursMinutes": "{hours} घंटा {minutes} मी",
+  "mapEtaLabel": "ईटीए {eta} - {distance}",
+  "mapOpenAction": "मानचित्र खोलें",
+  "orderMapTitle": "आदेश मानचित्र",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "इस आदेश के बारे में बातचीत करें",
+  "messagesTitle": "संदेशों",
+  "messagesSearchHint": "संदेश खोजें",
+  "messagesLoadError": "बातचीत लोड करने में त्रुटि: {error}",
+  "messagesEmpty": "आपने अभी तक कोई बातचीत नहीं की है.\nएक बार जब आप किसी प्रदाता/ग्राहक से चैट करेंगे, तो वे यहां दिखाई देंगे।",
+  "messagesNewConversationTitle": "नई बातचीत",
+  "messagesNewConversationBody": "किसी प्रदाता या ग्राहक के साथ बातचीत शुरू करने के लिए, अपने \"ऑर्डर\" पर जाएं या नया ऑर्डर स्वीकार करें।",
+  "messagesFilterAll": "सभी",
+  "messagesFilterUnread": "अपठित ग",
+  "messagesFilterFavorites": "पसंदीदा",
+  "messagesFilterGroups": "समूह",
+  "messagesFilterEmpty": "\"{filter}\" में कुछ भी नहीं",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "कोई बातचीत नहीं मिली.",
+  "messagesPinConversation": "वार्तालाप पिन करें",
+  "messagesUnpinConversation": "बातचीत अनपिन करें",
+  "chatPresenceOnline": "ऑनलाइन",
+  "chatPresenceLastSeenAt": "अंतिम बार {time} पर देखा गया",
+  "chatPresenceLastSeenYesterdayAt": "आखिरी बार कल {time} पर देखा गया",
+  "chatPresenceLastSeenOn": "अंतिम बार {date} को {time} पर देखा गया",
+  "chatImageTooLarge": "छवि बहुत बड़ी है (अधिकतम 15एमबी)।",
+  "chatImageSendError": "छवि भेजने में त्रुटि: {error}",
+  "chatFileReadError": "फ़ाइल को पढ़ा नहीं जा सका.",
+  "chatFileTooLarge": "फ़ाइल बहुत बड़ी है (अधिकतम 20MB).",
+  "chatFileSendError": "फ़ाइल भेजने में त्रुटि: {error}",
+  "chatAudioReadError": "ऑडियो पढ़ा नहीं जा सका.",
+  "chatAudioTooLarge": "ऑडियो बहुत बड़ा (अधिकतम 20 एमबी)।",
+  "chatAudioSendError": "ऑडियो भेजने में त्रुटि: {error}",
+  "chatAttachFile": "लेख्यपत्र भेज दें",
+  "chatAttachGallery": "फोटो भेजें (गैलरी)",
+  "chatAttachCamera": "फ़ोटो लें (कैमरा)",
+  "chatAttachAudio": "ऑडियो भेजें (फ़ाइल)",
+  "chatAttachAudioSubtitle": "एक ऑडियो फ़ाइल चुनें (mp3/m4a/wav/...)।",
+  "chatOpenLink": "खुला लिंक",
+  "chatAttachTooltip": "संलग्न करना",
+  "chatSendTooltip": "भेजना",
+  "chatSearchAction": "खोज",
+  "chatSearchHint": "संदेश खोजें",
+  "chatSearchEmpty": "खोजने के लिए कुछ लिखें.",
+  "chatSearchNoResults": "कोई संदेश नहीं मिला.",
+  "chatMediaAction": "मीडिया, लिंक और फ़ाइलें",
+  "chatMediaTitle": "मीडिया, लिंक और फ़ाइलें",
+  "chatMediaPhotosTab": "तस्वीरें",
+  "chatMediaLinksTab": "लिंक",
+  "chatMediaAudioTab": "ऑडियो",
+  "chatMediaFilesTab": "फ़ाइलें",
+  "chatMediaEmptyPhotos": "अभी तक कोई फ़ोटो नहीं.",
+  "chatMediaEmptyLinks": "अभी तक कोई लिंक नहीं.",
+  "chatMediaEmptyAudio": "अभी तक कोई ऑडियो नहीं.",
+  "chatMediaEmptyFiles": "अभी तक कोई फ़ाइल नहीं.",
+  "chatFavoritesAction": "तारांकित",
+  "chatFavoritesTitle": "तारांकित संदेश",
+  "chatFavoritesEmpty": "आपके पास अभी तक कोई तारांकित संदेश नहीं है.",
+  "chatStarAction": "पसंदीदा में जोड़े",
+  "chatUnstarAction": "पसंदीदा से हटाएँ",
+  "chatViewProviderProfileAction": "प्रदाता प्रोफ़ाइल देखें",
+  "chatViewCustomerProfileAction": "ग्राहक प्रोफ़ाइल देखें",
+  "chatIncomingCall": "एक फोन आ रहा है",
+  "chatCallStartedVideo": "वीडियो कॉल शुरू हुई",
+  "chatCallStartedVoice": "वॉइस कॉल प्रारंभ हुई",
+  "chatImageLabel": "छवि",
+  "chatAudioLabel": "ऑडियो",
+  "chatFileLabel": "फ़ाइल",
+  "chatCallEntryLabel": "पुकारना",
+  "chatNoSession": "कोई सक्रिय सत्र नहीं. चैट तक पहुंचने के लिए साइन इन करें.",
+  "chatTitleFallback": "बात करना",
+  "chatVideoCallAction": "वीडियो कॉल",
+  "chatVoiceCallAction": "पुकारना",
+  "chatMarkReadAction": "पढ़े हुए का चिह्न",
+  "chatCallMissingParticipant": "अन्य भागीदार को अभी तक यह आदेश नहीं सौंपा गया है।",
+  "chatCallStartError": "कॉल प्रारंभ नहीं हो सकी.",
+  "chatCallMessageVideo": "वीडियो कॉल: {url}",
+  "chatCallMessageVoice": "कॉल करें: {url}",
+  "profileProviderTitle": "प्रदाता प्रोफ़ाइल",
+  "profileCustomerTitle": "ग्राहक प्रोफाइल",
+  "profileAboutTitle": "के बारे में",
+  "profileLocationTitle": "जगह",
+  "profileServicesTitle": "सेवाएं",
+  "profilePortfolioTitle": "पोर्टफोलियो",
+  "chatOpenFullAction": "पूरी चैट खोलें",
+  "chatOpenFullUnavailable": "अन्य प्रतिभागी को अभी तक यह आदेश नहीं सौंपा गया है।",
+  "chatReplyAction": "जवाब",
+  "chatCopyAction": "प्रतिलिपि",
+  "chatDeleteAction": "मिटाना",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "नई कहानी",
+  "storyPublishing": "कहानी प्रकाशित हो रही है...",
+  "storyPublished": "कहानी प्रकाशित! 24 घंटे में समाप्त हो रहा है.",
+  "storyPublishError": "कहानी प्रकाशित करने में त्रुटि: {error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "कैप्शन (वैकल्पिक)",
+  "actionPublish": "प्रकाशित करना",
+  "snackOrderRemoved": "आदेश हटा दिया गया.",
+  "snackClientCancelledOrder": "ग्राहक ने ऑर्डर रद्द कर दिया.",
+  "snackOrderCancelled": "आदेश रद्द किया गया।",
+  "snackOrderAcceptedByAnother": "किसी अन्य प्रदाता ने आदेश स्वीकार कर लिया.",
+  "snackOrderUpdated": "ऑर्डर अपडेट किया गया.",
+  "snackUserNotAuthenticated": "उपयोगकर्ता प्रमाणित नहीं है.",
+  "snackOrderAcceptedCanQuote": "आदेश स्वीकार किया गया. आप ऑर्डर विवरण में उद्धरण भेज सकते हैं।",
+  "snackOrderAcceptedSuccess": "आदेश स्वीकार किया गया.",
+  "snackErrorAcceptingOrder": "आदेश स्वीकार करने में त्रुटि: {error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "आदेश स्वीकार कर लिया गया",
+  "dialogContentQuotePrompt": "यह आदेश उद्धरणानुसार है.\n\nक्या आप अभी कोटेशन श्रेणी भेजना चाहते हैं?",
+  "dialogTitleProposeService": "सेवा का प्रस्ताव रखें",
+  "dialogContentProposeService": "इस सेवा के लिए एक मूल्य सीमा निर्धारित करें.\nयात्रा और श्रम शामिल करें।",
+  "labelMinValue": "न्यूनतम मूल्य",
+  "labelMaxValue": "अधिकतम मूल्य",
+  "labelMessageOptional": "ग्राहक को संदेश (वैकल्पिक)",
+  "hintExampleValue": "उदाहरण: {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "उदाहरण: यात्रा शामिल है। बड़ी सामग्री अतिरिक्त हैं.",
+  "snackFillValidValues": "मान्य न्यूनतम और अधिकतम मान दर्ज करें.",
+  "snackMinCannotBeGreaterThanMax": "न्यूनतम अधिकतम से अधिक नहीं हो सकता.",
+  "snackProposalSent": "ग्राहक को प्रस्ताव भेजा गया.",
+  "snackErrorSendingProposal": "प्रस्ताव भेजने में त्रुटि: {error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

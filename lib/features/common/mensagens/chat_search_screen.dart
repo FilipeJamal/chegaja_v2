@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 class ChatSearchScreen extends StatefulWidget {
@@ -28,7 +28,6 @@ class _ChatSearchScreenState extends State<ChatSearchScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final locale = l10n.localeName;
-    final timeFormat = DateFormat('dd/MM/yyyy HH:mm', locale);
 
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +73,7 @@ class _ChatSearchScreenState extends State<ChatSearchScreen> {
             itemBuilder: (context, index) {
               final msg = items[index];
               final preview = _previewForMessage(msg, l10n);
-              final time = timeFormat.format(msg.createdAt);
+              final time = DateTimeUtils.formatDateTime(msg.createdAt, locale: locale);
               return ListTile(
                 leading: const Icon(Icons.search),
                 title: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis),

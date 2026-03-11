@@ -1,0 +1,424 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChegaJa v2 - Fast, Reliable Service</title>
+  <meta name="description" content="ChegaJa v2 delivers fast, reliable service with a simple, transparent experience." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #0b5d58;
+      --secondary: #0b1f3a;
+      --accent: #f97316;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Source Sans 3", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      background: rgba(248, 250, 252, 0.9);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+    }
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .nav-cta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: transparent;
+    }
+
+    .hero {
+      padding: 80px 0 40px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+      align-items: center;
+    }
+    .hero h1 {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(36px, 4vw, 56px);
+      line-height: 1.1;
+      margin: 0 0 16px;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 18px;
+      margin: 0 0 24px;
+    }
+    .hero-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .hero-metric {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .metric {
+      background: #f1f5f9;
+      padding: 14px;
+      border-radius: 14px;
+    }
+
+    section {
+      padding: 72px 0;
+    }
+
+    .section-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 28px;
+      margin: 0 0 16px;
+    }
+    .section-subtitle {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .step {
+      background: #eef2f7;
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .faq {
+      display: grid;
+      gap: 12px;
+    }
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      cursor: pointer;
+    }
+    .faq-item h4 {
+      margin: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+    }
+    .faq-item p {
+      margin: 8px 0 0;
+      color: var(--text-muted);
+      display: none;
+    }
+    .faq-item.open p { display: block; }
+
+    .cta {
+      background: var(--secondary);
+      color: #fff;
+      border-radius: 24px;
+      padding: 48px;
+      text-align: center;
+    }
+    .cta h2 {
+      font-family: "Space Grotesk", sans-serif;
+      margin: 0 0 12px;
+      font-size: 32px;
+    }
+    .cta p { color: #cbd5f5; margin-bottom: 24px; }
+
+    footer {
+      padding: 32px 0 56px;
+      color: var(--text-muted);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+    }
+
+    @media (max-width: 800px) {
+      .nav-links { display: none; }
+      .hero { padding-top: 56px; }
+      section { padding: 56px 0; }
+      .cta { padding: 36px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        ChegaJa v2
+      </div>
+      <div class="nav-links">
+        <a href="design-spec-preview.html">About</a>
+        <a href="design-spec-preview.html">Features</a>
+        <a href="design-spec-preview.html">Pricing</a>
+        <a href="design-spec-preview.html">Contact</a>
+        <a href="design-spec-preview.html">Design Spec</a>
+      </div>
+      <div class="nav-cta">
+        <a class="btn btn-secondary" href="design-spec-preview.html">View Plans</a>
+        <a class="btn btn-primary" href="design-spec-preview.html">Get Started</a>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <h1>Fast, reliable service that gets you to done.</h1>
+          <p>ChegaJa v2 is built for speed and clarity. Book, track, and finish with confidence in a single, simple flow.</p>
+          <div class="nav-cta">
+            <a class="btn btn-primary" href="design-spec-preview.html">Start Now</a>
+            <a class="btn btn-secondary" href="design-spec-preview.html">See How It Works</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <strong>Live status and instant confirmation</strong>
+          <p style="color: var(--text-muted); margin-top: 8px;">No guessing. Every request is tracked end-to-end.</p>
+          <div class="hero-metric">
+            <div class="metric">
+              <div style="font-weight: 700; font-size: 20px;">2 min</div>
+              <div style="color: var(--text-muted); font-size: 14px;">avg. response time</div>
+            </div>
+            <div class="metric">
+              <div style="font-weight: 700; font-size: 20px;">98%</div>
+              <div style="color: var(--text-muted); font-size: 14px;">on-time completion</div>
+            </div>
+            <div class="metric">
+              <div style="font-weight: 700; font-size: 20px;">24/7</div>
+              <div style="color: var(--text-muted); font-size: 14px;">coverage</div>
+            </div>
+            <div class="metric">
+              <div style="font-weight: 700; font-size: 20px;">Simple</div>
+              <div style="color: var(--text-muted); font-size: 14px;">3-step flow</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Why teams choose ChegaJa v2</h2>
+        <p class="section-subtitle">Clear communication, reliable delivery, and a calm user experience.</p>
+        <div class="grid-3">
+          <div class="card">
+            <strong>Instant confirmation</strong>
+            <p>Every request is acknowledged immediately with a clear ETA.</p>
+          </div>
+          <div class="card">
+            <strong>Transparent tracking</strong>
+            <p>Know exactly what is happening at each step, in real time.</p>
+          </div>
+          <div class="card">
+            <strong>Built for speed</strong>
+            <p>Optimized flows remove friction for both users and operators.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">How it works</h2>
+        <p class="section-subtitle">A simple path from request to completion.</p>
+        <div class="steps">
+          <div class="step">
+            <strong>1. Request</strong>
+            <p>Share what you need in seconds.</p>
+          </div>
+          <div class="step">
+            <strong>2. Track</strong>
+            <p>Follow progress with live updates.</p>
+          </div>
+          <div class="step">
+            <strong>3. Finish</strong>
+            <p>Get a fast, reliable completion.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Trusted by teams</h2>
+        <p class="section-subtitle">Real outcomes from people who need reliability.</p>
+        <div class="testimonials">
+          <div class="card">
+            <p>"ChegaJa v2 removed the guesswork. We ship faster now."</p>
+            <strong>- Operations Lead</strong>
+          </div>
+          <div class="card">
+            <p>"Clear status and quick turnaround. It just works."</p>
+            <strong>- Small Business Owner</strong>
+          </div>
+          <div class="card">
+            <p>"The experience feels premium, without the complexity."</p>
+            <strong>- Product Manager</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">FAQ</h2>
+        <p class="section-subtitle">Quick answers to common questions.</p>
+        <div class="faq">
+          <div class="faq-item">
+            <h4>How fast can I get started? <span>+</span></h4>
+            <p>Most teams are live in minutes. Just request access and go.</p>
+          </div>
+          <div class="faq-item">
+            <h4>Is progress visible to everyone? <span>+</span></h4>
+            <p>Yes, live status is visible to all stakeholders by default.</p>
+          </div>
+          <div class="faq-item">
+            <h4>Can I customize the workflow? <span>+</span></h4>
+            <p>Workflows are configurable to match your process.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="cta">
+          <h2>Ready to move faster?</h2>
+          <p>Get started with ChegaJa v2 and deliver with confidence.</p>
+          <a class="btn btn-primary" href="design-spec-preview.html">Talk to Us</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <strong>ChegaJa v2</strong>
+        <p>Fast, reliable service for modern teams.</p>
+      </div>
+      <div>
+        <div><a href="design-spec-preview.html">About</a></div>
+        <div><a href="design-spec-preview.html">Features</a></div>
+        <div><a href="design-spec-preview.html">Pricing</a></div>
+      </div>
+      <div>
+        <div><a href="design-spec-preview.html">Contact</a></div>
+        <div><a href="#">Privacy</a></div>
+        <div><a href="#">Terms</a></div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.faq-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        item.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>

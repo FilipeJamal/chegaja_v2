@@ -1,5 +1,6 @@
 // lib/features/cliente/novo_pedido_screen.dart
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
@@ -43,6 +44,7 @@ class NovoPedidoScreen extends StatefulWidget {
 }
 
 enum _LocalizacaoModo { automatico, manual }
+
 enum _BuscaPrestadorModo { automatico, manual }
 
 class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
@@ -60,8 +62,10 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   final _enderecoTextoController = TextEditingController();
 
   late String _modo; // IMEDIATO / AGENDADO (modo real gravado no Firestore)
-  String _tipoPrecoSelecionado = 'a_combinar'; // a_combinar | fixo | por_orcamento
-  String _tipoPagamentoSelecionado = 'dinheiro'; // dinheiro | online_antes | online_depois
+  String _tipoPrecoSelecionado =
+      'a_combinar'; // a_combinar | fixo | por_orcamento
+  String _tipoPagamentoSelecionado =
+      'dinheiro'; // dinheiro | online_antes | online_depois
 
   String? _categoriaNome;
   String? _servicoIdSelecionado;
@@ -77,8 +81,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   double? _longitude;
   bool _obtendoLocal = false;
   _LocalizacaoModo _modoLocalizacao = _LocalizacaoModo.automatico;
-  bool _procurandoEndereco = false;
-  String? _enderecoManualSelecionado;
+
   _BuscaPrestadorModo _buscaPrestadorModo = _BuscaPrestadorModo.automatico;
   PrestadorSelecionado? _prestadorSelecionado;
 
@@ -133,7 +136,6 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           _modo = widget.servicoInicial?.mode ?? widget.modo;
         }
       }
-
     }
   }
 
@@ -239,7 +241,6 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       setState(() {
         _latitude = pos.latitude;
         _longitude = pos.longitude;
-        _enderecoManualSelecionado = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -270,54 +271,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       setState(() {
         _latitude = result.latitude;
         _longitude = result.longitude;
-        _enderecoManualSelecionado = null;
       });
-    }
-  }
-
-  Future<void> _procurarEnderecoManual() async {
-    if (_procurandoEndereco) return;
-
-    final query = _enderecoTextoController.text.trim();
-    if (query.length < 3) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escreve pelo menos 3 caracteres.')),
-      );
-      return;
-    }
-
-    setState(() => _procurandoEndereco = true);
-    try {
-      final resultados = await _buscarEnderecos(query);
-      if (!mounted) return;
-
-      if (resultados.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nenhum resultado encontrado.')),
-        );
-        return;
-      }
-
-      final escolhido = await _mostrarResultadosEndereco(resultados);
-      if (!mounted) return;
-      if (escolhido == null) return;
-
-      setState(() {
-        _latitude = escolhido.latitude;
-        _longitude = escolhido.longitude;
-        _enderecoTextoController.text = escolhido.label;
-        _enderecoManualSelecionado = escolhido.label;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao pesquisar endereco: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _procurandoEndereco = false);
-      }
     }
   }
 
@@ -373,36 +327,6 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     }
 
     return resultados;
-  }
-
-  Future<_EnderecoSugestao?> _mostrarResultadosEndereco(
-    List<_EnderecoSugestao> resultados,
-  ) {
-    return showModalBottomSheet<_EnderecoSugestao>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return SafeArea(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            itemCount: resultados.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (ctx, index) {
-              final item = resultados[index];
-              return ListTile(
-                title: Text(
-                  item.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () => Navigator.of(ctx).pop(item),
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   double? _parseDouble(dynamic value) {
@@ -483,7 +407,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.missingRequiredFieldsError)),
       );
-      _scrollController.animateTo(
+      await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
@@ -531,7 +455,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.categoryRequiredError)),
       );
-      _scrollController.animateTo(
+      await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
@@ -590,11 +514,9 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         );
         Navigator.of(context).pop();
       } else {
-        final bool manual =
-            _buscaPrestadorModo == _BuscaPrestadorModo.manual &&
-                _prestadorSelecionado != null;
-        final String? prestadorId =
-            manual ? _prestadorSelecionado!.id : null;
+        final bool manual = _buscaPrestadorModo == _BuscaPrestadorModo.manual &&
+            _prestadorSelecionado != null;
+        final String? prestadorId = manual ? _prestadorSelecionado!.id : null;
 
         final String pedidoId = await PedidosRepo.criarPedido(
           clienteId: user.uid,
@@ -621,19 +543,23 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         );
 
         if (manual) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => PedidoDetalheScreen(
-                pedidoId: pedidoId,
-                isCliente: true,
+          unawaited(
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => PedidoDetalheScreen(
+                  pedidoId: pedidoId,
+                  isCliente: true,
+                ),
               ),
             ),
           );
         } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => AguardandoPrestadorScreen(
-                pedidoId: pedidoId,
+          unawaited(
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => AguardandoPrestadorScreen(
+                  pedidoId: pedidoId,
+                ),
               ),
             ),
           );
@@ -847,14 +773,13 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       body: Stack(
         children: [
           FutureBuilder<List<Servico>>(
-            future:
-                (widget.servicosLoader ??
-                    ServicosRepo.buscarServicosAtivosTodos)(),
+            future: (widget.servicosLoader ??
+                ServicosRepo.buscarServicosAtivosTodos)(),
             builder: (context, snapshot) {
               final servicos = snapshot.data ?? [];
-              final bool loading = snapshot.connectionState ==
-                      ConnectionState.waiting &&
-                  servicos.isEmpty;
+              final bool loading =
+                  snapshot.connectionState == ConnectionState.waiting &&
+                      servicos.isEmpty;
 
               final nomes = servicos.map((s) => s.name).toList();
               final servicosFiltrados = [...servicos];
@@ -940,7 +865,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                      ], 
+                      ],
 
                       // Categoria
                       Text(
@@ -1073,8 +998,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                                       null
                                                   ? Text(
                                                       _prestadorSelecionado!
-                                                              .nome
-                                                              .isNotEmpty
+                                                              .nome.isNotEmpty
                                                           ? _prestadorSelecionado!
                                                               .nome[0]
                                                               .toUpperCase()
@@ -1159,8 +1083,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                         controller: _tituloController,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(16)),
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
                           ),
                           hintText: hintTitulo,
                         ),
@@ -1184,8 +1107,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                         maxLines: 3,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(16)),
+                            borderRadius: BorderRadius.all(Radius.circular(16)),
                           ),
                           hintText: hintDescricao,
                         ),
@@ -1242,68 +1164,146 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            TextFormField(
-                              controller: _enderecoTextoController,
-                              decoration: InputDecoration(
-                                border: const OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
+                            if (isManual)
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return RawAutocomplete<_EnderecoSugestao>(
+                                    textEditingController:
+                                        _enderecoTextoController,
+                                    focusNode: FocusNode(),
+                                    optionsBuilder: (textEditingValue) async {
+                                      final query =
+                                          textEditingValue.text.trim();
+                                      if (query.length < 3) {
+                                        return const [];
+                                      }
+                                      // Debounce simples via delay
+                                      await Future.delayed(
+                                        const Duration(milliseconds: 500),
+                                      );
+                                      if (textEditingValue.text.trim() !=
+                                          query) {
+                                        return const [];
+                                      }
+
+                                      // Se o utilizador limpar o campo manual, anulamos a seleção
+                                      if (query.isEmpty) {
+                                        setState(() {
+                                          _latitude = null;
+                                          _longitude = null;
+                                        });
+                                      }
+
+                                      try {
+                                        return await _buscarEnderecos(query);
+                                      } catch (e) {
+                                        debugPrint(
+                                            'Error searching address: $e');
+                                        return const [];
+                                      }
+                                    },
+                                    onSelected: (option) {
+                                      setState(() {
+                                        _enderecoTextoController.text =
+                                            option.label;
+                                        _latitude = option.latitude;
+                                        _longitude = option.longitude;
+                                      });
+                                    },
+                                    optionsViewBuilder: (
+                                      context,
+                                      onSelected,
+                                      options,
+                                    ) {
+                                      return Align(
+                                        alignment: Alignment.topLeft,
+                                        child: Material(
+                                          elevation: 4.0,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: SizedBox(
+                                            width: constraints.maxWidth,
+                                            height: 250,
+                                            child: ListView.builder(
+                                              padding: EdgeInsets.zero,
+                                              itemCount: options.length,
+                                              itemBuilder: (
+                                                BuildContext context,
+                                                int index,
+                                              ) {
+                                                final option =
+                                                    options.elementAt(index);
+                                                return ListTile(
+                                                  title: Text(option.label),
+                                                  onTap: () {
+                                                    onSelected(option);
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    fieldViewBuilder: (
+                                      BuildContext context,
+                                      TextEditingController
+                                          textEditingController,
+                                      FocusNode focusNode,
+                                      VoidCallback onFieldSubmitted,
+                                    ) {
+                                      return TextFormField(
+                                        controller: textEditingController,
+                                        focusNode: focusNode,
+                                        decoration: InputDecoration(
+                                          border: const OutlineInputBorder(
+                                            borderRadius: BorderRadius.all(
+                                              Radius.circular(12),
+                                            ),
+                                          ),
+                                          hintText: l10n.locationAddressHint,
+                                          suffixIcon: const Icon(Icons.search),
+                                        ),
+                                        maxLines: 2,
+                                      );
+                                    },
+                                  );
+                                },
+                              )
+                            else
+                              TextFormField(
+                                controller: _enderecoTextoController,
+                                readOnly: true, // Auto mode is read-only
+                                decoration: InputDecoration(
+                                  border: const OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(12)),
+                                  ),
+                                  hintText: l10n.locationAddressHint,
+                                  filled: true,
+                                  fillColor: Colors.grey.shade100,
                                 ),
-                                hintText: l10n.locationAddressHint,
-                                suffixIcon: isManual
-                                    ? IconButton(
-                                        tooltip: 'Procurar endereco',
-                                        onPressed: _procurandoEndereco
-                                            ? null
-                                            : _procurarEnderecoManual,
-                                        icon: _procurandoEndereco
-                                            ? const SizedBox(
-                                                height: 18,
-                                                width: 18,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              )
-                                            : const Icon(Icons.search),
-                                      )
-                                    : null,
+                                maxLines: 2,
                               ),
-                              maxLines: 2,
-                              onChanged: (value) {
-                                if (!isManual) return;
-                                final trimmed = value.trim();
-                                if (_enderecoManualSelecionado == null) return;
-                                if (trimmed == _enderecoManualSelecionado) return;
-                                setState(() {
-                                  _enderecoManualSelecionado = null;
-                                  _latitude = null;
-                                  _longitude = null;
-                                });
-                              },
-                            ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: isManual
-                                        ? (_procurandoEndereco
-                                            ? null
-                                            : _procurarEnderecoManual)
+                                        ? null // No button needed in manual mode (autocomplete)
                                         : (_obtendoLocal
                                             ? null
                                             : _obterLocalizacaoAtual),
                                     icon: Icon(
                                       isManual
-                                          ? Icons.search
+                                          ? Icons.edit_location_alt
                                           : Icons.my_location,
                                       size: 18,
                                     ),
                                     label: Text(
                                       isManual
-                                          ? (_procurandoEndereco
-                                              ? 'A procurar...'
-                                              : 'Procurar endereco')
+                                          ? 'Digita o endereco acima'
                                           : (_obtendoLocal
                                               ? l10n.locationGetting
                                               : l10n.locationUseCurrent),
@@ -1476,10 +1476,10 @@ class _SelecionarLocalNoMapaScreenState
     }
   }
 
-  void _onPositionChanged(MapPosition position, bool hasGesture) {
-    if (hasGesture && position.center != null) {
+  void _onPositionChanged(MapCamera camera, bool hasGesture) {
+    if (hasGesture) {
       setState(() {
-        _center = position.center!;
+        _center = camera.center;
       });
     }
   }

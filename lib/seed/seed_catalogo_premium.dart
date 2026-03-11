@@ -1,5 +1,6 @@
 // lib/seed/seed_catalogo_premium.dart
 // Script para popular o Firestore com o catálogo premium completo
+// ignore_for_file: avoid_print
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -32,10 +33,10 @@ Future<void> seedCatalogoPremium({
   // 1. Verificar estado atual
   print('📊 Verificando estado atual do catálogo...');
   final existingCount = await servicosRef.count().get();
-  final currentCount = existingCount.count;
+  final currentCount = existingCount.count ?? 0;
 
   if (currentCount > 0) {
-    print('⚠️  ATENÇÃO: Já existem $currentCount serviços no Firestore!');
+    print('⚠️  ATENÇÁO: Já existem $currentCount serviços no Firestore!');
 
     if (!forceClear) {
       print('');
@@ -191,10 +192,14 @@ void _mostrarEstatisticas(List<Map<String, dynamic>> servicos) {
     ..forEach((e) => print('  ${e.key}: ${e.value}'));
 
   print('\nPor Nível de Verificação:');
-  porNivelVerificacao.entries.forEach((e) => print('  ${e.key}: ${e.value}'));
+  for (var e in porNivelVerificacao.entries) {
+    print('  ${e.key}: ${e.value}');
+  }
 
   print('\nPor Modo:');
-  porMode.entries.forEach((e) => print('  ${e.key}: ${e.value}'));
+  for (var e in porMode.entries) {
+    print('  ${e.key}: ${e.value}');
+  }
 
   print('\nTop 10 Categorias:');
   porCategoria.entries.toList()

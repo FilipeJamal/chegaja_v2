@@ -28,7 +28,7 @@ List<Map<String, dynamic>> gerarCatalogoPremium({int? limit}) {
           descricao: categoria.descricao,
           iconKey: categoria.iconKey ?? macro.iconKey,
           cor: macro.cor,
-        ));
+        ),);
         ids.add(id);
         contador++;
       }
@@ -58,7 +58,7 @@ List<Map<String, dynamic>> gerarCatalogoPremium({int? limit}) {
           requerPortfolio: espec.requerPortfolio,
           iconKey: espec.iconKey ?? categoria.iconKey ?? macro.iconKey,
           cor: macro.cor,
-        ));
+        ),);
         ids.add(especId);
         contador++;
 
@@ -93,7 +93,7 @@ List<Map<String, dynamic>> gerarCatalogoPremium({int? limit}) {
                 requerPortfolio: espec.requerPortfolio,
                 iconKey: espec.iconKey ?? categoria.iconKey ?? macro.iconKey,
                 cor: macro.cor,
-              ));
+              ),);
               ids.add(variacaoId);
               contador++;
             }
@@ -103,7 +103,7 @@ List<Map<String, dynamic>> gerarCatalogoPremium({int? limit}) {
     }
   }
 
-  print('✅ Gerado ${servicos.length} serviços no catálogo premium!');
+
 
   if (limit != null && servicos.length > limit) {
     return servicos.sublist(0, limit);
@@ -197,7 +197,7 @@ Map<String, dynamic> _criarServico({
 
 /// Normaliza texto (remove acentos, lowercase, trim)
 String _normalizar(String text) {
-  const comAcento = 'áàâãéèêíïóôõöúçÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇ';
+  const comAcento = 'áàâãéèêíïóôõöúçÁÀÂÁÉÈÊÍÏÓÔÕÖÚÇ';
   const semAcento = 'aaaaeeeiiooooucAAAAAEEEIIOOOOUC';
 
   var normalized = text.toLowerCase().trim();

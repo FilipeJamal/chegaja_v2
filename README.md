@@ -22,6 +22,21 @@ flutter pub get
 
 Se o VS Code mostrar erros tipo "Target of URI doesn't exist", normalmente é porque o `pub get` ainda não correu (ou falhou).
 
+### Nota sobre `firebase_auth` local
+O `pubspec.yaml` usa:
+
+```yaml
+dependency_overrides:
+  firebase_auth:
+    path: packages/firebase_auth
+```
+
+Este override existe para aplicar ajustes locais no plugin enquanto o upstream não é adotado no projeto.
+
+- Mantém a pasta `packages/firebase_auth` versionada no repo.
+- Em CI e em novas máquinas, corre `flutter pub get` na raiz normalmente (sem `pub add` do plugin externo).
+- Se removeres o override, valida antes os fluxos de Auth (anónimo, role selector e sessão).
+
 ---
 
 ## 2) Variáveis de ambiente
@@ -69,6 +84,42 @@ flutter run -d chrome
 ```
 
 > **Nota:** O app está configurado para usar emuladores automaticamente quando `USE_FIREBASE_EMULATORS=true` no ficheiro `.env`. Se vires erros de "network-request-failed", significa que os emuladores não estão a correr. Consulta `DEVELOPMENT.md` para mais detalhes.
+
+### Modo rápido de desenvolvimento
+
+Para reduzir o tempo de `flutter run` no dia a dia, usa o script:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_flutter_fast.ps1
+```
+
+O que ele faz:
+- reutiliza sempre o mesmo `target` (`lib/main_dev.dart`) e as mesmas flags, o que ajuda a cache incremental do Flutter;
+- evita `flutter pub get` quando `pubspec.yaml` e `pubspec.lock` não mudaram;
+- corre com `FAST_DEV_MODE=true`, que desliga bootstrap opcional pesado no arranque local;
+- fixa `host` e `port` web para manter o fluxo previsível.
+
+Opções úteis:
+
+```powershell
+# Se mudaste dependências
+powershell -ExecutionPolicy Bypass -File scripts\run_flutter_fast.ps1 -ForcePubGet
+
+# Se queres o arranque completo, sem o modo rápido
+powershell -ExecutionPolicy Bypass -File scripts\run_flutter_fast.ps1 -FullBoot
+
+# Se queres pré-aquecer a toolchain web
+powershell -ExecutionPolicy Bypass -File scripts\run_flutter_fast.ps1 -Precache
+
+# Se queres medir startup
+powershell -ExecutionPolicy Bypass -File scripts\run_flutter_fast.ps1 -TraceStartup
+```
+
+Boas práticas para manter o arranque rápido:
+- não alternes sem necessidade entre `lib/main.dart` e `lib/main_dev.dart`;
+- não mudes constantemente os `--dart-define`, porque isso invalida parte da cache;
+- evita `flutter clean` salvo quando há corrupção real de build;
+- depois de `flutter pub get`, prefere `--no-pub` ou usa o script acima.
 
 ### Emuladores disponíveis:
 - **Auth Emulator:** http://localhost:9099
@@ -135,3 +186,21 @@ Para Universal/App Links em produção, configura:
 - Cliente paga no momento de **Confirmar valor final** quando `tipoPagamento != dinheiro`
 
 > Para produção, **ativa webhooks** no Stripe e guarda o webhook secret nas Functions.
+
+---
+
+## 8) MCP (Stitch)
+
+Este repo **não** guarda chaves. O Stitch MCP deve ser configurado **localmente**.
+
+1. Usa o arquivo de exemplo `mcp.example.json`.
+2. Copia/mescla o conteúdo no teu config local de MCP:
+   - Windows: `%USERPROFILE%\.verdent\mcp.json`
+   - Linux/Mac: `$HOME/.verdent/mcp.json`
+3. Substitui `YOUR_API_KEY` pela tua chave.
+
+Alternativa via VS Code (Antigravity):
+1. Agent Panel → ⋯ → **MCP Servers** → **Manage MCP Servers** → **View raw config**.
+2. Adiciona o bloco de `mcp.example.json` e guarda.
+
+> **Importante:** nunca faças commit de chaves. Usa apenas o arquivo local.

@@ -15,12 +15,13 @@ class ServicosRepo {
     if (raw == 'IMEDIATO') return 'IMEDIATO';
     return 'IMEDIATO';
   }
+
   // Referência para a coleção `servicos`
   static CollectionReference<Map<String, dynamic>> get _col =>
       FirebaseFirestore.instance.collection('servicos');
 
   /// Fallback local (emulador costuma começar vazio).
-  /// Isto evita a Home "sem categorias" quando est?s a testar com emuladores.
+  /// Isto evita a Home "sem categorias" quando estás a testar com emuladores.
   static List<Servico> _fallbackServicosAtivos() {
     final lista = initialServicosFull
         .map((m) => Servico.fromMap(m, (m['id'] ?? '').toString()))
@@ -34,7 +35,7 @@ class ServicosRepo {
   /// Stream de serviços ATIVOS (isActive == true),
   /// já filtrados e ordenados pelo nome.
   static Stream<List<Servico>> streamServicosAtivos() {
-    // âš ï¸ IMPORTANTE (fix do â€œHome vaziaâ€):
+    // IMPORTANTE (fix da "Home vazia"):
     // Antigamente fazíamos `.where('isActive' == true)`. Se o catálogo tiver
     // docs antigos sem o campo `isActive` (apenas `ativo`), a query devolve 0
     // resultados e a Home do cliente fica vazia.
@@ -114,7 +115,6 @@ class ServicosRepo {
 
     lista = lista.where((s) => _normalizeMode(s.mode) == target).toList();
 
-
     lista.sort((a, b) => a.name.compareTo(b.name));
     return lista;
   }
@@ -149,9 +149,3 @@ class ServicosRepo {
         );
   }
 }
-
-
-
-
-
-

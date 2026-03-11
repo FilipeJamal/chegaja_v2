@@ -490,7 +490,7 @@ class User {
     assert(phoneNumber.isNotEmpty);
     // If we add a recaptcha to the page by creating a new instance, we must
     // also clear that instance before proceeding.
-    bool mustClear = verifier == null;
+    final bool mustClear = verifier == null;
     verifier ??= RecaptchaVerifier(auth: _delegate.auth);
     try {
       final result =

@@ -1,9 +1,13 @@
-﻿// lib/features/prestador/prestador_home_screen.dart
+// lib/features/prestador/prestador_home_screen.dart
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart'; // Needed for Position
 import 'package:intl/intl.dart';
+import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
@@ -11,7 +15,9 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_service.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
+import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
@@ -31,7 +37,7 @@ const double kCommissionPercent = 0.15;
 String _labelEstado(String estado) {
   switch (estado) {
     case 'criado':
-      return 'Ã€ espera de prestador';
+      return 'À espera de prestador';
     case 'aguarda_resposta_prestador':
       return 'Convite pendente';
     case 'aguarda_resposta_cliente':
@@ -41,9 +47,9 @@ String _labelEstado(String estado) {
     case 'em_andamento':
       return 'Em andamento';
     case 'aguarda_confirmacao_valor':
-      return 'A aguardar confirmaÃ§Ã£o do valor';
+      return 'A aguardar confirmação do valor';
     case 'concluido':
-      return 'ConcluÃ­do';
+      return 'Concluído';
     case 'cancelado':
       return 'Cancelado';
     default:
@@ -54,12 +60,12 @@ String _labelEstado(String estado) {
 String _labelTipoPreco(String tipo) {
   switch (tipo) {
     case 'fixo':
-      return 'PreÃ§o fixo';
+      return 'Preço fixo';
     case 'por_orcamento':
-      return 'Por orÃ§amento';
+      return 'Por orçamento';
     case 'a_combinar':
     default:
-      return 'PreÃ§o a combinar';
+      return 'Preço a combinar';
   }
 }
 
@@ -94,10 +100,10 @@ String _textoAcaoPendentePrestador(Pedido p) {
     return 'Tens um trabalho aceite, pronto para iniciar.';
   }
   if (p.estado == 'em_andamento') {
-    return 'Tens um serviÃ§o em andamento. Marca como concluÃ­do quando terminares.';
+    return 'Tens um serviço em andamento. Marca como concluído quando terminares.';
   }
   if (p.statusConfirmacaoValor == 'pendente_prestador') {
-    return 'Define e envia o valor final do serviÃ§o.';
+    return 'Define e envia o valor final do serviço.';
   }
   return '';
 }
@@ -113,8 +119,9 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   int _currentIndex = 0;
   bool _online = false;
   bool _roleReady = false;
+  StreamSubscription<User?>? _authSub;
 
-  // âœ… Badge sem ChatMessage / sem streamMessagesForPedido
+  // ✅ Badge sem ChatMessage / sem streamMessagesForPedido
   StreamSubscription<List<Pedido>>? _pedidosSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _prestadorDocSub;
   final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
@@ -122,13 +129,24 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   final Map<String, bool> _unreadPorPedido = {};
   bool _hasUnreadMessages = false;
 
+  // Tracking
+  StreamSubscription<Position>? _trackingSub;
+
   @override
   void initState() {
     super.initState();
-    _initPrestador();
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+      if (!mounted) return;
+      unawaited(_initPrestador());
+    });
+    unawaited(_initPrestador());
   }
 
   Future<void> _initPrestador() async {
+    try {
+      await AuthService.ensureSignedInAnonymously();
+    } catch (_) {}
+
     try {
       await AuthService.setActiveRole('prestador');
     } catch (_) {}
@@ -151,9 +169,14 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
       final data = snap.data();
       final onlineFromDb = (data?['isOnline'] as bool?) ?? false;
       if (!mounted) return;
+
+      // Se houver mudança de estado, atualiza UI e Tracking
       if (_online != onlineFromDb) {
         setState(() => _online = onlineFromDb);
       }
+
+      // Garante que o tracking reflete o estado do DB (single source of truth)
+      _manageTracking(onlineFromDb);
     });
 
     _pedidosSub ??=
@@ -168,7 +191,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
     final user = AuthService.currentUser;
     if (user == null) return;
 
-    ChatService.instance.ensureChatMetaForPedido(pedido.id);
+    await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
     final myName = (user.displayName?.trim().isNotEmpty ?? false)
         ? user.displayName!.trim()
@@ -216,7 +239,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
     }
 
     for (final p in ativos) {
-      // âœ… garante que o chat tem prestadorId => MensagensTab do prestador passa a mostrar
+      // ✅ garante que o chat tem prestadorId => MensagensTab do prestador passa a mostrar
       _ensureChatMetaForPrestador(p);
 
       if (!_chatSubs.containsKey(p.id)) {
@@ -227,9 +250,17 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
             .orderBy('createdAt', descending: true)
             .limit(50);
 
-        _chatSubs[p.id] = q.snapshots().listen((snap) {
-          _onMessagesUpdate(p.id, snap.docs);
-        });
+        _chatSubs[p.id] = q.snapshots().listen(
+          (snap) => _onMessagesUpdate(p.id, snap.docs),
+          onError: (Object error, StackTrace stackTrace) {
+            _unreadPorPedido[p.id] = false;
+            _recalculateHasUnread();
+            if (kDebugMode) {
+              // ignore: avoid_print
+              print('[PrestadorHome] chatSub(${p.id}) error: $error');
+            }
+          },
+        );
       }
     }
   }
@@ -244,7 +275,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
       final data = d.data();
       final senderRole = (data['senderRole'] ?? '').toString();
 
-      // prestador considera "nÃ£o lido" mensagens do cliente nÃ£o vistas pelo prestador
+      // prestador considera "não lido" mensagens do cliente não vistas pelo prestador
       if (senderRole != 'cliente') continue;
       if (data['seenByPrestador'] == true) continue;
 
@@ -266,6 +297,8 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
 
   @override
   void dispose() {
+    _authSub?.cancel();
+    _trackingSub?.cancel();
     _prestadorDocSub?.cancel();
     _pedidosSub?.cancel();
     for (final sub in _chatSubs.values) {
@@ -274,91 +307,71 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
     super.dispose();
   }
 
+  Future<void> _manageTracking(bool shouldBeOnline) async {
+    final user = AuthService.currentUser;
+    if (user == null) {
+      await _trackingSub?.cancel();
+      _trackingSub = null;
+      return;
+    }
+
+    if (shouldBeOnline) {
+      // Se deve estar online mas nao tem tracking, inicia
+      if (_trackingSub == null) {
+        debugPrint('Iniciando tracking prestador: ${user.uid}');
+        _trackingSub = await LocationService.instance.startPrestadorTracking(
+          prestadorId: user.uid,
+          isOnline: true,
+        );
+      }
+    } else {
+      // Se deve estar offline, cancela se existir
+      if (_trackingSub != null) {
+        debugPrint('Parando tracking prestador: ${user.uid}');
+        await _trackingSub?.cancel();
+        _trackingSub = null;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final pages = <Widget>[
-      _PrestadorInicioTab(
-        online: _online,
-        roleReady: _roleReady,
-        onToggleOnline: (value) => setState(() => _online = value),
-      ),
-      const _PrestadorPedidosTab(),
-      const MensagensTab(viewerRole: 'prestador'),
-      const _ContaTab(roleLabel: 'Prestador'),
-    ];
+    final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      body: SafeArea(
-        child: pages[_currentIndex],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        showUnselectedLabels: true,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+    return AppShellScaffold(
+      currentIndex: _currentIndex,
+      onDestinationSelected: (index) => setState(() => _currentIndex = index),
+      destinations: [
+        AppShellDestination(
+          label: l10n.navHome,
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          child: _PrestadorInicioTab(
+            online: _online,
+            roleReady: _roleReady,
+            onToggleOnline: (value) => setState(() => _online = value),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'Meus Trabalhos',
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.chat_bubble_outline),
-                if (_hasUnreadMessages)
-                  const Positioned(
-                    right: -2,
-                    top: -2,
-                    child: SizedBox(
-                      width: 10,
-                      height: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            activeIcon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.chat_bubble),
-                if (_hasUnreadMessages)
-                  const Positioned(
-                    right: -2,
-                    top: -2,
-                    child: SizedBox(
-                      width: 10,
-                      height: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            label: 'Mensagens',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-        ],
-      ),
+        ),
+        AppShellDestination(
+          label: l10n.navMyJobs,
+          icon: Icons.work_outline,
+          selectedIcon: Icons.work,
+          child: const _PrestadorPedidosTab(),
+        ),
+        AppShellDestination(
+          label: l10n.navMessages,
+          icon: Icons.chat_bubble_outline,
+          selectedIcon: Icons.chat_bubble,
+          showBadge: _hasUnreadMessages,
+          child: const MensagensTab(viewerRole: 'prestador'),
+        ),
+        AppShellDestination(
+          label: l10n.navProfile,
+          icon: Icons.person_outline,
+          selectedIcon: Icons.person,
+          child: _ContaTab(roleLabel: l10n.roleLabelProvider),
+        ),
+      ],
     );
   }
 }
@@ -504,7 +517,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     final user = AuthService.currentUser;
     if (user == null) return;
 
-    ChatService.instance.ensureChatMetaForPedido(pedido.id);
+    await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
     final myName = (user.displayName?.trim().isNotEmpty ?? false)
         ? user.displayName!.trim()
@@ -539,18 +552,18 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     final user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Utilizador nÃ£o autenticado.')),
+        const SnackBar(content: Text('Utilizador não autenticado.')),
       );
       return;
     }
 
     try {
-      await PedidosRepo.aceitarPedido(
-        pedidoId: pedido.id,
+      await PedidoService.instance.aceitarPedidoAberto(
+        pedido: pedido,
         prestadorId: user.uid,
       );
 
-      // âœ… garante que o chat fica associÃ¡vel ao prestador (prestadorId)
+      // ✅ garante que o chat fica associável ao prestador (prestadorId)
       await _ensureChatMetaAfterAccept(pedido);
 
       if (!context.mounted) return;
@@ -562,9 +575,9 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
               context: context,
               builder: (ctx) {
                 return AlertDialog(
-                  title: const Text('Pedido aceite âœ…'),
+                  title: const Text('Pedido aceite ✅'),
                   content: const Text(
-                    'Este pedido Ã© por orÃ§amento.\n\nQueres enviar o orÃ§amento (faixa min/max) agora?',
+                    'Este pedido é por orçamento.\n\nQueres enviar o orçamento (faixa min/max) agora?',
                   ),
                   actions: [
                     TextButton(
@@ -589,7 +602,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Pedido aceite. Podes enviar o orÃ§amento no detalhe do pedido.',
+                'Pedido aceite. Podes enviar o orçamento no detalhe do pedido.',
               ),
             ),
           );
@@ -612,7 +625,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     final user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Utilizador nÃ£o autenticado.')),
+        const SnackBar(content: Text('Utilizador não autenticado.')),
       );
       return;
     }
@@ -625,35 +638,35 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Propor serviÃ§o'),
+          title: const Text('Propor serviço'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Define uma faixa de preÃ§o para este serviÃ§o.\nInclui deslocaÃ§Ã£o e mÃ£o de obra.',
+                  'Define uma faixa de preço para este serviço.\nInclui deslocação e mão de obra.',
                   style: TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 16),
-                const Text('Valor mÃ­nimo (â‚¬)'),
+                const Text('Valor mínimo (€)'),
                 TextField(
                   controller: minController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    prefixText: 'â‚¬ ',
+                    prefixText: '€ ',
                     hintText: 'Ex.: 20',
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Valor mÃ¡ximo (â‚¬)'),
+                const Text('Valor máximo (€)'),
                 TextField(
                   controller: maxController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    prefixText: 'â‚¬ ',
+                    prefixText: '€ ',
                     hintText: 'Ex.: 35',
                   ),
                 ),
@@ -664,7 +677,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                   maxLines: 2,
                   decoration: const InputDecoration(
                     hintText:
-                        'Ex.: Inclui deslocaÃ§Ã£o. Materiais grandes Ã  parte.',
+                        'Ex.: Inclui deslocação. Materiais grandes à parte.',
                   ),
                 ),
               ],
@@ -678,14 +691,17 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
             TextButton(
               onPressed: () async {
                 final min = double.tryParse(
-                    minController.text.replaceAll(',', '.').trim());
+                  minController.text.replaceAll(',', '.').trim(),
+                );
                 final max = double.tryParse(
-                    maxController.text.replaceAll(',', '.').trim());
+                  maxController.text.replaceAll(',', '.').trim(),
+                );
 
                 if (min == null || max == null || min <= 0 || max <= 0) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(
-                      content: Text('Preenche valores mÃ­nimo e mÃ¡ximo vÃ¡lidos.'),
+                      content:
+                          Text('Preenche valores mínimo e máximo válidos.'),
                     ),
                   );
                   return;
@@ -694,7 +710,8 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 if (min > max) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(
-                      content: Text('O mÃ­nimo nÃ£o pode ser maior que o mÃ¡ximo.'),
+                      content:
+                          Text('O mínimo não pode ser maior que o máximo.'),
                     ),
                   );
                   return;
@@ -715,7 +732,9 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Proposta enviada ao cliente.')),
+                    const SnackBar(
+                      content: Text('Proposta enviada ao cliente.'),
+                    ),
                   );
                 } catch (e) {
                   if (!context.mounted) return;
@@ -738,11 +757,18 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.roleReady) {
+      unawaited(AuthService.ensureSignedInAnonymously());
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final l10n = AppLocalizations.of(context)!;
     final primary = Theme.of(context).colorScheme.primary;
     final user = AuthService.currentUser;
 
     if (user == null) {
-      return const Center(child: Text('Erro: utilizador nÃ£o autenticado.'));
+      unawaited(AuthService.ensureSignedInAnonymously());
+      return const Center(child: Text('A recuperar sessão...'));
     }
 
     final df = DateFormat('dd/MM HH:mm');
@@ -789,9 +815,9 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
           }
         }
 
-        final liquidoHojeStr = 'â‚¬ ${liquidoHoje.toStringAsFixed(2)}';
-        final brutoHojeStr = 'â‚¬ ${brutoHoje.toStringAsFixed(2)}';
-        final taxaHojeStr = 'â‚¬ ${taxaHoje.toStringAsFixed(2)}';
+        final liquidoHojeStr = '€ ${liquidoHoje.toStringAsFixed(2)}';
+        final brutoHojeStr = '€ ${brutoHoje.toStringAsFixed(2)}';
+        final taxaHojeStr = '€ ${taxaHoje.toStringAsFixed(2)}';
         final servicosMesStr = servicosMes.toString();
 
         final pendentesComAcao = pedidosDoPrestador
@@ -807,14 +833,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'OlÃ¡, prestador ðŸ‘‹',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              Text(
+                l10n.providerHomeGreeting,
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Fica online para receber novos pedidos.',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
+              Text(
+                l10n.providerHomeSubtitle,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 16),
               Container(
@@ -842,7 +869,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        widget.online ? 'EstÃ¡s ONLINE' : 'EstÃ¡s OFFLINE',
+                        widget.online ? 'Estás ONLINE' : 'Estás OFFLINE',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: widget.online
@@ -865,7 +892,8 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                         widget.onToggleOnline(value);
                         final user = AuthService.currentUser;
                         if (user != null) {
-                          await LocationService.instance.updatePrestadorLastLocation(
+                          await LocationService.instance
+                              .updatePrestadorLastLocation(
                             prestadorId: user.uid,
                             isOnline: value,
                           );
@@ -879,24 +907,23 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
               Row(
                 children: [
                   _KpiCard(
-                    label: 'Ganhos hoje (lÃ­quido)',
+                    label: 'Ganhos hoje (líquido)',
                     value: liquidoHojeStr,
                     icon: Icons.euro_outlined,
-                    subtitle: 'Bruto: $brutoHojeStr â€¢ Taxa: $taxaHojeStr',
+                    subtitle: 'Bruto: $brutoHojeStr | Taxa: $taxaHojeStr',
                   ),
                   const SizedBox(width: 12),
                   _KpiCard(
-                    label: 'ServiÃ§os este mÃªs',
+                    label: 'Serviços este mês',
                     value: servicosMesStr,
                     icon: Icons.work_outline,
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-
               if (trabalhoDestaque != null) ...[
                 GestureDetector(
-                  // âœ… corrigido: antes estava a usar "pedido" que nÃ£o existia
+                  // ✅ corrigido: antes estava a usar "pedido" que não existia
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -916,7 +943,10 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.notifications_active_outlined, size: 22),
+                        const Icon(
+                          Icons.notifications_active_outlined,
+                          size: 22,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -939,7 +969,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                               ),
                               const SizedBox(height: 2),
                               const Text(
-                                'Toca aqui para abrir o prÃ³ximo trabalho.',
+                                'Toca aqui para abrir o próximo trabalho.',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.black87,
@@ -954,23 +984,19 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 ),
                 const SizedBox(height: 12),
               ],
-
               _PrestadorMensagensBanner(prestadorId: user.uid),
               const SizedBox(height: 16),
-
               StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: _settingsStream,
                 builder: (context, settingsSnap) {
                   final data = settingsSnap.data?.data() ?? <String, dynamic>{};
-                  final servicosNomes =
-                      (data['servicosNomes'] as List?)
-                              ?.whereType<String>()
-                              .toList() ??
-                          <String>[];
+                  final servicosNomes = (data['servicosNomes'] as List?)
+                          ?.whereType<String>()
+                          .toList() ??
+                      <String>[];
                   final hasCategorias = servicosNomes.isNotEmpty;
 
-                  if (settingsSnap.connectionState ==
-                          ConnectionState.waiting &&
+                  if (settingsSnap.connectionState == ConnectionState.waiting &&
                       data.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.only(bottom: 16),
@@ -1001,7 +1027,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                             Icon(Icons.category_outlined, color: primary),
                             const SizedBox(width: 8),
                             const Text(
-                              'Categorias de atuacao',
+                              'Categorias de atuação',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1011,14 +1037,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Usamos as categorias para filtrar pedidos compativeis.',
+                          'Usamos as categorias para filtrar pedidos compatíveis.',
                           style: TextStyle(fontSize: 12, color: Colors.black54),
                         ),
                         const SizedBox(height: 10),
                         if (!hasCategorias)
                           const Text(
                             'Nenhuma categoria selecionada.',
-                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.black54),
                           )
                         else
                           Wrap(
@@ -1053,13 +1080,11 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                   );
                 },
               ),
-
               const Text(
                 'Pedidos perto de ti',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
-
               if (!widget.roleReady)
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
@@ -1067,208 +1092,218 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 )
               else
                 StreamBuilder<List<Pedido>>(
-                stream: PedidosRepo.streamPedidosDisponiveis(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  stream: PedidosRepo.streamPedidosDisponiveis(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Erro a carregar pedidos: ${snapshot.error}',
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  }
-
-                  var pedidos = snapshot.data ?? [];
-                  pedidos =
-                      pedidos.where((p) => !_ignorados.contains(p.id)).toList();
-
-                  if (pedidos.isEmpty) {
-                    _atualizarDisponiveis(const <Pedido>[]);
-                    return const Padding(
-                      padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                      child: Text(
-                        'NÃ£o hÃ¡ pedidos disponÃ­veis neste momento.\n'
-                        'Assim que um cliente criar um pedido, ele aparece aqui. ðŸ˜‰',
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  }
-
-                  return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: _settingsStream,
-                    builder: (context, settingsSnap) {
-                      final sdata = settingsSnap.data?.data();
-
-                      if (settingsSnap.connectionState ==
-                              ConnectionState.waiting &&
-                          sdata == null) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (sdata == null) {
-                        _resetDisponiveis();
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Configura a tua Ã¡rea de atuaÃ§Ã£o para receber pedidos compatÃ­veis.',
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const PrestadorSettingsScreen(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.tune),
-                                label: const Text('Configurar'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final servicos = (sdata['servicos'] as List?)
-                              ?.whereType<String>()
-                              .toSet() ??
-                          <String>{};
-
-                      final servicosNomes = (sdata['servicosNomes'] as List?)
-                              ?.whereType<String>()
-                              .toSet() ??
-                          <String>{};
-                      final hasCategorias =
-                          servicos.isNotEmpty || servicosNomes.isNotEmpty;
-
-                      if (!hasCategorias) {
-                        _resetDisponiveis();
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Seleciona as categorias que fazes para receber pedidos.',
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const PrestadorSettingsScreen(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.list_alt),
-                                label: const Text('Selecionar categorias'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final radiusKm =
-                          (sdata['radiusKm'] as num?)?.toDouble() ?? 10.0;
-
-                      final lastLoc =
-                          sdata['lastLocation'] as Map<String, dynamic>?;
-                      final lat = (lastLoc?['lat'] as num?)?.toDouble();
-                      final lng = (lastLoc?['lng'] as num?)?.toDouble();
-
-                      final isOnline = (sdata['isOnline'] as bool?) ?? false;
-                      if (!isOnline) {
-                        _resetDisponiveis();
-                        return const Padding(
-                          padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: Text(
-                            'EstÃ¡s offline. Ativa o modo online para receber pedidos.',
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
-
-                      bool matchesService(Pedido p) {
-                        if (servicos.contains(p.servicoId)) return true;
-                        final nome = p.servicoNome ?? p.categoria;
-                        if (nome != null && servicosNomes.contains(nome)) return true;
-                        return false;
-                      }
-
-                      bool matchesDistance(Pedido p) {
-                        if (lat == null || lng == null) return true;
-                        if (p.latitude == null || p.longitude == null) return true;
-
-                        final distKm = LocationService.instance.distanceKm(
-                          lat1: lat,
-                          lng1: lng,
-                          lat2: p.latitude!,
-                          lng2: p.longitude!,
-                        );
-
-                        return distKm <= radiusKm;
-                      }
-
-                      final filtered = pedidos
-                          .where((p) => matchesService(p) && matchesDistance(p))
-                          .toList();
-
-                      _atualizarDisponiveis(filtered);
-
-                      if (filtered.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                          child: Text(
-                            'Sem pedidos compatÃ­veis agora.\n'
-                            'Ajusta serviÃ§os/raio ou atualiza a localizaÃ§Ã£o.',
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final pedido = filtered[index];
-
-                          final tipoPrecoLabel = _labelTipoPreco(pedido.tipoPreco);
-                          final tipoPagamentoLabel =
-                              _labelTipoPagamento(pedido.tipoPagamento);
-
-                          return _PedidoDisponivelCard(
-                            pedido: pedido,
-                            titulo: pedido.titulo,
-                            categoria: pedido.categoria,
-                            descricao: pedido.descricao,
-                            agendadoPara: pedido.agendadoPara,
-                            modo: pedido.modo,
-                            tipoPrecoLabel: tipoPrecoLabel,
-                            tipoPagamentoLabel: tipoPagamentoLabel,
-                            df: df,
-                            onPropor: () => _aceitarPedido(context, pedido),
-                            onIgnorar: () => _ignorarPedido(pedido),
-                          );
-                        },
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Erro a carregar pedidos: ${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
                       );
-                    },
-                  );
-                },
-              ),
+                    }
 
+                    var pedidos = snapshot.data ?? [];
+                    pedidos = pedidos
+                        .where((p) => !_ignorados.contains(p.id))
+                        .toList();
+
+                    if (pedidos.isEmpty) {
+                      _atualizarDisponiveis(const <Pedido>[]);
+                      return Padding(
+                        padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
+                        child: Text(
+                          '${l10n.noOrdersAvailableMessage}\n${l10n.providerHomeSubtitle}',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+
+                    return StreamBuilder<
+                        DocumentSnapshot<Map<String, dynamic>>>(
+                      stream: _settingsStream,
+                      builder: (context, settingsSnap) {
+                        final sdata = settingsSnap.data?.data();
+
+                        if (settingsSnap.connectionState ==
+                                ConnectionState.waiting &&
+                            sdata == null) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (sdata == null) {
+                          _resetDisponiveis();
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Configura a tua área de atuação para receber pedidos compatíveis.',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PrestadorSettingsScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.tune),
+                                  label: const Text('Configurar'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final servicos = (sdata['servicos'] as List?)
+                                ?.whereType<String>()
+                                .toSet() ??
+                            <String>{};
+
+                        final servicosNomes = (sdata['servicosNomes'] as List?)
+                                ?.whereType<String>()
+                                .toSet() ??
+                            <String>{};
+                        final hasCategorias =
+                            servicos.isNotEmpty || servicosNomes.isNotEmpty;
+
+                        if (!hasCategorias) {
+                          _resetDisponiveis();
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(top: 8.0, bottom: 16.0),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  'Seleciona as categorias que fazes para receber pedidos.',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const PrestadorSettingsScreen(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.list_alt),
+                                  label: const Text('Selecionar categorias'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final radiusKm =
+                            (sdata['radiusKm'] as num?)?.toDouble() ?? 10.0;
+
+                        final lastLoc =
+                            sdata['lastLocation'] as Map<String, dynamic>?;
+                        final lat = (lastLoc?['lat'] as num?)?.toDouble();
+                        final lng = (lastLoc?['lng'] as num?)?.toDouble();
+
+                        final isOnline = (sdata['isOnline'] as bool?) ?? false;
+                        if (!isOnline) {
+                          _resetDisponiveis();
+                          return const Padding(
+                            padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
+                            child: Text(
+                              'Estás offline. Ativa o modo online para receber pedidos.',
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        }
+
+                        bool matchesService(Pedido p) {
+                          if (servicos.contains(p.servicoId)) return true;
+                          final nome = p.servicoNome ?? p.categoria;
+                          if (nome != null && servicosNomes.contains(nome)) {
+                            return true;
+                          }
+                          return false;
+                        }
+
+                        bool matchesDistance(Pedido p) {
+                          if (lat == null || lng == null) return true;
+                          if (p.latitude == null || p.longitude == null) {
+                            return true;
+                          }
+
+                          final distKm = LocationService.instance.distanceKm(
+                            lat1: lat,
+                            lng1: lng,
+                            lat2: p.latitude!,
+                            lng2: p.longitude!,
+                          );
+
+                          return distKm <= radiusKm;
+                        }
+
+                        final filtered = pedidos
+                            .where(
+                              (p) => matchesService(p) && matchesDistance(p),
+                            )
+                            .toList();
+
+                        _atualizarDisponiveis(filtered);
+
+                        if (filtered.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
+                            child: Text(
+                              'Sem pedidos compatíveis agora.\n'
+                              'Ajusta serviços/raio ou atualiza a localização.',
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final pedido = filtered[index];
+
+                            final tipoPrecoLabel =
+                                _labelTipoPreco(pedido.tipoPreco);
+                            final tipoPagamentoLabel =
+                                _labelTipoPagamento(pedido.tipoPagamento);
+
+                            return _PedidoDisponivelCard(
+                              pedido: pedido,
+                              titulo: pedido.titulo,
+                              categoria: pedido.categoria,
+                              descricao: pedido.descricao,
+                              agendadoPara: pedido.agendadoPara,
+                              modo: pedido.modo,
+                              tipoPrecoLabel: tipoPrecoLabel,
+                              tipoPagamentoLabel: tipoPagamentoLabel,
+                              df: df,
+                              onPropor: () => _aceitarPedido(context, pedido),
+                              onIgnorar: () => _ignorarPedido(pedido),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
               const SizedBox(height: 16),
             ],
           ),
@@ -1339,9 +1374,18 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
             .orderBy('createdAt', descending: true)
             .limit(50);
 
-        _chatSubs[p.id] = q.snapshots().listen((snap) {
-          _onMessagesUpdate(p.id, snap.docs);
-        });
+        _chatSubs[p.id] = q.snapshots().listen(
+          (snap) => _onMessagesUpdate(p.id, snap.docs),
+          onError: (Object error, StackTrace stackTrace) {
+            _unreadPorPedido[p.id] = false;
+            _lastUnreadAtPorPedido[p.id] = null;
+            _recalculateGlobal();
+            if (kDebugMode) {
+              // ignore: avoid_print
+              print('[PrestadorHomeBanner] chatSub(${p.id}) error: $error');
+            }
+          },
+        );
       }
     }
   }
@@ -1419,10 +1463,10 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
     final primary = Theme.of(context).colorScheme.primary;
     final pedido = _pedidoMaisRecente!;
 
-    // âœ… agora abre o CHAT (Instagram/WhatsApp), nÃ£o o detalhe
+    // ✅ agora abre o CHAT (Instagram/WhatsApp), não o detalhe
     return GestureDetector(
       onTap: () async {
-        ChatService.instance.ensureChatMetaForPedido(pedido.id);
+        await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
         final snap = await FirebaseFirestore.instance
             .collection('chats')
@@ -1439,7 +1483,7 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
         if (!context.mounted) return;
 
         if (clienteId.trim().isEmpty) {
-          Navigator.of(context).push(
+          await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => PedidoDetalheScreen(
                 pedidoId: pedido.id,
@@ -1450,7 +1494,7 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
           return;
         }
 
-        Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ChatThreadScreen(
               pedidoId: pedido.id,
@@ -1565,7 +1609,8 @@ class _KpiCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: const TextStyle(fontSize: 11, color: Colors.black54),
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.black54),
                     ),
                   ],
                 ],
@@ -1607,13 +1652,13 @@ class _PedidoDisponivelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final linhaCategoria = categoria ?? 'Categoria nÃ£o definida';
+    final linhaCategoria = categoria ?? 'Categoria não definida';
 
     String linhaAgendamento;
     if (modo == 'AGENDADO' && agendadoPara != null) {
       linhaAgendamento = 'Agendado: ${df.format(agendadoPara!)}';
     } else {
-      linhaAgendamento = 'ServiÃ§o imediato';
+      linhaAgendamento = 'Serviço imediato';
     }
 
     final desc = (descricao ?? '').trim();
@@ -1696,7 +1741,8 @@ class _PrestadorPedidosTab extends StatelessWidget {
     final user = AuthService.currentUser;
 
     if (user == null) {
-      return const Center(child: Text('Erro: utilizador nÃ£o autenticado.'));
+      unawaited(AuthService.ensureSignedInAnonymously());
+      return const Center(child: CircularProgressIndicator());
     }
 
     final df = DateFormat('dd/MM HH:mm');
@@ -1717,7 +1763,7 @@ class _PrestadorPedidosTab extends StatelessWidget {
               labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               tabs: [
                 Tab(text: 'Em aberto'),
-                Tab(text: 'ConcluÃ­dos'),
+                Tab(text: 'Concluídos'),
                 Tab(text: 'Cancelados'),
               ],
             ),
@@ -1756,19 +1802,19 @@ class _PrestadorPedidosTab extends StatelessWidget {
                       _PrestadorListaPedidos(
                         pedidos: emAberto,
                         mensagemVazio:
-                            'Ainda nÃ£o tens trabalhos em aberto.\nVai Ã  aba InÃ­cio e aceita um pedido.',
+                            'Ainda não tens trabalhos em aberto.\nVai à aba Início e aceita um pedido.',
                         df: df,
                         podeCancelar: true,
                       ),
                       _PrestadorListaPedidos(
                         pedidos: concluidos,
-                        mensagemVazio: 'Ainda nÃ£o tens trabalhos concluÃ­dos.',
+                        mensagemVazio: 'Ainda não tens trabalhos concluídos.',
                         df: df,
                         podeCancelar: false,
                       ),
                       _PrestadorListaPedidos(
                         pedidos: cancelados,
-                        mensagemVazio: 'Ainda nÃ£o tens trabalhos cancelados.',
+                        mensagemVazio: 'Ainda não tens trabalhos cancelados.',
                         df: df,
                         podeCancelar: false,
                       ),
@@ -1835,9 +1881,8 @@ class _PrestadorPedidoCard extends StatelessWidget {
   });
 
   Future<void> _cancelarTrabalho(BuildContext context) async {
-    final emServico =
-        pedido.estado == 'em_andamento' ||
-            pedido.estado == 'aguarda_confirmacao_valor';
+    final emServico = pedido.estado == 'em_andamento' ||
+        pedido.estado == 'aguarda_confirmacao_valor';
     final motivos = CancelamentoMotivos.forPrestador(emServico: emServico);
     CancelamentoMotivoOption selectedMotivo = motivos.first;
     final detalheController = TextEditingController();
@@ -1857,7 +1902,7 @@ class _PrestadorPedidoCard extends StatelessWidget {
                 children: [
                   const Text(
                     'Tens a certeza que queres cancelar este trabalho?\n'
-                    'O pedido pode voltar a ficar disponÃ­vel para outros prestadores.',
+                    'O pedido pode voltar a ficar disponível para outros prestadores.',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 12),
@@ -1904,7 +1949,7 @@ class _PrestadorPedidoCard extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('NÃ£o'),
+                  child: const Text('Não'),
                 ),
                 TextButton(
                   onPressed: () {
@@ -1930,12 +1975,15 @@ class _PrestadorPedidoCard extends StatelessWidget {
 
     final motivo = selectedMotivo.id;
     final motivoDetalhe = detalheController.text.trim();
-    final motivoDetalheFinal =
-        motivoDetalhe.isEmpty ? null : motivoDetalhe;
+    final motivoDetalheFinal = motivoDetalhe.isEmpty ? null : motivoDetalhe;
 
     try {
+      final user = AuthService.currentUser;
+      if (user == null) return;
+
       await PedidoService.instance.cancelarPorPrestador(
         pedido: pedido,
+        prestadorId: user.uid,
         motivo: motivo,
         motivoDetalhe: motivoDetalheFinal,
         motivoIsId: true,
@@ -1971,10 +2019,10 @@ class _PrestadorPedidoCard extends StatelessWidget {
     if (pedido.modo == 'AGENDADO' && pedido.agendadoPara != null) {
       subtitulo = 'Agendado: ${df.format(pedido.agendadoPara!)}';
     } else {
-      subtitulo = 'ServiÃ§o imediato';
+      subtitulo = 'Serviço imediato';
     }
 
-    final categoria = pedido.categoria ?? 'Categoria nÃ£o definida';
+    final categoria = pedido.categoria ?? 'Categoria não definida';
     final desc = pedido.descricao.trim();
     final temDescricao = desc.isNotEmpty;
 
@@ -2004,12 +2052,12 @@ class _PrestadorPedidoCard extends StatelessWidget {
 
     if (totalPago != null && commission != null && liquido != null) {
       valorClienteLabel =
-          'Valor pago pelo cliente: â‚¬ ${totalPago.toStringAsFixed(2)}';
+          'Valor pago pelo cliente: € ${totalPago.toStringAsFixed(2)}';
       valorPrestadorLabel =
-          'Tu recebes: â‚¬ ${liquido.toStringAsFixed(2)} â€¢ Taxa: â‚¬ ${commission.toStringAsFixed(2)}';
+          'Tu recebes: € ${liquido.toStringAsFixed(2)} | Taxa: € ${commission.toStringAsFixed(2)}';
     } else if (isConcluido && pedido.preco != null) {
       valorClienteLabel =
-          'Valor do serviÃ§o: â‚¬ ${pedido.preco!.toStringAsFixed(2)}';
+          'Valor do serviço: € ${pedido.preco!.toStringAsFixed(2)}';
     }
 
     final bool mostrarCancelar =
@@ -2132,63 +2180,95 @@ class _ContaTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Conta ($roleLabel)',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth > AppBreakpoints.tabletMax
+            ? AppBreakpoints.contentMaxSingleColumn
+            : double.infinity;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x6,
           ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-            title: const Text('Ver o meu perfil'),
-            subtitle: const Text('Perfil de Prestador'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PrestadorPerfilScreen(),
-                ),
-              );
-            },
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.accountTitle(roleLabel),
+                    style: theme.textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.x4),
+                  Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person_outline),
+                          ),
+                          title: Text(l10n.providerAccountProfileTitle),
+                          subtitle: Text(l10n.providerAccountProfileSubtitle),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PrestadorPerfilScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.payments_outlined),
+                          title: const Text('Pagamentos (Stripe)'),
+                          subtitle: const Text('Ativar recebimentos online'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const PrestadorPagamentosScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.settings_outlined),
+                          trailing: const Icon(Icons.chevron_right),
+                          title: const Text('Definições'),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PrestadorSettingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.help_outline),
+                          title: Text(l10n.accountHelpSupport),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.payments_outlined),
-            title: const Text('Pagamentos (Stripe)'),
-            subtitle: const Text('Ativar recebimentos online'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PrestadorPagamentosScreen(),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('DefiniÃ§Ãµes'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PrestadorSettingsScreen(),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Ajuda e suporte'),
-            onTap: () {},
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
-
-

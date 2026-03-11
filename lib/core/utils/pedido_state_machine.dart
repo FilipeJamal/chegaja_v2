@@ -94,6 +94,21 @@ class PedidoStateMachine {
     return allowed[f]?.contains(t) ?? false;
   }
 
+
+  static const int timeoutMinutes = 30;
+
+  static bool hasExpired(String status, DateTime? lastUpdate) {
+    if (lastUpdate == null) return false;
+    final s = status.trim().toLowerCase();
+    
+    // States subject to timeout (pending acceptance)
+    if (s == criado || s == aguardaRespostaPrestador) {
+      final diff = DateTime.now().difference(lastUpdate);
+      return diff.inMinutes >= timeoutMinutes;
+    }
+    return false;
+  }
+
   static void assertTransition({
     required String role,
     required String from,

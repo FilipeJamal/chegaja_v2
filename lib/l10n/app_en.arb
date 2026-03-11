@@ -243,6 +243,80 @@
   "providerHomeSubtitle": "Go online to receive new orders.",
   "providerStatusOnline": "You're ONLINE",
   "providerStatusOffline": "You're OFFLINE",
+  "providerSettingsLoadError": "Error loading settings: {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "Error saving settings: {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "Service area",
+  "serviceAreaHeading": "Where do you want to receive orders?",
+  "serviceAreaSubtitle": "Set the services you provide and the maximum radius around your base city.",
+  "serviceAreaBaseLocation": "Base location",
+  "serviceAreaRadius": "Service radius",
+  "serviceAreaSaved": "Service area saved successfully.",
+  "serviceAreaInfoNote": "In the future we'll use these settings to filter orders by proximity and service type. For now, this helps us prepare the matching engine.",
+  "availabilityTitle": "Availability",
+  "servicesYouProvideTitle": "Services you provide",
+  "servicesCatalogEmpty": "No services configured in the catalog yet.",
+  "servicesSearchPrompt": "Type to search and add services.",
+  "servicesSearchNoResults": "No services found.",
+  "servicesSelectedTitle": "Selected services",
+  "serviceUnnamed": "Unnamed service",
+  "serviceModeQuote": "Quote",
+  "serviceModeScheduled": "Scheduled",
+  "serviceModeImmediate": "Immediate",
+  "providerServicesSelectAtLeastOne": "Select at least one service you provide.",
+  "countryLabel": "Country",
+  "cityLabel": "City",
+  "stateLabelDistrict": "District",
+  "stateLabelProvince": "Province",
+  "stateLabelState": "State",
+  "stateLabelRegion": "Region",
+  "stateLabelCounty": "County",
+  "stateLabelRegionOrState": "Region/State",
+  "searchHint": "Search...",
+  "searchCountryHint": "Type to search countries",
+  "searchGenericHint": "Type to search",
+  "searchServicesHint": "Search services",
+  "openCountriesListTooltip": "View country list",
+  "openListTooltip": "View list",
+  "selectCountryTitle": "Select country",
+  "selectCityTitle": "Select city",
+  "selectFieldTitle": "Select {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "Save changes",
+  "supportTitle": "Help & support",
+  "supportSubtitle": "Have questions? Contact us.",
+  "myScheduleTitle": "My schedule",
+  "myScheduleSubtitle": "Set hours and days off",
+  "languageTitle": "Language",
+  "languageModeManual": "Manual",
+  "languageModeAuto": "Auto",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "Auto (system)",
+  "providerCategoriesTitle": "Service categories",
+  "providerCategoriesSubtitle": "We use categories to filter compatible orders.",
+  "providerCategoriesEmpty": "No category selected.",
+  "providerCategoriesSelect": "Select categories",
+  "providerCategoriesEdit": "Add or edit categories",
+  "providerCategoriesRequiredMessage": "Select your categories to receive matching orders.",
   "providerKpiEarningsToday": "Earnings today (net)",
   "providerKpiServicesThisMonth": "Services this month",
   "providerKpiGrossFeeSubtitle": "Gross: {gross} - Fee: {fee}",
@@ -307,6 +381,8 @@
   "cancelJobPrompt": "Are you sure you want to cancel this job?\\nThe order may become available to other providers.",
   "cancelJobReasonLabel": "Cancellation reason (optional):",
   "cancelJobReasonFieldLabel": "Reason",
+  "cancelJobDetailLabel": "Cancellation details",
+  "cancelJobDetailRequired": "Please add a detail.",
   "cancelJobSuccess": "Job cancelled.",
   "cancelJobError": "Error cancelling job: {error}",
   "@cancelJobError": {
@@ -576,6 +652,21 @@
   "messagesSearchHint": "Search messages",
   "messagesLoadError": "Error loading conversations: {error}",
   "messagesEmpty": "You don't have any conversations yet.\nOnce you chat with a provider/customer, they'll appear here.",
+  "messagesNewConversationTitle": "New conversation",
+  "messagesNewConversationBody": "To start a conversation with a provider or customer, go to your \"Orders\" or accept a new order.",
+  "messagesFilterAll": "All",
+  "messagesFilterUnread": "Unread",
+  "messagesFilterFavorites": "Favorites",
+  "messagesFilterGroups": "Groups",
+  "messagesFilterEmpty": "Nothing in \"{filter}\"",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "No conversations found.",
+  "messagesPinConversation": "Pin conversation",
+  "messagesUnpinConversation": "Unpin conversation",
   "chatPresenceOnline": "online",
   "chatPresenceLastSeenAt": "last seen at {time}",
   "chatPresenceLastSeenYesterdayAt": "last seen yesterday at {time}",
@@ -640,17 +731,10 @@
   "profileServicesTitle": "Services",
   "profilePortfolioTitle": "Portfolio",
   "chatOpenFullAction": "Open full chat",
-  "chatOpenFullUnavailable": "The other participant hasn't been assigned to this order yet.",
-  "@messagesLoadError": {
-    "placeholders": {
-      "error": {}
-    }
-  },
-  "@chatPresenceLastSeenAt": {
-    "placeholders": {
-      "time": {}
-    }
-  },
+  "chatOpenFullUnavailable": "The other participant is not yet assigned to this order.",
+  "chatReplyAction": "Reply",
+  "chatCopyAction": "Copy",
+  "chatDeleteAction": "Delete",
   "@chatPresenceLastSeenYesterdayAt": {
     "placeholders": {
       "time": {}
@@ -685,6 +769,54 @@
   "@chatCallMessageVoice": {
     "placeholders": {
       "url": {}
+    }
+  },
+  "storyNewTitle": "New story",
+  "storyPublishing": "Publishing story...",
+  "storyPublished": "Story published! Expires in 24h.",
+  "storyPublishError": "Error publishing story: {error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "Caption (optional)",
+  "actionPublish": "Publish",
+  "snackOrderRemoved": "Order removed.",
+  "snackClientCancelledOrder": "Customer cancelled the order.",
+  "snackOrderCancelled": "Order cancelled.",
+  "snackOrderAcceptedByAnother": "Another provider accepted the order.",
+  "snackOrderUpdated": "Order updated.",
+  "snackUserNotAuthenticated": "User not authenticated.",
+  "snackOrderAcceptedCanQuote": "Order accepted. You can send the quote in the order details.",
+  "snackOrderAcceptedSuccess": "Order accepted.",
+  "snackErrorAcceptingOrder": "Error accepting order: {error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "Order accepted",
+  "dialogContentQuotePrompt": "This order is by quote.\n\nDo you want to send the quote range now?",
+  "dialogTitleProposeService": "Propose service",
+  "dialogContentProposeService": "Set a price range for this service.\nInclude travel and labor.",
+  "labelMinValue": "Minimum value",
+  "labelMaxValue": "Maximum value",
+  "labelMessageOptional": "Message to the customer (optional)",
+  "hintExampleValue": "Ex.: {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "Ex.: Includes travel. Large materials are extra.",
+  "snackFillValidValues": "Enter valid minimum and maximum values.",
+  "snackMinCannotBeGreaterThanMax": "The minimum can't be greater than the maximum.",
+  "snackProposalSent": "Proposal sent to the customer.",
+  "snackErrorSendingProposal": "Error sending proposal: {error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
     }
   }
 }

@@ -19,6 +19,9 @@ class Servico {
   /// Nome visível da categoria/serviço (ex.: "Canalizador", "Confeitaria")
   final String name;
 
+  /// Nomes traduzidos por idioma (ex.: {'en': 'Plumber'})
+  final Map<String, String> nameI18n;
+
   /// Modo: "IMEDIATO", "AGENDADO" ou "POR_PROPOSTA"
   final String mode;
 
@@ -40,6 +43,7 @@ class Servico {
     required this.mode,
     required this.keywords,
     required this.isActive,
+    this.nameI18n = const {},
     this.iconKey,
     this.createdAt,
   });
@@ -70,6 +74,7 @@ class Servico {
     //   a Home do cliente ficar “vazia”.
 
     final name = (map['name'] ?? map['nome'])?.toString() ?? '';
+    final nameI18n = _parseNameI18n(map['name_i18n']);
 
     final rawMode = (map['mode'] ?? map['modo'])?.toString() ?? 'IMEDIATO';
     final mode = rawMode.toUpperCase().trim();
@@ -100,6 +105,7 @@ class Servico {
       name: name,
       mode: mode,
       keywords: kws,
+      nameI18n: nameI18n,
       iconKey: (map['iconKey'] ?? map['icone'])?.toString(),
       isActive: isActive,
       createdAt: created,
@@ -115,6 +121,7 @@ class Servico {
       'keywords': keywords,
       'iconKey': iconKey,
       'isActive': isActive,
+      if (nameI18n.isNotEmpty) 'name_i18n': nameI18n,
 
       // Campos v1 (compatibilidade)
       'nome': name,
@@ -131,6 +138,7 @@ class Servico {
     String? name,
     String? mode,
     List<String>? keywords,
+    Map<String, String>? nameI18n,
     String? iconKey,
     bool? isActive,
     DateTime? createdAt,
@@ -140,9 +148,24 @@ class Servico {
       name: name ?? this.name,
       mode: mode ?? this.mode,
       keywords: keywords ?? this.keywords,
+      nameI18n: nameI18n ?? this.nameI18n,
       iconKey: iconKey ?? this.iconKey,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  String nameForLang(String? langCode) {
+    if (langCode == null || langCode.isEmpty) return name;
+    return nameI18n[langCode] ?? name;
+  }
+
+  static Map<String, String> _parseNameI18n(dynamic raw) {
+    if (raw is Map) {
+      return raw.map(
+        (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+      )..removeWhere((_, value) => value.isEmpty);
+    }
+    return const {};
   }
 }

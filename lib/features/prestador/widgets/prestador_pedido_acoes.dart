@@ -1,8 +1,9 @@
 // lib/features/prestador/widgets/prestador_pedido_acoes.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
+import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 
@@ -18,12 +19,13 @@ class PrestadorPedidoAcoes extends StatelessWidget {
   Widget build(BuildContext context) {
     // Se o pedido é por orçamento (ou pedido por proposta), o prestador NÃO deve iniciar
     // enquanto o cliente não aceitar a proposta.
-    final bool isOrcamento =
-        pedido.tipoPreco == 'por_orcamento';
+    final bool isOrcamento = pedido.tipoPreco == 'por_orcamento';
 
     switch (pedido.estado) {
       case 'aguarda_resposta_prestador':
         return _AcaoResponderConvite(pedido: pedido);
+      case 'aguarda_resposta_cliente':
+        return _AcaoAguardandoRespostaCliente(pedido: pedido);
       case 'aceito':
         // Se for orçamento e ainda não existe "aceita_cliente", mostramos ação para enviar orçamento.
         if (isOrcamento && pedido.statusProposta != 'aceita_cliente') {
@@ -63,7 +65,7 @@ class _AcaoResponderConvite extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Convite direto do cliente. Queres aceitar este servico?',
+          'Convite direto do cliente. Queres aceitar este serviço?',
           style: TextStyle(fontSize: 12, color: Colors.black54),
         ),
         const SizedBox(height: 8),
@@ -125,6 +127,32 @@ class _AcaoResponderConvite extends StatelessWidget {
   }
 }
 
+class _AcaoAguardandoRespostaCliente extends StatelessWidget {
+  final Pedido pedido;
+
+  const _AcaoAguardandoRespostaCliente({required this.pedido});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Aguardando resposta do cliente.',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        if (pedido.precoPropostoPrestador != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Proposta enviada: ${CurrencyUtils.format(pedido.precoPropostoPrestador!)}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _AcaoEnviarOrcamento extends StatelessWidget {
   final Pedido pedido;
 
@@ -164,23 +192,23 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Valor mínimo (€)'),
+                      Text('Valor mínimo (${CurrencyUtils.currencySymbol()})'),
                       const SizedBox(height: 4),
                       TextField(
                         controller: minController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: const InputDecoration(
                           hintText: 'Ex.: 20',
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Valor máximo (€)'),
+                      Text('Valor máximo (${CurrencyUtils.currencySymbol()})'),
                       const SizedBox(height: 4),
                       TextField(
                         controller: maxController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: const InputDecoration(
                           hintText: 'Ex.: 35',
                         ),
@@ -275,7 +303,7 @@ class _AcaoIniciarServico extends StatelessWidget {
         Text(
           isAgendado
               ? 'Este serviço está agendado. Só deves iniciar perto da hora '
-                'combinada com o cliente.'
+                  'combinada com o cliente.'
               : 'Quando chegares ao local do serviço, clica em "Iniciar serviço".',
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
@@ -301,12 +329,11 @@ class _AcaoIniciarServico extends StatelessWidget {
                   final diff = agendado.difference(agora);
                   final horas = diff.inHours;
                   final minutos = diff.inMinutes % 60;
-                  final textoTempo = horas > 0
-                      ? '${horas}h ${minutos}min'
-                      : '${minutos}min';
+                  final textoTempo =
+                      horas > 0 ? '${horas}h ${minutos}min' : '${minutos}min';
 
-                  final dataFormatada =
-                      DateFormat('dd/MM \'às\' HH:mm').format(agendado);
+                  final dataFormatada = DateTimeUtils.formatDateTime(agendado,
+                      locale: Localizations.localeOf(context).toString());
 
                   await showDialog<void>(
                     context: context,
@@ -333,7 +360,13 @@ class _AcaoIniciarServico extends StatelessWidget {
               }
 
               try {
-                await PedidoService.instance.iniciarPedido(pedido: pedido);
+                final user = AuthService.currentUser;
+                if (user == null) return;
+
+                await PedidoService.instance.iniciarPedido(
+                  pedido: pedido,
+                  prestadorId: user.uid,
+                );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Serviço iniciado.')),
@@ -383,15 +416,15 @@ class _AcaoLancarValorFinal extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
-              const Text('Valor final a cobrar (€)'),
+              Text('Valor final a cobrar (${CurrencyUtils.currencySymbol()})'),
               const SizedBox(height: 4),
               TextField(
                 controller: controller,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                decoration: const InputDecoration(
-                  prefixText: '€ ',
+                decoration: InputDecoration(
+                  prefixText: '${CurrencyUtils.currencySymbol()} ',
                   hintText: 'Ex.: 35',
                 ),
               ),
@@ -410,13 +443,12 @@ class _AcaoLancarValorFinal extends StatelessWidget {
                 if (valor == null || valor <= 0) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(
-                      content: Text('Introduz um valor final válido.'),
+                      content: Text('Introduz um valor final valido.'),
                     ),
                   );
                   return;
                 }
 
-                // verifica se está fora da faixa
                 final foraFaixa = PedidoService.valorForaDaFaixa(
                   valor: valor,
                   min: pedido.valorMinEstimadoPrestador,
@@ -431,11 +463,11 @@ class _AcaoLancarValorFinal extends StatelessWidget {
                       return AlertDialog(
                         title: const Text('Valor fora da faixa'),
                         content: Text(
-                          'O valor que estás a lançar está fora da faixa que '
+                          'O valor que estas a lancar esta fora da faixa que '
                           'tinhas indicado ao cliente.\n\n'
                           '$faixaMsg\n\n'
-                          'Tens a certeza que € ${valor.toStringAsFixed(2)} '
-                          'é o valor correto?',
+                          'Tens a certeza que ${CurrencyUtils.format(valor)} '
+                          'e o valor correto?',
                         ),
                         actions: [
                           TextButton(
@@ -450,16 +482,15 @@ class _AcaoLancarValorFinal extends StatelessWidget {
                       );
                     },
                   );
-
-                if (confirm != true) {
-                  return;
+                  if (confirm != true) {
+                    return;
+                  }
                 }
-              }
 
-              if (!ctx.mounted) return;
-              Navigator.of(ctx).pop(valor);
-            },
-            child: const Text('Enviar ao cliente'),
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop(valor);
+              },
+              child: const Text('Enviar ao cliente'),
             ),
           ],
         );
@@ -469,9 +500,13 @@ class _AcaoLancarValorFinal extends StatelessWidget {
     if (valorDigitado == null) return;
 
     try {
+      final user = AuthService.currentUser;
+      if (user == null) return;
+
       await PedidoService.instance.proporValorFinal(
         pedido: pedido,
         valorFinal: valorDigitado,
+        prestadorId: user.uid,
       );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -496,14 +531,13 @@ class _AcaoLancarValorFinal extends StatelessWidget {
     final max = pedido.valorMaxEstimadoPrestador;
 
     if (min != null && max != null) {
-      return 'Faixa combinada: € ${min.toStringAsFixed(2)} a '
-          '€ ${max.toStringAsFixed(2)}.';
+      return 'Faixa combinada: ${CurrencyUtils.format(min)} a ${CurrencyUtils.format(max)}.';
     }
     if (min != null) {
-      return 'Faixa combinada: desde € ${min.toStringAsFixed(2)}.';
+      return 'Faixa combinada: desde ${CurrencyUtils.format(min)}.';
     }
     if (max != null) {
-      return 'Faixa combinada: até € ${max.toStringAsFixed(2)}.';
+      return 'Faixa combinada: até ${CurrencyUtils.format(max)}.';
     }
     return 'Sem faixa combinada.';
   }
@@ -553,7 +587,7 @@ class _AcaoAguardandoConfirmacao extends StatelessWidget {
         const SizedBox(height: 6),
         if (valor != null) ...[
           Text(
-            'Valor proposto: € ${valor.toStringAsFixed(2)}',
+            'Valor proposto: ${CurrencyUtils.format(valor)}',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -626,8 +660,7 @@ class _ResumoComissaoCard extends StatelessWidget {
     final double safeLiquido = liquido ?? 0.0;
 
     // 3) Percentagem dinâmica
-    final double percent =
-        bruto > 0 ? (safeCommission / bruto * 100.0) : 0.0;
+    final double percent = bruto > 0 ? (safeCommission / bruto * 100.0) : 0.0;
 
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -652,15 +685,15 @@ class _ResumoComissaoCard extends StatelessWidget {
           ],
           _linhaResumo(
             'Valor bruto',
-            '€ ${bruto.toStringAsFixed(2)}',
+            CurrencyUtils.format(bruto),
           ),
           _linhaResumo(
             'Taxa da plataforma (${percent.toStringAsFixed(0)}%)',
-            '€ ${safeCommission.toStringAsFixed(2)}',
+            CurrencyUtils.format(safeCommission),
           ),
           _linhaResumo(
             'Valor líquido (para ti)',
-            '€ ${safeLiquido.toStringAsFixed(2)}',
+            CurrencyUtils.format(safeLiquido),
           ),
         ],
       ),

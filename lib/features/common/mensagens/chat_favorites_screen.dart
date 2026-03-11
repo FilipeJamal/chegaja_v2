@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
@@ -14,7 +14,7 @@ class ChatFavoritesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final locale = l10n.localeName;
-    final timeFormat = DateFormat('dd/MM/yyyy HH:mm', locale);
+    // timeFormat removed
 
     return Scaffold(
       appBar: AppBar(
@@ -42,7 +42,7 @@ class ChatFavoritesScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final msg = items[index];
               final preview = _previewForMessage(msg, l10n);
-              final time = timeFormat.format(msg.createdAt);
+              final time = DateTimeUtils.formatDateTime(msg.createdAt, locale: locale);
               return ListTile(
                 leading: const Icon(Icons.star, color: Colors.amber),
                 title: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis),

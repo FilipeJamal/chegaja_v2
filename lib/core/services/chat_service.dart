@@ -13,6 +13,10 @@ class ChatService {
 
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
+  final Map<String, Future<void>> _pendingEnsureChatMeta = {};
+
+  bool _isPermissionDenied(Object error) =>
+      error is FirebaseException && error.code == 'permission-denied';
 
   DocumentReference<Map<String, dynamic>> _chatDoc(String pedidoId) =>
       _db.collection('chats').doc(pedidoId);
@@ -23,7 +27,29 @@ class ChatService {
   // ============================================================
   // META DO CHAT (garante que o doc chats/{pedidoId} existe)
   // ============================================================
-  Future<void> ensureChatMetaForPedido(String pedidoId) async {
+  Future<void> ensureChatMetaForPedido(String pedidoId) {
+    final pid = pedidoId.trim();
+    if (pid.isEmpty) return Future.value();
+
+    final pending = _pendingEnsureChatMeta[pid];
+    if (pending != null) return pending;
+
+    final future = _ensureChatMetaForPedido(pid).catchError((
+      Object error,
+      StackTrace stackTrace,
+    ) {
+      if (_isPermissionDenied(error)) return;
+      Error.throwWithStackTrace(error, stackTrace);
+    });
+    _pendingEnsureChatMeta[pid] = future;
+    return future.whenComplete(() {
+      if (identical(_pendingEnsureChatMeta[pid], future)) {
+        _pendingEnsureChatMeta.remove(pid);
+      }
+    });
+  }
+
+  Future<void> _ensureChatMetaForPedido(String pedidoId) async {
     final ref = _chatDoc(pedidoId);
     final snap = await ref.get();
 
@@ -59,7 +85,6 @@ class ChatService {
           if (clienteId != null) 'clienteId': clienteId,
           'prestadorId': prestadorId,
           if (pedidoTitulo != null) 'pedidoTitulo': pedidoTitulo,
-
           'createdAt': now,
           'updatedAt': now,
           'lastMessageAt': now,
@@ -75,31 +100,33 @@ class ChatService {
       return;
     }
 
-    await ref.set(
-      {
-        'pedidoId': pedidoId,
-        'updatedAt': now,
-        if (clienteId != null && (snap.data()?['clienteId'] == null))
-          'clienteId': clienteId,
-        if ((snap.data()?['prestadorId'] == null))
-          'prestadorId': prestadorId ?? snap.data()?['prestadorId'],
-        if (pedidoTitulo != null && (snap.data()?['pedidoTitulo'] == null))
-          'pedidoTitulo': pedidoTitulo,
+    final data = snap.data() ?? const <String, dynamic>{};
+    final patch = <String, dynamic>{
+      'pedidoId': pedidoId,
+      if (clienteId != null && data['clienteId'] == null)
+        'clienteId': clienteId,
+      if (data['prestadorId'] == null && prestadorId != null)
+        'prestadorId': prestadorId,
+      if (pedidoTitulo != null && data['pedidoTitulo'] == null)
+        'pedidoTitulo': pedidoTitulo,
+      if (data['lastMessageAt'] == null) 'lastMessageAt': now,
+      if (data['lastMessage'] == null) 'lastMessage': '',
+      if (data['lastSenderRole'] == null) 'lastSenderRole': '',
+      if (data['hasUnreadCliente'] == null) 'hasUnreadCliente': false,
+      if (data['hasUnreadPrestador'] == null) 'hasUnreadPrestador': false,
+      if (data['unreadByCliente'] == null) 'unreadByCliente': 0,
+      if (data['unreadByPrestador'] == null) 'unreadByPrestador': 0,
+    };
 
-        if (snap.data()?['lastMessageAt'] == null) 'lastMessageAt': now,
-        if (snap.data()?['lastMessage'] == null) 'lastMessage': '',
-        if (snap.data()?['lastSenderRole'] == null) 'lastSenderRole': '',
-        if (snap.data()?['hasUnreadCliente'] == null) 'hasUnreadCliente': false,
-        if (snap.data()?['hasUnreadPrestador'] == null) 'hasUnreadPrestador': false,
-        if (snap.data()?['unreadByCliente'] == null) 'unreadByCliente': 0,
-        if (snap.data()?['unreadByPrestador'] == null) 'unreadByPrestador': 0,
-      },
-      SetOptions(merge: true),
-    );
+    if (patch.length > 1) {
+      await ref.set(
+        patch,
+        SetOptions(merge: true),
+      );
+    }
 
-    // Backfill preview (se já existiam msgs mas meta estava vazio)
+    // Backfill preview if messages existed before chat meta.
     try {
-      final data = snap.data() ?? <String, dynamic>{};
       final lastMessage = (data['lastMessage'] as String?) ?? '';
 
       if (lastMessage.trim().isEmpty) {
@@ -110,14 +137,16 @@ class ChatService {
 
         if (lastMsgQs.docs.isNotEmpty) {
           final m = lastMsgQs.docs.first.data();
-          final text = (m['text'] ?? m['texto'] ?? m['message'] ?? m['conteudo'] ?? '')
-              .toString()
-              .trim();
+          final text =
+              (m['text'] ?? m['texto'] ?? m['message'] ?? m['conteudo'] ?? '')
+                  .toString()
+                  .trim();
           final senderRole = (m['senderRole'] ?? '').toString();
           final createdAt = m['createdAt'];
 
           await ref.set(
             {
+              'pedidoId': pedidoId,
               'updatedAt': FieldValue.serverTimestamp(),
               if (text.isNotEmpty) 'lastMessage': text,
               if (createdAt is Timestamp)
@@ -135,7 +164,8 @@ class ChatService {
     }
   }
 
-  Future<void> ensureChatMeta(String pedidoId) => ensureChatMetaForPedido(pedidoId);
+  Future<void> ensureChatMeta(String pedidoId) =>
+      ensureChatMetaForPedido(pedidoId);
 
   // ============================================================
   // STREAMS
@@ -151,11 +181,24 @@ class ChatService {
         .map((qs) => qs.docs.map(ChatMessage.fromFirestore).toList());
   }
 
-  Stream<List<ChatMessage>> streamMessages(String pedidoId, {int limit = 200}) =>
+  Stream<List<ChatMessage>> streamMessages(String pedidoId,
+          {int limit = 200}) =>
       streamMessagesForPedido(pedidoId, limit: limit);
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>> streamChatMeta(String pedidoId) {
+  Stream<DocumentSnapshot<Map<String, dynamic>>> streamChatMeta(
+      String pedidoId) {
     return _chatDoc(pedidoId).snapshots();
+  }
+
+  Stream<List<ChatMessage>> streamStarredMessages(String pedidoId) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+
+    return _messagesCol(pedidoId)
+        .where('starredBy', arrayContains: uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((qs) => qs.docs.map(ChatMessage.fromFirestore).toList());
   }
 
   /// Lista as conversas (threads) do utilizador.
@@ -181,9 +224,11 @@ class ChatService {
       q = col.where('clienteId', isEqualTo: uid);
     }
 
-    return q.orderBy('lastMessageAt', descending: true).limit(limit).snapshots();
+    return q
+        .orderBy('lastMessageAt', descending: true)
+        .limit(limit)
+        .snapshots();
   }
-
 
   // ============================================================
   // ENVIAR MENSAGEM
@@ -197,6 +242,8 @@ class ChatService {
     String? senderId,
     String? senderRole,
     String? role,
+    String? replyToId,
+    String? replyToText,
     Map<String, dynamic>? extra,
   }) async {
     final pid = pedidoId.trim();
@@ -208,12 +255,15 @@ class ChatService {
     }
 
     final extraMap = extra ?? const <String, dynamic>{};
-    final mediaUrl = (extraMap['mediaUrl'] ?? extraMap['fileUrl'] ?? extraMap['url'])
-        ?.toString()
-        .trim();
+    final mediaUrl =
+        (extraMap['mediaUrl'] ?? extraMap['fileUrl'] ?? extraMap['url'])
+            ?.toString()
+            .trim();
     final hasMedia = mediaUrl != null && mediaUrl.isNotEmpty;
     final typeFromExtra = (extraMap['type'] as String?)?.trim();
-    final msgType = (typeFromExtra != null && typeFromExtra.isNotEmpty) ? typeFromExtra : 'text';
+    final msgType = (typeFromExtra != null && typeFromExtra.isNotEmpty)
+        ? typeFromExtra
+        : 'text';
 
     if (content.isEmpty && !hasMedia) return;
 
@@ -228,16 +278,15 @@ class ChatService {
     final msgData = <String, dynamic>{
       'pedidoId': pid,
       'type': msgType,
-
       if (content.isNotEmpty) 'text': content,
       if (content.isNotEmpty) 'texto': content,
       if (content.isNotEmpty) 'message': content,
       if (content.isNotEmpty) 'conteudo': content,
-
+      if (replyToId != null) 'replyToId': replyToId,
+      if (replyToText != null) 'replyToText': replyToText,
       'senderId': uid,
       'senderRole': roleFinal,
       'createdAt': now,
-
       'seenByCliente': roleFinal == 'cliente',
       'seenByPrestador': roleFinal == 'prestador',
       'deliveredToCliente': roleFinal == 'cliente',
@@ -253,7 +302,9 @@ class ChatService {
         : () {
             if (msgType == 'call') {
               final callType = (extraMap['callType'] ?? '').toString().trim();
-              return callType == 'video' ? 'Chamada de video' : 'Chamada de voz';
+              return callType == 'video'
+                  ? 'Chamada de video'
+                  : 'Chamada de voz';
             }
             if (msgType == 'image') return 'Foto';
             if (msgType == 'sticker') return 'Sticker';
@@ -267,6 +318,7 @@ class ChatService {
           }();
 
     final chatUpdate = <String, dynamic>{
+      'pedidoId': pid,
       'updatedAt': now,
       'lastMessageAt': now,
       'lastMessage': preview,
@@ -298,33 +350,37 @@ class ChatService {
     final r = role.trim();
     if (pid.isEmpty || r.isEmpty) return;
 
-    final deliveredField =
-        (r == 'cliente') ? 'deliveredToCliente' : 'deliveredToPrestador';
+    try {
+      final deliveredField =
+          (r == 'cliente') ? 'deliveredToCliente' : 'deliveredToPrestador';
 
-    final qs = await _messagesCol(pid)
-        .orderBy('createdAt', descending: true)
-        .limit(200)
-        .get();
+      final qs = await _messagesCol(pid)
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .get();
 
-    final batch = _db.batch();
-    var updates = 0;
+      final batch = _db.batch();
+      var updates = 0;
 
-    for (final d in qs.docs) {
-      final data = d.data();
-      final senderRole = (data['senderRole'] as String?) ?? '';
+      for (final d in qs.docs) {
+        final data = d.data();
+        final senderRole = (data['senderRole'] as String?) ?? '';
 
-      if (senderRole == r) continue;
+        if (senderRole == r) continue;
 
-      final delivered = data[deliveredField] == true;
-      if (delivered) continue;
+        final delivered = data[deliveredField] == true;
+        if (delivered) continue;
 
-      batch.update(d.reference, {deliveredField: true});
-      updates++;
-      if (updates >= 450) break;
-    }
+        batch.update(d.reference, {deliveredField: true});
+        updates++;
+        if (updates >= 450) break;
+      }
 
-    if (updates > 0) {
-      await batch.commit();
+      if (updates > 0) {
+        await batch.commit();
+      }
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied') rethrow;
     }
   }
 
@@ -336,48 +392,56 @@ class ChatService {
     final r = role.trim();
     if (pid.isEmpty || r.isEmpty) return;
 
-    final seenField = (r == 'cliente') ? 'seenByCliente' : 'seenByPrestador';
-    final now = FieldValue.serverTimestamp();
+    try {
+      final seenField = (r == 'cliente') ? 'seenByCliente' : 'seenByPrestador';
+      final now = FieldValue.serverTimestamp();
 
-    final qs = await _messagesCol(pid)
-        .orderBy('createdAt', descending: true)
-        .limit(200)
-        .get();
+      final qs = await _messagesCol(pid)
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .get();
 
-    final batch = _db.batch();
-    var updates = 0;
+      final batch = _db.batch();
+      var updates = 0;
 
-    for (final d in qs.docs) {
-      final data = d.data();
-      final senderRole = (data['senderRole'] as String?) ?? '';
+      for (final d in qs.docs) {
+        final data = d.data();
+        final senderRole = (data['senderRole'] as String?) ?? '';
 
-      if (senderRole == r) continue;
+        if (senderRole == r) continue;
 
-      final seen = data[seenField] == true;
-      if (seen) continue;
+        final seen = data[seenField] == true;
+        if (seen) continue;
 
-      batch.update(d.reference, {seenField: true});
-      updates++;
-      if (updates >= 450) break;
+        batch.update(d.reference, {seenField: true});
+        updates++;
+        if (updates >= 450) break;
+      }
+
+      batch.set(
+        _chatDoc(pid),
+        <String, dynamic>{
+          'pedidoId': pid,
+          'updatedAt': now,
+          if (r == 'cliente') 'hasUnreadCliente': false,
+          if (r == 'prestador') 'hasUnreadPrestador': false,
+          if (r == 'cliente') 'unreadByCliente': 0,
+          if (r == 'prestador') 'unreadByPrestador': 0,
+        },
+        SetOptions(merge: true),
+      );
+
+      await batch.commit();
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied') rethrow;
     }
-
-    batch.set(
-      _chatDoc(pid),
-      <String, dynamic>{
-        'updatedAt': now,
-        if (r == 'cliente') 'hasUnreadCliente': false,
-        if (r == 'prestador') 'hasUnreadPrestador': false,
-        if (r == 'cliente') 'unreadByCliente': 0,
-        if (r == 'prestador') 'unreadByPrestador': 0,
-      },
-      SetOptions(merge: true),
-    );
-
-    await batch.commit();
   }
 
   // ============================================================
   // ⭐ FAVORITOS (STARRED)
+  // ============================================================
+  // ============================================================
+  // ⭐ FAVORITOS (STARRED) & REAÇÕES
   // ============================================================
   Future<void> setMessageStarred({
     required String pedidoId,
@@ -390,26 +454,178 @@ class ChatService {
     final ref = _messagesCol(pedidoId).doc(messageId);
     if (starred) {
       await ref.set(
-        {'starredBy': FieldValue.arrayUnion([uid])},
+        {
+          'starredBy': FieldValue.arrayUnion([uid])
+        },
         SetOptions(merge: true),
       );
     } else {
       await ref.set(
-        {'starredBy': FieldValue.arrayRemove([uid])},
+        {
+          'starredBy': FieldValue.arrayRemove([uid])
+        },
         SetOptions(merge: true),
       );
     }
   }
 
-  Stream<List<ChatMessage>> streamStarredMessages(String pedidoId) {
+  Future<void> toggleReaction({
+    required String pedidoId,
+    required String messageId,
+    required String reaction, // ex: '❤️'
+  }) async {
     final uid = _auth.currentUser?.uid ?? '';
-    if (uid.isEmpty) {
-      return const Stream<List<ChatMessage>>.empty();
+    if (uid.isEmpty) return;
+
+    final ref = _messagesCol(pedidoId).doc(messageId);
+
+    // Firestore não suporta toggle em Map facilmente.
+    // Temos de ler, alterar e gravar ou usar Transaction.
+    // Para UX rápida, vamos usar Transaction.
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+
+      final data = snap.data() ?? {};
+      final reactions = Map<String, dynamic>.from(data['reactions'] ?? {});
+
+      final List<dynamic> users = List.from(reactions[reaction] ?? []);
+
+      if (users.contains(uid)) {
+        users.remove(uid); // Toggle OFF
+        if (users.isEmpty) {
+          reactions.remove(reaction);
+        } else {
+          reactions[reaction] = users;
+        }
+      } else {
+        users.add(uid); // Toggle ON
+        reactions[reaction] = users;
+      }
+
+      tx.update(ref, {'reactions': reactions});
+    });
+  }
+
+  // ============================================================
+  // EDITAR / APAGAR (SOFT DELETE) / REPLY
+  // ============================================================
+  Future<void> deleteMessage({
+    required String pedidoId,
+    required String messageId,
+  }) async {
+    final uid = _auth.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    // Soft delete
+    await _messagesCol(pedidoId).doc(messageId).update({
+      'isDeleted': true,
+      'text': '🚫 Esta mensagem foi apagada', // Opcional, para clientes antigos
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Check if it was last message?
+    // (Opcional: atualizar lastMessage do chat se for a ultima... complexo mas melhor)
+  }
+
+  Future<void> editMessage({
+    required String pedidoId,
+    required String messageId,
+    required String newText,
+  }) async {
+    final uid = _auth.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    await _messagesCol(pedidoId).doc(messageId).update({
+      'isEdited': true,
+      'text': newText,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> sendLocation({
+    required String pedidoId,
+    required double latitude,
+    required double longitude,
+    required String senderRole,
+  }) async {
+    await sendMessage(
+      pedidoId: pedidoId,
+      text: '📍 Localização Partilhada', // Fallback text
+      senderRole: senderRole,
+      senderId: _auth.currentUser?.uid,
+      extra: {
+        'type': 'location',
+        'locationLat': latitude,
+        'locationLng': longitude,
+      },
+    );
+  }
+
+  // ============================================================
+  // INDICADORES DE PRESENÇA (TYPING)
+  // ============================================================
+  // Usamos uma coleção separada 'typing' ou 'presence' dentro do chat
+  // chats/{pid}/typing/{uid} -> { isTyping: bool, updatedAt: ... }
+
+  Future<void> setTypingStatus({
+    required String pedidoId,
+    required bool isTyping,
+    required String role,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final ref = _chatDoc(pedidoId).collection('typing').doc(uid);
+
+    if (isTyping) {
+      await ref.set({
+        'uid': uid,
+        'role': role,
+        'isTyping': true,
+        'lastTypedAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await ref.delete();
     }
-    return _messagesCol(pedidoId)
-        .where('starredBy', arrayContains: uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((qs) => qs.docs.map(ChatMessage.fromFirestore).toList());
+  }
+
+  Stream<List<String>> streamTypingUsers(String pedidoId) {
+    if (pedidoId.isEmpty) return const Stream.empty();
+
+    // Limpar typing antigos (> 10s)? Feito idealmente via Cloud Functions ou Lazy filter na UI.
+    // Aqui retornamos quem está na coleção.
+    return _chatDoc(pedidoId).collection('typing').snapshots().map((snap) {
+      return snap.docs
+          .map((d) {
+            // Opcional: verificar timestamp para ignorar stale
+            return d['role'].toString(); // Retorna roles que estão escrevendo
+          })
+          .toSet()
+          .toList();
+    });
+  }
+
+  // ============================================================
+  // FAVORITAR CHAT (PIN)
+  // ============================================================
+  Future<void> toggleChatFavorite({
+    required String pedidoId,
+    required String uid,
+  }) async {
+    final ref = _chatDoc(pedidoId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+
+    final data = snap.data() ?? {};
+    final favs = List<String>.from(data['favoritedBy'] ?? []);
+
+    if (favs.contains(uid)) {
+      favs.remove(uid);
+    } else {
+      favs.add(uid);
+    }
+
+    await ref.update({'favoritedBy': favs});
   }
 }

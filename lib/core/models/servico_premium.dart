@@ -43,7 +43,7 @@ class ServicoPremium {
   /// Duração média em minutos
   final int? duracaoMediaMinutos;
 
-  // ============ VERIFICAÇÃO PROFISSIONAL ============
+  // ============ VERIFICAÇÁO PROFISSIONAL ============
 
   /// Nível de verificação requerido
   final NivelVerificacao nivelVerificacao;

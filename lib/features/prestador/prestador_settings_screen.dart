@@ -1,12 +1,22 @@
 // lib/features/prestador/prestador_settings_screen.dart
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/services/google_places_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/servico_search.dart';
+import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
+import 'package:chegaja_v2/core/services/user_country_service.dart';
+import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
+import 'package:chegaja_v2/features/common/suporte_screen.dart';
+import 'package:chegaja_v2/core/services/locale_service.dart';
+import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
+import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 /// Ecrã de definições do prestador:
 /// - serviços que realiza (IDs de `servicos`)
@@ -24,26 +34,26 @@ class PrestadorSettingsScreen extends StatefulWidget {
 
 class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   static const Map<String, String> _stateLabelByCountryCode = {
-    'PT': 'Distrito',
-    'AO': 'Provincia',
-    'MZ': 'Provincia',
-    'BR': 'Estado',
-    'US': 'Estado',
-    'CA': 'Provincia',
-    'ES': 'Provincia',
-    'IT': 'Provincia',
-    'FR': 'Regiao',
-    'DE': 'Estado',
-    'GB': 'Condado',
+    'PT': 'district',
+    'AO': 'province',
+    'MZ': 'province',
+    'BR': 'state',
+    'US': 'state',
+    'CA': 'province',
+    'ES': 'province',
+    'IT': 'province',
+    'FR': 'region',
+    'DE': 'state',
+    'GB': 'county',
   };
 
   bool _loading = true;
   bool _saving = false;
 
-  List<_ServicoItem> _todosServicos = [];
+  List<Servico> _todosServicos = [];
   final Set<String> _servicosSelecionados = {};
   String _servicoQuery = '';
-  ServicoSearchIndex<_ServicoItem>? _servicoSearchIndex;
+  ServicoSearchIndex<Servico>? _servicoSearchIndex;
   String _servicoSearchKey = '';
 
   double _radiusKm = 10;
@@ -89,30 +99,19 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   }
 
   Future<void> _carregarDados() async {
-    final user = AuthService.currentUser;
-    if (user == null) {
-      setState(() {
-        _loading = false;
-      });
-      return;
-    }
-
+    setState(() => _loading = true);
     try {
+      final user =
+          AuthService.currentUser; // Assuming _auth is AuthService.instance
+      if (user == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+
       // 1) Buscar servicos ativos do catalogo global (com fallback local)
       final servicosData = await ServicosRepo.buscarServicosAtivosTodos();
-      final servicos = servicosData
-          .map(
-            (s) => _ServicoItem(
-              id: s.id,
-              name: s.name.isNotEmpty ? s.name : 'Sem nome',
-              mode: s.mode,
-              keywords: s.keywords,
-            ),
-          )
-          .toList();
-      servicos.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-      );
+      final servicos = [...servicosData]
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
       // 2) Buscar perfil atual do prestador (se existir)
       final docPrestador = await FirebaseFirestore.instance
@@ -134,7 +133,8 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           country = data['country'] as String?;
           state = data['state'] as String?;
           city = data['city'] as String?;
-          countryCode = (data['countryCode'] ?? data['country_code'])?.toString();
+          countryCode =
+              (data['countryCode'] ?? data['country_code'])?.toString();
           stateCode = (data['stateCode'] ?? data['provinceCode'])?.toString();
           final r = data['radiusKm'];
           if (r is num) radius = r.toDouble();
@@ -180,18 +180,34 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       setState(() {
         _loading = false;
       });
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao carregar definições: $e'),
+          content: Text(l10n.providerSettingsLoadError(e.toString())),
         ),
       );
     }
   }
 
   String _stateLabelForCountry(csc.Country? country) {
-    if (country == null) return 'Regiao/Estado';
-    return _stateLabelByCountryCode[country.isoCode.toUpperCase()] ??
-        'Regiao/Estado';
+    final l10n = AppLocalizations.of(context)!;
+    final labelKey = country == null
+        ? null
+        : _stateLabelByCountryCode[country.isoCode.toUpperCase()];
+    switch (labelKey) {
+      case 'district':
+        return l10n.stateLabelDistrict;
+      case 'province':
+        return l10n.stateLabelProvince;
+      case 'state':
+        return l10n.stateLabelState;
+      case 'region':
+        return l10n.stateLabelRegion;
+      case 'county':
+        return l10n.stateLabelCounty;
+      default:
+        return l10n.stateLabelRegionOrState;
+    }
   }
 
   csc.Country? _findCountryByIso(String? code) {
@@ -216,7 +232,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     if (_countries.isNotEmpty || _loadingCountries) return;
     setState(() => _loadingCountries = true);
     try {
-      final list = await LocationDataService.instance.getCountries();
+      final list = await LocationDataService.instance
+          .getCountries()
+          .timeout(const Duration(seconds: 8));
       if (!mounted) return;
       setState(() => _countries = list);
     } catch (_) {
@@ -232,9 +250,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   Future<void> _loadStatesForCountry(String countryCode) async {
     setState(() => _loadingStates = true);
     try {
-      final list = await LocationDataService.instance.getStatesForCountryCode(
-        countryCode,
-      );
+      final list = await LocationDataService.instance
+          .getStatesForCountryCode(countryCode)
+          .timeout(const Duration(seconds: 10));
       if (!mounted) return;
       setState(() => _statesForCountry = list);
     } catch (_) {
@@ -250,10 +268,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   Future<void> _loadCitiesForState(String countryCode, String stateCode) async {
     setState(() => _loadingCities = true);
     try {
-      final list = await LocationDataService.instance.getCitiesForState(
-        countryCode,
-        stateCode,
-      );
+      final list = await LocationDataService.instance
+          .getCitiesForState(countryCode, stateCode)
+          .timeout(const Duration(seconds: 60));
       if (!mounted) return;
       setState(() => _citiesForState = list);
     } catch (_) {
@@ -269,8 +286,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   Future<void> _loadCitiesForCountry(String countryCode) async {
     setState(() => _loadingCities = true);
     try {
-      final list =
-          await LocationDataService.instance.getCitiesForCountryCode(countryCode);
+      final list = await LocationDataService.instance
+          .getCitiesForCountryCode(countryCode)
+          .timeout(const Duration(seconds: 60));
       if (!mounted) return;
       setState(() => _citiesForCountry = list);
     } catch (_) {
@@ -321,15 +339,17 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           _profileStateCode = selectedState.isoCode;
           _estadoCtrl.text = selectedState.name;
         });
-        await _loadCitiesForState(
-          selectedState.countryCode,
-          selectedState.isoCode,
+        unawaited(
+          _loadCitiesForState(
+            selectedState.countryCode,
+            selectedState.isoCode,
+          ),
         );
         return;
       }
     }
 
-    await _loadCitiesForCountry(selectedCountry.isoCode);
+    unawaited(_loadCitiesForCountry(selectedCountry.isoCode));
   }
 
   Future<void> _onCountrySelected(csc.Country country) async {
@@ -364,35 +384,39 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     await _loadCitiesForState(state.countryCode, state.isoCode);
   }
 
-  void _ensureServicoSearchIndex() {
+  void _ensureServicoSearchIndex(Locale locale) {
     final key = _todosServicos.isEmpty
         ? 'empty'
-        : '${_todosServicos.length}:${_todosServicos.first.id}:${_todosServicos.last.id}';
+        : '${locale.languageCode}:${_todosServicos.length}:${_todosServicos.first.id}:${_todosServicos.last.id}';
     if (_servicoSearchIndex != null && _servicoSearchKey == key) return;
     _servicoSearchKey = key;
-    _servicoSearchIndex = ServicoSearchIndex<_ServicoItem>(
+    _servicoSearchIndex = ServicoSearchIndex<Servico>(
       items: _todosServicos,
       id: (s) => s.id,
-      name: (s) => s.name,
+      name: (s) => s.nameForLang(locale.languageCode),
       keywords: (s) => s.keywords,
-      mode: (s) => s.mode ?? '',
+      mode: (s) => s.mode,
     );
   }
 
-  List<_ServicoItem> _servicosSelecionadosOrdenados() {
+  List<Servico> _servicosSelecionadosOrdenados(Locale locale) {
     final selected = _todosServicos
         .where((s) => _servicosSelecionados.contains(s.id))
         .toList();
-    selected.sort((a, b) => a.name.compareTo(b.name));
+    selected.sort(
+      (a, b) => a
+          .nameForLang(locale.languageCode)
+          .compareTo(b.nameForLang(locale.languageCode)),
+    );
     return selected;
   }
 
-  List<_ServicoItem> _filterServicos() {
+  List<Servico> _filterServicos(Locale locale) {
     final query = _servicoQuery.trim();
     if (query.isEmpty) {
-      return _servicosSelecionadosOrdenados();
+      return _servicosSelecionadosOrdenados(locale);
     }
-    _ensureServicoSearchIndex();
+    _ensureServicoSearchIndex(locale);
     return _servicoSearchIndex?.search(query, limit: 80) ?? const [];
   }
 
@@ -406,11 +430,12 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     return 'IMEDIATO';
   }
 
-  List<Widget> _buildServicoSections(List<_ServicoItem> servicos) {
-    final grouped = <String, List<_ServicoItem>>{
-      'ORCAMENTO': <_ServicoItem>[],
-      'AGENDADO': <_ServicoItem>[],
-      'IMEDIATO': <_ServicoItem>[],
+  List<Widget> _buildServicoSections(List<Servico> servicos, Locale locale) {
+    final l10n = AppLocalizations.of(context)!;
+    final grouped = <String, List<Servico>>{
+      'ORCAMENTO': <Servico>[],
+      'AGENDADO': <Servico>[],
+      'IMEDIATO': <Servico>[],
     };
 
     for (final servico in servicos) {
@@ -418,7 +443,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       grouped[mode]!.add(servico);
     }
 
-    Widget buildTile(_ServicoItem s) {
+    Widget buildTile(Servico s) {
+      final displayName = s.nameForLang(locale.languageCode);
+      final label = displayName.isNotEmpty ? displayName : l10n.serviceUnnamed;
       return CheckboxListTile(
         value: _servicosSelecionados.contains(s.id),
         onChanged: (checked) {
@@ -430,7 +457,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
             }
           });
         },
-        title: Text(s.name),
+        title: Text(label),
         controlAffinity: ListTileControlAffinity.leading,
       );
     }
@@ -440,7 +467,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       String mode,
       String label,
     ) {
-      final items = grouped[mode] ?? const <_ServicoItem>[];
+      final items = grouped[mode] ?? const <Servico>[];
       if (items.isEmpty) return;
       out.add(
         Text(
@@ -457,9 +484,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     }
 
     final sections = <Widget>[];
-    addSection(sections, 'ORCAMENTO', 'Orcamento');
-    addSection(sections, 'AGENDADO', 'Agendado');
-    addSection(sections, 'IMEDIATO', 'Imediato');
+    addSection(sections, 'ORCAMENTO', l10n.serviceModeQuote);
+    addSection(sections, 'AGENDADO', l10n.serviceModeScheduled);
+    addSection(sections, 'IMEDIATO', l10n.serviceModeImmediate);
     if (sections.isNotEmpty) {
       sections.removeLast();
     }
@@ -469,13 +496,12 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   Future<void> _guardar() async {
     final user = AuthService.currentUser;
     if (user == null) return;
+    final l10n = AppLocalizations.of(context)!;
 
     if (_servicosSelecionados.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Escolhe pelo menos um serviço que realizas.',
-          ),
+        SnackBar(
+          content: Text(l10n.providerServicesSelectAtLeastOne),
         ),
       );
       return;
@@ -513,11 +539,16 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         SetOptions(merge: true),
       );
 
+      final countryCode = _selectedCountry?.isoCode;
+      if (countryCode != null && countryCode.isNotEmpty) {
+        await UserCountryService.instance.setManualCountry(countryCode);
+      }
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Área de atuação guardada com sucesso.'),
+        SnackBar(
+          content: Text(l10n.serviceAreaSaved),
         ),
       );
 
@@ -526,7 +557,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao guardar definições: $e'),
+          content: Text(l10n.providerSettingsSaveError(e.toString())),
         ),
       );
     } finally {
@@ -542,9 +573,11 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     required String title,
     required List<T> items,
     required String Function(T) label,
-    String hintText = 'Pesquisar...',
+    String? hintText,
     int maxResults = 200,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+    final effectiveHint = hintText ?? l10n.searchHint;
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
@@ -586,14 +619,17 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         const SizedBox(height: 4),
                         Text(
                           title,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: searchCtrl,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.search),
-                            hintText: hintText,
+                            hintText: effectiveHint,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -666,6 +702,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   }
 
   Widget _countryField() {
+    final l10n = AppLocalizations.of(context)!;
     return RawAutocomplete<csc.Country>(
       textEditingController: _paisCtrl,
       focusNode: _paisFocus,
@@ -684,7 +721,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           controller: controller,
           focusNode: focusNode,
           decoration: InputDecoration(
-            labelText: 'Pais',
+            labelText: l10n.countryLabel,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: _loadingCountries
                 ? const Padding(
@@ -696,12 +733,13 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                     ),
                   )
                 : IconButton(
-                    tooltip: 'Ver lista de paises',
+                    tooltip: l10n.openCountriesListTooltip,
                     onPressed: () async {
                       if (_countries.isEmpty) return;
-                      final selected = await _showSearchBottomSheet<csc.Country>(
-                        title: 'Escolher pais',
-                        hintText: 'Escreve para pesquisar paises',
+                      final selected =
+                          await _showSearchBottomSheet<csc.Country>(
+                        title: l10n.selectCountryTitle,
+                        hintText: l10n.searchCountryHint,
                         items: _countries,
                         label: (c) => c.name,
                         maxResults: 200,
@@ -745,6 +783,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   }
 
   Widget _stateField(String label) {
+    final l10n = AppLocalizations.of(context)!;
     return RawAutocomplete<csc.State>(
       textEditingController: _estadoCtrl,
       focusNode: _estadoFocus,
@@ -775,18 +814,42 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                     ),
                   )
                 : IconButton(
-                    tooltip: 'Ver lista',
+                    tooltip: l10n.openListTooltip,
                     onPressed: () async {
-                      if (_statesForCountry.isEmpty) return;
-                      final selected = await _showSearchBottomSheet<csc.State>(
-                        title: 'Escolher $label',
-                        hintText: 'Escreve para pesquisar',
-                        items: _statesForCountry,
-                        label: (s) => s.name,
-                        maxResults: 200,
+                      final selected = await PlaceSearchBottomSheet.show(
+                        context: context,
+                        title: l10n.selectFieldTitle(label),
+                        hintText: l10n.searchGenericHint,
+                        localItems:
+                            _statesForCountry.map((s) => s.name).toList(),
+                        type: PlaceSearchType.region,
+                        countryCode: _selectedCountry?.isoCode ??
+                            UserCountryService.instance.countryCode,
+                        maxLocal: 200,
                       );
-                      if (selected != null) {
-                        await _onStateSelected(selected);
+                      if (selected == null) return;
+
+                      csc.State? localMatch;
+                      final normalized =
+                          LocationDataService.normalize(selected);
+                      for (final s in _statesForCountry) {
+                        if (LocationDataService.normalize(s.name) ==
+                            normalized) {
+                          localMatch = s;
+                          break;
+                        }
+                      }
+
+                      if (localMatch != null) {
+                        await _onStateSelected(localMatch);
+                      } else {
+                        setState(() {
+                          _selectedState = null;
+                          _profileStateCode = null;
+                          _estadoCtrl.text = selected;
+                          _citiesForState = <csc.City>[];
+                          _cidadeCtrl.clear();
+                        });
                       }
                     },
                     icon: const Icon(Icons.arrow_drop_down),
@@ -821,6 +884,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   Widget _cityField({
     required List<csc.City> cities,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return RawAutocomplete<csc.City>(
       textEditingController: _cidadeCtrl,
       focusNode: _cidadeFocus,
@@ -839,7 +903,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           controller: controller,
           focusNode: focusNode,
           decoration: InputDecoration(
-            labelText: 'Cidade',
+            labelText: l10n.cityLabel,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: _loadingCities
                 ? const Padding(
@@ -851,22 +915,22 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                     ),
                   )
                 : IconButton(
-                    tooltip: 'Ver lista',
-                    onPressed: cities.isEmpty
-                        ? null
-                        : () async {
-                            final selected =
-                                await _showSearchBottomSheet<csc.City>(
-                              title: 'Escolher cidade',
-                              hintText: 'Escreve para pesquisar',
-                              items: cities,
-                              label: (c) => c.name,
-                              maxResults: 200,
-                            );
-                            if (selected != null) {
-                              setState(() => _cidadeCtrl.text = selected.name);
-                            }
-                          },
+                    tooltip: l10n.openListTooltip,
+                    onPressed: () async {
+                      final selected = await PlaceSearchBottomSheet.show(
+                        context: context,
+                        title: l10n.selectCityTitle,
+                        hintText: l10n.searchGenericHint,
+                        localItems: cities.map((c) => c.name).toList(),
+                        type: PlaceSearchType.city,
+                        countryCode: _selectedCountry?.isoCode ??
+                            UserCountryService.instance.countryCode,
+                        maxLocal: 200,
+                      );
+                      if (selected != null) {
+                        setState(() => _cidadeCtrl.text = selected);
+                      }
+                    },
                     icon: const Icon(Icons.arrow_drop_down),
                   ),
           ),
@@ -885,16 +949,18 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final primary = Theme.of(context).colorScheme.primary;
     final hasStates = _statesForCountry.isNotEmpty;
+    final locale = Localizations.localeOf(context);
     final stateLabel = _stateLabelForCountry(_selectedCountry);
     final cities = hasStates ? _citiesForState : _citiesForCountry;
     final hasQuery = _servicoQuery.trim().isNotEmpty;
-    final servicosVisiveis = _filterServicos();
+    final servicosVisiveis = _filterServicos(locale);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Área de atuação'),
+        title: Text(l10n.serviceAreaTitle),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -905,17 +971,17 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                     child: ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
-                        const Text(
-                          'Onde queres receber pedidos?',
-                          style: TextStyle(
+                        Text(
+                          l10n.serviceAreaHeading,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
-                          'Define os serviços que fazes e o raio máximo em torno da tua cidade base.',
-                          style: TextStyle(
+                        Text(
+                          l10n.serviceAreaSubtitle,
+                          style: const TextStyle(
                             fontSize: 13,
                             color: Colors.black54,
                           ),
@@ -923,9 +989,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         const SizedBox(height: 16),
 
                         // Localização base
-                        const Text(
-                          'Localização base',
-                          style: TextStyle(
+                        Text(
+                          l10n.serviceAreaBaseLocation,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -941,9 +1007,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         const SizedBox(height: 16),
 
                         // Raio
-                        const Text(
-                          'Raio de atuação',
-                          style: TextStyle(
+                        Text(
+                          l10n.serviceAreaRadius,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
@@ -977,19 +1043,89 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         ),
                         const SizedBox(height: 16),
 
+                        const SizedBox(height: 16),
+
+                        // Agenda
+                        Text(
+                          l10n.availabilityTitle,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // --- Cartão de Agenda (Existente) ---
+                        // --- Idioma ---
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.language,
+                              color: Colors.purple,
+                              size: 32,
+                            ),
+                            title: Text(l10n.languageTitle),
+                            subtitle: Text(
+                              l10n.languageModeLabel(
+                                LocaleService.instance.locale.languageCode
+                                    .toUpperCase(),
+                                LocaleService.instance.isManualOverride
+                                    ? l10n.languageModeManual
+                                    : l10n.languageModeAuto,
+                              ),
+                            ),
+                            trailing:
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () {
+                              _showLanguagePicker(context);
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // --- Cartão de Agenda (Existente) ---
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.calendar_month,
+                              color: Colors.blueAccent,
+                              size: 32,
+                            ),
+                            title: Text(l10n.myScheduleTitle),
+                            subtitle: Text(l10n.myScheduleSubtitle),
+                            trailing:
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const PrestadorAgendaScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
                         // Serviços
-                        const Text(
-                          'Serviços que realizas',
-                          style: TextStyle(
+                        Text(
+                          l10n.servicesYouProvideTitle,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 8),
                         if (_todosServicos.isEmpty)
-                          const Text(
-                            'Ainda não há serviços configurados no catálogo.',
-                            style: TextStyle(
+                          Text(
+                            l10n.servicesCatalogEmpty,
+                            style: const TextStyle(
                               fontSize: 13,
                               color: Colors.black54,
                             ),
@@ -1000,7 +1136,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                               TextField(
                                 decoration: InputDecoration(
                                   prefixIcon: const Icon(Icons.search),
-                                  hintText: 'Pesquisar servicos',
+                                  hintText: l10n.searchServicesHint,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1019,37 +1155,69 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                               ),
                               const SizedBox(height: 8),
                               if (!hasQuery && servicosVisiveis.isEmpty)
-                                const Text(
-                                  'Escreve para pesquisar e adicionar servicos.',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.servicesSearchPrompt,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.black54,
                                   ),
                                 )
                               else if (servicosVisiveis.isEmpty)
-                                const Text(
-                                  'Nenhum servico encontrado.',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.servicesSearchNoResults,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.black54,
                                   ),
                                 )
                               else ...[
                                 if (!hasQuery)
-                                  const Text(
-                                    'Servicos selecionados',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.servicesSelectedTitle,
+                                    style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: _buildServicoSections(servicosVisiveis),
+                                  children: _buildServicoSections(
+                                    servicosVisiveis,
+                                    locale,
+                                  ),
                                 ),
                               ],
                             ],
                           ),
+                        const SizedBox(height: 24),
+
+                        // --- Cartão de Suporte ---
+                        Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.help_outline,
+                              color: Colors.blueGrey,
+                              size: 32,
+                            ),
+                            title: Text(l10n.supportTitle),
+                            subtitle: Text(l10n.supportSubtitle),
+                            trailing:
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SuporteScreen(
+                                    userType: 'prestador',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                         const SizedBox(height: 24),
 
                         Container(
@@ -1061,11 +1229,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                               color: primary.withValues(alpha: 0.3),
                             ),
                           ),
-                          child: const Text(
-                            'No futuro vamos usar estas definições para '
-                            'filtrar pedidos por proximidade e tipo de serviço. '
-                            'Por agora, isto ajuda-nos a preparar o motor de matching. 😊',
-                            style: TextStyle(
+                          child: Text(
+                            l10n.serviceAreaInfoNote,
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.black87,
                             ),
@@ -1089,13 +1255,12 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
                                       Colors.white,
                                     ),
                                   ),
                                 )
-                              : const Text('Guardar alterações'),
+                              : Text(l10n.saveChanges),
                         ),
                       ),
                     ),
@@ -1104,19 +1269,72 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
               ),
             ),
     );
+  } // This closing brace was added based on the instruction's context.
+
+  void _showLanguagePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => const LanguageSelectorWidget(),
+    );
   }
-}
+} // This closing brace was added based on the instruction's context.
 
-class _ServicoItem {
-  final String id;
-  final String name;
-  final String? mode;
-  final List<String> keywords;
+class LanguageSelectorWidget extends StatelessWidget {
+  const LanguageSelectorWidget({super.key});
 
-  _ServicoItem({
-    required this.id,
-    required this.name,
-    this.mode,
-    this.keywords = const [],
-  });
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    const locales = AppLocalizations.supportedLocales;
+    const namesByCode = {
+      'pt': 'Português',
+      'en': 'English',
+      'es': 'Español',
+      'fr': 'Français',
+      'de': 'Deutsch',
+      'ar': 'العربية',
+      'hi': 'हिन्दी',
+      'ru': 'Русский',
+      'zh': '中文',
+    };
+
+    return AnimatedBuilder(
+      animation: LocaleService.instance,
+      builder: (context, _) {
+        final current = LocaleService.instance.locale;
+        final isAuto = !LocaleService.instance.isManualOverride;
+
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: Text(l10n.languageAutoSystem),
+                trailing: isAuto ? const Icon(Icons.check) : null,
+                onTap: () async {
+                  await LocaleService.instance.clearLocale();
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+              ),
+              const Divider(height: 1),
+              for (final locale in locales)
+                ListTile(
+                  title: Text(
+                    namesByCode[locale.languageCode] ??
+                        locale.languageCode.toUpperCase(),
+                  ),
+                  trailing: current.languageCode == locale.languageCode
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () async {
+                    await LocaleService.instance.setLocale(locale);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

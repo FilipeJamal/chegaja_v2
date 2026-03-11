@@ -1,31 +1,37 @@
-﻿// lib/features/cliente/pedido_detalhe_screen.dart
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+// lib/features/cliente/pedido_detalhe_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_pedido_acoes.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
-import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
-import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/avaliacao_service.dart';
+import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/politica_reembolso.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
-import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
+import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
+import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
+import 'package:chegaja_v2/features/cliente/widgets/avaliacao_pedido_card.dart';
+import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_banners.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_chat_widgets.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_contato_section.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_info_row.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_mapa_osm.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_timeline.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/widgets/chat_audio_player.dart';
-import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
-import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
-import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
-import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 class PedidoDetalheScreen extends StatelessWidget {
@@ -125,9 +131,10 @@ class PedidoDetalheScreen extends StatelessWidget {
   }
 
   String _resolvePhone(Map<String, dynamic> data) {
-    final phone = (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
-        .toString()
-        .trim();
+    final phone =
+        (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
+            .toString()
+            .trim();
     if (phone.isNotEmpty) return phone;
     return (data['phoneRaw'] ?? '').toString().trim();
   }
@@ -200,10 +207,9 @@ class PedidoDetalheScreen extends StatelessWidget {
               currencyFormat,
             );
 
-            final bool estaProcurandoPrestador =
-                (pedido.estado == 'criado' ||
-                        pedido.estado == 'aguarda_resposta_cliente') &&
-                    pedido.prestadorId == null;
+            final bool estaProcurandoPrestador = (pedido.estado == 'criado' ||
+                    pedido.estado == 'aguarda_resposta_cliente') &&
+                pedido.prestadorId == null;
             final bool aguardandoRespostaPrestador = isCliente &&
                 pedido.estado == 'aguarda_resposta_prestador' &&
                 pedido.prestadorId != null;
@@ -224,8 +230,9 @@ class PedidoDetalheScreen extends StatelessWidget {
                 isCliente && clienteId != null && clienteId == pedido.clienteId;
             final isPrestadorViewer = !isCliente &&
                 AuthService.currentUser?.uid == pedido.prestadorId;
-            final String? noShowRole =
-                isClienteViewer ? 'cliente' : (isPrestadorViewer ? 'prestador' : null);
+            final String? noShowRole = isClienteViewer
+                ? 'cliente'
+                : (isPrestadorViewer ? 'prestador' : null);
             final bool hasNoShow = pedido.noShowReportedBy != null;
             final bool podeReportarNoShow = !hasNoShow &&
                 pedido.prestadorId != null &&
@@ -291,32 +298,31 @@ class PedidoDetalheScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  _PedidoTimeline(estado: pedido.estado),
+                  PedidoTimeline(estado: pedido.estado),
                   const SizedBox(height: 12),
 
                   if (aguardandoRespostaPrestador) ...[
-                    _BannerAcaoPrestador(
+                    BannerAcaoPrestador(
                       icon: Icons.mark_chat_unread,
-                      texto: 'Convite enviado ao prestador. Aguardando resposta.',
+                      texto:
+                          'Convite enviado ao prestador. Aguardando resposta.',
                       botao: 'Trocar',
-                      onPressed: () =>
-                          _trocarPrestadorManual(context, pedido),
+                      onPressed: () => _trocarPrestadorManual(context, pedido),
                     ),
                     const SizedBox(height: 16),
                   ],
                   if (podeEscolherManual) ...[
-                    _BannerAcaoPrestador(
+                    BannerAcaoPrestador(
                       icon: Icons.search,
                       texto: 'Queres escolher um prestador manualmente?',
                       botao: 'Selecionar',
-                      onPressed: () =>
-                          _trocarPrestadorManual(context, pedido),
+                      onPressed: () => _trocarPrestadorManual(context, pedido),
                     ),
                     const SizedBox(height: 16),
                   ],
 
                   if (estaProcurandoPrestador) ...[
-                    _BannerAguardandoPrestador(pedidoId: pedido.id),
+                    BannerAguardandoPrestador(pedidoId: pedido.id),
                     const SizedBox(height: 16),
                   ],
 
@@ -394,7 +400,7 @@ class PedidoDetalheScreen extends StatelessWidget {
                   ],
 
                   if (podeAvaliar) ...[
-                    _AvaliacaoPedidoCard(
+                    AvaliacaoPedidoCard(
                       pedidoId: pedido.id,
                       prestadorId: pedido.prestadorId!,
                       clienteId: clienteId,
@@ -485,8 +491,9 @@ class PedidoDetalheScreen extends StatelessWidget {
                                 pedido,
                                 noShowRole,
                               ),
-                              icon:
-                                  const Icon(Icons.report_gmailerrorred_outlined),
+                              icon: const Icon(
+                                Icons.report_gmailerrorred_outlined,
+                              ),
                               label: Text(l10n.noShowReportAction),
                             ),
                           ),
@@ -504,29 +511,29 @@ class PedidoDetalheScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _InfoRow(
+                  PedidoInfoRow(
                     label: l10n.orderInfoIdLabel,
                     value: pedido.id,
                   ),
-                  _InfoRow(
+                  PedidoInfoRow(
                     label: l10n.orderInfoCreatedAtLabel,
                     value: df.format(pedido.createdAt),
                   ),
-                  _InfoRow(
+                  PedidoInfoRow(
                     label: l10n.orderInfoStatusLabel,
                     value: estadoLabel,
                   ),
-                  _InfoRow(
+                  PedidoInfoRow(
                     label: l10n.orderInfoModeLabel,
                     value: pedido.modo,
                   ),
-                  _InfoRow(
+                  PedidoInfoRow(
                     label: l10n.orderInfoValueLabel,
                     value: valorLabel,
                   ),
                   const SizedBox(height: 16),
 
-                  _ContatoSection(
+                  ContatoSection(
                     pedido: pedido,
                     isCliente: isCliente,
                     resolvePhone: _resolvePhone,
@@ -544,7 +551,7 @@ class PedidoDetalheScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // ð Morada textual (se existir)
+                  // Morada textual (se existir)
                   if (pedido.enderecoTexto?.trim().isNotEmpty ?? false) ...[
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,7 +576,7 @@ class PedidoDetalheScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
 
-                  PedidoMapaCard(
+                  PedidoMapaOsmCard(
                     pedido: pedido,
                     isCliente: isCliente,
                   ),
@@ -634,10 +641,11 @@ class PedidoDetalheScreen extends StatelessWidget {
                   ],
 
                   // CHAT (cartão que abre/fecha o chat)
-                  _ChatExpandable(
+                  ChatExpandable(
                     pedidoId: pedido.id,
                     isCliente: isCliente,
-                    otherUserId: isCliente ? pedido.prestadorId : pedido.clienteId,
+                    otherUserId:
+                        isCliente ? pedido.prestadorId : pedido.clienteId,
                     pedidoTitulo: pedido.titulo,
                   ),
                   const SizedBox(height: 16),
@@ -688,11 +696,9 @@ class PedidoDetalheScreen extends StatelessWidget {
   ) async {
     if (!isCliente) return;
 
-    final servicoId =
-        pedido.servicoId.isNotEmpty ? pedido.servicoId : null;
+    final servicoId = pedido.servicoId.isNotEmpty ? pedido.servicoId : null;
 
-    final selecionado = await Navigator.of(context)
-        .push<PrestadorSelecionado>(
+    final selecionado = await Navigator.of(context).push<PrestadorSelecionado>(
       MaterialPageRoute(
         builder: (_) => SelecionarPrestadorScreen(
           servicoId: servicoId,
@@ -706,8 +712,12 @@ class PedidoDetalheScreen extends StatelessWidget {
     if (selecionado == null) return;
 
     try {
+      final user = AuthService.currentUser;
+      if (user == null) return;
+
       await PedidoService.instance.convidarPrestadorManual(
         pedido: pedido,
+        clienteId: user.uid,
         prestadorId: selecionado.id,
       );
       if (context.mounted) {
@@ -747,9 +757,8 @@ class PedidoDetalheScreen extends StatelessWidget {
     if (pedido.estado == 'concluido' || pedido.estado == 'cancelado') return;
     final l10n = AppLocalizations.of(context)!;
 
-    final estaEmServico =
-        pedido.estado == 'em_andamento' ||
-            pedido.estado == 'aguarda_confirmacao_valor';
+    final estaEmServico = pedido.estado == 'em_andamento' ||
+        pedido.estado == 'aguarda_confirmacao_valor';
 
     final motivos = CancelamentoMotivos.forCliente(emServico: estaEmServico);
     CancelamentoMotivoOption selectedMotivo = motivos.first;
@@ -862,8 +871,7 @@ class PedidoDetalheScreen extends StatelessWidget {
 
     final motivo = selectedMotivo.id;
     final motivoDetalhe = detalheController.text.trim();
-    final motivoDetalheFinal =
-        motivoDetalhe.isEmpty ? null : motivoDetalhe;
+    final motivoDetalheFinal = motivoDetalhe.isEmpty ? null : motivoDetalhe;
 
     final info = PoliticaReembolso.calcularParaCancelamentoCliente(
       pedido,
@@ -873,6 +881,7 @@ class PedidoDetalheScreen extends StatelessWidget {
     try {
       await PedidoService.instance.cancelarPorCliente(
         pedido: pedido,
+        clienteId: user.uid,
         motivo: motivo,
         motivoDetalhe: motivoDetalheFinal,
         motivoIsId: true,
@@ -979,9 +988,8 @@ class PedidoDetalheScreen extends StatelessWidget {
     Pedido pedido,
   ) async {
     final l10n = AppLocalizations.of(context)!;
-    final emServico =
-        pedido.estado == 'em_andamento' ||
-            pedido.estado == 'aguarda_confirmacao_valor';
+    final emServico = pedido.estado == 'em_andamento' ||
+        pedido.estado == 'aguarda_confirmacao_valor';
     final motivos = CancelamentoMotivos.forPrestador(emServico: emServico);
     CancelamentoMotivoOption selectedMotivo = motivos.first;
     final detalheController = TextEditingController();
@@ -1073,12 +1081,15 @@ class PedidoDetalheScreen extends StatelessWidget {
 
     final motivo = selectedMotivo.id;
     final motivoDetalhe = detalheController.text.trim();
-    final motivoDetalheFinal =
-        motivoDetalhe.isEmpty ? null : motivoDetalhe;
+    final motivoDetalheFinal = motivoDetalhe.isEmpty ? null : motivoDetalhe;
 
     try {
+      final user = AuthService.currentUser;
+      if (user == null) return;
+
       await PedidoService.instance.cancelarPorPrestador(
         pedido: pedido,
+        prestadorId: user.uid,
         motivo: motivo,
         motivoDetalhe: motivoDetalheFinal,
         motivoIsId: true,
@@ -1104,8 +1115,7 @@ class PedidoDetalheScreen extends StatelessWidget {
 
   void _abrirDialogNovoValor(BuildContext context, Pedido pedido) {
     final l10n = AppLocalizations.of(context)!;
-    final currencyFormat =
-        NumberFormat.simpleCurrency(locale: l10n.localeName);
+    final currencyFormat = NumberFormat.simpleCurrency(locale: l10n.localeName);
     final currencySymbol = currencyFormat.currencySymbol;
     final controller = TextEditingController();
 
@@ -1120,8 +1130,7 @@ class PedidoDetalheScreen extends StatelessWidget {
               labelText: l10n.orderFinalValueLabel,
               prefixText: '$currencySymbol ',
             ),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
           actions: [
             TextButton(
@@ -1131,8 +1140,7 @@ class PedidoDetalheScreen extends StatelessWidget {
             TextButton(
               child: Text(l10n.actionSend),
               onPressed: () async {
-                final texto =
-                    controller.text.replaceAll(',', '.').trim();
+                final texto = controller.text.replaceAll(',', '.').trim();
                 final valor = double.tryParse(texto);
 
                 if (valor == null || valor <= 0) {
@@ -1144,9 +1152,13 @@ class PedidoDetalheScreen extends StatelessWidget {
                   return;
                 }
 
+                final user = AuthService.currentUser;
+                if (user == null) return;
+
                 try {
                   await PedidoService.instance.proporValorFinal(
                     pedido: pedido,
+                    prestadorId: user.uid,
                     valorFinal: valor,
                   );
 
@@ -1737,8 +1749,7 @@ class _ChatExpandableState extends State<_ChatExpandable> {
                 ? '${lastMessage.substring(0, 40)}...'
                 : lastMessage;
             if (lastAt != null) {
-              final time =
-                  DateFormat('HH:mm', l10n.localeName).format(lastAt);
+              final time = DateFormat('HH:mm', l10n.localeName).format(lastAt);
               subtitle = l10n.chatPreviewWithTime(preview, time);
             } else {
               subtitle = preview;
@@ -2003,7 +2014,7 @@ class _ChatSectionState extends State<_ChatSection> {
 
       await Future.delayed(const Duration(milliseconds: 200));
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
+        await _scrollController.animateTo(
           0,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
@@ -2055,7 +2066,6 @@ class _ChatSectionState extends State<_ChatSection> {
     return Container(
       height: 260,
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.grey.shade300,
@@ -2065,11 +2075,10 @@ class _ChatSectionState extends State<_ChatSection> {
         children: [
           Expanded(
             child: StreamBuilder<List<ChatMessage>>(
-              stream: ChatService.instance
-                  .streamMessagesForPedido(widget.pedidoId),
+              stream:
+                  ChatService.instance.streamMessagesForPedido(widget.pedidoId),
               builder: (context, snapshot) {
-                if (snapshot.connectionState ==
-                    ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
@@ -2116,8 +2125,9 @@ class _ChatSectionState extends State<_ChatSection> {
                     // ----- HEADER DE DIA (Hoje / Ontem / data) -----
                     Widget? dayHeader;
                     final msgDate = msg.createdAt;
-                    final next =
-                        (index + 1 < messages.length) ? messages[index + 1] : null;
+                    final next = (index + 1 < messages.length)
+                        ? messages[index + 1]
+                        : null;
                     final nextDate = next?.createdAt ?? msgDate;
                     final showHeader =
                         next == null || !_isSameDay(msgDate, nextDate);
@@ -2125,8 +2135,7 @@ class _ChatSectionState extends State<_ChatSection> {
                     if (showHeader) {
                       final label = _buildDayLabel(msgDate);
                       dayHeader = Padding(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Center(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -2149,7 +2158,7 @@ class _ChatSectionState extends State<_ChatSection> {
                         ),
                       );
                     }
-                  
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -2168,8 +2177,7 @@ class _ChatSectionState extends State<_ChatSection> {
           ),
           const Divider(height: 1),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
                 IconButton(
@@ -2183,9 +2191,8 @@ class _ChatSectionState extends State<_ChatSection> {
                     enabled: canSend && !_sending,
                     decoration: InputDecoration(
                       isDense: true,
-                      hintText: canSend
-                          ? l10n.chatInputHint
-                          : l10n.chatLoginHint,
+                      hintText:
+                          canSend ? l10n.chatInputHint : l10n.chatLoginHint,
                       border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(20)),
                       ),
@@ -2242,7 +2249,8 @@ class _ChatBubble extends StatelessWidget {
     if (uri == null) return;
     await launchUrl(
       uri,
-      mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      mode:
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
       webOnlyWindowName: kIsWeb ? '_blank' : null,
     );
   }
@@ -2252,12 +2260,9 @@ class _ChatBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    final alignment =
-        isMine ? Alignment.centerRight : Alignment.centerLeft;
+    final alignment = isMine ? Alignment.centerRight : Alignment.centerLeft;
 
-    final bgColor = isMine
-        ? const Color(0xFFE1FFC7)
-        : Colors.white;
+    final bgColor = isMine ? const Color(0xFFE1FFC7) : Colors.white;
 
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(12),
@@ -2338,7 +2343,8 @@ class _ChatBubble extends StatelessWidget {
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade700),
                     ),
                 ],
               ),
@@ -2398,9 +2404,8 @@ class _ChatBubble extends StatelessWidget {
       final bool deliveredToOther = viewerIsCliente
           ? message.deliveredToPrestador
           : message.deliveredToCliente;
-      final bool seenByOther = viewerIsCliente
-          ? message.seenByPrestador
-          : message.seenByCliente;
+      final bool seenByOther =
+          viewerIsCliente ? message.seenByPrestador : message.seenByCliente;
 
       if (seenByOther) {
         // dois certinhos azuis
@@ -2523,14 +2528,19 @@ class _ContatoSection extends StatelessWidget {
     final fallbackCollection = isCliente ? 'users' : null;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection(collection).doc(otherId).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection(collection)
+          .doc(otherId)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return _buildContactCard(phone: '', loading: true);
         }
         final data = snapshot.data?.data() ?? <String, dynamic>{};
         final primaryPhone = resolvePhone(data);
-        final shouldFallback = primaryPhone.isEmpty && fallbackCollection != null;
+        final shouldFallback =
+            primaryPhone.isEmpty && fallbackCollection != null;
 
         if (shouldFallback) {
           return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -2539,7 +2549,8 @@ class _ContatoSection extends StatelessWidget {
                 .doc(otherId)
                 .snapshots(),
             builder: (context, fallbackSnap) {
-              final fallbackData = fallbackSnap.data?.data() ?? <String, dynamic>{};
+              final fallbackData =
+                  fallbackSnap.data?.data() ?? <String, dynamic>{};
               final fallbackPhone = resolvePhone(fallbackData);
               return _buildContactCard(
                 phone: fallbackPhone,
@@ -2557,7 +2568,9 @@ class _ContatoSection extends StatelessWidget {
 
   Widget _buildContactCard({required String phone, bool loading = false}) {
     final hasPhone = phone.isNotEmpty;
-    final label = loading ? 'A carregar...' : (hasPhone ? phone : 'Telefone nao informado');
+    final label = loading
+        ? 'A carregar...'
+        : (hasPhone ? phone : 'Telefone nao informado');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2670,8 +2683,9 @@ class PedidoMapaCard extends StatelessWidget {
     final routePoints = prestadorPoint != null
         ? <LatLng>[prestadorPoint, pedidoPoint]
         : const <LatLng>[];
-    final distanceKm =
-        prestadorPoint != null ? _distanceKm(prestadorPoint, pedidoPoint) : null;
+    final distanceKm = prestadorPoint != null
+        ? _distanceKm(prestadorPoint, pedidoPoint)
+        : null;
     final etaText = distanceKm != null ? _formatEta(distanceKm, l10n) : null;
     final distanceText =
         distanceKm != null ? _formatDistance(distanceKm, l10n) : null;
@@ -2897,8 +2911,7 @@ class _PedidoMapaFullScreenState extends State<PedidoMapaFullScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.chegaja.app',
               ),
               if (routePoints.isNotEmpty)
@@ -2986,4 +2999,3 @@ class _PedidoMapaFullScreenState extends State<PedidoMapaFullScreen> {
     );
   }
 }
-

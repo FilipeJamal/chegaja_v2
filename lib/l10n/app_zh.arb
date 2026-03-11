@@ -1,0 +1,822 @@
+{
+  "@@locale": "zh",
+  "appTitle": "切加贾",
+  "roleSelectorWelcome": "欢迎来到ChegaJa",
+  "roleSelectorPrompt": "选择您想要如何使用该应用程序：",
+  "roleCustomerTitle": "我是顾客",
+  "roleCustomerDescription": "我想找到我附近的服务提供商。",
+  "roleProviderTitle": "我是供应商",
+  "roleProviderDescription": "我希望收到客户的请求并赚取更多。",
+  "invalidSession": "无效会话。",
+  "paymentsTitle": "付款（条纹）",
+  "paymentsHeading": "接收在线付款",
+  "paymentsDescription": "要通过应用程序接收付款，您需要创建一个 Stripe 帐户 (Connect Express)。\n入门将在浏览器中打开，需要 2-3 分钟。",
+  "paymentsActive": "在线支付活跃。",
+  "paymentsInactive": "在线支付尚未激活。完成入职。",
+  "stripeAccountLabel": "条带帐户：{accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "入职开放。完成后，回来查看状态。",
+  "onboardingStartError": "开始加入时出错：{error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "管理 Stripe 帐户",
+  "activatePayments": "激活付款",
+  "technicalNotesTitle": "技术说明",
+  "technicalNotesBody": "• Stripe 通过Cloud Functions（服务器端）进行配置。\n• 平台佣金自动应用到PaymentIntent 中。\n• 在生产中，添加Stripe Webhook 并将Webhook 密钥存储在Functions 中。",
+  "kycTitle": "身份验证：{status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "发送文档（照片或 PDF）。 v2.6 中提供了完整的验证。",
+  "kycSendDocument": "发送文件",
+  "kycAddDocument": "添加文档",
+  "kycStatusApproved": "得到正式认可的",
+  "kycStatusRejected": "被拒绝",
+  "kycStatusInReview": "审核中",
+  "kycStatusNotStarted": "未开始",
+  "kycFileReadError": "无法读取文件。",
+  "kycFileTooLarge": "文件太大（最大 10MB）。",
+  "kycUploading": "正在上传文档...",
+  "kycUploadSuccess": "文件已送交审查。",
+  "kycUploadError": "发送文档时出错：{error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "已被您取消",
+  "statusCancelledByProvider": "被提供商取消",
+  "statusCancelled": "取消",
+  "statusLookingForProvider": "寻找供应商",
+  "statusProviderPreparingQuote": "找到供应商（准备报价）",
+  "statusQuoteToDecide": "您有一个报价来决定",
+  "statusProviderFound": "找到提供商",
+  "statusServiceInProgress": "服务进行中",
+  "statusAwaitingValueConfirmation": "等待您的价值确认",
+  "statusServiceCompleted": "服务完成",
+  "valueToConfirm": "{value}（确认）",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value}（建议）",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} 至 {max}（预计）",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "从{min}开始（预计）",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "最多 {max}（估计）",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "定价",
+  "priceByQuote": "通过报价",
+  "priceToArrange": "待安排",
+  "paymentOnlineBefore": "网上支付（之前）",
+  "paymentOnlineAfter": "网上支付（后）",
+  "paymentCash": "现金支付",
+  "pendingActionQuoteToReview": "您有一份报价/建议需要审核。",
+  "pendingActionValueToConfirm": "提供商发送了最终值。你需要确认一下。",
+  "pendingActionProviderPreparingQuote": "找到提供者。他们正在准备报价。",
+  "pendingActionProviderChat": "找到提供者。你可以和他们聊天。",
+  "roleLabelCustomer": "顾客",
+  "navHome": "家",
+  "navMyOrders": "我的订单",
+  "navMessages": "留言",
+  "navProfile": "轮廓",
+  "homeGreeting": "你好",
+  "homeSubtitle": "今天你需要什么？",
+  "homePendingTitle": "你有一些事情需要决定",
+  "homePendingCta": "点击此处打开下一个订单并做出决定。",
+  "servicesLoadError": "加载服务时出错：{error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "尚未配置服务。\\n您很快就会在此处看到类别 🙂",
+  "availableServicesTitle": "可用服务",
+  "serviceTabImmediate": "即时",
+  "serviceTabScheduled": "预定",
+  "serviceTabQuote": "通过报价",
+  "unreadMessagesTitle": "您有新消息",
+  "unreadMessagesCta": "点击此处打开聊天。",
+  "serviceSearchHint": "搜索服务...",
+  "serviceSearchEmpty": "没有找到适合此搜索的服务。",
+  "serviceModeImmediateDescription": "提供商今天会尽快到达。",
+  "serviceModeScheduledDescription": "安排服务的日期和时间。",
+  "serviceModeQuoteDescription": "请求报价（提供商发送最小/最大范围）。",
+  "userNotAuthenticatedError": "错误：用户未经过身份验证。",
+  "myOrdersTitle": "我的订单",
+  "ordersTabPending": "待办的",
+  "ordersTabCompleted": "完全的",
+  "ordersTabCancelled": "取消",
+  "ordersLoadError": "加载订单时出错：{error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "您没有待处理的订单。\\n从主页创建新订单。",
+  "ordersEmptyCompleted": "您还没有完成订单。",
+  "ordersEmptyCancelled": "您还没有取消订单。",
+  "orderQuoteScheduled": "报价（预定）",
+  "orderQuoteImmediate": "报价（即时）",
+  "orderScheduled": "预定服务",
+  "orderImmediate": "即时服务",
+  "categoryNotDefined": "类别未定义",
+  "orderStateLabel": "州：{state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "价格型号：{model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "付款：{payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "值：{value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "帐户 ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "你的名字",
+  "accountProfileSubtitle": "轮廓",
+  "accountSettings": "设置",
+  "accountHelpSupport": "帮助和支持",
+  "navMyJobs": "我的工作",
+  "roleLabelProvider": "提供者",
+  "enableLocationToGoOnline": "启用位置即可上网。",
+  "nearbyOrdersTitle": "您附近的订单",
+  "noOrdersAvailableMessage": "目前没有可用订单。",
+  "configureServiceAreaMessage": "设置您的服务区域和服务以开始接收订单。",
+  "configureAction": "配置",
+  "offlineEnableOnlineMessage": "你离线了。启用在线状态以接收订单。",
+  "noMatchingOrdersMessage": "没有与您的服务和区域匹配的订单。",
+  "orderAcceptedMessage": "订单已接受。",
+  "orderAcceptedCanSendQuote": "订单已接受。您可以稍后发送报价。",
+  "orderAcceptError": "接受订单时出错：{error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "订单已接受",
+  "orderAcceptedBudgetPrompt": "该订单是按报价的。\\n\\n您想立即发送报价范围吗？",
+  "actionLater": "之后",
+  "actionSendNow": "立即发送",
+  "actionCancel": "取消",
+  "actionSend": "发送",
+  "actionIgnore": "忽略",
+  "actionAccept": "接受",
+  "actionNo": "不",
+  "actionYesCancel": "是的，取消",
+  "proposalDialogTitle": "发送报价",
+  "proposalDialogDescription": "设置此服务的价格范围。\\n包括差旅费和人工费。",
+  "proposalMinValueLabel": "最小值 ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "例如：20",
+  "proposalMaxValueLabel": "最大值 ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "例如：35",
+  "proposalMessageLabel": "给客户的消息（可选）",
+  "proposalMessageHint": "例如：包括旅行。大的材料是额外的。",
+  "proposalInvalidValues": "输入有效的最小值和最大值。",
+  "proposalMinGreaterThanMax": "最小值不能大于最大值。",
+  "proposalSent": "提案已发送给客户。",
+  "proposalSendError": "发送提案时出错：{error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "您好，提供商",
+  "providerHomeSubtitle": "上网接收新订单。",
+  "providerStatusOnline": "你在线",
+  "providerStatusOffline": "你离线了",
+  "providerSettingsLoadError": "加载设置时出错：{error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "保存设置时出错：{error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "服务区",
+  "serviceAreaHeading": "您想在哪里接收订单？",
+  "serviceAreaSubtitle": "设置您提供的服务以及您的基地城市周围的最大半径。",
+  "serviceAreaBaseLocation": "基地位置",
+  "serviceAreaRadius": "服务半径",
+  "serviceAreaSaved": "服务区保存成功。",
+  "serviceAreaInfoNote": "将来，我们将使用这些设置按邻近度和服务类型过滤订单。目前，这可以帮助我们准备匹配引擎。",
+  "availabilityTitle": "可用性",
+  "servicesYouProvideTitle": "您提供的服务",
+  "servicesCatalogEmpty": "目录中尚未配置任何服务。",
+  "servicesSearchPrompt": "键入以搜索和添加服务。",
+  "servicesSearchNoResults": "未找到任何服务。",
+  "servicesSelectedTitle": "精选服务",
+  "serviceUnnamed": "未命名服务",
+  "serviceModeQuote": "引用",
+  "serviceModeScheduled": "预定",
+  "serviceModeImmediate": "即时",
+  "providerServicesSelectAtLeastOne": "至少选择您提供的一项服务。",
+  "countryLabel": "国家",
+  "cityLabel": "城市",
+  "stateLabelDistrict": "区",
+  "stateLabelProvince": "省",
+  "stateLabelState": "状态",
+  "stateLabelRegion": "地区",
+  "stateLabelCounty": "县",
+  "stateLabelRegionOrState": "地区/州",
+  "searchHint": "搜索...",
+  "searchCountryHint": "输入搜索国家",
+  "searchGenericHint": "输入搜索",
+  "searchServicesHint": "搜寻服务",
+  "openCountriesListTooltip": "查看国家列表",
+  "openListTooltip": "查看列表",
+  "selectCountryTitle": "选择国家",
+  "selectCityTitle": "选择城市",
+  "selectFieldTitle": "选择{field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "保存更改",
+  "supportTitle": "帮助与支持",
+  "supportSubtitle": "有疑问吗？联系我们。",
+  "myScheduleTitle": "我的日程",
+  "myScheduleSubtitle": "设置休息时间和休息日",
+  "languageTitle": "语言",
+  "languageModeManual": "手动的",
+  "languageModeAuto": "汽车",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "自动（系统）",
+  "providerCategoriesTitle": "服务类别",
+  "providerCategoriesSubtitle": "我们使用类别来过滤兼容订单。",
+  "providerCategoriesEmpty": "未选择类别。",
+  "providerCategoriesSelect": "选择类别",
+  "providerCategoriesEdit": "添加或编辑类别",
+  "providerCategoriesRequiredMessage": "选择您的类别以接收匹配的订单。",
+  "providerKpiEarningsToday": "今日收益（净值）",
+  "providerKpiServicesThisMonth": "本月服务",
+  "providerKpiGrossFeeSubtitle": "毛额：{gross} - 费用：{fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "你有工作需要管理",
+  "providerHighlightCta": "点击此处打开下一个作业。",
+  "providerPendingActionAccepted": "你有一份被接受的工作，准备开始。",
+  "providerPendingActionInProgress": "您有一项工作正在进行中。完成后将其标记为已完成。",
+  "providerPendingActionSetFinalValue": "设置并发送最终服务值。",
+  "providerUnreadMessagesTitle": "您有来自客户的新消息",
+  "providerUnreadMessagesJob": "在职：{jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "我的职位",
+  "providerJobsTabOpen": "打开",
+  "providerJobsTabCompleted": "完全的",
+  "providerJobsTabCancelled": "取消",
+  "providerJobsLoadError": "加载作业时出错：{error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "您还没有空缺职位。\\n转到主页并接受订单。",
+  "providerJobsEmptyCompleted": "您还没有完成作业。",
+  "providerJobsEmptyCancelled": "您还没有取消作业。",
+  "scheduledForDate": "预定时间：{date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "查看详情",
+  "clientPaidValueLabel": "客户付款：{value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "您收到：{value} - 费用：{fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "服务价值：{value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "取消作业",
+  "cancelJobPrompt": "您确定要取消此作业吗？\\n该订单可能可供其他提供商使用。",
+  "cancelJobReasonLabel": "取消原因（可选）：",
+  "cancelJobReasonFieldLabel": "原因",
+  "cancelJobDetailLabel": "取消详情",
+  "cancelJobDetailRequired": "请添加详细信息。",
+  "cancelJobSuccess": "作业取消了。",
+  "cancelJobError": "取消作业时出错：{error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "查看我的个人资料",
+  "providerAccountProfileSubtitle": "供应商简介",
+  "activateOnlinePaymentsSubtitle": "启用在线支付",
+  "statusProviderWaiting": "新请求",
+  "statusQuoteWaitingCustomer": "等待客户回复",
+  "statusAcceptedToStart": "已接受（准备开始）",
+  "statusInProgress": "进行中",
+  "statusCompleted": "完全的",
+  "orderDefaultImmediateTitle": "加急服务",
+  "locationServiceDisabled": "设备上的位置服务已禁用。",
+  "locationPermissionDenied": "位置权限被拒绝。\\n无法获取当前位置。",
+  "locationPermissionDeniedForever": "位置权限被永久拒绝。\\n在设备设置中启用位置。",
+  "locationFetchError": "获取位置时出错：{error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "表格还没有准备好。再试一次。",
+  "missingRequiredFieldsError": "缺少必填字段。检查红色字段。",
+  "scheduleDateTimeRequiredError": "选择服务日期和时间。",
+  "scheduleDateTimeFutureError": "选择未来的日期/时间。",
+  "categoryRequiredError": "选择一个类别。",
+  "orderUpdatedSuccess": "订单更新成功！",
+  "orderCreatedSuccess": "订单已创建！寻找供应商...",
+  "orderUpdateError": "更新订单时出错：{error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "创建订单时出错：{error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "例如：水槽下方的水管漏水",
+  "orderTitleExampleElectric": "例如：客厅插座坏了+安装吸顶灯",
+  "orderTitleExampleCleaning": "例如：全面清洁两居室公寓（厨房、卫生间、窗户、地板）。",
+  "orderTitleHintImmediate": "简要解释发生了什么以及您需要什么。",
+  "orderTitleHintScheduled": "说明您何时需要服务、详细位置以及需要做什么。",
+  "orderTitleHintQuote": "描述您想要接收提案的服务。",
+  "orderTitleHintDefault": "描述您需要的服务。",
+  "orderDescriptionExampleCleaning": "例如：全面清洁两居室公寓（厨房、卫生间、窗户、地板）。",
+  "orderDescriptionHintImmediate": "简要解释发生了什么以及您需要什么。",
+  "orderDescriptionHintScheduled": "说明您何时需要服务、详细位置以及需要做什么。",
+  "orderDescriptionHintQuote": "描述您想要的服务、大致预算（如果您有的话）以及重要细节。",
+  "orderDescriptionHintDefault": "更详细地解释一下您需要什么。",
+  "priceModelTitle": "价格模型",
+  "priceModelQuoteInfo": "这项服务是按报价提供的。提供商将提出最终价格。",
+  "priceTypeLabel": "价格类型",
+  "paymentTypeLabel": "支付方式",
+  "orderHeaderQuoteTitle": "报价请求",
+  "orderHeaderQuoteSubtitle": "描述您的需求，提供商可以发送一个范围（最小/最大）。",
+  "orderHeaderImmediateTitle": "即时服务",
+  "orderHeaderImmediateSubtitle": "我们将尽快致电可用的提供商。",
+  "orderHeaderScheduledTitle": "预定服务",
+  "orderHeaderScheduledSubtitle": "选择提供商来找您的日期和时间。",
+  "orderHeaderDefaultTitle": "新订单",
+  "orderHeaderDefaultSubtitle": "描述您需要的服务。",
+  "orderEditTitle": "编辑订单",
+  "orderNewTitle": "新订单",
+  "whenServiceNeededLabel": "您什么时候需要该服务？",
+  "categoryLabel": "类别",
+  "categoryHint": "选择服务类别",
+  "orderTitleLabel": "订单标题",
+  "orderTitleRequiredError": "为订单写一个标题。",
+  "orderDescriptionOptionalLabel": "说明（可选）",
+  "locationApproxLabel": "大概位置",
+  "locationSelectedLabel": "地点选定。",
+  "locationSelectPrompt": "选择执行服务的地点（大约）。",
+  "locationAddressHint": "街道、门牌号、楼层、参考号（可选，但很有帮助）",
+  "locationGetting": "获取位置...",
+  "locationUseCurrent": "使用当前位置",
+  "locationChooseOnMap": "在地图上选择",
+  "serviceDateTimeLabel": "服务日期和时间",
+  "serviceDateTimePick": "选择日期和时间",
+  "saveChangesButton": "保存更改",
+  "submitOrderButton": "请求服务",
+  "mapSelectTitle": "在地图上选择位置",
+  "mapSelectInstruction": "将地图拖至大概的服务位置，然后确认。",
+  "mapSelectConfirm": "确认位置",
+  "orderDetailsTitle": "订单详情",
+  "orderLoadError": "加载订单时出错：{error}",
+  "orderNotFound": "未找到订单。",
+  "scheduledNoDate": "预定（未设定日期）",
+  "orderValueRejectedTitle": "客户拒绝了建议的价值。",
+  "orderValueRejectedBody": "与客户聊天并在一致后提出新的价值。",
+  "actionProposeNewValue": "提出新价值",
+  "noShowReportedTitle": "报告未出现",
+  "noShowReportedBy": "报告人：{role}",
+  "noShowReportedAt": "于：{date}",
+  "noShowTitle": "缺席",
+  "noShowDescription": "如果对方没有出现，您可以举报。",
+  "noShowReportAction": "报告未出现",
+  "orderInfoTitle": "订单信息",
+  "orderInfoIdLabel": "订单号",
+  "orderInfoCreatedAtLabel": "创建于",
+  "orderInfoStatusLabel": "地位",
+  "orderInfoModeLabel": "模式",
+  "orderInfoValueLabel": "价值",
+  "orderLocationTitle": "订单地点",
+  "orderDescriptionTitle": "订单说明",
+  "providerMessageTitle": "提供者消息",
+  "actionEditOrder": "编辑订单",
+  "actionCancelOrder": "取消订单",
+  "cancelOrderTitle": "取消订单",
+  "orderCancelInProgressWarning": "该服务已经在进行中。\n现在取消可能会导致部分退款。",
+  "orderCancelConfirmPrompt": "您确定要取消此订单吗？",
+  "orderCancelReasonLabel": "取消原因",
+  "orderCancelReasonOptionalLabel": "原因（可选）",
+  "orderCancelledSnack": "订单已取消。 {message}。",
+  "orderCancelError": "取消订单时出错：{error}",
+  "noShowReportDialogTitle": "报告未出现",
+  "noShowReportDialogDescription": "仅当其他人没有出现时才使用此功能。",
+  "noShowReasonOptionalLabel": "原因（可选）",
+  "actionReport": "报告",
+  "noShowReportSuccess": "报告未出现。",
+  "noShowReportError": "报告未出现错误：{error}",
+  "orderFinalValueTitle": "提出新的最终值",
+  "orderFinalValueLabel": "价值",
+  "orderFinalValueInvalid": "输入有效值。",
+  "orderFinalValueSent": "发送给客户的新价值。",
+  "orderFinalValueSendError": "发送新值时出错：{error}",
+  "ratingSentTitle": "评级已发送",
+  "ratingProviderTitle": "提供商评级",
+  "ratingPrompt": "留下 1 到 5 的评分。",
+  "ratingCommentLabel": "评论（可选）",
+  "ratingSendAction": "发送评级",
+  "ratingSelectError": "选择一个评级。",
+  "ratingSentSnack": "评级已发送。",
+  "ratingSendError": "发送评级时出错：{error}",
+  "timelineCreated": "已创建",
+  "timelineAccepted": "公认",
+  "timelineInProgress": "进行中",
+  "timelineCancelled": "取消",
+  "timelineCompleted": "完全的",
+  "lookingForProviderBanner": "我们仍在寻找该订单的供应商。",
+  "actionView": "看法",
+  "chatNoMessagesSubtitle": "还没有消息",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 ???} other{{count} ???}}",
+  "actionClose": "关闭",
+  "actionOpen": "打开",
+  "chatAuthRequired": "您需要经过身份验证才能发送消息。",
+  "chatSendError": "发送消息时出错：{error}",
+  "todayLabel": "今天",
+  "yesterdayLabel": "昨天",
+  "chatLoadError": "加载消息时出错：{error}",
+  "chatEmptyMessage": "还没有消息。\n送第一张吧！",
+  "chatInputHint": "写留言...",
+  "chatLoginHint": "登录以发送消息",
+  "roleLabelSystem": "系统",
+  "youLabel": "你",
+  "distanceMeters": "{meters} 米",
+  "distanceKilometers": "{kilometers} 公里",
+  "etaLessThanMinute": "<1分钟",
+  "etaMinutes": "{minutes} 分钟",
+  "etaHours": "{hours} 小时",
+  "etaHoursMinutes": "{hours} 小时 {minutes} 米",
+  "mapEtaLabel": "预计到达时间 {eta} - {distance}",
+  "mapOpenAction": "打开地图",
+  "orderMapTitle": "订单图",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "讨论此订单",
+  "messagesTitle": "留言",
+  "messagesSearchHint": "搜索消息",
+  "messagesLoadError": "加载对话时出错：{error}",
+  "messagesEmpty": "你们还没有任何对话。\n一旦您与提供商/客户聊天，他们就会出现在此处。",
+  "messagesNewConversationTitle": "新对话",
+  "messagesNewConversationBody": "要与提供商或客户开始对话，请转到您的“订单”或接受新订单。",
+  "messagesFilterAll": "全部",
+  "messagesFilterUnread": "未读",
+  "messagesFilterFavorites": "收藏夹",
+  "messagesFilterGroups": "团体",
+  "messagesFilterEmpty": "“{filter}”中没有任何内容",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "未找到任何对话。",
+  "messagesPinConversation": "固定对话",
+  "messagesUnpinConversation": "取消固定对话",
+  "chatPresenceOnline": "在线的",
+  "chatPresenceLastSeenAt": "最后一次出现在 {time}",
+  "chatPresenceLastSeenYesterdayAt": "最后一次出现在昨天，时间为 {time}",
+  "chatPresenceLastSeenOn": "最后一次出现于 {date} 的 {time}",
+  "chatImageTooLarge": "图片太大（最大 15MB）。",
+  "chatImageSendError": "发送图像时出错：{error}",
+  "chatFileReadError": "无法读取文件。",
+  "chatFileTooLarge": "文件太大（最大 20MB）。",
+  "chatFileSendError": "发送文件时出错：{error}",
+  "chatAudioReadError": "无法读取音频。",
+  "chatAudioTooLarge": "音频太大（最大 20MB）。",
+  "chatAudioSendError": "发送音频时出错：{error}",
+  "chatAttachFile": "发送文件",
+  "chatAttachGallery": "发送照片（图库）",
+  "chatAttachCamera": "拍照（相机）",
+  "chatAttachAudio": "发送音频（文件）",
+  "chatAttachAudioSubtitle": "选择一个音频文件（mp3/m4a/wav/...）。",
+  "chatOpenLink": "打开链接",
+  "chatAttachTooltip": "附",
+  "chatSendTooltip": "发送",
+  "chatSearchAction": "搜索",
+  "chatSearchHint": "搜索消息",
+  "chatSearchEmpty": "输入要搜索的内容。",
+  "chatSearchNoResults": "没有找到消息。",
+  "chatMediaAction": "媒体、链接和文件",
+  "chatMediaTitle": "媒体、链接和文件",
+  "chatMediaPhotosTab": "照片",
+  "chatMediaLinksTab": "链接",
+  "chatMediaAudioTab": "声音的",
+  "chatMediaFilesTab": "文件",
+  "chatMediaEmptyPhotos": "还没有照片。",
+  "chatMediaEmptyLinks": "还没有链接。",
+  "chatMediaEmptyAudio": "还没有音频。",
+  "chatMediaEmptyFiles": "还没有文件。",
+  "chatFavoritesAction": "已加星标",
+  "chatFavoritesTitle": "加星标的消息",
+  "chatFavoritesEmpty": "您还没有加星标的消息。",
+  "chatStarAction": "添加到收藏夹",
+  "chatUnstarAction": "从收藏夹中删除",
+  "chatViewProviderProfileAction": "查看提供商资料",
+  "chatViewCustomerProfileAction": "查看客户资料",
+  "chatIncomingCall": "来电",
+  "chatCallStartedVideo": "视频通话开始",
+  "chatCallStartedVoice": "语音通话开始",
+  "chatImageLabel": "图像",
+  "chatAudioLabel": "声音的",
+  "chatFileLabel": "文件",
+  "chatCallEntryLabel": "称呼",
+  "chatNoSession": "没有活动会话。登录以访问聊天。",
+  "chatTitleFallback": "聊天",
+  "chatVideoCallAction": "视频电话",
+  "chatVoiceCallAction": "称呼",
+  "chatMarkReadAction": "标记为已读",
+  "chatCallMissingParticipant": "其他参与者尚未分配到此订单。",
+  "chatCallStartError": "无法开始通话。",
+  "chatCallMessageVideo": "视频通话：{url}",
+  "chatCallMessageVoice": "致电：{url}",
+  "profileProviderTitle": "供应商简介",
+  "profileCustomerTitle": "客户简介",
+  "profileAboutTitle": "关于",
+  "profileLocationTitle": "地点",
+  "profileServicesTitle": "服务",
+  "profilePortfolioTitle": "文件夹",
+  "chatOpenFullAction": "打开完整聊天",
+  "chatOpenFullUnavailable": "其他参与者尚未分配到此订单。",
+  "chatReplyAction": "回复",
+  "chatCopyAction": "复制",
+  "chatDeleteAction": "删除",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "新故事",
+  "storyPublishing": "发布故事...",
+  "storyPublished": "故事发表！ 24 小时后到期。",
+  "storyPublishError": "发布故事时出错：{error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "标题（可选）",
+  "actionPublish": "发布",
+  "snackOrderRemoved": "订单已删除。",
+  "snackClientCancelledOrder": "客户取消订单。",
+  "snackOrderCancelled": "订单已取消。",
+  "snackOrderAcceptedByAnother": "另一家供应商接受了订单。",
+  "snackOrderUpdated": "订单已更新。",
+  "snackUserNotAuthenticated": "用户未经过身份验证。",
+  "snackOrderAcceptedCanQuote": "订单已接受。您可以在订单详细信息中发送报价。",
+  "snackOrderAcceptedSuccess": "订单已接受。",
+  "snackErrorAcceptingOrder": "接受订单时出错：{error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "订单已接受",
+  "dialogContentQuotePrompt": "该订单采用报价方式。\n\n您想现在发送报价范围吗？",
+  "dialogTitleProposeService": "提出服务建议",
+  "dialogContentProposeService": "设置此服务的价格范围。\n包括旅行和劳务。",
+  "labelMinValue": "最小值",
+  "labelMaxValue": "最大值",
+  "labelMessageOptional": "给客户的消息（可选）",
+  "hintExampleValue": "例如：{value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "例如：包括旅行。大的材料是额外的。",
+  "snackFillValidValues": "输入有效的最小值和最大值。",
+  "snackMinCannotBeGreaterThanMax": "最小值不能大于最大值。",
+  "snackProposalSent": "提案已发送给客户。",
+  "snackErrorSendingProposal": "发送提案时出错：{error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

@@ -1,0 +1,822 @@
+{
+  "@@locale": "fr",
+  "appTitle": "ChegaJa",
+  "roleSelectorWelcome": "Bienvenue sur ChegaJa",
+  "roleSelectorPrompt": "Choisissez comment vous souhaitez utiliser l'application :",
+  "roleCustomerTitle": "je suis client",
+  "roleCustomerDescription": "Je souhaite trouver des prestataires de services près de chez moi.",
+  "roleProviderTitle": "je suis un fournisseur",
+  "roleProviderDescription": "Je souhaite recevoir les demandes des clients et gagner plus.",
+  "invalidSession": "Séance invalide.",
+  "paymentsTitle": "Paiements (Stripe)",
+  "paymentsHeading": "Recevez des paiements en ligne",
+  "paymentsDescription": "Pour recevoir des paiements via l'application, vous devez créer un compte Stripe (Connect Express).\nL'intégration s'ouvre dans votre navigateur et prend 2 à 3 minutes.",
+  "paymentsActive": "Paiements en ligne ACTIF.",
+  "paymentsInactive": "Les paiements en ligne ne sont pas encore actifs. Intégration complète.",
+  "stripeAccountLabel": "Compte Stripe : {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "Intégration ouverte. Après avoir terminé, revenez pour vérifier l’état.",
+  "onboardingStartError": "Erreur lors du démarrage de l'intégration : {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "Gérer le compte Stripe",
+  "activatePayments": "Activer les paiements",
+  "technicalNotesTitle": "Notes techniques",
+  "technicalNotesBody": "• Stripe est configuré via Cloud Functions (côté serveur).\n• La commission de la plateforme est appliquée automatiquement dans le PaymentIntent.\n• En production, ajoutez le webhook Stripe et stockez le secret du webhook dans Functions.",
+  "kycTitle": "Vérification d'identité : {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "Envoyez un document (photo ou PDF). La validation complète arrive dans la v2.6.",
+  "kycSendDocument": "Envoyer le document",
+  "kycAddDocument": "Ajouter un document",
+  "kycStatusApproved": "Approuvé",
+  "kycStatusRejected": "Rejeté",
+  "kycStatusInReview": "En revue",
+  "kycStatusNotStarted": "Pas commencé",
+  "kycFileReadError": "Impossible de lire le fichier.",
+  "kycFileTooLarge": "Fichier trop volumineux (max. 10 Mo).",
+  "kycUploading": "Téléchargement du document...",
+  "kycUploadSuccess": "Document envoyé pour examen.",
+  "kycUploadError": "Erreur lors de l'envoi du document : {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "Annulé par vous",
+  "statusCancelledByProvider": "Annulé par le fournisseur",
+  "statusCancelled": "Annulé",
+  "statusLookingForProvider": "À la recherche d'un fournisseur",
+  "statusProviderPreparingQuote": "Prestataire trouvé (établissement du devis)",
+  "statusQuoteToDecide": "Vous avez un devis pour décider",
+  "statusProviderFound": "Fournisseur trouvé",
+  "statusServiceInProgress": "Prestation en cours",
+  "statusAwaitingValueConfirmation": "En attente de votre confirmation de valeur",
+  "statusServiceCompleted": "Prestation terminée",
+  "valueToConfirm": "{value} (à confirmer)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (proposé)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} à {max} (estimation)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "À partir de {min} (estimation)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "Jusqu'à {max} (estimé)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "Prix ​​fixe",
+  "priceByQuote": "Par devis",
+  "priceToArrange": "A aménager",
+  "paymentOnlineBefore": "Paiement en ligne (avant)",
+  "paymentOnlineAfter": "Paiement en ligne (après)",
+  "paymentCash": "Paiement en espèces",
+  "pendingActionQuoteToReview": "Vous avez un devis/proposition à examiner.",
+  "pendingActionValueToConfirm": "Le fournisseur a envoyé la valeur finale. Vous devez confirmer.",
+  "pendingActionProviderPreparingQuote": "Fournisseur trouvé. Ils préparent le devis.",
+  "pendingActionProviderChat": "Fournisseur trouvé. Vous pouvez discuter avec eux.",
+  "roleLabelCustomer": "Client",
+  "navHome": "Maison",
+  "navMyOrders": "Mes commandes",
+  "navMessages": "Messages",
+  "navProfile": "Profil",
+  "homeGreeting": "Bonjour",
+  "homeSubtitle": "De quoi as-tu besoin aujourd’hui ?",
+  "homePendingTitle": "Tu as quelque chose à décider",
+  "homePendingCta": "Appuyez ici pour ouvrir la commande suivante et décider.",
+  "servicesLoadError": "Erreur lors du chargement des services : {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "Aucun service configuré pour l'instant.\\nVous verrez bientôt les catégories ici 🙂",
+  "availableServicesTitle": "Services disponibles",
+  "serviceTabImmediate": "Immédiat",
+  "serviceTabScheduled": "Programmé",
+  "serviceTabQuote": "Par devis",
+  "unreadMessagesTitle": "Vous avez de nouveaux messages",
+  "unreadMessagesCta": "Appuyez ici pour ouvrir le chat.",
+  "serviceSearchHint": "Service de recherche...",
+  "serviceSearchEmpty": "Aucun service trouvé pour cette recherche.",
+  "serviceModeImmediateDescription": "Un prestataire arrive aujourd'hui le plus rapidement possible.",
+  "serviceModeScheduledDescription": "Planifiez un jour et une heure pour le service.",
+  "serviceModeQuoteDescription": "Demandez un devis (le fournisseur envoie une plage min/max).",
+  "userNotAuthenticatedError": "Erreur : utilisateur non authentifié.",
+  "myOrdersTitle": "Mes commandes",
+  "ordersTabPending": "En attente",
+  "ordersTabCompleted": "Complété",
+  "ordersTabCancelled": "Annulé",
+  "ordersLoadError": "Erreur lors du chargement des commandes : {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "Vous n'avez aucune commande en attente.\\nCréez une nouvelle commande depuis l'accueil.",
+  "ordersEmptyCompleted": "Vous n'avez pas encore de commandes terminées.",
+  "ordersEmptyCancelled": "Vous n'avez pas encore de commandes annulées.",
+  "orderQuoteScheduled": "Devis (planifié)",
+  "orderQuoteImmediate": "Devis (immédiat)",
+  "orderScheduled": "Service programmé",
+  "orderImmediate": "Service immédiat",
+  "categoryNotDefined": "Catégorie non définie",
+  "orderStateLabel": "État : {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "Modèle de prix : {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "Paiement : {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "Valeur : {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "Compte ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "Votre nom",
+  "accountProfileSubtitle": "Profil",
+  "accountSettings": "Paramètres",
+  "accountHelpSupport": "Aide et support",
+  "navMyJobs": "Mes emplois",
+  "roleLabelProvider": "Fournisseur",
+  "enableLocationToGoOnline": "Activez la localisation pour aller en ligne.",
+  "nearbyOrdersTitle": "Commandes près de chez vous",
+  "noOrdersAvailableMessage": "Aucune commande disponible pour le moment.",
+  "configureServiceAreaMessage": "Définissez votre zone de service et vos services pour commencer à recevoir des commandes.",
+  "configureAction": "Configurer",
+  "offlineEnableOnlineMessage": "Vous êtes hors ligne. Activez le statut en ligne pour recevoir des commandes.",
+  "noMatchingOrdersMessage": "Aucune commande correspondante pour vos services et votre région.",
+  "orderAcceptedMessage": "Commande acceptée.",
+  "orderAcceptedCanSendQuote": "Commande acceptée. Vous pourrez envoyer le devis plus tard.",
+  "orderAcceptError": "Erreur lors de l'acceptation de la commande : {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "Commande acceptée",
+  "orderAcceptedBudgetPrompt": "Cette commande se fait par devis.\\n\\nVoulez-vous envoyer la plage de devis maintenant ?",
+  "actionLater": "Plus tard",
+  "actionSendNow": "Envoyer maintenant",
+  "actionCancel": "Annuler",
+  "actionSend": "Envoyer",
+  "actionIgnore": "Ignorer",
+  "actionAccept": "Accepter",
+  "actionNo": "Non",
+  "actionYesCancel": "Oui, annuler",
+  "proposalDialogTitle": "Envoyer un devis",
+  "proposalDialogDescription": "Définissez une fourchette de prix pour ce service.\\nIncluez les déplacements et la main d'œuvre.",
+  "proposalMinValueLabel": "Valeur minimale ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "Ex. : 20",
+  "proposalMaxValueLabel": "Valeur maximale ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "Ex. : 35",
+  "proposalMessageLabel": "Message au client (facultatif)",
+  "proposalMessageHint": "Ex. : Comprend les déplacements. Les gros matériaux sont en sus.",
+  "proposalInvalidValues": "Entrez des valeurs minimales et maximales valides.",
+  "proposalMinGreaterThanMax": "Le minimum ne peut pas être supérieur au maximum.",
+  "proposalSent": "Proposition envoyée au client.",
+  "proposalSendError": "Erreur lors de l'envoi de la proposition : {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "Bonjour, fournisseur",
+  "providerHomeSubtitle": "Allez en ligne pour recevoir de nouvelles commandes.",
+  "providerStatusOnline": "Vous êtes EN LIGNE",
+  "providerStatusOffline": "Vous êtes HORS LIGNE",
+  "providerSettingsLoadError": "Erreur lors du chargement des paramètres : {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "Erreur lors de l'enregistrement des paramètres : {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "Aire de service",
+  "serviceAreaHeading": "Où souhaitez-vous recevoir les commandes ?",
+  "serviceAreaSubtitle": "Définissez les services que vous fournissez et le rayon maximum autour de votre ville de base.",
+  "serviceAreaBaseLocation": "Emplacement de base",
+  "serviceAreaRadius": "Rayon de service",
+  "serviceAreaSaved": "Zone de service enregistrée avec succès.",
+  "serviceAreaInfoNote": "À l'avenir, nous utiliserons ces paramètres pour filtrer les commandes par proximité et type de service. Pour l'instant, cela nous aide à préparer le moteur de correspondance.",
+  "availabilityTitle": "Disponibilité",
+  "servicesYouProvideTitle": "Services que vous fournissez",
+  "servicesCatalogEmpty": "Aucun service configuré dans le catalogue pour le moment.",
+  "servicesSearchPrompt": "Tapez pour rechercher et ajouter des services.",
+  "servicesSearchNoResults": "Aucun service trouvé.",
+  "servicesSelectedTitle": "Prestations sélectionnées",
+  "serviceUnnamed": "Service sans nom",
+  "serviceModeQuote": "Citation",
+  "serviceModeScheduled": "Programmé",
+  "serviceModeImmediate": "Immédiat",
+  "providerServicesSelectAtLeastOne": "Sélectionnez au moins un service que vous fournissez.",
+  "countryLabel": "Pays",
+  "cityLabel": "Ville",
+  "stateLabelDistrict": "District",
+  "stateLabelProvince": "Province",
+  "stateLabelState": "État",
+  "stateLabelRegion": "Région",
+  "stateLabelCounty": "Comté",
+  "stateLabelRegionOrState": "Région/État",
+  "searchHint": "Recherche...",
+  "searchCountryHint": "Tapez pour rechercher des pays",
+  "searchGenericHint": "Tapez pour rechercher",
+  "searchServicesHint": "Services de recherche",
+  "openCountriesListTooltip": "Afficher la liste des pays",
+  "openListTooltip": "Afficher la liste",
+  "selectCountryTitle": "Sélectionnez un pays",
+  "selectCityTitle": "Sélectionnez la ville",
+  "selectFieldTitle": "Sélectionnez {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "Enregistrer les modifications",
+  "supportTitle": "Aide et assistance",
+  "supportSubtitle": "Vous avez des questions ? Contactez-nous.",
+  "myScheduleTitle": "Mon emploi du temps",
+  "myScheduleSubtitle": "Définir les heures et les jours de congé",
+  "languageTitle": "Langue",
+  "languageModeManual": "Manuel",
+  "languageModeAuto": "Auto",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "Automatique (système)",
+  "providerCategoriesTitle": "Catégories de services",
+  "providerCategoriesSubtitle": "Nous utilisons des catégories pour filtrer les commandes compatibles.",
+  "providerCategoriesEmpty": "Aucune catégorie sélectionnée.",
+  "providerCategoriesSelect": "Sélectionnez les catégories",
+  "providerCategoriesEdit": "Ajouter ou modifier des catégories",
+  "providerCategoriesRequiredMessage": "Sélectionnez vos catégories pour recevoir les commandes correspondantes.",
+  "providerKpiEarningsToday": "Gains aujourd'hui (nets)",
+  "providerKpiServicesThisMonth": "Services ce mois-ci",
+  "providerKpiGrossFeeSubtitle": "Brut : {gross} - Frais : {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "Vous avez un travail à gérer",
+  "providerHighlightCta": "Appuyez ici pour ouvrir le travail suivant.",
+  "providerPendingActionAccepted": "Vous avez un travail accepté, prêt à commencer.",
+  "providerPendingActionInProgress": "Vous avez un travail en cours. Marquez-le comme terminé lorsque vous avez terminé.",
+  "providerPendingActionSetFinalValue": "Définissez et envoyez la valeur finale du service.",
+  "providerUnreadMessagesTitle": "Vous avez de nouveaux messages de clients",
+  "providerUnreadMessagesJob": "En poste : {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "Mes emplois",
+  "providerJobsTabOpen": "Ouvrir",
+  "providerJobsTabCompleted": "Complété",
+  "providerJobsTabCancelled": "Annulé",
+  "providerJobsLoadError": "Erreur lors du chargement des tâches : {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "Vous n'avez pas encore d'offres d'emploi disponibles.\\nAccédez à l'accueil et acceptez une commande.",
+  "providerJobsEmptyCompleted": "Vous n'avez pas encore de tâches terminées.",
+  "providerJobsEmptyCancelled": "Vous n'avez pas encore de tâches annulées.",
+  "scheduledForDate": "Programmé : {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "Afficher les détails",
+  "clientPaidValueLabel": "Client payé : {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "Vous recevez : {value} - Frais : {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "Valeur du service : {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "Annuler le travail",
+  "cancelJobPrompt": "Êtes-vous sûr de vouloir annuler cette tâche ?\\nLa commande peut devenir disponible pour d'autres fournisseurs.",
+  "cancelJobReasonLabel": "Motif d'annulation (facultatif) :",
+  "cancelJobReasonFieldLabel": "Raison",
+  "cancelJobDetailLabel": "Détails de l'annulation",
+  "cancelJobDetailRequired": "Veuillez ajouter un détail.",
+  "cancelJobSuccess": "Travail annulé.",
+  "cancelJobError": "Erreur lors de l'annulation de la tâche : {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "Voir mon profil",
+  "providerAccountProfileSubtitle": "Profil du fournisseur",
+  "activateOnlinePaymentsSubtitle": "Activer les paiements en ligne",
+  "statusProviderWaiting": "Nouvelle demande",
+  "statusQuoteWaitingCustomer": "En attente de la réponse du client",
+  "statusAcceptedToStart": "Accepté (prêt à démarrer)",
+  "statusInProgress": "En cours",
+  "statusCompleted": "Complété",
+  "orderDefaultImmediateTitle": "Service urgent",
+  "locationServiceDisabled": "Le service de localisation est désactivé sur l'appareil.",
+  "locationPermissionDenied": "Autorisation de localisation refusée.\\nImpossible d'obtenir la position actuelle.",
+  "locationPermissionDeniedForever": "Autorisation de localisation définitivement refusée.\\nActivez la localisation dans les paramètres de l'appareil.",
+  "locationFetchError": "Erreur lors de l'obtention de la position : {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "Le formulaire n'est pas encore prêt. Essayer à nouveau.",
+  "missingRequiredFieldsError": "Les champs obligatoires sont manquants. Vérifiez les champs en rouge.",
+  "scheduleDateTimeRequiredError": "Choisissez la date et l'heure du service.",
+  "scheduleDateTimeFutureError": "Choisissez une date/heure future.",
+  "categoryRequiredError": "Choisissez une catégorie.",
+  "orderUpdatedSuccess": "Commande mise à jour avec succès !",
+  "orderCreatedSuccess": "Commande créée ! A la recherche d'un prestataire...",
+  "orderUpdateError": "Erreur lors de la mise à jour de la commande : {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "Erreur lors de la création de la commande : {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "Ex. : Fuite de plomberie sous l’évier",
+  "orderTitleExampleElectric": "Ex. : La prise ne fonctionne pas dans le salon + installer un plafonnier",
+  "orderTitleExampleCleaning": "Ex. : Nettoyage complet d'un appartement 2 chambres (cuisine, WC, fenêtres, sol).",
+  "orderTitleHintImmediate": "Expliquez brièvement ce qui se passe et ce dont vous avez besoin.",
+  "orderTitleHintScheduled": "Dites quand vous souhaitez bénéficier du service, les détails de l'emplacement et ce qui doit être fait.",
+  "orderTitleHintQuote": "Décrivez le service pour lequel vous souhaitez recevoir des propositions.",
+  "orderTitleHintDefault": "Décrivez le service dont vous avez besoin.",
+  "orderDescriptionExampleCleaning": "Ex. : Nettoyage complet d'un appartement 2 chambres (cuisine, WC, fenêtres, sol).",
+  "orderDescriptionHintImmediate": "Expliquez brièvement ce qui se passe et ce dont vous avez besoin.",
+  "orderDescriptionHintScheduled": "Dites quand vous souhaitez bénéficier du service, les détails de l'emplacement et ce qui doit être fait.",
+  "orderDescriptionHintQuote": "Décrivez le service que vous souhaitez, le budget approximatif (si vous en avez un) et les détails importants.",
+  "orderDescriptionHintDefault": "Expliquez un peu plus en détail ce dont vous avez besoin.",
+  "priceModelTitle": "Modèle de prix",
+  "priceModelQuoteInfo": "Cette prestation se fait sur devis. Le prestataire proposera le prix final.",
+  "priceTypeLabel": "Type de prix",
+  "paymentTypeLabel": "Type de paiement",
+  "orderHeaderQuoteTitle": "Demande de devis",
+  "orderHeaderQuoteSubtitle": "Décrivez ce dont vous avez besoin et le fournisseur peut envoyer une plage (min/max).",
+  "orderHeaderImmediateTitle": "Service immédiat",
+  "orderHeaderImmediateSubtitle": "Un prestataire disponible sera appelé dans les plus brefs délais.",
+  "orderHeaderScheduledTitle": "Service programmé",
+  "orderHeaderScheduledSubtitle": "Choisissez le jour et l’heure à laquelle le prestataire viendra chez vous.",
+  "orderHeaderDefaultTitle": "Nouvelle commande",
+  "orderHeaderDefaultSubtitle": "Décrivez le service dont vous avez besoin.",
+  "orderEditTitle": "Modifier la commande",
+  "orderNewTitle": "Nouvelle commande",
+  "whenServiceNeededLabel": "Quand avez-vous besoin du service ?",
+  "categoryLabel": "Catégorie",
+  "categoryHint": "Choisissez la catégorie de service",
+  "orderTitleLabel": "Titre de la commande",
+  "orderTitleRequiredError": "Écrivez un titre pour la commande.",
+  "orderDescriptionOptionalLabel": "Description (facultatif)",
+  "locationApproxLabel": "Localisation approximative",
+  "locationSelectedLabel": "Emplacement sélectionné.",
+  "locationSelectPrompt": "Choisissez où le service sera effectué (approximatif).",
+  "locationAddressHint": "Rue, numéro, étage, référence (facultatif, mais aide beaucoup)",
+  "locationGetting": "Obtenir l'emplacement...",
+  "locationUseCurrent": "Utiliser l'emplacement actuel",
+  "locationChooseOnMap": "Choisissez sur la carte",
+  "serviceDateTimeLabel": "Date et heure du service",
+  "serviceDateTimePick": "Choisissez le jour et l'heure",
+  "saveChangesButton": "Enregistrer les modifications",
+  "submitOrderButton": "Demander un service",
+  "mapSelectTitle": "Choisissez un emplacement sur la carte",
+  "mapSelectInstruction": "Faites glisser la carte vers l'emplacement approximatif du service, puis confirmez.",
+  "mapSelectConfirm": "Confirmer l'emplacement",
+  "orderDetailsTitle": "Détails de la commande",
+  "orderLoadError": "Erreur de chargement de l'ordre : {error}",
+  "orderNotFound": "Commande introuvable.",
+  "scheduledNoDate": "Programmé (aucune date fixée)",
+  "orderValueRejectedTitle": "Le client a rejeté la valeur proposée.",
+  "orderValueRejectedBody": "Discutez avec le client et proposez une nouvelle valeur une fois aligné.",
+  "actionProposeNewValue": "Proposer une nouvelle valeur",
+  "noShowReportedTitle": "Non-présentation signalée",
+  "noShowReportedBy": "Signalé par : {role}",
+  "noShowReportedAt": "À : {date}",
+  "noShowTitle": "Non-présentation",
+  "noShowDescription": "Si l'autre personne ne s'est pas présentée, vous pouvez le signaler.",
+  "noShowReportAction": "Signaler une non-présentation",
+  "orderInfoTitle": "Informations sur la commande",
+  "orderInfoIdLabel": "Numéro de commande",
+  "orderInfoCreatedAtLabel": "Créé à",
+  "orderInfoStatusLabel": "Statut",
+  "orderInfoModeLabel": "Mode",
+  "orderInfoValueLabel": "Valeur",
+  "orderLocationTitle": "Lieu de commande",
+  "orderDescriptionTitle": "Description de la commande",
+  "providerMessageTitle": "Message du fournisseur",
+  "actionEditOrder": "Modifier la commande",
+  "actionCancelOrder": "Annuler la commande",
+  "cancelOrderTitle": "Annuler la commande",
+  "orderCancelInProgressWarning": "Le service est déjà en cours.\nL'annulation maintenant peut entraîner un remboursement partiel.",
+  "orderCancelConfirmPrompt": "Êtes-vous sûr de vouloir annuler cette commande ?",
+  "orderCancelReasonLabel": "Motif d'annulation",
+  "orderCancelReasonOptionalLabel": "Raison (facultatif)",
+  "orderCancelledSnack": "Commande annulée. {message}.",
+  "orderCancelError": "Erreur lors de l'annulation de la commande : {error}",
+  "noShowReportDialogTitle": "Signaler une non-présentation",
+  "noShowReportDialogDescription": "Utilisez-le uniquement si l'autre personne ne s'est pas présentée.",
+  "noShowReasonOptionalLabel": "Raison (facultatif)",
+  "actionReport": "Rapport",
+  "noShowReportSuccess": "Non-présentation signalée.",
+  "noShowReportError": "Erreur signalant une non-présentation : {error}",
+  "orderFinalValueTitle": "Proposer une nouvelle valeur finale",
+  "orderFinalValueLabel": "Valeur",
+  "orderFinalValueInvalid": "Entrez une valeur valide.",
+  "orderFinalValueSent": "Nouvelle valeur envoyée au client.",
+  "orderFinalValueSendError": "Erreur lors de l'envoi d'une nouvelle valeur : {error}",
+  "ratingSentTitle": "Note envoyée",
+  "ratingProviderTitle": "Évaluation du fournisseur",
+  "ratingPrompt": "Laissez une note de 1 à 5.",
+  "ratingCommentLabel": "Commentaire (facultatif)",
+  "ratingSendAction": "Envoyer une note",
+  "ratingSelectError": "Choisissez une note.",
+  "ratingSentSnack": "Note envoyée.",
+  "ratingSendError": "Erreur lors de l'envoi de la note : {error}",
+  "timelineCreated": "Créé",
+  "timelineAccepted": "Accepté",
+  "timelineInProgress": "En cours",
+  "timelineCancelled": "Annulé",
+  "timelineCompleted": "Complété",
+  "lookingForProviderBanner": "Nous recherchons toujours un fournisseur pour cette commande.",
+  "actionView": "Voir",
+  "chatNoMessagesSubtitle": "Pas encore de messages",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 message} other{{count} messages}}",
+  "actionClose": "Fermer",
+  "actionOpen": "Ouvrir",
+  "chatAuthRequired": "Vous devez être authentifié pour envoyer des messages.",
+  "chatSendError": "Erreur lors de l'envoi du message : {error}",
+  "todayLabel": "Aujourd'hui",
+  "yesterdayLabel": "Hier",
+  "chatLoadError": "Messages d'erreur lors du chargement : {error}",
+  "chatEmptyMessage": "Aucun message pour l'instant.\nEnvoyez le premier !",
+  "chatInputHint": "Écrire un message...",
+  "chatLoginHint": "Connectez-vous pour envoyer des messages",
+  "roleLabelSystem": "Système",
+  "youLabel": "Toi",
+  "distanceMeters": "{meters} mois",
+  "distanceKilometers": "{kilometers} km",
+  "etaLessThanMinute": "<1 minute",
+  "etaMinutes": "{minutes} min",
+  "etaHours": "{hours} heures",
+  "etaHoursMinutes": "{hours} heures {minutes} heures",
+  "mapEtaLabel": "ETA {eta} - {distance}",
+  "mapOpenAction": "Ouvrir la carte",
+  "orderMapTitle": "Plan de commande",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "Discutez de cette commande",
+  "messagesTitle": "Messages",
+  "messagesSearchHint": "Rechercher des messages",
+  "messagesLoadError": "Erreur lors du chargement des conversations : {error}",
+  "messagesEmpty": "Vous n'avez encore aucune conversation.\nUne fois que vous aurez discuté avec un fournisseur/client, celui-ci apparaîtra ici.",
+  "messagesNewConversationTitle": "Nouvelle conversation",
+  "messagesNewConversationBody": "Pour démarrer une conversation avec un fournisseur ou un client, rendez-vous dans vos « Commandes » ou acceptez une nouvelle commande.",
+  "messagesFilterAll": "Tous",
+  "messagesFilterUnread": "Non lu",
+  "messagesFilterFavorites": "Favoris",
+  "messagesFilterGroups": "Groupes",
+  "messagesFilterEmpty": "Rien dans \"{filter}\"",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "Aucune conversation trouvée.",
+  "messagesPinConversation": "Épingler la conversation",
+  "messagesUnpinConversation": "Désépingler la conversation",
+  "chatPresenceOnline": "en ligne",
+  "chatPresenceLastSeenAt": "vu pour la dernière fois à {time}",
+  "chatPresenceLastSeenYesterdayAt": "vu pour la dernière fois hier à {time}",
+  "chatPresenceLastSeenOn": "vu pour la dernière fois le {date} à {time}",
+  "chatImageTooLarge": "Image trop grande (max 15 Mo).",
+  "chatImageSendError": "Erreur lors de l'envoi de l'image : {error}",
+  "chatFileReadError": "Impossible de lire le fichier.",
+  "chatFileTooLarge": "Fichier trop volumineux (max 20 Mo).",
+  "chatFileSendError": "Erreur lors de l'envoi du fichier : {error}",
+  "chatAudioReadError": "Impossible de lire l'audio.",
+  "chatAudioTooLarge": "Audio trop volumineux (max 20 Mo).",
+  "chatAudioSendError": "Erreur lors de l'envoi de l'audio : {error}",
+  "chatAttachFile": "Envoyer le fichier",
+  "chatAttachGallery": "Envoyer une photo (galerie)",
+  "chatAttachCamera": "Prendre une photo (appareil photo)",
+  "chatAttachAudio": "Envoyer de l'audio (fichier)",
+  "chatAttachAudioSubtitle": "Choisissez un fichier audio (mp3/m4a/wav/...).",
+  "chatOpenLink": "Ouvrir le lien",
+  "chatAttachTooltip": "Attacher",
+  "chatSendTooltip": "Envoyer",
+  "chatSearchAction": "Recherche",
+  "chatSearchHint": "Rechercher des messages",
+  "chatSearchEmpty": "Tapez quelque chose à rechercher.",
+  "chatSearchNoResults": "Aucun message trouvé.",
+  "chatMediaAction": "Médias, liens et fichiers",
+  "chatMediaTitle": "Médias, liens et fichiers",
+  "chatMediaPhotosTab": "Photos",
+  "chatMediaLinksTab": "Links",
+  "chatMediaAudioTab": "Audio",
+  "chatMediaFilesTab": "Fichiers",
+  "chatMediaEmptyPhotos": "Pas encore de photos.",
+  "chatMediaEmptyLinks": "Pas encore de liens.",
+  "chatMediaEmptyAudio": "Pas encore de son.",
+  "chatMediaEmptyFiles": "Aucun fichier pour l'instant.",
+  "chatFavoritesAction": "Favoris",
+  "chatFavoritesTitle": "Messages favoris",
+  "chatFavoritesEmpty": "Vous n'avez pas encore de messages favoris.",
+  "chatStarAction": "Ajouter aux favoris",
+  "chatUnstarAction": "Supprimer des favoris",
+  "chatViewProviderProfileAction": "Afficher le profil du fournisseur",
+  "chatViewCustomerProfileAction": "Afficher le profil du client",
+  "chatIncomingCall": "Appel entrant",
+  "chatCallStartedVideo": "Appel vidéo démarré",
+  "chatCallStartedVoice": "Appel vocal démarré",
+  "chatImageLabel": "Image",
+  "chatAudioLabel": "Audio",
+  "chatFileLabel": "Déposer",
+  "chatCallEntryLabel": "Appel",
+  "chatNoSession": "Aucune session active. Connectez-vous pour accéder au chat.",
+  "chatTitleFallback": "Chat",
+  "chatVideoCallAction": "Appel vidéo",
+  "chatVoiceCallAction": "Appel",
+  "chatMarkReadAction": "Marquer comme lu",
+  "chatCallMissingParticipant": "L'autre participant n'est pas encore affecté à cette commande.",
+  "chatCallStartError": "Impossible de démarrer l'appel.",
+  "chatCallMessageVideo": "Appel vidéo : {url}",
+  "chatCallMessageVoice": "Appel : {url}",
+  "profileProviderTitle": "Profil du fournisseur",
+  "profileCustomerTitle": "Profil client",
+  "profileAboutTitle": "À propos",
+  "profileLocationTitle": "Emplacement",
+  "profileServicesTitle": "Services",
+  "profilePortfolioTitle": "Portefeuille",
+  "chatOpenFullAction": "Ouvrir le chat complet",
+  "chatOpenFullUnavailable": "L'autre participant n'est pas encore affecté à cette commande.",
+  "chatReplyAction": "Répondre",
+  "chatCopyAction": "Copie",
+  "chatDeleteAction": "Supprimer",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "Nouvelle histoire",
+  "storyPublishing": "Histoire de publication...",
+  "storyPublished": "Histoire publiée ! Expire dans 24h.",
+  "storyPublishError": "Erreur de publication de l'histoire : {error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "Légende (facultatif)",
+  "actionPublish": "Publier",
+  "snackOrderRemoved": "Commande supprimée.",
+  "snackClientCancelledOrder": "Le client a annulé la commande.",
+  "snackOrderCancelled": "Commande annulée.",
+  "snackOrderAcceptedByAnother": "Un autre fournisseur a accepté la commande.",
+  "snackOrderUpdated": "Commande mise à jour.",
+  "snackUserNotAuthenticated": "Utilisateur non authentifié.",
+  "snackOrderAcceptedCanQuote": "Commande acceptée. Vous pouvez envoyer le devis dans les détails de la commande.",
+  "snackOrderAcceptedSuccess": "Commande acceptée.",
+  "snackErrorAcceptingOrder": "Erreur lors de l'acceptation de la commande : {error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "Commande acceptée",
+  "dialogContentQuotePrompt": "Cette commande se fait sur devis.\n\nVoulez-vous envoyer la fourchette de devis maintenant ?",
+  "dialogTitleProposeService": "Proposer une prestation",
+  "dialogContentProposeService": "Fixez une fourchette de prix pour ce service.\nIncluez les déplacements et la main d’œuvre.",
+  "labelMinValue": "Valeur minimale",
+  "labelMaxValue": "Valeur maximale",
+  "labelMessageOptional": "Message au client (facultatif)",
+  "hintExampleValue": "Ex. : {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "Ex. : Comprend les déplacements. Les gros matériaux sont en sus.",
+  "snackFillValidValues": "Entrez des valeurs minimales et maximales valides.",
+  "snackMinCannotBeGreaterThanMax": "Le minimum ne peut pas être supérieur au maximum.",
+  "snackProposalSent": "Proposition envoyée au client.",
+  "snackErrorSendingProposal": "Erreur lors de l'envoi de la proposition : {error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

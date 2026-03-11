@@ -5,8 +5,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_ar.dart';
+import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_es.dart';
+import 'app_localizations_fr.dart';
+import 'app_localizations_hi.dart';
 import 'app_localizations_pt.dart';
+import 'app_localizations_ru.dart';
+import 'app_localizations_zh.dart';
 
 // ignore_for_file: type=lint
 
@@ -62,7 +69,8 @@ import 'app_localizations_pt.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +78,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +91,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -91,8 +101,15 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('ar'),
+    Locale('de'),
     Locale('en'),
-    Locale('pt')
+    Locale('es'),
+    Locale('fr'),
+    Locale('hi'),
+    Locale('pt'),
+    Locale('ru'),
+    Locale('zh')
   ];
 
   /// No description provided for @appTitle.
@@ -947,6 +964,324 @@ abstract class AppLocalizations {
   /// **'You\'re OFFLINE'**
   String get providerStatusOffline;
 
+  /// No description provided for @providerSettingsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading settings: {error}'**
+  String providerSettingsLoadError(Object error);
+
+  /// No description provided for @providerSettingsSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving settings: {error}'**
+  String providerSettingsSaveError(Object error);
+
+  /// No description provided for @serviceAreaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service area'**
+  String get serviceAreaTitle;
+
+  /// No description provided for @serviceAreaHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Where do you want to receive orders?'**
+  String get serviceAreaHeading;
+
+  /// No description provided for @serviceAreaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the services you provide and the maximum radius around your base city.'**
+  String get serviceAreaSubtitle;
+
+  /// No description provided for @serviceAreaBaseLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Base location'**
+  String get serviceAreaBaseLocation;
+
+  /// No description provided for @serviceAreaRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Service radius'**
+  String get serviceAreaRadius;
+
+  /// No description provided for @serviceAreaSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Service area saved successfully.'**
+  String get serviceAreaSaved;
+
+  /// No description provided for @serviceAreaInfoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'In the future we\'ll use these settings to filter orders by proximity and service type. For now, this helps us prepare the matching engine.'**
+  String get serviceAreaInfoNote;
+
+  /// No description provided for @availabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability'**
+  String get availabilityTitle;
+
+  /// No description provided for @servicesYouProvideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Services you provide'**
+  String get servicesYouProvideTitle;
+
+  /// No description provided for @servicesCatalogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No services configured in the catalog yet.'**
+  String get servicesCatalogEmpty;
+
+  /// No description provided for @servicesSearchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search and add services.'**
+  String get servicesSearchPrompt;
+
+  /// No description provided for @servicesSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No services found.'**
+  String get servicesSearchNoResults;
+
+  /// No description provided for @servicesSelectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected services'**
+  String get servicesSelectedTitle;
+
+  /// No description provided for @serviceUnnamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed service'**
+  String get serviceUnnamed;
+
+  /// No description provided for @serviceModeQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote'**
+  String get serviceModeQuote;
+
+  /// No description provided for @serviceModeScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled'**
+  String get serviceModeScheduled;
+
+  /// No description provided for @serviceModeImmediate.
+  ///
+  /// In en, this message translates to:
+  /// **'Immediate'**
+  String get serviceModeImmediate;
+
+  /// No description provided for @providerServicesSelectAtLeastOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one service you provide.'**
+  String get providerServicesSelectAtLeastOne;
+
+  /// No description provided for @countryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get countryLabel;
+
+  /// No description provided for @cityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get cityLabel;
+
+  /// No description provided for @stateLabelDistrict.
+  ///
+  /// In en, this message translates to:
+  /// **'District'**
+  String get stateLabelDistrict;
+
+  /// No description provided for @stateLabelProvince.
+  ///
+  /// In en, this message translates to:
+  /// **'Province'**
+  String get stateLabelProvince;
+
+  /// No description provided for @stateLabelState.
+  ///
+  /// In en, this message translates to:
+  /// **'State'**
+  String get stateLabelState;
+
+  /// No description provided for @stateLabelRegion.
+  ///
+  /// In en, this message translates to:
+  /// **'Region'**
+  String get stateLabelRegion;
+
+  /// No description provided for @stateLabelCounty.
+  ///
+  /// In en, this message translates to:
+  /// **'County'**
+  String get stateLabelCounty;
+
+  /// No description provided for @stateLabelRegionOrState.
+  ///
+  /// In en, this message translates to:
+  /// **'Region/State'**
+  String get stateLabelRegionOrState;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search...'**
+  String get searchHint;
+
+  /// No description provided for @searchCountryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search countries'**
+  String get searchCountryHint;
+
+  /// No description provided for @searchGenericHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type to search'**
+  String get searchGenericHint;
+
+  /// No description provided for @searchServicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search services'**
+  String get searchServicesHint;
+
+  /// No description provided for @openCountriesListTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'View country list'**
+  String get openCountriesListTooltip;
+
+  /// No description provided for @openListTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'View list'**
+  String get openListTooltip;
+
+  /// No description provided for @selectCountryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select country'**
+  String get selectCountryTitle;
+
+  /// No description provided for @selectCityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select city'**
+  String get selectCityTitle;
+
+  /// No description provided for @selectFieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select {field}'**
+  String selectFieldTitle(Object field);
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get saveChanges;
+
+  /// No description provided for @supportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & support'**
+  String get supportTitle;
+
+  /// No description provided for @supportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Have questions? Contact us.'**
+  String get supportSubtitle;
+
+  /// No description provided for @myScheduleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My schedule'**
+  String get myScheduleTitle;
+
+  /// No description provided for @myScheduleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set hours and days off'**
+  String get myScheduleSubtitle;
+
+  /// No description provided for @languageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get languageTitle;
+
+  /// No description provided for @languageModeManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get languageModeManual;
+
+  /// No description provided for @languageModeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get languageModeAuto;
+
+  /// No description provided for @languageModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{code} - {mode}'**
+  String languageModeLabel(Object code, Object mode);
+
+  /// No description provided for @languageAutoSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto (system)'**
+  String get languageAutoSystem;
+
+  /// No description provided for @providerCategoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Service categories'**
+  String get providerCategoriesTitle;
+
+  /// No description provided for @providerCategoriesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We use categories to filter compatible orders.'**
+  String get providerCategoriesSubtitle;
+
+  /// No description provided for @providerCategoriesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No category selected.'**
+  String get providerCategoriesEmpty;
+
+  /// No description provided for @providerCategoriesSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select categories'**
+  String get providerCategoriesSelect;
+
+  /// No description provided for @providerCategoriesEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or edit categories'**
+  String get providerCategoriesEdit;
+
+  /// No description provided for @providerCategoriesRequiredMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your categories to receive matching orders.'**
+  String get providerCategoriesRequiredMessage;
+
   /// No description provided for @providerKpiEarningsToday.
   ///
   /// In en, this message translates to:
@@ -1108,6 +1443,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reason'**
   String get cancelJobReasonFieldLabel;
+
+  /// No description provided for @cancelJobDetailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancellation details'**
+  String get cancelJobDetailLabel;
+
+  /// No description provided for @cancelJobDetailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add a detail.'**
+  String get cancelJobDetailRequired;
 
   /// No description provided for @cancelJobSuccess.
   ///
@@ -2045,6 +2392,66 @@ abstract class AppLocalizations {
   /// **'You don\'t have any conversations yet.\nOnce you chat with a provider/customer, they\'ll appear here.'**
   String get messagesEmpty;
 
+  /// No description provided for @messagesNewConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get messagesNewConversationTitle;
+
+  /// No description provided for @messagesNewConversationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'To start a conversation with a provider or customer, go to your \"Orders\" or accept a new order.'**
+  String get messagesNewConversationBody;
+
+  /// No description provided for @messagesFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get messagesFilterAll;
+
+  /// No description provided for @messagesFilterUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get messagesFilterUnread;
+
+  /// No description provided for @messagesFilterFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get messagesFilterFavorites;
+
+  /// No description provided for @messagesFilterGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups'**
+  String get messagesFilterGroups;
+
+  /// No description provided for @messagesFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in \"{filter}\"'**
+  String messagesFilterEmpty(Object filter);
+
+  /// No description provided for @messagesSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations found.'**
+  String get messagesSearchNoResults;
+
+  /// No description provided for @messagesPinConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin conversation'**
+  String get messagesPinConversation;
+
+  /// No description provided for @messagesUnpinConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin conversation'**
+  String get messagesUnpinConversation;
+
   /// No description provided for @chatPresenceOnline.
   ///
   /// In en, this message translates to:
@@ -2432,11 +2839,198 @@ abstract class AppLocalizations {
   /// No description provided for @chatOpenFullUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'The other participant hasn\'t been assigned to this order yet.'**
+  /// **'The other participant is not yet assigned to this order.'**
   String get chatOpenFullUnavailable;
+
+  /// No description provided for @chatReplyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get chatReplyAction;
+
+  /// No description provided for @chatCopyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get chatCopyAction;
+
+  /// No description provided for @chatDeleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get chatDeleteAction;
+
+  /// No description provided for @storyNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New story'**
+  String get storyNewTitle;
+
+  /// No description provided for @storyPublishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing story...'**
+  String get storyPublishing;
+
+  /// No description provided for @storyPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Story published! Expires in 24h.'**
+  String get storyPublished;
+
+  /// No description provided for @storyPublishError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error publishing story: {error}'**
+  String storyPublishError(Object error);
+
+  /// No description provided for @storyCaptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Caption (optional)'**
+  String get storyCaptionHint;
+
+  /// No description provided for @actionPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get actionPublish;
+
+  /// No description provided for @snackOrderRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Order removed.'**
+  String get snackOrderRemoved;
+
+  /// No description provided for @snackClientCancelledOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer cancelled the order.'**
+  String get snackClientCancelledOrder;
+
+  /// No description provided for @snackOrderCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Order cancelled.'**
+  String get snackOrderCancelled;
+
+  /// No description provided for @snackOrderAcceptedByAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Another provider accepted the order.'**
+  String get snackOrderAcceptedByAnother;
+
+  /// No description provided for @snackOrderUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Order updated.'**
+  String get snackOrderUpdated;
+
+  /// No description provided for @snackUserNotAuthenticated.
+  ///
+  /// In en, this message translates to:
+  /// **'User not authenticated.'**
+  String get snackUserNotAuthenticated;
+
+  /// No description provided for @snackOrderAcceptedCanQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Order accepted. You can send the quote in the order details.'**
+  String get snackOrderAcceptedCanQuote;
+
+  /// No description provided for @snackOrderAcceptedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Order accepted.'**
+  String get snackOrderAcceptedSuccess;
+
+  /// No description provided for @snackErrorAcceptingOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Error accepting order: {error}'**
+  String snackErrorAcceptingOrder(Object error);
+
+  /// No description provided for @dialogTitleOrderAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Order accepted'**
+  String get dialogTitleOrderAccepted;
+
+  /// No description provided for @dialogContentQuotePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'This order is by quote.\n\nDo you want to send the quote range now?'**
+  String get dialogContentQuotePrompt;
+
+  /// No description provided for @dialogTitleProposeService.
+  ///
+  /// In en, this message translates to:
+  /// **'Propose service'**
+  String get dialogTitleProposeService;
+
+  /// No description provided for @dialogContentProposeService.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a price range for this service.\nInclude travel and labor.'**
+  String get dialogContentProposeService;
+
+  /// No description provided for @labelMinValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum value'**
+  String get labelMinValue;
+
+  /// No description provided for @labelMaxValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum value'**
+  String get labelMaxValue;
+
+  /// No description provided for @labelMessageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Message to the customer (optional)'**
+  String get labelMessageOptional;
+
+  /// No description provided for @hintExampleValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Ex.: {value}'**
+  String hintExampleValue(Object value);
+
+  /// No description provided for @hintProposalMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ex.: Includes travel. Large materials are extra.'**
+  String get hintProposalMessage;
+
+  /// No description provided for @snackFillValidValues.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter valid minimum and maximum values.'**
+  String get snackFillValidValues;
+
+  /// No description provided for @snackMinCannotBeGreaterThanMax.
+  ///
+  /// In en, this message translates to:
+  /// **'The minimum can\'t be greater than the maximum.'**
+  String get snackMinCannotBeGreaterThanMax;
+
+  /// No description provided for @snackProposalSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposal sent to the customer.'**
+  String get snackProposalSent;
+
+  /// No description provided for @snackErrorSendingProposal.
+  ///
+  /// In en, this message translates to:
+  /// **'Error sending proposal: {error}'**
+  String snackErrorSendingProposal(Object error);
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -2445,25 +3039,48 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'pt'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+        'ar',
+        'de',
+        'en',
+        'es',
+        'fr',
+        'hi',
+        'pt',
+        'ru',
+        'zh'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'pt': return AppLocalizationsPt();
+    case 'ar':
+      return AppLocalizationsAr();
+    case 'de':
+      return AppLocalizationsDe();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'es':
+      return AppLocalizationsEs();
+    case 'fr':
+      return AppLocalizationsFr();
+    case 'hi':
+      return AppLocalizationsHi();
+    case 'pt':
+      return AppLocalizationsPt();
+    case 'ru':
+      return AppLocalizationsRu();
+    case 'zh':
+      return AppLocalizationsZh();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

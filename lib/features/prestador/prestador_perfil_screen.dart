@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:chegaja_v2/core/services/location_data_service.dart';
+import 'package:chegaja_v2/core/services/google_places_service.dart';
+import 'package:chegaja_v2/core/services/user_country_service.dart';
+import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 
 class PrestadorPerfilScreen extends StatefulWidget {
@@ -129,7 +132,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
 
       // se já tivermos a lista de países carregada, seleciona o país
       // e carrega as cidades (para autocomplete do campo "Cidade")
-      _syncSelectedCountryFromProfileOrText();
+      await _syncSelectedCountryFromProfileOrText();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -165,7 +168,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     }
 
     // depois de carregar países, tenta selecionar (profile ou texto)
-    _syncSelectedCountryFromProfileOrText();
+    await _syncSelectedCountryFromProfileOrText();
   }
 
   Future<void> _syncSelectedCountryFromProfileOrText() async {
@@ -184,7 +187,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     }
 
     // 2) fallback: pelo nome escrito no campo
-    found ??= await LocationDataService.instance.findCountryByName(_paisCtrl.text);
+    found ??=
+        await LocationDataService.instance.findCountryByName(_paisCtrl.text);
 
     if (found == null) return;
 
@@ -209,7 +213,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
 
     setState(() => _loadingCities = true);
     try {
-      final list = await LocationDataService.instance.getCitiesForCountryCode(countryCode);
+      final list = await LocationDataService.instance
+          .getCitiesForCountryCode(countryCode);
 
       // remove duplicados por nome (há países com cidades repetidas)
       final seen = <String>{};
@@ -255,7 +260,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     required String title,
     required List<T> items,
     required String Function(T) label,
-    String hintText = 'Pesquisar…',
+    String hintText = 'Pesquisar...',
     int maxResults = 300,
   }) {
     return showModalBottomSheet<T>(
@@ -301,7 +306,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
                         const SizedBox(height: 4),
                         Text(
                           title,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -346,14 +352,14 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
 
     if (_countries.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lista de países ainda a carregar…')),
+        const SnackBar(content: Text('Lista de países ainda a carregar...')),
       );
       return;
     }
 
     final selected = await _showSearchBottomSheet<Country>(
       title: 'Escolher país',
-      hintText: 'Escreve para pesquisar países…',
+      hintText: 'Escreve para pesquisar países...',
       items: _countries,
       label: (c) => c.name,
       maxResults: 200,
@@ -379,17 +385,19 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
 
     if (!mounted) return;
 
-    final selected = await _showSearchBottomSheet<City>(
+    final selected = await PlaceSearchBottomSheet.show(
+      context: context,
       title: 'Escolher cidade (${c.name})',
-      hintText: 'Escreve para pesquisar cidades…',
-      items: _citiesForSelectedCountry,
-      label: (city) => city.name,
-      maxResults: 400,
+      hintText: 'Escreve para pesquisar cidades...',
+      localItems: _citiesForSelectedCountry.map((city) => city.name).toList(),
+      type: PlaceSearchType.city,
+      countryCode: c.isoCode,
+      maxLocal: 400,
     );
 
     if (selected != null) {
       setState(() {
-        _cidadeCtrl.text = selected.name;
+        _cidadeCtrl.text = selected;
       });
     }
   }
@@ -399,7 +407,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     if (doc == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Precisas estar autenticado para guardar o perfil.')),
+        const SnackBar(
+            content: Text('Precisas estar autenticado para guardar o perfil.')),
       );
       return;
     }
@@ -409,20 +418,27 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     try {
       final code = (_selectedCountry?.isoCode ?? _profileCountryCode)?.trim();
 
-      await doc.set({
-        'nome': _nomeCtrl.text.trim(),
-        'bio': _bioCtrl.text.trim(),
-        'city': _cidadeCtrl.text.trim(),
-        'country': _paisCtrl.text.trim(),
-        if (code != null && code.isNotEmpty)
-          'countryCode': code.toUpperCase()
-        else
-          'countryCode': FieldValue.delete(),
-        'radiusKm': _radiusKm,
-        'photoUrl': _photoUrl,
-        'portfolioUrls': _portfolioUrls,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await doc.set(
+        {
+          'nome': _nomeCtrl.text.trim(),
+          'bio': _bioCtrl.text.trim(),
+          'city': _cidadeCtrl.text.trim(),
+          'country': _paisCtrl.text.trim(),
+          if (code != null && code.isNotEmpty)
+            'countryCode': code.toUpperCase()
+          else
+            'countryCode': FieldValue.delete(),
+          'radiusKm': _radiusKm,
+          'photoUrl': _photoUrl,
+          'portfolioUrls': _portfolioUrls,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+
+      if (code != null && code.isNotEmpty) {
+        await UserCountryService.instance.setManualCountry(code);
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -445,7 +461,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     if (doc == null || uid == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Precisas estar autenticado para alterar a foto.')),
+        const SnackBar(
+            content: Text('Precisas estar autenticado para alterar a foto.')),
       );
       return;
     }
@@ -460,17 +477,21 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       final bytes = await x.readAsBytes();
       final url = await _uploadBytes(
         bytes: bytes,
-        path: 'prestadores/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        path:
+            'prestadores/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
         contentType: 'image/jpeg',
       );
 
       if (!mounted) return;
       setState(() => _photoUrl = url);
 
-      await doc.set({
-        'photoUrl': url,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await doc.set(
+        {
+          'photoUrl': url,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -486,7 +507,9 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     if (doc == null || uid == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Precisas estar autenticado para editar o portfólio.')),
+        const SnackBar(
+            content:
+                Text('Precisas estar autenticado para editar o portfólio.')),
       );
       return;
     }
@@ -512,10 +535,13 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       if (!mounted) return;
       setState(() => _portfolioUrls.addAll(newUrls));
 
-      await doc.set({
-        'portfolioUrls': _portfolioUrls,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await doc.set(
+        {
+          'portfolioUrls': _portfolioUrls,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -531,10 +557,13 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     try {
       setState(() => _portfolioUrls.remove(url));
 
-      await doc.set({
-        'portfolioUrls': _portfolioUrls,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await doc.set(
+        {
+          'portfolioUrls': _portfolioUrls,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
 
       // tenta apagar do Storage (se der)
       try {
@@ -576,7 +605,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
         body: Center(
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Sem sessão ativa. Faz login para veres/editares o teu perfil.'),
+            child: Text(
+                'Sem sessão ativa. Faz login para veres/editares o teu perfil.'),
           ),
         ),
       );
@@ -635,7 +665,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     return Row(
       children: [
         InkWell(
-          // ✅ Tap abre a foto em ecrã inteiro (se existir). Long-press mantém “alterar foto”.
+          // Tap abre a foto em ecrã inteiro (se existir). Long press mantém "alterar foto".
           onTap: () {
             if (hasPhoto) {
               _openImageViewer(
@@ -659,8 +689,11 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _nomeCtrl.text.trim().isEmpty ? 'Sem nome' : _nomeCtrl.text.trim(),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                _nomeCtrl.text.trim().isEmpty
+                    ? 'Sem nome'
+                    : _nomeCtrl.text.trim(),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
@@ -761,7 +794,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       displayStringForOption: (c) => c.name,
       optionsBuilder: (TextEditingValue value) {
         if (_selectedCountry == null) return const Iterable<City>.empty();
-        if (_citiesForSelectedCountry.isEmpty) return const Iterable<City>.empty();
+        if (_citiesForSelectedCountry.isEmpty)
+          return const Iterable<City>.empty();
 
         final q = LocationDataService.normalize(value.text);
         if (q.isEmpty) {
@@ -781,7 +815,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
           focusNode: focusNode,
           decoration: InputDecoration(
             labelText: 'Cidade',
-            hintText: hasCountry ? null : 'Escreve manualmente ou escolhe um país',
+            hintText:
+                hasCountry ? null : 'Escreve manualmente ou escolhe um país',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: _loadingCities
                 ? const Padding(
@@ -849,7 +884,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     );
   }
 
-  Widget _field(String label, TextEditingController controller, {int maxLines = 1}) {
+  Widget _field(String label, TextEditingController controller,
+      {int maxLines = 1}) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
@@ -973,7 +1009,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
                               child: SizedBox(
                                 height: 22,
                                 width: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                           );

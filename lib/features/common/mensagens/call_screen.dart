@@ -77,11 +77,11 @@ class _CallScreenState extends State<CallScreen> {
 
     final permissionsOk = await _ensurePermissions();
     if (!permissionsOk) {
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted) await Navigator.of(context).maybePop();
       return;
     }
 
-    _listenToCallDoc();
+    await _listenToCallDoc();
 
     if (widget.isCaller) {
       await _startAsCaller();
@@ -118,7 +118,7 @@ class _CallScreenState extends State<CallScreen> {
       if (status == 'declined' || status == 'ended') {
         if (!_ending) {
           _ending = true;
-          if (mounted) Navigator.of(context).maybePop();
+          if (mounted) await Navigator.of(context).maybePop();
         }
         return;
       }
@@ -303,7 +303,7 @@ class _CallScreenState extends State<CallScreen> {
     if (_ending) return;
     _ending = true;
     await _callService.updateStatus(widget.callId, status);
-    if (mounted) Navigator.of(context).maybePop();
+    if (mounted) await Navigator.of(context).maybePop();
   }
 
   Future<void> _disposeRtc() async {

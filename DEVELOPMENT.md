@@ -1,14 +1,3 @@
-# ChegaJa V2 - Development Guide
-
-## Prerequisites
-
-- Flutter SDK (latest stable version)
-- Firebase CLI (`npm install -g firebase-tools`)
-- Node.js and npm (for Firebase Functions)
-- A code editor (VS Code recommended)
-
-## Initial Setup
-
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
@@ -19,6 +8,14 @@
    ```bash
    flutter pub get
    ```
+
+   This project intentionally uses a local override for `firebase_auth` in `pubspec.yaml`:
+   ```yaml
+   dependency_overrides:
+     firebase_auth:
+       path: packages/firebase_auth
+   ```
+   Keep `packages/firebase_auth` present in your workspace when running locally or in CI.
 
 3. **Install Firebase Functions dependencies**
    ```bash

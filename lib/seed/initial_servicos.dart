@@ -106,7 +106,7 @@ final initialServicos = <Map<String, dynamic>>[
     'isActive': true,
   },
 
-  // LIMPEZA & ORGANIZAÇÃO
+  // LIMPEZA & ORGANIZAÇÁO
   {
     'id': 'limpeza_domestica',
     'name': 'Limpeza doméstica',
@@ -396,7 +396,7 @@ final initialServicos = <Map<String, dynamic>>[
     'isActive': true,
   },
 
-  // EDUCAÇÃO & AULAS
+  // EDUCAÇÁO & AULAS
   {
     'id': 'explicador',
     'name': 'Explicador / Aulas particulares',

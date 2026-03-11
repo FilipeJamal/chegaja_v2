@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "e2e:ui:dual": "node tools/e2e/full_ui_dual_role_e2e.js"
+  },
+  "dependencies": {
+    "firebase-tools": "^15.5.1",
+    "pptxgenjs": "^4.0.1",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

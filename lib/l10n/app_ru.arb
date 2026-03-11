@@ -1,0 +1,822 @@
+{
+  "@@locale": "ru",
+  "appTitle": "ЧегаЯ",
+  "roleSelectorWelcome": "Добро пожаловать в ЧегаЯ",
+  "roleSelectorPrompt": "Выберите, как вы хотите использовать приложение:",
+  "roleCustomerTitle": "я клиент",
+  "roleCustomerDescription": "Я хочу найти поставщиков услуг рядом со мной.",
+  "roleProviderTitle": "я провайдер",
+  "roleProviderDescription": "Я хочу получать запросы клиентов и зарабатывать больше.",
+  "invalidSession": "Неверная сессия.",
+  "paymentsTitle": "Платежи (полоса)",
+  "paymentsHeading": "Получайте онлайн-платежи",
+  "paymentsDescription": "Чтобы получать платежи через приложение, вам необходимо создать учетную запись Stripe (Connect Express).\nОнбординг открывается в вашем браузере и занимает 2–3 минуты.",
+  "paymentsActive": "Онлайн-платежи АКТИВНЫ.",
+  "paymentsInactive": "Онлайн-платежи пока не активны. Полная адаптация.",
+  "stripeAccountLabel": "Учетная запись Stripe: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "Регистрация открыта. После завершения вернитесь, чтобы проверить статус.",
+  "onboardingStartError": "Ошибка при запуске регистрации: {error}.",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "Управление учетной записью Stripe",
+  "activatePayments": "Активировать платежи",
+  "technicalNotesTitle": "Технические примечания",
+  "technicalNotesBody": "• Stripe настраивается с помощью облачных функций (на стороне сервера).\n• Комиссия платформы применяется автоматически в PaymentIntent.\n• В рабочей среде добавьте веб-перехватчик Stripe и сохраните секрет веб-перехватчика в функциях.",
+  "kycTitle": "Проверка личности: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "Отправьте документ (фото или PDF). Полная проверка появилась в версии 2.6.",
+  "kycSendDocument": "Отправить документ",
+  "kycAddDocument": "Добавить документ",
+  "kycStatusApproved": "Одобренный",
+  "kycStatusRejected": "Отклоненный",
+  "kycStatusInReview": "На рассмотрении",
+  "kycStatusNotStarted": "Не запущено",
+  "kycFileReadError": "Не удалось прочитать файл.",
+  "kycFileTooLarge": "Файл слишком большой (макс. 10 МБ).",
+  "kycUploading": "Загрузка документа...",
+  "kycUploadSuccess": "Документ отправлен на рассмотрение.",
+  "kycUploadError": "Ошибка отправки документа: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "Отменено вами",
+  "statusCancelledByProvider": "Отменено провайдером",
+  "statusCancelled": "Отменено",
+  "statusLookingForProvider": "Ищу провайдера",
+  "statusProviderPreparingQuote": "Поставщик найден (подготавливается коммерческое предложение)",
+  "statusQuoteToDecide": "У вас есть предложение, чтобы принять решение",
+  "statusProviderFound": "Провайдер найден",
+  "statusServiceInProgress": "Обслуживание в процессе",
+  "statusAwaitingValueConfirmation": "Ожидаем подтверждения стоимости",
+  "statusServiceCompleted": "Обслуживание завершено",
+  "valueToConfirm": "{value} (для подтверждения)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (предлагается)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "От {min} до {max} (приблизительно)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "С {min} (приблизительно)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "До {max} (оценка)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "Фиксированная цена",
+  "priceByQuote": "По цитате",
+  "priceToArrange": "Быть организованным",
+  "paymentOnlineBefore": "Онлайн оплата (раньше)",
+  "paymentOnlineAfter": "Онлайн оплата (после)",
+  "paymentCash": "Оплата наличными",
+  "pendingActionQuoteToReview": "У вас есть предложение/цена для рассмотрения.",
+  "pendingActionValueToConfirm": "Поставщик отправил окончательное значение. Вам нужно подтвердить.",
+  "pendingActionProviderPreparingQuote": "Провайдер найден. Они готовят предложение.",
+  "pendingActionProviderChat": "Провайдер найден. Вы можете пообщаться с ними.",
+  "roleLabelCustomer": "Клиент",
+  "navHome": "Дом",
+  "navMyOrders": "Мои заказы",
+  "navMessages": "Сообщения",
+  "navProfile": "Профиль",
+  "homeGreeting": "Привет",
+  "homeSubtitle": "Что вам нужно сегодня?",
+  "homePendingTitle": "Вам есть что решить",
+  "homePendingCta": "Нажмите здесь, чтобы открыть следующий заказ и принять решение.",
+  "servicesLoadError": "Ошибка загрузки служб: {error}.",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "Службы пока не настроены.\\nСкоро здесь появятся категории 🙂",
+  "availableServicesTitle": "Доступные услуги",
+  "serviceTabImmediate": "Немедленный",
+  "serviceTabScheduled": "Запланировано",
+  "serviceTabQuote": "По цитате",
+  "unreadMessagesTitle": "У вас есть новые сообщения",
+  "unreadMessagesCta": "Нажмите здесь, чтобы открыть чат.",
+  "serviceSearchHint": "Поисковый сервис...",
+  "serviceSearchEmpty": "По данному запросу услуги не найдены.",
+  "serviceModeImmediateDescription": "Поставщик приезжает сегодня как можно быстрее.",
+  "serviceModeScheduledDescription": "Назначьте день и время оказания услуги.",
+  "serviceModeQuoteDescription": "Запросить цену (поставщик отправляет минимальный/максимальный диапазон).",
+  "userNotAuthenticatedError": "Ошибка: пользователь не аутентифицирован.",
+  "myOrdersTitle": "Мои заказы",
+  "ordersTabPending": "В ожидании",
+  "ordersTabCompleted": "Завершенный",
+  "ordersTabCancelled": "Отменено",
+  "ordersLoadError": "Ошибка при загрузке заказов: {error}.",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "У вас нет отложенных ордеров.\\nСоздайте новый заказ на главном экране.",
+  "ordersEmptyCompleted": "У вас еще нет выполненных заказов.",
+  "ordersEmptyCancelled": "У вас еще нет отмененных заказов.",
+  "orderQuoteScheduled": "Цитата (по расписанию)",
+  "orderQuoteImmediate": "Цитата (сразу)",
+  "orderScheduled": "Плановое обслуживание",
+  "orderImmediate": "Немедленное обслуживание",
+  "categoryNotDefined": "Категория не определена",
+  "orderStateLabel": "Состояние: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "Ценовая модель: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "Оплата: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "Значение: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "Аккаунт ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "Ваше имя",
+  "accountProfileSubtitle": "Профиль",
+  "accountSettings": "Настройки",
+  "accountHelpSupport": "Помощь и поддержка",
+  "navMyJobs": "Мои вакансии",
+  "roleLabelProvider": "Поставщик",
+  "enableLocationToGoOnline": "Включите местоположение для выхода в Интернет.",
+  "nearbyOrdersTitle": "Заказы рядом с вами",
+  "noOrdersAvailableMessage": "На данный момент заказов нет.",
+  "configureServiceAreaMessage": "Установите зону обслуживания и услуги, чтобы начать получать заказы.",
+  "configureAction": "Настроить",
+  "offlineEnableOnlineMessage": "Вы оффлайн. Включите онлайн-статус для получения заказов.",
+  "noMatchingOrdersMessage": "Нет подходящих заказов для ваших услуг и региона.",
+  "orderAcceptedMessage": "Заказ принят.",
+  "orderAcceptedCanSendQuote": "Заказ принят. Вы можете отправить ценовое предложение позже.",
+  "orderAcceptError": "Ошибка принятия заказа: {error}.",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "Заказ принят",
+  "orderAcceptedBudgetPrompt": "Этот заказ осуществляется по котировке.\\n\\nХотите отправить диапазон котировок сейчас?",
+  "actionLater": "Позже",
+  "actionSendNow": "Отправить сейчас",
+  "actionCancel": "Отмена",
+  "actionSend": "Отправлять",
+  "actionIgnore": "игнорировать",
+  "actionAccept": "Принимать",
+  "actionNo": "Нет",
+  "actionYesCancel": "Да, отменить",
+  "proposalDialogTitle": "Отправить предложение",
+  "proposalDialogDescription": "Установите диапазон цен на эту услугу.\\nВключите проезд и работу.",
+  "proposalMinValueLabel": "Минимальное значение ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "Пример: 20",
+  "proposalMaxValueLabel": "Максимальное значение ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "Пример: 35",
+  "proposalMessageLabel": "Сообщение клиенту (необязательно)",
+  "proposalMessageHint": "Пример: Включает поездку. Крупногабаритные материалы оплачиваются дополнительно.",
+  "proposalInvalidValues": "Введите допустимые минимальные и максимальные значения.",
+  "proposalMinGreaterThanMax": "Минимум не может быть больше максимума.",
+  "proposalSent": "Предложение отправлено заказчику.",
+  "proposalSendError": "Ошибка отправки предложения: {error}.",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "Привет, провайдер",
+  "providerHomeSubtitle": "Заходите в Интернет, чтобы получать новые заказы.",
+  "providerStatusOnline": "Ты ОНЛАЙН",
+  "providerStatusOffline": "Ты ОФФЛАЙН",
+  "providerSettingsLoadError": "Ошибка загрузки настроек: {error}.",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "Ошибка сохранения настроек: {error}.",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "Зона обслуживания",
+  "serviceAreaHeading": "Где вы хотите получать заказы?",
+  "serviceAreaSubtitle": "Установите предоставляемые вами услуги и максимальный радиус вокруг вашего базового города.",
+  "serviceAreaBaseLocation": "Базовое расположение",
+  "serviceAreaRadius": "Радиус обслуживания",
+  "serviceAreaSaved": "Зона обслуживания успешно сохранена.",
+  "serviceAreaInfoNote": "В будущем мы будем использовать эти настройки для фильтрации заказов по близости и типу услуги. На данный момент это помогает нам подготовить соответствующий движок.",
+  "availabilityTitle": "Доступность",
+  "servicesYouProvideTitle": "Услуги, которые вы предоставляете",
+  "servicesCatalogEmpty": "В каталоге пока не настроено ни одной службы.",
+  "servicesSearchPrompt": "Введите для поиска и добавления услуг.",
+  "servicesSearchNoResults": "Сервисы не найдены.",
+  "servicesSelectedTitle": "Выбранные услуги",
+  "serviceUnnamed": "Безымянный сервис",
+  "serviceModeQuote": "Цитировать",
+  "serviceModeScheduled": "Запланировано",
+  "serviceModeImmediate": "Немедленный",
+  "providerServicesSelectAtLeastOne": "Выберите хотя бы одну услугу, которую вы предоставляете.",
+  "countryLabel": "Страна",
+  "cityLabel": "Город",
+  "stateLabelDistrict": "Округ",
+  "stateLabelProvince": "Провинция",
+  "stateLabelState": "Состояние",
+  "stateLabelRegion": "Область",
+  "stateLabelCounty": "Графство",
+  "stateLabelRegionOrState": "Регион/штат",
+  "searchHint": "Поиск...",
+  "searchCountryHint": "Введите для поиска стран",
+  "searchGenericHint": "Введите для поиска",
+  "searchServicesHint": "Поисковые сервисы",
+  "openCountriesListTooltip": "Посмотреть список стран",
+  "openListTooltip": "Посмотреть список",
+  "selectCountryTitle": "Выберите страну",
+  "selectCityTitle": "Выберите город",
+  "selectFieldTitle": "Выберите {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "Сохранить изменения",
+  "supportTitle": "Помощь и поддержка",
+  "supportSubtitle": "Есть вопросы? Связаться с нами.",
+  "myScheduleTitle": "Мое расписание",
+  "myScheduleSubtitle": "Установить часы и выходные дни",
+  "languageTitle": "Язык",
+  "languageModeManual": "Руководство",
+  "languageModeAuto": "Авто",
+  "languageModeLabel": "{code} – {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "Авто (система)",
+  "providerCategoriesTitle": "Категории услуг",
+  "providerCategoriesSubtitle": "Мы используем категории для фильтрации совместимых заказов.",
+  "providerCategoriesEmpty": "Категория не выбрана.",
+  "providerCategoriesSelect": "Выберите категории",
+  "providerCategoriesEdit": "Добавить или изменить категории",
+  "providerCategoriesRequiredMessage": "Выберите категории, чтобы получать соответствующие заказы.",
+  "providerKpiEarningsToday": "Прибыль сегодня (чистая)",
+  "providerKpiServicesThisMonth": "Услуги в этом месяце",
+  "providerKpiGrossFeeSubtitle": "Валовая сумма: {gross} - Комиссия: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "У вас есть работа, которой нужно управлять",
+  "providerHighlightCta": "Нажмите здесь, чтобы открыть следующее задание.",
+  "providerPendingActionAccepted": "У вас есть принятая работа, и вы готовы приступить к ней.",
+  "providerPendingActionInProgress": "У вас есть работа. Отметьте его завершенным, когда закончите.",
+  "providerPendingActionSetFinalValue": "Установите и отправьте окончательное значение услуги.",
+  "providerUnreadMessagesTitle": "У вас есть новые сообщения от клиентов",
+  "providerUnreadMessagesJob": "На работе: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "Мои работы",
+  "providerJobsTabOpen": "Открыть",
+  "providerJobsTabCompleted": "Завершенный",
+  "providerJobsTabCancelled": "Отменено",
+  "providerJobsLoadError": "Ошибка загрузки заданий: {error}.",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "У вас пока нет открытых вакансий.\\nПерейдите на главную и примите заказ.",
+  "providerJobsEmptyCompleted": "У вас еще нет завершенных работ.",
+  "providerJobsEmptyCancelled": "У вас еще нет отмененных заданий.",
+  "scheduledForDate": "Запланировано: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "Посмотреть детали",
+  "clientPaidValueLabel": "Клиент заплатил: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "Вы получаете: {value} - Комиссия: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "Стоимость услуги: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "Отменить задание",
+  "cancelJobPrompt": "Вы уверены, что хотите отменить это задание?\\nЗаказ может стать доступен другим поставщикам.",
+  "cancelJobReasonLabel": "Причина отмены (необязательно):",
+  "cancelJobReasonFieldLabel": "Причина",
+  "cancelJobDetailLabel": "Подробности отмены",
+  "cancelJobDetailRequired": "Пожалуйста, добавьте деталь.",
+  "cancelJobSuccess": "Работа отменена.",
+  "cancelJobError": "Ошибка отмены задания: {error}.",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "Посмотреть мой профиль",
+  "providerAccountProfileSubtitle": "Профиль провайдера",
+  "activateOnlinePaymentsSubtitle": "Включить онлайн-платежи",
+  "statusProviderWaiting": "Новый запрос",
+  "statusQuoteWaitingCustomer": "Ожидание ответа клиента",
+  "statusAcceptedToStart": "Принято (готово к запуску)",
+  "statusInProgress": "В ходе выполнения",
+  "statusCompleted": "Завершенный",
+  "orderDefaultImmediateTitle": "Срочная услуга",
+  "locationServiceDisabled": "На устройстве отключена служба определения местоположения.",
+  "locationPermissionDenied": "Разрешение на определение местоположения отклонено.\\nНе удалось получить текущее местоположение.",
+  "locationPermissionDeniedForever": "Разрешение на определение местоположения навсегда отклонено.\\nВключите определение местоположения в настройках устройства.",
+  "locationFetchError": "Ошибка получения местоположения: {error}.",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "Форма еще не готова. Попробуйте еще раз.",
+  "missingRequiredFieldsError": "Обязательные поля отсутствуют. Проверьте поля, выделенные красным.",
+  "scheduleDateTimeRequiredError": "Выберите дату и время оказания услуги.",
+  "scheduleDateTimeFutureError": "Выберите будущую дату/время.",
+  "categoryRequiredError": "Выберите категорию.",
+  "orderUpdatedSuccess": "Заказ успешно обновлен!",
+  "orderCreatedSuccess": "Заказ создан! Ищем провайдера...",
+  "orderUpdateError": "Ошибка обновления заказа: {error}.",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "Ошибка при создании заказа: {error}.",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "Пример: Течь водопровода под раковиной.",
+  "orderTitleExampleElectric": "Пример: не работает розетка в гостиной + установите потолочный светильник.",
+  "orderTitleExampleCleaning": "Пример: Полная уборка 2-комнатной квартиры (кухня, санузел, окна, пол).",
+  "orderTitleHintImmediate": "Кратко объясните, что происходит и что вам нужно.",
+  "orderTitleHintScheduled": "Скажите, когда вам нужна услуга, подробности о местоположении и что нужно сделать.",
+  "orderTitleHintQuote": "Опишите услугу, по которой вы хотите получать предложения.",
+  "orderTitleHintDefault": "Опишите услугу, которая вам нужна.",
+  "orderDescriptionExampleCleaning": "Пример: Полная уборка 2-комнатной квартиры (кухня, санузел, окна, пол).",
+  "orderDescriptionHintImmediate": "Кратко объясните, что происходит и что вам нужно.",
+  "orderDescriptionHintScheduled": "Скажите, когда вам нужна услуга, подробности о местоположении и что нужно сделать.",
+  "orderDescriptionHintQuote": "Опишите желаемую услугу, приблизительный бюджет (если он у вас есть) и важные детали.",
+  "orderDescriptionHintDefault": "Опишите немного подробнее, что вам нужно.",
+  "priceModelTitle": "Цена модели",
+  "priceModelQuoteInfo": "Эта услуга предоставляется по цитате. Поставщик предложит окончательную цену.",
+  "priceTypeLabel": "Тип цены",
+  "paymentTypeLabel": "Тип платежа",
+  "orderHeaderQuoteTitle": "Запрос цены",
+  "orderHeaderQuoteSubtitle": "Опишите, что вам нужно, и провайдер может прислать диапазон (мин/макс).",
+  "orderHeaderImmediateTitle": "Немедленное обслуживание",
+  "orderHeaderImmediateSubtitle": "Доступный поставщик будет вызван как можно скорее.",
+  "orderHeaderScheduledTitle": "Плановое обслуживание",
+  "orderHeaderScheduledSubtitle": "Выберите день и время, когда провайдер приедет к вам.",
+  "orderHeaderDefaultTitle": "Новый заказ",
+  "orderHeaderDefaultSubtitle": "Опишите услугу, которая вам нужна.",
+  "orderEditTitle": "Изменить заказ",
+  "orderNewTitle": "Новый заказ",
+  "whenServiceNeededLabel": "Когда вам нужна услуга?",
+  "categoryLabel": "Категория",
+  "categoryHint": "Выберите категорию услуги",
+  "orderTitleLabel": "Название заказа",
+  "orderTitleRequiredError": "Напишите название заказа.",
+  "orderDescriptionOptionalLabel": "Описание (необязательно)",
+  "locationApproxLabel": "Примерное местоположение",
+  "locationSelectedLabel": "Место выбрано.",
+  "locationSelectPrompt": "Выберите, где будет оказана услуга (приблизительно).",
+  "locationAddressHint": "Улица, номер, этаж, ссылка (необязательно, но очень помогает)",
+  "locationGetting": "Получение местоположения...",
+  "locationUseCurrent": "Использовать текущее местоположение",
+  "locationChooseOnMap": "Выбрать на карте",
+  "serviceDateTimeLabel": "Дата и время обслуживания",
+  "serviceDateTimePick": "Выберите день и время",
+  "saveChangesButton": "Сохранить изменения",
+  "submitOrderButton": "Запросить услугу",
+  "mapSelectTitle": "Выберите местоположение на карте",
+  "mapSelectInstruction": "Перетащите карту к приблизительному местоположению службы, затем подтвердите.",
+  "mapSelectConfirm": "Подтвердить местоположение",
+  "orderDetailsTitle": "Детали заказа",
+  "orderLoadError": "Ошибка загрузки заказа: {error}.",
+  "orderNotFound": "Заказ не найден.",
+  "scheduledNoDate": "Запланировано (дата не установлена)",
+  "orderValueRejectedTitle": "Заказчик отклонил предложенную стоимость.",
+  "orderValueRejectedBody": "Поговорите с клиентом и предложите новое значение после согласования.",
+  "actionProposeNewValue": "Предложите новую ценность",
+  "noShowReportedTitle": "Сообщено о неявке",
+  "noShowReportedBy": "Сообщил: {role}",
+  "noShowReportedAt": "В: {date}",
+  "noShowTitle": "Неявка",
+  "noShowDescription": "Если другой человек не явился, вы можете сообщить об этом.",
+  "noShowReportAction": "Сообщить о неявке",
+  "orderInfoTitle": "Информация о заказе",
+  "orderInfoIdLabel": "Идентификатор заказа",
+  "orderInfoCreatedAtLabel": "Создано в",
+  "orderInfoStatusLabel": "Статус",
+  "orderInfoModeLabel": "Режим",
+  "orderInfoValueLabel": "Ценить",
+  "orderLocationTitle": "Место заказа",
+  "orderDescriptionTitle": "Описание заказа",
+  "providerMessageTitle": "Сообщение поставщика",
+  "actionEditOrder": "Изменить заказ",
+  "actionCancelOrder": "Отменить заказ",
+  "cancelOrderTitle": "Отменить заказ",
+  "orderCancelInProgressWarning": "Услуга уже выполняется.\nОтмена сейчас может привести к частичному возврату средств.",
+  "orderCancelConfirmPrompt": "Вы уверены, что хотите отменить этот заказ?",
+  "orderCancelReasonLabel": "Причина отмены",
+  "orderCancelReasonOptionalLabel": "Причина (необязательно)",
+  "orderCancelledSnack": "Заказ отменен. {message}.",
+  "orderCancelError": "Ошибка отмены заказа: {error}.",
+  "noShowReportDialogTitle": "Сообщить о неявке",
+  "noShowReportDialogDescription": "Используйте это, только если другой человек не появился.",
+  "noShowReasonOptionalLabel": "Причина (необязательно)",
+  "actionReport": "Отчет",
+  "noShowReportSuccess": "Сообщается о неявке.",
+  "noShowReportError": "Ошибка сообщения о неявке: {error}",
+  "orderFinalValueTitle": "Предложить новое окончательное значение",
+  "orderFinalValueLabel": "Ценить",
+  "orderFinalValueInvalid": "Введите допустимое значение.",
+  "orderFinalValueSent": "Новое значение отправлено клиенту.",
+  "orderFinalValueSendError": "Ошибка отправки нового значения: {error}.",
+  "ratingSentTitle": "Оценка отправлена",
+  "ratingProviderTitle": "Рейтинг провайдера",
+  "ratingPrompt": "Оставьте оценку от 1 до 5.",
+  "ratingCommentLabel": "Комментарий (необязательно)",
+  "ratingSendAction": "Отправить оценку",
+  "ratingSelectError": "Выберите рейтинг.",
+  "ratingSentSnack": "Оценка отправлена.",
+  "ratingSendError": "Ошибка отправки рейтинга: {error}",
+  "timelineCreated": "Созданный",
+  "timelineAccepted": "Принял",
+  "timelineInProgress": "В ходе выполнения",
+  "timelineCancelled": "Отменено",
+  "timelineCompleted": "Завершенный",
+  "lookingForProviderBanner": "Мы все еще ищем поставщика для этого заказа.",
+  "actionView": "Вид",
+  "chatNoMessagesSubtitle": "Сообщений пока нет",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{1 ?????????} other{{count} ?????????}}",
+  "actionClose": "Закрывать",
+  "actionOpen": "Открыть",
+  "chatAuthRequired": "Для отправки сообщений вам необходимо пройти аутентификацию.",
+  "chatSendError": "Ошибка отправки сообщения: {error}",
+  "todayLabel": "Сегодня",
+  "yesterdayLabel": "Вчера",
+  "chatLoadError": "Ошибка загрузки сообщений: {error}.",
+  "chatEmptyMessage": "Сообщений пока нет.\nОтправьте первый!",
+  "chatInputHint": "Напишите сообщение...",
+  "chatLoginHint": "Войдите, чтобы отправлять сообщения",
+  "roleLabelSystem": "Система",
+  "youLabel": "Ты",
+  "distanceMeters": "{meters} м",
+  "distanceKilometers": "{kilometers} км",
+  "etaLessThanMinute": "<1 мин.",
+  "etaMinutes": "{minutes} мин.",
+  "etaHours": "{hours} ч.",
+  "etaHoursMinutes": "{hours} ч. {minutes} мин.",
+  "mapEtaLabel": "Расчетное время прибытия {eta} – {distance}",
+  "mapOpenAction": "Открыть карту",
+  "orderMapTitle": "Заказать карту",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "Обсудить этот заказ",
+  "messagesTitle": "Сообщения",
+  "messagesSearchHint": "Поиск сообщений",
+  "messagesLoadError": "Ошибка загрузки бесед: {error}.",
+  "messagesEmpty": "У вас пока нет разговоров.\nКогда вы пообщаетесь с поставщиком/клиентом, они появятся здесь.",
+  "messagesNewConversationTitle": "Новый разговор",
+  "messagesNewConversationBody": "Чтобы начать разговор с поставщиком или клиентом, перейдите в раздел «Заказы» или примите новый заказ.",
+  "messagesFilterAll": "Все",
+  "messagesFilterUnread": "Непрочитано",
+  "messagesFilterFavorites": "Избранное",
+  "messagesFilterGroups": "Группы",
+  "messagesFilterEmpty": "Ничего в \"{filter}\"",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "Ни одного разговора не найдено.",
+  "messagesPinConversation": "Закрепить беседу",
+  "messagesUnpinConversation": "Открепить беседу",
+  "chatPresenceOnline": "онлайн",
+  "chatPresenceLastSeenAt": "последний раз видели {time}",
+  "chatPresenceLastSeenYesterdayAt": "последний раз видели вчера в {time}",
+  "chatPresenceLastSeenOn": "последний раз видели {date} в {time}",
+  "chatImageTooLarge": "Изображение слишком большое (максимум 15 МБ).",
+  "chatImageSendError": "Ошибка отправки изображения: {error}",
+  "chatFileReadError": "Не удалось прочитать файл.",
+  "chatFileTooLarge": "Файл слишком большой (максимум 20 МБ).",
+  "chatFileSendError": "Ошибка отправки файла: {error}",
+  "chatAudioReadError": "Не удалось прочитать аудио.",
+  "chatAudioTooLarge": "Звук слишком большой (максимум 20 МБ).",
+  "chatAudioSendError": "Ошибка отправки аудио: {error}",
+  "chatAttachFile": "Отправить файл",
+  "chatAttachGallery": "Отправить фото (галерея)",
+  "chatAttachCamera": "Сфотографировать (камерой)",
+  "chatAttachAudio": "Отправить аудио (файл)",
+  "chatAttachAudioSubtitle": "Выберите аудиофайл (mp3/m4a/wav/...).",
+  "chatOpenLink": "Открыть ссылку",
+  "chatAttachTooltip": "Прикреплять",
+  "chatSendTooltip": "Отправлять",
+  "chatSearchAction": "Поиск",
+  "chatSearchHint": "Поиск сообщений",
+  "chatSearchEmpty": "Введите что-нибудь для поиска.",
+  "chatSearchNoResults": "Сообщений не найдено.",
+  "chatMediaAction": "Медиа, ссылки и файлы",
+  "chatMediaTitle": "Медиа, ссылки и файлы",
+  "chatMediaPhotosTab": "Фотографии",
+  "chatMediaLinksTab": "Ссылки",
+  "chatMediaAudioTab": "Аудио",
+  "chatMediaFilesTab": "Файлы",
+  "chatMediaEmptyPhotos": "Фото пока нет.",
+  "chatMediaEmptyLinks": "Ссылок пока нет.",
+  "chatMediaEmptyAudio": "Звука пока нет.",
+  "chatMediaEmptyFiles": "Файлов пока нет.",
+  "chatFavoritesAction": "Помечено",
+  "chatFavoritesTitle": "Помеченные сообщения",
+  "chatFavoritesEmpty": "У вас пока нет помеченных сообщений.",
+  "chatStarAction": "Добавить в избранное",
+  "chatUnstarAction": "Удалить из избранного",
+  "chatViewProviderProfileAction": "Посмотреть профиль провайдера",
+  "chatViewCustomerProfileAction": "Посмотреть профиль клиента",
+  "chatIncomingCall": "Входящий звонок",
+  "chatCallStartedVideo": "Видеозвонок начался",
+  "chatCallStartedVoice": "Голосовой вызов начался",
+  "chatImageLabel": "Изображение",
+  "chatAudioLabel": "Аудио",
+  "chatFileLabel": "Файл",
+  "chatCallEntryLabel": "Вызов",
+  "chatNoSession": "Нет активной сессии. Войдите, чтобы получить доступ к чату.",
+  "chatTitleFallback": "Чат",
+  "chatVideoCallAction": "Видеозвонок",
+  "chatVoiceCallAction": "Вызов",
+  "chatMarkReadAction": "Отметить как прочитанное",
+  "chatCallMissingParticipant": "Другой участник еще не назначен этому заказу.",
+  "chatCallStartError": "Не удалось начать звонок.",
+  "chatCallMessageVideo": "Видеозвонок: {url}",
+  "chatCallMessageVoice": "Звонок: {url}",
+  "profileProviderTitle": "Профиль провайдера",
+  "profileCustomerTitle": "Профиль клиента",
+  "profileAboutTitle": "О",
+  "profileLocationTitle": "Расположение",
+  "profileServicesTitle": "Услуги",
+  "profilePortfolioTitle": "Портфель",
+  "chatOpenFullAction": "Открыть полный чат",
+  "chatOpenFullUnavailable": "Другой участник еще не назначен этому заказу.",
+  "chatReplyAction": "Отвечать",
+  "chatCopyAction": "Копировать",
+  "chatDeleteAction": "Удалить",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "Новая история",
+  "storyPublishing": "Публикация истории...",
+  "storyPublished": "История опубликована! Срок действия истекает через 24 часа.",
+  "storyPublishError": "Ошибка публикации истории: {error}.",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "Подпись (необязательно)",
+  "actionPublish": "Публиковать",
+  "snackOrderRemoved": "Заказ удален.",
+  "snackClientCancelledOrder": "Клиент отменил заказ.",
+  "snackOrderCancelled": "Заказ отменен.",
+  "snackOrderAcceptedByAnother": "Другой поставщик принял заказ.",
+  "snackOrderUpdated": "Заказ обновлен.",
+  "snackUserNotAuthenticated": "Пользователь не аутентифицирован.",
+  "snackOrderAcceptedCanQuote": "Заказ принят. Вы можете отправить ценовое предложение в деталях заказа.",
+  "snackOrderAcceptedSuccess": "Заказ принят.",
+  "snackErrorAcceptingOrder": "Ошибка принятия заказа: {error}.",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "Заказ принят",
+  "dialogContentQuotePrompt": "Этот заказ является ценовым.\n\nХотите отправить диапазон котировок сейчас?",
+  "dialogTitleProposeService": "Предложить услугу",
+  "dialogContentProposeService": "Установите ценовой диапазон для этой услуги.\nВключите командировки и работу.",
+  "labelMinValue": "Минимальное значение",
+  "labelMaxValue": "Максимальное значение",
+  "labelMessageOptional": "Сообщение клиенту (необязательно)",
+  "hintExampleValue": "Пример: {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "Пример: Включает поездку. Крупногабаритные материалы оплачиваются дополнительно.",
+  "snackFillValidValues": "Введите допустимые минимальные и максимальные значения.",
+  "snackMinCannotBeGreaterThanMax": "Минимум не может быть больше максимума.",
+  "snackProposalSent": "Предложение отправлено заказчику.",
+  "snackErrorSendingProposal": "Ошибка отправки предложения: {error}.",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

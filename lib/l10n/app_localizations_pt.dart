@@ -21,13 +21,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get roleCustomerTitle => 'Sou cliente';
 
   @override
-  String get roleCustomerDescription => 'Quero encontrar prestadores de serviço perto de mim.';
+  String get roleCustomerDescription =>
+      'Quero encontrar prestadores de serviço perto de mim.';
 
   @override
   String get roleProviderTitle => 'Sou prestador';
 
   @override
-  String get roleProviderDescription => 'Quero receber pedidos de clientes e ganhar mais.';
+  String get roleProviderDescription =>
+      'Quero receber pedidos de clientes e ganhar mais.';
 
   @override
   String get invalidSession => 'Sessão inválida.';
@@ -39,13 +41,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get paymentsHeading => 'Receber pagamentos online';
 
   @override
-  String get paymentsDescription => 'Para receber pagamentos via app, precisas criar uma conta Stripe (Connect Express).\nO onboarding abre no teu browser e demora 2–3 minutos.';
+  String get paymentsDescription =>
+      'Para receber pagamentos via app, precisas criar uma conta Stripe (Connect Express).\nO onboarding abre no teu browser e demora 2–3 minutos.';
 
   @override
   String get paymentsActive => 'Pagamentos online ATIVOS.';
 
   @override
-  String get paymentsInactive => 'Pagamentos ainda não ativos. Faz o onboarding.';
+  String get paymentsInactive =>
+      'Pagamentos ainda não ativos. Faz o onboarding.';
 
   @override
   String stripeAccountLabel(Object accountId) {
@@ -53,7 +57,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get onboardingOpened => 'Onboarding aberto. Depois de concluíres, volta aqui para ver o estado.';
+  String get onboardingOpened =>
+      'Onboarding aberto. Depois de concluíres, volta aqui para ver o estado.';
 
   @override
   String onboardingStartError(Object error) {
@@ -70,7 +75,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get technicalNotesTitle => 'Notas técnicas';
 
   @override
-  String get technicalNotesBody => '• O Stripe é configurado via Cloud Functions (server-side).\n• A comissão da plataforma é aplicada automaticamente no PaymentIntent.\n• Em produção, adiciona o webhook do Stripe e guarda a webhook secret nas Functions.';
+  String get technicalNotesBody =>
+      '• O Stripe é configurado via Cloud Functions (server-side).\n• A comissão da plataforma é aplicada automaticamente no PaymentIntent.\n• Em produção, adiciona o webhook do Stripe e guarda a webhook secret nas Functions.';
 
   @override
   String kycTitle(Object status) {
@@ -78,7 +84,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get kycDescription => 'Envia um documento (foto ou PDF). A validação completa fica para v2.6.';
+  String get kycDescription =>
+      'Envia um documento (foto ou PDF). A validação completa fica para v2.6.';
 
   @override
   String get kycSendDocument => 'Enviar documento';
@@ -128,7 +135,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get statusLookingForProvider => 'A procurar prestador';
 
   @override
-  String get statusProviderPreparingQuote => 'Prestador encontrado (a preparar orçamento)';
+  String get statusProviderPreparingQuote =>
+      'Prestador encontrado (a preparar orçamento)';
 
   @override
   String get statusQuoteToDecide => 'Tens um orçamento para decidir';
@@ -140,7 +148,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get statusServiceInProgress => 'Serviço em andamento';
 
   @override
-  String get statusAwaitingValueConfirmation => 'A aguardar tua confirmação de valor';
+  String get statusAwaitingValueConfirmation =>
+      'A aguardar tua confirmação de valor';
 
   @override
   String get statusServiceCompleted => 'Serviço concluído';
@@ -192,16 +201,20 @@ class AppLocalizationsPt extends AppLocalizations {
   String get paymentCash => 'Pagamento em dinheiro';
 
   @override
-  String get pendingActionQuoteToReview => 'Tens um orçamento/proposta para analisar.';
+  String get pendingActionQuoteToReview =>
+      'Tens um orçamento/proposta para analisar.';
 
   @override
-  String get pendingActionValueToConfirm => 'O prestador lançou o valor final. Falta confirmares.';
+  String get pendingActionValueToConfirm =>
+      'O prestador lançou o valor final. Falta confirmares.';
 
   @override
-  String get pendingActionProviderPreparingQuote => 'Prestador encontrado. Ele está a preparar o orçamento.';
+  String get pendingActionProviderPreparingQuote =>
+      'Prestador encontrado. Ele está a preparar o orçamento.';
 
   @override
-  String get pendingActionProviderChat => 'Prestador encontrado. Podes falar com ele no chat.';
+  String get pendingActionProviderChat =>
+      'Prestador encontrado. Podes falar com ele no chat.';
 
   @override
   String get roleLabelCustomer => 'Cliente';
@@ -228,7 +241,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homePendingTitle => 'Tens algo para decidir';
 
   @override
-  String get homePendingCta => 'Toca aqui para abrir o próximo pedido e decidir.';
+  String get homePendingCta =>
+      'Toca aqui para abrir o próximo pedido e decidir.';
 
   @override
   String servicesLoadError(Object error) {
@@ -236,7 +250,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get servicesEmptyMessage => 'Ainda não há serviços configurados.\\nEm breve vais ver aqui categorias para escolher 😉';
+  String get servicesEmptyMessage =>
+      'Ainda não há serviços configurados.\\nEm breve vais ver aqui categorias para escolher 😉';
 
   @override
   String get availableServicesTitle => 'Serviços disponíveis';
@@ -260,16 +275,20 @@ class AppLocalizationsPt extends AppLocalizations {
   String get serviceSearchHint => 'Procurar serviço...';
 
   @override
-  String get serviceSearchEmpty => 'Não encontrámos serviços para esta pesquisa.';
+  String get serviceSearchEmpty =>
+      'Não encontrámos serviços para esta pesquisa.';
 
   @override
-  String get serviceModeImmediateDescription => 'Um prestador vem já hoje, o mais rápido possível.';
+  String get serviceModeImmediateDescription =>
+      'Um prestador vem já hoje, o mais rápido possível.';
 
   @override
-  String get serviceModeScheduledDescription => 'Marca dia e hora para o serviço.';
+  String get serviceModeScheduledDescription =>
+      'Marca dia e hora para o serviço.';
 
   @override
-  String get serviceModeQuoteDescription => 'Pede orçamento (o prestador envia faixa min/max).';
+  String get serviceModeQuoteDescription =>
+      'Pede orçamento (o prestador envia faixa min/max).';
 
   @override
   String get userNotAuthenticatedError => 'Erro: utilizador não autenticado.';
@@ -292,7 +311,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get ordersEmptyPending => 'Não tens pedidos pendentes.\\nCria um novo pedido no Início.';
+  String get ordersEmptyPending =>
+      'Não tens pedidos pendentes.\\nCria um novo pedido no Início.';
 
   @override
   String get ordersEmptyCompleted => 'Ainda não tens pedidos concluídos.';
@@ -359,7 +379,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get roleLabelProvider => 'Prestador';
 
   @override
-  String get enableLocationToGoOnline => 'Ativa a localização para ficar online.';
+  String get enableLocationToGoOnline =>
+      'Ativa a localização para ficar online.';
 
   @override
   String get nearbyOrdersTitle => 'Pedidos perto de ti';
@@ -368,22 +389,26 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noOrdersAvailableMessage => 'Não há pedidos disponíveis agora.';
 
   @override
-  String get configureServiceAreaMessage => 'Configura a tua área e serviços para começar a receber pedidos.';
+  String get configureServiceAreaMessage =>
+      'Configura a tua área e serviços para começar a receber pedidos.';
 
   @override
   String get configureAction => 'Configurar';
 
   @override
-  String get offlineEnableOnlineMessage => 'Estás offline. Fica online para receber pedidos.';
+  String get offlineEnableOnlineMessage =>
+      'Estás offline. Fica online para receber pedidos.';
 
   @override
-  String get noMatchingOrdersMessage => 'Sem pedidos compatíveis com os teus serviços e área.';
+  String get noMatchingOrdersMessage =>
+      'Sem pedidos compatíveis com os teus serviços e área.';
 
   @override
   String get orderAcceptedMessage => 'Pedido aceite.';
 
   @override
-  String get orderAcceptedCanSendQuote => 'Pedido aceite. Podes enviar o orçamento mais tarde.';
+  String get orderAcceptedCanSendQuote =>
+      'Pedido aceite. Podes enviar o orçamento mais tarde.';
 
   @override
   String orderAcceptError(Object error) {
@@ -394,7 +419,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get orderAcceptedDialogTitle => 'Pedido aceite';
 
   @override
-  String get orderAcceptedBudgetPrompt => 'Este pedido é por orçamento.\\n\\nQueres enviar o orçamento (faixa min/max) agora?';
+  String get orderAcceptedBudgetPrompt =>
+      'Este pedido é por orçamento.\\n\\nQueres enviar o orçamento (faixa min/max) agora?';
 
   @override
   String get actionLater => 'Mais tarde';
@@ -424,7 +450,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get proposalDialogTitle => 'Propor serviço';
 
   @override
-  String get proposalDialogDescription => 'Define uma faixa de preço para este serviço.\\nInclui deslocação e mão de obra.';
+  String get proposalDialogDescription =>
+      'Define uma faixa de preço para este serviço.\\nInclui deslocação e mão de obra.';
 
   @override
   String proposalMinValueLabel(Object currency) {
@@ -446,13 +473,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get proposalMessageLabel => 'Mensagem para o cliente (opcional)';
 
   @override
-  String get proposalMessageHint => 'Ex.: Inclui deslocação. Materiais grandes à parte.';
+  String get proposalMessageHint =>
+      'Ex.: Inclui deslocação. Materiais grandes à parte.';
 
   @override
-  String get proposalInvalidValues => 'Preenche valores mínimo e máximo válidos.';
+  String get proposalInvalidValues =>
+      'Preenche valores mínimo e máximo válidos.';
 
   @override
-  String get proposalMinGreaterThanMax => 'O mínimo não pode ser maior que o máximo.';
+  String get proposalMinGreaterThanMax =>
+      'O mínimo não pode ser maior que o máximo.';
 
   @override
   String get proposalSent => 'Proposta enviada ao cliente.';
@@ -475,6 +505,180 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providerStatusOffline => 'Estás OFFLINE';
 
   @override
+  String providerSettingsLoadError(Object error) {
+    return 'Erro ao carregar definições: $error';
+  }
+
+  @override
+  String providerSettingsSaveError(Object error) {
+    return 'Erro ao guardar definições: $error';
+  }
+
+  @override
+  String get serviceAreaTitle => 'Área de atuação';
+
+  @override
+  String get serviceAreaHeading => 'Onde queres receber pedidos?';
+
+  @override
+  String get serviceAreaSubtitle =>
+      'Define os serviços que fazes e o raio máximo em torno da tua cidade base.';
+
+  @override
+  String get serviceAreaBaseLocation => 'Localização base';
+
+  @override
+  String get serviceAreaRadius => 'Raio de atuação';
+
+  @override
+  String get serviceAreaSaved => 'Área de atuação guardada com sucesso.';
+
+  @override
+  String get serviceAreaInfoNote =>
+      'No futuro vamos usar estas definições para filtrar pedidos por proximidade e tipo de serviço. Por agora, isto ajuda-nos a preparar o motor de matching.';
+
+  @override
+  String get availabilityTitle => 'Disponibilidade';
+
+  @override
+  String get servicesYouProvideTitle => 'Serviços que realizas';
+
+  @override
+  String get servicesCatalogEmpty =>
+      'Ainda não há serviços configurados no catálogo.';
+
+  @override
+  String get servicesSearchPrompt =>
+      'Escreve para pesquisar e adicionar serviços.';
+
+  @override
+  String get servicesSearchNoResults => 'Nenhum serviço encontrado.';
+
+  @override
+  String get servicesSelectedTitle => 'Serviços selecionados';
+
+  @override
+  String get serviceUnnamed => 'Serviço sem nome';
+
+  @override
+  String get serviceModeQuote => 'Orçamento';
+
+  @override
+  String get serviceModeScheduled => 'Agendado';
+
+  @override
+  String get serviceModeImmediate => 'Imediato';
+
+  @override
+  String get providerServicesSelectAtLeastOne =>
+      'Escolhe pelo menos um serviço que realizas.';
+
+  @override
+  String get countryLabel => 'País';
+
+  @override
+  String get cityLabel => 'Cidade';
+
+  @override
+  String get stateLabelDistrict => 'Distrito';
+
+  @override
+  String get stateLabelProvince => 'Província';
+
+  @override
+  String get stateLabelState => 'Estado';
+
+  @override
+  String get stateLabelRegion => 'Região';
+
+  @override
+  String get stateLabelCounty => 'Condado';
+
+  @override
+  String get stateLabelRegionOrState => 'Região/Estado';
+
+  @override
+  String get searchHint => 'Pesquisar...';
+
+  @override
+  String get searchCountryHint => 'Escreve para pesquisar países';
+
+  @override
+  String get searchGenericHint => 'Escreve para pesquisar';
+
+  @override
+  String get searchServicesHint => 'Pesquisar serviços';
+
+  @override
+  String get openCountriesListTooltip => 'Ver lista de países';
+
+  @override
+  String get openListTooltip => 'Ver lista';
+
+  @override
+  String get selectCountryTitle => 'Escolher país';
+
+  @override
+  String get selectCityTitle => 'Escolher cidade';
+
+  @override
+  String selectFieldTitle(Object field) {
+    return 'Escolher $field';
+  }
+
+  @override
+  String get saveChanges => 'Guardar alterações';
+
+  @override
+  String get supportTitle => 'Ajuda e suporte';
+
+  @override
+  String get supportSubtitle => 'Tens dúvidas? Contacta-nos.';
+
+  @override
+  String get myScheduleTitle => 'Minha Agenda';
+
+  @override
+  String get myScheduleSubtitle => 'Definir horários e dias de folga';
+
+  @override
+  String get languageTitle => 'Idioma';
+
+  @override
+  String get languageModeManual => 'Manual';
+
+  @override
+  String get languageModeAuto => 'Auto';
+
+  @override
+  String languageModeLabel(Object code, Object mode) {
+    return '$code - $mode';
+  }
+
+  @override
+  String get languageAutoSystem => 'Auto (Sistema)';
+
+  @override
+  String get providerCategoriesTitle => 'Categorias de atuação';
+
+  @override
+  String get providerCategoriesSubtitle =>
+      'Usamos as categorias para filtrar pedidos compatíveis.';
+
+  @override
+  String get providerCategoriesEmpty => 'Nenhuma categoria selecionada.';
+
+  @override
+  String get providerCategoriesSelect => 'Selecionar categorias';
+
+  @override
+  String get providerCategoriesEdit => 'Adicionar ou editar categorias';
+
+  @override
+  String get providerCategoriesRequiredMessage =>
+      'Seleciona categorias para receber pedidos compatíveis.';
+
+  @override
   String get providerKpiEarningsToday => 'Ganhos hoje (líquido)';
 
   @override
@@ -492,13 +696,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providerHighlightCta => 'Toca aqui para abrir o próximo trabalho.';
 
   @override
-  String get providerPendingActionAccepted => 'Tens um trabalho aceite, pronto para iniciar.';
+  String get providerPendingActionAccepted =>
+      'Tens um trabalho aceite, pronto para iniciar.';
 
   @override
-  String get providerPendingActionInProgress => 'Tens um serviço em andamento. Marca como concluído quando terminares.';
+  String get providerPendingActionInProgress =>
+      'Tens um serviço em andamento. Marca como concluído quando terminares.';
 
   @override
-  String get providerPendingActionSetFinalValue => 'Define e envia o valor final do serviço.';
+  String get providerPendingActionSetFinalValue =>
+      'Define e envia o valor final do serviço.';
 
   @override
   String get providerUnreadMessagesTitle => 'Tens novas mensagens de clientes';
@@ -526,13 +733,16 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get providerJobsEmptyOpen => 'Ainda não tens trabalhos em aberto.\\nVai à aba Início e aceita um pedido.';
+  String get providerJobsEmptyOpen =>
+      'Ainda não tens trabalhos em aberto.\\nVai à aba Início e aceita um pedido.';
 
   @override
-  String get providerJobsEmptyCompleted => 'Ainda não tens trabalhos concluídos.';
+  String get providerJobsEmptyCompleted =>
+      'Ainda não tens trabalhos concluídos.';
 
   @override
-  String get providerJobsEmptyCancelled => 'Ainda não tens trabalhos cancelados.';
+  String get providerJobsEmptyCancelled =>
+      'Ainda não tens trabalhos cancelados.';
 
   @override
   String scheduledForDate(Object date) {
@@ -561,13 +771,20 @@ class AppLocalizationsPt extends AppLocalizations {
   String get cancelJobTitle => 'Cancelar trabalho';
 
   @override
-  String get cancelJobPrompt => 'Tens a certeza que queres cancelar este trabalho?\\nO pedido pode voltar a ficar disponível para outros prestadores.';
+  String get cancelJobPrompt =>
+      'Tens a certeza que queres cancelar este trabalho?\\nO pedido pode voltar a ficar disponível para outros prestadores.';
 
   @override
   String get cancelJobReasonLabel => 'Motivo do cancelamento (opcional):';
 
   @override
   String get cancelJobReasonFieldLabel => 'Motivo';
+
+  @override
+  String get cancelJobDetailLabel => 'Detalhe do motivo';
+
+  @override
+  String get cancelJobDetailRequired => 'Informe um detalhe.';
 
   @override
   String get cancelJobSuccess => 'Trabalho cancelado.';
@@ -605,13 +822,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get orderDefaultImmediateTitle => 'Serviço urgente';
 
   @override
-  String get locationServiceDisabled => 'O serviço de localização está desativado no dispositivo.';
+  String get locationServiceDisabled =>
+      'O serviço de localização está desativado no dispositivo.';
 
   @override
-  String get locationPermissionDenied => 'Permissão de localização negada.\\nNão foi possível obter a localização atual.';
+  String get locationPermissionDenied =>
+      'Permissão de localização negada.\\nNão foi possível obter a localização atual.';
 
   @override
-  String get locationPermissionDeniedForever => 'Permissão de localização negada permanentemente.\\nAtiva a localização nas definições do dispositivo.';
+  String get locationPermissionDeniedForever =>
+      'Permissão de localização negada permanentemente.\\nAtiva a localização nas definições do dispositivo.';
 
   @override
   String locationFetchError(Object error) {
@@ -619,13 +839,16 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get formNotReadyError => 'O formulário ainda não está pronto. Tenta novamente.';
+  String get formNotReadyError =>
+      'O formulário ainda não está pronto. Tenta novamente.';
 
   @override
-  String get missingRequiredFieldsError => 'Faltam campos obrigatórios. Verifica os campos em vermelho.';
+  String get missingRequiredFieldsError =>
+      'Faltam campos obrigatórios. Verifica os campos em vermelho.';
 
   @override
-  String get scheduleDateTimeRequiredError => 'Escolhe a data e hora do serviço.';
+  String get scheduleDateTimeRequiredError =>
+      'Escolhe a data e hora do serviço.';
 
   @override
   String get scheduleDateTimeFutureError => 'Escolhe uma data/hora no futuro.';
@@ -650,46 +873,58 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get orderTitleExamplePlumbing => 'Ex.: Canalização a verter debaixo do lava-louça';
+  String get orderTitleExamplePlumbing =>
+      'Ex.: Canalização a verter debaixo do lava-louça';
 
   @override
-  String get orderTitleExampleElectric => 'Ex.: Tomada não funciona na sala + ligar candeeiro de teto';
+  String get orderTitleExampleElectric =>
+      'Ex.: Tomada não funciona na sala + ligar candeeiro de teto';
 
   @override
-  String get orderTitleExampleCleaning => 'Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).';
+  String get orderTitleExampleCleaning =>
+      'Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).';
 
   @override
-  String get orderTitleHintImmediate => 'Explica rapidamente o que está a acontecer e o que precisas.';
+  String get orderTitleHintImmediate =>
+      'Explica rapidamente o que está a acontecer e o que precisas.';
 
   @override
-  String get orderTitleHintScheduled => 'Indica para quando queres o serviço, detalhes do local e o que deve ser feito.';
+  String get orderTitleHintScheduled =>
+      'Indica para quando queres o serviço, detalhes do local e o que deve ser feito.';
 
   @override
-  String get orderTitleHintQuote => 'Descreve o serviço desejado para receber propostas.';
+  String get orderTitleHintQuote =>
+      'Descreve o serviço desejado para receber propostas.';
 
   @override
   String get orderTitleHintDefault => 'Descreve o serviço que precisas.';
 
   @override
-  String get orderDescriptionExampleCleaning => 'Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).';
+  String get orderDescriptionExampleCleaning =>
+      'Ex.: Limpeza completa de apartamento T2 (cozinha, WC, janelas e chão).';
 
   @override
-  String get orderDescriptionHintImmediate => 'Explica rapidamente o que está a acontecer e o que precisas.';
+  String get orderDescriptionHintImmediate =>
+      'Explica rapidamente o que está a acontecer e o que precisas.';
 
   @override
-  String get orderDescriptionHintScheduled => 'Indica para quando queres o serviço, detalhes do local e o que deve ser feito.';
+  String get orderDescriptionHintScheduled =>
+      'Indica para quando queres o serviço, detalhes do local e o que deve ser feito.';
 
   @override
-  String get orderDescriptionHintQuote => 'Descreve o serviço desejado, orçamento aproximado (se tiveres) e detalhes importantes.';
+  String get orderDescriptionHintQuote =>
+      'Descreve o serviço desejado, orçamento aproximado (se tiveres) e detalhes importantes.';
 
   @override
-  String get orderDescriptionHintDefault => 'Explica com algum detalhe o que precisas.';
+  String get orderDescriptionHintDefault =>
+      'Explica com algum detalhe o que precisas.';
 
   @override
   String get priceModelTitle => 'Modelo de preço';
 
   @override
-  String get priceModelQuoteInfo => 'Este serviço é por orçamento. O prestador vai propor o valor final.';
+  String get priceModelQuoteInfo =>
+      'Este serviço é por orçamento. O prestador vai propor o valor final.';
 
   @override
   String get priceTypeLabel => 'Tipo de preço';
@@ -701,19 +936,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get orderHeaderQuoteTitle => 'Pedido por orçamento';
 
   @override
-  String get orderHeaderQuoteSubtitle => 'Descreve o que precisas e o prestador pode enviar uma faixa (mín/máx).';
+  String get orderHeaderQuoteSubtitle =>
+      'Descreve o que precisas e o prestador pode enviar uma faixa (mín/máx).';
 
   @override
   String get orderHeaderImmediateTitle => 'Serviço imediato';
 
   @override
-  String get orderHeaderImmediateSubtitle => 'Um prestador disponível será chamado o mais rápido possível.';
+  String get orderHeaderImmediateSubtitle =>
+      'Um prestador disponível será chamado o mais rápido possível.';
 
   @override
   String get orderHeaderScheduledTitle => 'Serviço por agendamento';
 
   @override
-  String get orderHeaderScheduledSubtitle => 'Escolhe o dia e hora para o prestador ir até ti.';
+  String get orderHeaderScheduledSubtitle =>
+      'Escolhe o dia e hora para o prestador ir até ti.';
 
   @override
   String get orderHeaderDefaultTitle => 'Novo pedido';
@@ -752,10 +990,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get locationSelectedLabel => 'Localização selecionada.';
 
   @override
-  String get locationSelectPrompt => 'Escolhe onde o serviço será feito (aproximado).';
+  String get locationSelectPrompt =>
+      'Escolhe onde o serviço será feito (aproximado).';
 
   @override
-  String get locationAddressHint => 'Rua, nº, andar, referência (opcional, mas ajuda muito)';
+  String get locationAddressHint =>
+      'Rua, nº, andar, referência (opcional, mas ajuda muito)';
 
   @override
   String get locationGetting => 'A obter localização...';
@@ -782,7 +1022,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get mapSelectTitle => 'Escolher localização no mapa';
 
   @override
-  String get mapSelectInstruction => 'Arrasta o mapa até ao local aproximado do serviço, depois confirma.';
+  String get mapSelectInstruction =>
+      'Arrasta o mapa até ao local aproximado do serviço, depois confirma.';
 
   @override
   String get mapSelectConfirm => 'Confirmar localização';
@@ -805,7 +1046,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get orderValueRejectedTitle => 'O cliente rejeitou o valor proposto.';
 
   @override
-  String get orderValueRejectedBody => 'Conversem pelo chat e propõe um novo valor quando estiverem alinhados.';
+  String get orderValueRejectedBody =>
+      'Conversem pelo chat e propõe um novo valor quando estiverem alinhados.';
 
   @override
   String get actionProposeNewValue => 'Propor novo valor';
@@ -827,7 +1069,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noShowTitle => 'No-show';
 
   @override
-  String get noShowDescription => 'Se a outra pessoa não apareceu, podes reportar.';
+  String get noShowDescription =>
+      'Se a outra pessoa não apareceu, podes reportar.';
 
   @override
   String get noShowReportAction => 'Reportar no-show';
@@ -869,10 +1112,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get cancelOrderTitle => 'Cancelar pedido';
 
   @override
-  String get orderCancelInProgressWarning => 'O serviço já está em andamento.\nAo cancelar agora, o reembolso pode não ser total.';
+  String get orderCancelInProgressWarning =>
+      'O serviço já está em andamento.\nAo cancelar agora, o reembolso pode não ser total.';
 
   @override
-  String get orderCancelConfirmPrompt => 'Tens a certeza que queres cancelar este pedido?';
+  String get orderCancelConfirmPrompt =>
+      'Tens a certeza que queres cancelar este pedido?';
 
   @override
   String get orderCancelReasonLabel => 'Motivo do cancelamento';
@@ -894,7 +1139,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noShowReportDialogTitle => 'Reportar no-show';
 
   @override
-  String get noShowReportDialogDescription => 'Usa esta opção apenas se a outra pessoa não apareceu.';
+  String get noShowReportDialogDescription =>
+      'Usa esta opção apenas se a outra pessoa não apareceu.';
 
   @override
   String get noShowReasonOptionalLabel => 'Motivo (opcional)';
@@ -969,7 +1215,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get timelineCompleted => 'Concluído';
 
   @override
-  String get lookingForProviderBanner => 'Ainda estamos a procurar um prestador para este pedido.';
+  String get lookingForProviderBanner =>
+      'Ainda estamos a procurar um prestador para este pedido.';
 
   @override
   String get actionView => 'Ver';
@@ -1000,7 +1247,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get actionOpen => 'Abrir';
 
   @override
-  String get chatAuthRequired => 'Precisas estar autenticado para enviar mensagens.';
+  String get chatAuthRequired =>
+      'Precisas estar autenticado para enviar mensagens.';
 
   @override
   String chatSendError(Object error) {
@@ -1087,7 +1335,41 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get messagesEmpty => 'Ainda não tens conversas.\nQuando falares com um prestador/cliente, aparece aqui.';
+  String get messagesEmpty =>
+      'Ainda não tens conversas.\nQuando falares com um prestador/cliente, aparece aqui.';
+
+  @override
+  String get messagesNewConversationTitle => 'Nova conversa';
+
+  @override
+  String get messagesNewConversationBody =>
+      'Para iniciar uma conversa com um prestador ou cliente, vai até aos teus \"Pedidos\" ou aceita um pedido novo.';
+
+  @override
+  String get messagesFilterAll => 'Tudo';
+
+  @override
+  String get messagesFilterUnread => 'Não lidas';
+
+  @override
+  String get messagesFilterFavorites => 'Favoritos';
+
+  @override
+  String get messagesFilterGroups => 'Grupos';
+
+  @override
+  String messagesFilterEmpty(Object filter) {
+    return 'Nada em \"$filter\"';
+  }
+
+  @override
+  String get messagesSearchNoResults => 'Nenhuma conversa encontrada.';
+
+  @override
+  String get messagesPinConversation => 'Fixar conversa';
+
+  @override
+  String get messagesUnpinConversation => 'Desfixar conversa';
 
   @override
   String get chatPresenceOnline => 'online';
@@ -1246,7 +1528,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get chatCallEntryLabel => 'Chamada';
 
   @override
-  String get chatNoSession => 'Sem sessão ativa. Faz login para aceder ao chat.';
+  String get chatNoSession =>
+      'Sem sessão ativa. Faz login para aceder ao chat.';
 
   @override
   String get chatTitleFallback => 'Chat';
@@ -1261,7 +1544,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get chatMarkReadAction => 'Marcar como lidas';
 
   @override
-  String get chatCallMissingParticipant => 'Ainda não há outro utilizador neste pedido.';
+  String get chatCallMissingParticipant =>
+      'Ainda não há outro utilizador neste pedido.';
 
   @override
   String get chatCallStartError => 'Não foi possível abrir a chamada.';
@@ -1298,5 +1582,113 @@ class AppLocalizationsPt extends AppLocalizations {
   String get chatOpenFullAction => 'Abrir chat completo';
 
   @override
-  String get chatOpenFullUnavailable => 'Ainda não existe outro utilizador associado a este pedido.';
+  String get chatOpenFullUnavailable =>
+      'Ainda não existe outro utilizador associado a este pedido.';
+
+  @override
+  String get chatReplyAction => 'Responder';
+
+  @override
+  String get chatCopyAction => 'Copiar';
+
+  @override
+  String get chatDeleteAction => 'Apagar';
+
+  @override
+  String get storyNewTitle => 'Novo Story';
+
+  @override
+  String get storyPublishing => 'A publicar story...';
+
+  @override
+  String get storyPublished => 'Story publicado! Expira em 24h.';
+
+  @override
+  String storyPublishError(Object error) {
+    return 'Erro ao publicar: $error';
+  }
+
+  @override
+  String get storyCaptionHint => 'Legenda (opcional)';
+
+  @override
+  String get actionPublish => 'Publicar';
+
+  @override
+  String get snackOrderRemoved => 'Pedido removido.';
+
+  @override
+  String get snackClientCancelledOrder => 'Cliente cancelou o pedido.';
+
+  @override
+  String get snackOrderCancelled => 'Pedido cancelado.';
+
+  @override
+  String get snackOrderAcceptedByAnother => 'Outro prestador aceitou o pedido.';
+
+  @override
+  String get snackOrderUpdated => 'Pedido atualizado.';
+
+  @override
+  String get snackUserNotAuthenticated => 'Utilizador não autenticado.';
+
+  @override
+  String get snackOrderAcceptedCanQuote =>
+      'Pedido aceite. Podes enviar o orçamento no detalhe do pedido.';
+
+  @override
+  String get snackOrderAcceptedSuccess => 'Pedido aceite.';
+
+  @override
+  String snackErrorAcceptingOrder(Object error) {
+    return 'Erro ao aceitar pedido: $error';
+  }
+
+  @override
+  String get dialogTitleOrderAccepted => 'Pedido aceite ✅';
+
+  @override
+  String get dialogContentQuotePrompt =>
+      'Este pedido é por orçamento.\n\nQueres enviar o orçamento (faixa min/max) agora?';
+
+  @override
+  String get dialogTitleProposeService => 'Propor serviço';
+
+  @override
+  String get dialogContentProposeService =>
+      'Define uma faixa de preço para este serviço.\nInclui deslocação e mão de obra.';
+
+  @override
+  String get labelMinValue => 'Valor mínimo';
+
+  @override
+  String get labelMaxValue => 'Valor máximo';
+
+  @override
+  String get labelMessageOptional => 'Mensagem para o cliente (opcional)';
+
+  @override
+  String hintExampleValue(Object value) {
+    return 'Ex.: $value';
+  }
+
+  @override
+  String get hintProposalMessage =>
+      'Ex.: Inclui deslocação. Materiais grandes à parte.';
+
+  @override
+  String get snackFillValidValues =>
+      'Preenche valores mínimo e máximo válidos.';
+
+  @override
+  String get snackMinCannotBeGreaterThanMax =>
+      'O mínimo não pode ser maior que o máximo.';
+
+  @override
+  String get snackProposalSent => 'Proposta enviada ao cliente.';
+
+  @override
+  String snackErrorSendingProposal(Object error) {
+    return 'Erro ao enviar proposta: $error';
+  }
 }

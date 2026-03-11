@@ -1,4 +1,4 @@
-﻿// lib/features/cliente/cliente_perfil_screen.dart
+// lib/features/cliente/cliente_perfil_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +9,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 
 import 'package:chegaja_v2/core/services/location_data_service.dart';
+import 'package:chegaja_v2/core/services/google_places_service.dart';
+import 'package:chegaja_v2/core/services/user_country_service.dart';
+import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
+import 'package:chegaja_v2/features/cliente/favoritos_screen.dart';
+import 'package:chegaja_v2/features/common/suporte_screen.dart';
 
 class ClientePerfilScreen extends StatefulWidget {
   const ClientePerfilScreen({super.key});
@@ -21,14 +26,14 @@ class ClientePerfilScreen extends StatefulWidget {
 class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   static const Map<String, String> _stateLabelByCountryCode = {
     'PT': 'Distrito',
-    'AO': 'Provincia',
-    'MZ': 'Provincia',
+    'AO': 'Província',
+    'MZ': 'Província',
     'BR': 'Estado',
     'US': 'Estado',
-    'CA': 'Provincia',
-    'ES': 'Provincia',
-    'IT': 'Provincia',
-    'FR': 'Regiao',
+    'CA': 'Província',
+    'ES': 'Província',
+    'IT': 'Província',
+    'FR': 'Região',
     'DE': 'Estado',
     'GB': 'Condado',
   };
@@ -102,8 +107,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   }
 
   String _stateLabelForCountry(csc.Country? country) {
-    if (country == null) return 'Regiao/Estado';
-    return _stateLabelByCountryCode[country.isoCode.toUpperCase()] ?? 'Regiao/Estado';
+    if (country == null) return 'Região/Estado';
+    return _stateLabelByCountryCode[country.isoCode.toUpperCase()] ??
+        'Região/Estado';
   }
 
   IsoCode? _isoFromCountryCode(String? isoCode) {
@@ -170,16 +176,21 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
       _cidadeCtrl.text = (data['city'] ?? '').toString();
       _photoUrl = (data['photoUrl'] ?? data['fotoUrl'])?.toString();
 
-      _profileCountryCode = (data['countryCode'] ?? data['country_code'])?.toString();
-      _profileStateCode = (data['stateCode'] ?? data['provinceCode'])?.toString();
-      _profilePhoneIso = (data['phoneIsoCode'] ?? data['phoneCountryCode'])?.toString();
+      _profileCountryCode =
+          (data['countryCode'] ?? data['country_code'])?.toString();
+      _profileStateCode =
+          (data['stateCode'] ?? data['provinceCode'])?.toString();
+      _profilePhoneIso =
+          (data['phoneIsoCode'] ?? data['phoneCountryCode'])?.toString();
 
-      final phone = (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
-          .toString()
-          .trim();
+      final phone =
+          (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
+              .toString()
+              .trim();
       if (phone.isNotEmpty) {
         _phoneCtrl.text = phone;
-        if ((_profilePhoneIso == null || _profilePhoneIso!.isEmpty) && phone.startsWith('+')) {
+        if ((_profilePhoneIso == null || _profilePhoneIso!.isEmpty) &&
+            phone.startsWith('+')) {
           try {
             final parsed = PhoneNumber.parse(phone);
             _profilePhoneIso = parsed.isoCode.name;
@@ -229,7 +240,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         }
       }
     }
-    if (found == null && _profilePhoneIso != null && _profilePhoneIso!.isNotEmpty) {
+    if (found == null &&
+        _profilePhoneIso != null &&
+        _profilePhoneIso!.isNotEmpty) {
       final iso = _profilePhoneIso!.toUpperCase();
       for (final c in _countries) {
         if (c.isoCode.toUpperCase() == iso) {
@@ -238,7 +251,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         }
       }
     }
-    found ??= await LocationDataService.instance.findCountryByName(_paisCtrl.text);
+    found ??=
+        await LocationDataService.instance.findCountryByName(_paisCtrl.text);
 
     if (found == null) return;
     await _onCountrySelected(found);
@@ -247,7 +261,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   Future<void> _setCountryByIsoCode(String isoCode) async {
     if (_countries.isEmpty) return;
     final iso = isoCode.toUpperCase();
-    final match = _countries.where((c) => c.isoCode.toUpperCase() == iso).toList();
+    final match =
+        _countries.where((c) => c.isoCode.toUpperCase() == iso).toList();
     if (match.isEmpty) return;
     if (_selectedCountry?.isoCode == match.first.isoCode) return;
     await _onCountrySelected(match.first);
@@ -275,7 +290,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     setState(() => _loadingStates = true);
 
     try {
-      final list = await LocationDataService.instance.getStatesForCountryCode(countryCode);
+      final list = await LocationDataService.instance
+          .getStatesForCountryCode(countryCode);
       if (!mounted) return;
       setState(() => _statesForCountry = list);
     } catch (_) {
@@ -349,7 +365,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     if (_loadingCities) return;
     setState(() => _loadingCities = true);
     try {
-      final list = await LocationDataService.instance.getCitiesForCountryCode(countryCode);
+      final list = await LocationDataService.instance
+          .getCitiesForCountryCode(countryCode);
       if (!mounted) return;
       setState(() => _citiesForCountry = list);
     } catch (_) {
@@ -365,7 +382,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     if (doc == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Precisas estar autenticado para guardar.')),
+        const SnackBar(
+            content: Text('Precisas estar autenticado para guardar.')),
       );
       return;
     }
@@ -415,6 +433,11 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         SetOptions(merge: true),
       );
 
+      final countryCode = _selectedCountry?.isoCode ?? _profileCountryCode;
+      if (countryCode != null && countryCode.trim().isNotEmpty) {
+        await UserCountryService.instance.setManualCountry(countryCode);
+      }
+
       try {
         await _auth.currentUser?.updateDisplayName(nome);
       } catch (_) {
@@ -441,7 +464,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     if (doc == null || uid == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Precisas estar autenticado para alterar a foto.')),
+        const SnackBar(
+            content: Text('Precisas estar autenticado para alterar a foto.')),
       );
       return;
     }
@@ -543,7 +567,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                         const SizedBox(height: 4),
                         Text(
                           title,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -625,7 +650,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         body: Center(
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Sem sessao ativa. Faz login para ver o perfil.'),
+            child: Text('Sem sessão ativa. Faz login para ver o perfil.'),
           ),
         ),
       );
@@ -657,17 +682,47 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         children: [
           _header(),
           const SizedBox(height: 20),
+          ListTile(
+            leading: const Icon(Icons.favorite, color: Colors.red),
+            title: const Text('Meus Favoritos'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            tileColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FavoritosScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.help_outline, color: Colors.blueGrey),
+            title: const Text('Ajuda e Suporte'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            tileColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const SuporteScreen(userType: 'cliente')),
+              );
+            },
+          ),
+          const SizedBox(height: 20),
           _sectionTitle('Dados pessoais'),
           const SizedBox(height: 8),
           _field('Nome', _nomeCtrl, onChanged: (_) => setState(() {})),
           const SizedBox(height: 12),
-          _field('Bio', _bioCtrl, maxLines: 3, onChanged: (_) => setState(() {})),
+          _field('Bio', _bioCtrl,
+              maxLines: 3, onChanged: (_) => setState(() {})),
           const SizedBox(height: 20),
           _sectionTitle('Contacto'),
           const SizedBox(height: 8),
           _phoneField(),
           const SizedBox(height: 20),
-          _sectionTitle('Localizacao'),
+          _sectionTitle('Localização'),
           const SizedBox(height: 8),
           _countryField(),
           const SizedBox(height: 12),
@@ -725,7 +780,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
             children: [
               Text(
                 name.isEmpty ? 'Sem nome' : name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
@@ -776,7 +832,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           ],
           decoration: InputDecoration(
             labelText: 'Telefone',
-            hintText: _dialCode.isNotEmpty ? 'Ex: $_dialCode 82 123 4567' : 'Ex: +258 82 123 4567',
+            hintText: _dialCode.isNotEmpty
+                ? 'Ex: $_dialCode 82 123 4567'
+                : 'Ex: +258 82 123 4567',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -784,7 +842,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
-              'Pais detectado: ${_selectedCountry!.name} ($_dialCode)',
+              'País detectado: ${_selectedCountry!.name} ($_dialCode)',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
             ),
           ),
@@ -801,7 +859,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         if (_countries.isEmpty) return const Iterable<csc.Country>.empty();
         final q = LocationDataService.normalize(value.text);
         if (q.isEmpty) return _countries.take(20);
-        return _countries.where((c) => LocationDataService.normalize(c.name).contains(q)).take(20);
+        return _countries
+            .where((c) => LocationDataService.normalize(c.name).contains(q))
+            .take(20);
       },
       onSelected: (c) => _onCountrySelected(c),
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -809,7 +869,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           controller: controller,
           focusNode: focusNode,
           decoration: InputDecoration(
-            labelText: 'Pais',
+            labelText: 'País',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: _loadingCountries
                 ? const Padding(
@@ -821,12 +881,13 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                     ),
                   )
                 : IconButton(
-                    tooltip: 'Ver lista de paises',
+                    tooltip: 'Ver lista de países',
                     onPressed: () async {
                       if (_countries.isEmpty) return;
-                      final selected = await _showSearchBottomSheet<csc.Country>(
-                        title: 'Escolher pais',
-                        hintText: 'Escreve para pesquisar paises',
+                      final selected =
+                          await _showSearchBottomSheet<csc.Country>(
+                        title: 'Escolher país',
+                        hintText: 'Escreve para pesquisar países',
                         items: _countries,
                         label: (c) => c.name,
                         maxResults: 200,
@@ -901,16 +962,40 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                 : IconButton(
                     tooltip: 'Ver lista',
                     onPressed: () async {
-                      if (_statesForCountry.isEmpty) return;
-                      final selected = await _showSearchBottomSheet<csc.State>(
+                      final selected = await PlaceSearchBottomSheet.show(
+                        context: context,
                         title: 'Escolher $label',
                         hintText: 'Escreve para pesquisar',
-                        items: _statesForCountry,
-                        label: (s) => s.name,
-                        maxResults: 200,
+                        localItems:
+                            _statesForCountry.map((s) => s.name).toList(),
+                        type: PlaceSearchType.region,
+                        countryCode: _selectedCountry?.isoCode ??
+                            UserCountryService.instance.countryCode,
+                        maxLocal: 200,
                       );
-                      if (selected != null) {
-                        await _onStateSelected(selected);
+                      if (selected == null) return;
+
+                      csc.State? localMatch;
+                      final normalized =
+                          LocationDataService.normalize(selected);
+                      for (final s in _statesForCountry) {
+                        if (LocationDataService.normalize(s.name) ==
+                            normalized) {
+                          localMatch = s;
+                          break;
+                        }
+                      }
+
+                      if (localMatch != null) {
+                        await _onStateSelected(localMatch);
+                      } else {
+                        setState(() {
+                          _selectedState = null;
+                          _profileStateCode = null;
+                          _estadoCtrl.text = selected;
+                          _citiesForState = <csc.City>[];
+                          _cidadeCtrl.clear();
+                        });
                       }
                     },
                     icon: const Icon(Icons.arrow_drop_down),
@@ -954,7 +1039,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         if (cities.isEmpty) return const Iterable<csc.City>.empty();
         final q = LocationDataService.normalize(value.text);
         if (q.isEmpty) return cities.take(20);
-        return cities.where((c) => LocationDataService.normalize(c.name).contains(q)).take(20);
+        return cities
+            .where((c) => LocationDataService.normalize(c.name).contains(q))
+            .take(20);
       },
       onSelected: (c) => setState(() => _cidadeCtrl.text = c.name),
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -976,16 +1063,18 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                 : IconButton(
                     tooltip: 'Ver lista',
                     onPressed: () async {
-                      if (cities.isEmpty) return;
-                      final selected = await _showSearchBottomSheet<csc.City>(
+                      final selected = await PlaceSearchBottomSheet.show(
+                        context: context,
                         title: 'Escolher cidade',
                         hintText: 'Escreve para pesquisar',
-                        items: cities,
-                        label: (c) => c.name,
-                        maxResults: 300,
+                        localItems: cities.map((c) => c.name).toList(),
+                        type: PlaceSearchType.city,
+                        countryCode: _selectedCountry?.isoCode ??
+                            UserCountryService.instance.countryCode,
+                        maxLocal: 300,
                       );
                       if (selected != null) {
-                        setState(() => _cidadeCtrl.text = selected.name);
+                        setState(() => _cidadeCtrl.text = selected);
                       }
                     },
                     icon: const Icon(Icons.arrow_drop_down),

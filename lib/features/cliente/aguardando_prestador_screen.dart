@@ -166,6 +166,7 @@ class _AguardandoPrestadorScreenState
 
       await PedidoService.instance.cancelarPorCliente(
         pedido: pedido,
+        clienteId: user.uid,
         motivo: motivo,
         tipoReembolso: PoliticaReembolso.tipoToString(info.tipo),
       );

@@ -1,0 +1,822 @@
+{
+  "@@locale": "ar",
+  "appTitle": "ChegaJa",
+  "roleSelectorWelcome": "مرحبا بكم في تشيغاجا",
+  "roleSelectorPrompt": "اختر الطريقة التي تريد بها استخدام التطبيق:",
+  "roleCustomerTitle": "أنا عميل",
+  "roleCustomerDescription": "أريد أن أجد مقدمي الخدمة بالقرب مني.",
+  "roleProviderTitle": "أنا مقدم",
+  "roleProviderDescription": "أريد تلقي طلبات العملاء وكسب المزيد.",
+  "invalidSession": "جلسة غير صالحة.",
+  "paymentsTitle": "المدفوعات (شريط)",
+  "paymentsHeading": "تلقي المدفوعات عبر الإنترنت",
+  "paymentsDescription": "لتلقي المدفوعات عبر التطبيق، تحتاج إلى إنشاء حساب Stripe (Connect Express).\nيتم فتح عملية الإعداد في متصفحك وتستغرق من 2 إلى 3 دقائق.",
+  "paymentsActive": "المدفوعات عبر الإنترنت نشطة.",
+  "paymentsInactive": "المدفوعات عبر الإنترنت ليست نشطة بعد. استكمال الإعداد.",
+  "stripeAccountLabel": "حساب الشريط: {accountId}",
+  "@stripeAccountLabel": {
+    "placeholders": {
+      "accountId": {}
+    }
+  },
+  "onboardingOpened": "تم فتح عملية الإعداد. بعد الانتهاء، عد للتحقق من الحالة.",
+  "onboardingStartError": "خطأ في بدء الإعداد: {error}",
+  "@onboardingStartError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "manageStripeAccount": "إدارة حساب الشريط",
+  "activatePayments": "تفعيل المدفوعات",
+  "technicalNotesTitle": "ملاحظات فنية",
+  "technicalNotesBody": "• تم تكوين Stripe عبر وظائف السحابة (من جانب الخادم).\n• يتم تطبيق عمولة المنصة تلقائيًا في PaymentIntent.\n• في مرحلة الإنتاج، قم بإضافة خطاف الويب Stripe وقم بتخزين سر خطاف الويب في الوظائف.",
+  "kycTitle": "التحقق من الهوية: {status}",
+  "@kycTitle": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "kycDescription": "أرسل مستندًا (صورة أو PDF). التحقق الكامل يأتي في v2.6.",
+  "kycSendDocument": "إرسال الوثيقة",
+  "kycAddDocument": "أضف وثيقة",
+  "kycStatusApproved": "موافقة",
+  "kycStatusRejected": "مرفوض",
+  "kycStatusInReview": "قيد المراجعة",
+  "kycStatusNotStarted": "لم يبدأ",
+  "kycFileReadError": "لا يمكن قراءة الملف.",
+  "kycFileTooLarge": "الملف كبير جدًا (بحد أقصى 10 ميجابايت).",
+  "kycUploading": "جارٍ تحميل المستند...",
+  "kycUploadSuccess": "تم إرسال المستند للمراجعة.",
+  "kycUploadError": "خطأ في إرسال المستند: {error}",
+  "@kycUploadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "statusCancelledByYou": "تم الإلغاء بواسطتك",
+  "statusCancelledByProvider": "تم الإلغاء بواسطة الموفر",
+  "statusCancelled": "تم الإلغاء",
+  "statusLookingForProvider": "أبحث عن مزود",
+  "statusProviderPreparingQuote": "تم العثور على المزود (جارٍ إعداد عرض الأسعار)",
+  "statusQuoteToDecide": "لديك اقتباس لتقرر",
+  "statusProviderFound": "تم العثور على المزود",
+  "statusServiceInProgress": "الخدمة قيد التقدم",
+  "statusAwaitingValueConfirmation": "في انتظار تأكيد القيمة الخاصة بك",
+  "statusServiceCompleted": "اكتملت الخدمة",
+  "valueToConfirm": "{value} (للتأكيد)",
+  "@valueToConfirm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueProposed": "{value} (مقترح)",
+  "@valueProposed": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "valueEstimatedRange": "{min} إلى {max} (تقديري)",
+  "@valueEstimatedRange": {
+    "placeholders": {
+      "min": {},
+      "max": {}
+    }
+  },
+  "valueEstimatedFrom": "من {min} (تقديري)",
+  "@valueEstimatedFrom": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "valueEstimatedUpTo": "ما يصل إلى {max} (تقديري)",
+  "@valueEstimatedUpTo": {
+    "placeholders": {
+      "max": {}
+    }
+  },
+  "valueUnknown": "—",
+  "priceFixed": "سعر ثابت",
+  "priceByQuote": "بالاقتباس",
+  "priceToArrange": "ليتم ترتيبها",
+  "paymentOnlineBefore": "الدفع عبر الإنترنت (قبل)",
+  "paymentOnlineAfter": "الدفع عبر الإنترنت (بعد)",
+  "paymentCash": "الدفع نقدا",
+  "pendingActionQuoteToReview": "لديك عرض أسعار/اقتراح للمراجعة.",
+  "pendingActionValueToConfirm": "أرسل الموفر القيمة النهائية. تحتاج إلى تأكيد.",
+  "pendingActionProviderPreparingQuote": "تم العثور على المزود. إنهم يعدون الاقتباس.",
+  "pendingActionProviderChat": "تم العثور على المزود. يمكنك الدردشة معهم.",
+  "roleLabelCustomer": "عميل",
+  "navHome": "بيت",
+  "navMyOrders": "طلباتي",
+  "navMessages": "رسائل",
+  "navProfile": "حساب تعريفي",
+  "homeGreeting": "مرحبًا",
+  "homeSubtitle": "ماذا تحتاج اليوم؟",
+  "homePendingTitle": "لديك شيء لتقرره",
+  "homePendingCta": "انقر هنا لفتح الطلب التالي واتخاذ القرار.",
+  "servicesLoadError": "خطأ في تحميل الخدمات: {error}",
+  "@servicesLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "servicesEmptyMessage": "لم يتم تكوين أي خدمات حتى الآن.\\nسترى الفئات هنا قريبًا 🙂",
+  "availableServicesTitle": "الخدمات المتاحة",
+  "serviceTabImmediate": "مباشر",
+  "serviceTabScheduled": "المقرر",
+  "serviceTabQuote": "بالاقتباس",
+  "unreadMessagesTitle": "لديك رسائل جديدة",
+  "unreadMessagesCta": "اضغط هنا لفتح الدردشة.",
+  "serviceSearchHint": "خدمة البحث...",
+  "serviceSearchEmpty": "لم يتم العثور على خدمات لهذا البحث.",
+  "serviceModeImmediateDescription": "يأتي المزود اليوم في أسرع وقت ممكن.",
+  "serviceModeScheduledDescription": "تحديد يوم ووقت للخدمة.",
+  "serviceModeQuoteDescription": "طلب عرض أسعار (يرسل المزود نطاقًا أدنى/أقصى).",
+  "userNotAuthenticatedError": "خطأ: لم تتم مصادقة المستخدم.",
+  "myOrdersTitle": "أوامري",
+  "ordersTabPending": "قيد الانتظار",
+  "ordersTabCompleted": "مكتمل",
+  "ordersTabCancelled": "تم الإلغاء",
+  "ordersLoadError": "خطأ في تحميل الطلبات: {error}",
+  "@ordersLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "ordersEmptyPending": "ليس لديك أية طلبات معلقة.\\nقم بإنشاء طلب جديد من الصفحة الرئيسية.",
+  "ordersEmptyCompleted": "لم تكتمل الطلبات بعد.",
+  "ordersEmptyCancelled": "لم تقم بإلغاء الطلبات بعد.",
+  "orderQuoteScheduled": "عرض الأسعار (مجدول)",
+  "orderQuoteImmediate": "اقتباس (فوري)",
+  "orderScheduled": "الخدمة المجدولة",
+  "orderImmediate": "خدمة فورية",
+  "categoryNotDefined": "الفئة غير محددة",
+  "orderStateLabel": "الولاية: {state}",
+  "@orderStateLabel": {
+    "placeholders": {
+      "state": {}
+    }
+  },
+  "orderPriceModelLabel": "نموذج السعر: {model}",
+  "@orderPriceModelLabel": {
+    "placeholders": {
+      "model": {}
+    }
+  },
+  "orderPaymentLabel": "الدفع: {payment}",
+  "@orderPaymentLabel": {
+    "placeholders": {
+      "payment": {}
+    }
+  },
+  "orderValueLabel": "القيمة: {value}",
+  "@orderValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "accountTitle": "الحساب ({role})",
+  "@accountTitle": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "accountNameTitle": "اسمك",
+  "accountProfileSubtitle": "حساب تعريفي",
+  "accountSettings": "إعدادات",
+  "accountHelpSupport": "المساعدة والدعم",
+  "navMyJobs": "وظائفي",
+  "roleLabelProvider": "مزود",
+  "enableLocationToGoOnline": "تمكين الموقع للاتصال بالإنترنت.",
+  "nearbyOrdersTitle": "أوامر بالقرب منك",
+  "noOrdersAvailableMessage": "لا توجد طلبات متاحة الآن.",
+  "configureServiceAreaMessage": "قم بتعيين منطقة الخدمة والخدمات الخاصة بك لبدء تلقي الطلبات.",
+  "configureAction": "تكوين",
+  "offlineEnableOnlineMessage": "أنت غير متصل بالإنترنت. تمكين حالة الاتصال بالإنترنت لتلقي الطلبات.",
+  "noMatchingOrdersMessage": "لا توجد طلبات مطابقة لخدماتك ومنطقتك.",
+  "orderAcceptedMessage": "تم قبول الطلب.",
+  "orderAcceptedCanSendQuote": "تم قبول الطلب. يمكنك إرسال الاقتباس في وقت لاحق.",
+  "orderAcceptError": "خطأ في قبول الطلب: {error}",
+  "@orderAcceptError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderAcceptedDialogTitle": "تم قبول الطلب",
+  "orderAcceptedBudgetPrompt": "هذا الطلب حسب عرض الأسعار.\\n\\nهل تريد إرسال نطاق عرض الأسعار الآن؟",
+  "actionLater": "لاحقاً",
+  "actionSendNow": "أرسل الآن",
+  "actionCancel": "يلغي",
+  "actionSend": "يرسل",
+  "actionIgnore": "يتجاهل",
+  "actionAccept": "يقبل",
+  "actionNo": "لا",
+  "actionYesCancel": "نعم، قم بالإلغاء",
+  "proposalDialogTitle": "إرسال الاقتباس",
+  "proposalDialogDescription": "قم بتعيين نطاق سعري لهذه الخدمة.\\nيشمل السفر والعمالة.",
+  "proposalMinValueLabel": "الحد الأدنى للقيمة ({currency})",
+  "@proposalMinValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMinValueHint": "مثال: 20",
+  "proposalMaxValueLabel": "الحد الأقصى للقيمة ({currency})",
+  "@proposalMaxValueLabel": {
+    "placeholders": {
+      "currency": {}
+    }
+  },
+  "proposalMaxValueHint": "مثال: 35",
+  "proposalMessageLabel": "رسالة إلى العميل (اختياري)",
+  "proposalMessageHint": "على سبيل المثال: يشمل السفر. المواد الكبيرة اضافية.",
+  "proposalInvalidValues": "أدخل الحد الأدنى والحد الأقصى للقيم الصالحة.",
+  "proposalMinGreaterThanMax": "لا يمكن أن يكون الحد الأدنى أكبر من الحد الأقصى.",
+  "proposalSent": "تم إرسال الاقتراح إلى العميل.",
+  "proposalSendError": "خطأ في إرسال الاقتراح: {error}",
+  "@proposalSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerHomeGreeting": "مرحبا، مقدم",
+  "providerHomeSubtitle": "اتصل بالإنترنت لتلقي الطلبات الجديدة.",
+  "providerStatusOnline": "أنت متصل",
+  "providerStatusOffline": "أنت غير متصل بالإنترنت",
+  "providerSettingsLoadError": "خطأ في تحميل الإعدادات: {error}",
+  "@providerSettingsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerSettingsSaveError": "خطأ في حفظ الإعدادات: {error}",
+  "@providerSettingsSaveError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "serviceAreaTitle": "منطقة الخدمة",
+  "serviceAreaHeading": "أين تريد تلقي الطلبات؟",
+  "serviceAreaSubtitle": "قم بتعيين الخدمات التي تقدمها والحد الأقصى لنصف القطر حول مدينتك الأساسية.",
+  "serviceAreaBaseLocation": "الموقع الأساسي",
+  "serviceAreaRadius": "دائرة نصف قطرها الخدمة",
+  "serviceAreaSaved": "تم حفظ منطقة الخدمة بنجاح.",
+  "serviceAreaInfoNote": "في المستقبل، سنستخدم هذه الإعدادات لتصفية الطلبات حسب مدى القرب ونوع الخدمة. في الوقت الحالي، يساعدنا هذا في إعداد المحرك المطابق.",
+  "availabilityTitle": "التوفر",
+  "servicesYouProvideTitle": "الخدمات التي تقدمها",
+  "servicesCatalogEmpty": "لم يتم تكوين أي خدمات في الكتالوج حتى الآن.",
+  "servicesSearchPrompt": "اكتب للبحث وإضافة الخدمات.",
+  "servicesSearchNoResults": "لم يتم العثور على الخدمات.",
+  "servicesSelectedTitle": "خدمات مختارة",
+  "serviceUnnamed": "خدمة بدون اسم",
+  "serviceModeQuote": "يقتبس",
+  "serviceModeScheduled": "المقرر",
+  "serviceModeImmediate": "مباشر",
+  "providerServicesSelectAtLeastOne": "حدد خدمة واحدة على الأقل تقدمها.",
+  "countryLabel": "دولة",
+  "cityLabel": "مدينة",
+  "stateLabelDistrict": "يصرف",
+  "stateLabelProvince": "مقاطعة",
+  "stateLabelState": "ولاية",
+  "stateLabelRegion": "منطقة",
+  "stateLabelCounty": "مقاطعة",
+  "stateLabelRegionOrState": "المنطقة/الولاية",
+  "searchHint": "يبحث...",
+  "searchCountryHint": "اكتب للبحث في البلدان",
+  "searchGenericHint": "اكتب للبحث",
+  "searchServicesHint": "خدمات البحث",
+  "openCountriesListTooltip": "عرض قائمة البلاد",
+  "openListTooltip": "عرض القائمة",
+  "selectCountryTitle": "اختر البلد",
+  "selectCityTitle": "اختر المدينة",
+  "selectFieldTitle": "حدد {field}",
+  "@selectFieldTitle": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "saveChanges": "حفظ التغييرات",
+  "supportTitle": "المساعدة والدعم",
+  "supportSubtitle": "هل لديك أسئلة؟ اتصل بنا.",
+  "myScheduleTitle": "الجدول الزمني الخاص بي",
+  "myScheduleSubtitle": "تحديد ساعات وأيام العطلة",
+  "languageTitle": "لغة",
+  "languageModeManual": "يدوي",
+  "languageModeAuto": "آلي",
+  "languageModeLabel": "{code} - {mode}",
+  "@languageModeLabel": {
+    "placeholders": {
+      "code": {},
+      "mode": {}
+    }
+  },
+  "languageAutoSystem": "تلقائي (نظام)",
+  "providerCategoriesTitle": "فئات الخدمة",
+  "providerCategoriesSubtitle": "نحن نستخدم الفئات لتصفية الطلبات المتوافقة.",
+  "providerCategoriesEmpty": "لم يتم تحديد فئة.",
+  "providerCategoriesSelect": "حدد الفئات",
+  "providerCategoriesEdit": "إضافة أو تحرير الفئات",
+  "providerCategoriesRequiredMessage": "حدد الفئات الخاصة بك لتلقي الطلبات المطابقة.",
+  "providerKpiEarningsToday": "أرباح اليوم (صافي)",
+  "providerKpiServicesThisMonth": "الخدمات هذا الشهر",
+  "providerKpiGrossFeeSubtitle": "الإجمالي: {gross} - الرسوم: {fee}",
+  "@providerKpiGrossFeeSubtitle": {
+    "placeholders": {
+      "gross": {},
+      "fee": {}
+    }
+  },
+  "providerHighlightTitle": "لديك وظيفة لإدارتها",
+  "providerHighlightCta": "اضغط هنا لفتح الوظيفة التالية.",
+  "providerPendingActionAccepted": "لديك وظيفة مقبولة، وعلى استعداد للبدء.",
+  "providerPendingActionInProgress": "لديك وظيفة في التقدم. ضع علامة \"مكتمل\" عند الانتهاء.",
+  "providerPendingActionSetFinalValue": "ضبط وإرسال قيمة الخدمة النهائية.",
+  "providerUnreadMessagesTitle": "لديك رسائل جديدة من العملاء",
+  "providerUnreadMessagesJob": "في الوظيفة: {jobTitle}",
+  "@providerUnreadMessagesJob": {
+    "placeholders": {
+      "jobTitle": {}
+    }
+  },
+  "providerJobsTitle": "وظائفي",
+  "providerJobsTabOpen": "يفتح",
+  "providerJobsTabCompleted": "مكتمل",
+  "providerJobsTabCancelled": "تم الإلغاء",
+  "providerJobsLoadError": "خطأ في تحميل المهام: {error}",
+  "@providerJobsLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerJobsEmptyOpen": "ليس لديك وظائف مفتوحة حتى الآن.\\nانتقل إلى الصفحة الرئيسية واقبل الطلب.",
+  "providerJobsEmptyCompleted": "ليس لديك وظائف مكتملة بعد.",
+  "providerJobsEmptyCancelled": "لم تقم بإلغاء الوظائف بعد.",
+  "scheduledForDate": "مجدولة: {date}",
+  "@scheduledForDate": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "viewDetailsTooltip": "عرض التفاصيل",
+  "clientPaidValueLabel": "العميل المدفوع: {value}",
+  "@clientPaidValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "providerEarningsFeeLabel": "تتلقى: {value} - الرسوم: {fee}",
+  "@providerEarningsFeeLabel": {
+    "placeholders": {
+      "value": {},
+      "fee": {}
+    }
+  },
+  "serviceValueLabel": "قيمة الخدمة: {value}",
+  "@serviceValueLabel": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "cancelJobTitle": "إلغاء المهمة",
+  "cancelJobPrompt": "هل أنت متأكد من رغبتك في إلغاء هذه المهمة؟\\nقد يصبح الطلب متاحاً لموفرين آخرين.",
+  "cancelJobReasonLabel": "سبب الإلغاء (اختياري):",
+  "cancelJobReasonFieldLabel": "سبب",
+  "cancelJobDetailLabel": "تفاصيل الإلغاء",
+  "cancelJobDetailRequired": "الرجاء إضافة التفاصيل.",
+  "cancelJobSuccess": "تم إلغاء الوظيفة.",
+  "cancelJobError": "خطأ في إلغاء المهمة: {error}",
+  "@cancelJobError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "providerAccountProfileTitle": "عرض ملفي الشخصي",
+  "providerAccountProfileSubtitle": "الملف الشخصي للمزود",
+  "activateOnlinePaymentsSubtitle": "تمكين المدفوعات عبر الإنترنت",
+  "statusProviderWaiting": "طلب جديد",
+  "statusQuoteWaitingCustomer": "في انتظار استجابة العملاء",
+  "statusAcceptedToStart": "مقبول (جاهز للبدء)",
+  "statusInProgress": "في تَقَدم",
+  "statusCompleted": "مكتمل",
+  "orderDefaultImmediateTitle": "خدمة عاجلة",
+  "locationServiceDisabled": "تم تعطيل خدمة الموقع على الجهاز.",
+  "locationPermissionDenied": "تم رفض إذن تحديد الموقع.\\nتعذر الحصول على الموقع الحالي.",
+  "locationPermissionDeniedForever": "تم رفض إذن تحديد الموقع نهائيًا.\\nقم بتمكين الموقع في إعدادات الجهاز.",
+  "locationFetchError": "خطأ في الحصول على الموقع: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "formNotReadyError": "النموذج ليس جاهزا بعد. حاول ثانية.",
+  "missingRequiredFieldsError": "الحقول المطلوبة مفقودة. تحقق من الحقول باللون الأحمر.",
+  "scheduleDateTimeRequiredError": "اختر تاريخ ووقت الخدمة.",
+  "scheduleDateTimeFutureError": "اختر تاريخًا/وقتًا في المستقبل.",
+  "categoryRequiredError": "اختر فئة.",
+  "orderUpdatedSuccess": "تم تحديث الطلب بنجاح!",
+  "orderCreatedSuccess": "تم إنشاء الطلب! أبحث عن مزود...",
+  "orderUpdateError": "حدث خطأ أثناء تحديث الطلب: {error}",
+  "@orderUpdateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderCreateError": "خطأ في إنشاء الطلب: {error}",
+  "@orderCreateError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "orderTitleExamplePlumbing": "مثال: تسرب السباكة تحت الحوض",
+  "orderTitleExampleElectric": "مثال: منفذ لا يعمل في غرفة المعيشة + تركيب ضوء السقف",
+  "orderTitleExampleCleaning": "مثال: تنظيف كامل لشقة مكونة من غرفتي نوم (مطبخ، تواليت، نوافذ، أرضية).",
+  "orderTitleHintImmediate": "اشرح بإيجاز ما يحدث وما تحتاجه.",
+  "orderTitleHintScheduled": "قل متى تريد الخدمة وتفاصيل الموقع وما يجب القيام به.",
+  "orderTitleHintQuote": "قم بوصف الخدمة التي ترغب في تلقي مقترحات بشأنها.",
+  "orderTitleHintDefault": "قم بوصف الخدمة التي تحتاجها.",
+  "orderDescriptionExampleCleaning": "مثال: تنظيف كامل لشقة مكونة من غرفتي نوم (مطبخ، تواليت، نوافذ، أرضية).",
+  "orderDescriptionHintImmediate": "اشرح بإيجاز ما يحدث وما تحتاجه.",
+  "orderDescriptionHintScheduled": "قل متى تريد الخدمة وتفاصيل الموقع وما يجب القيام به.",
+  "orderDescriptionHintQuote": "قم بوصف الخدمة التي تريدها، والميزانية التقريبية (إذا كانت لديك واحدة)، والتفاصيل المهمة.",
+  "orderDescriptionHintDefault": "اشرح بمزيد من التفصيل ما تحتاجه.",
+  "priceModelTitle": "نموذج السعر",
+  "priceModelQuoteInfo": "هذه الخدمة عن طريق الاقتباس. سيقترح المزود السعر النهائي.",
+  "priceTypeLabel": "نوع السعر",
+  "paymentTypeLabel": "نوع الدفع",
+  "orderHeaderQuoteTitle": "طلب الاقتباس",
+  "orderHeaderQuoteSubtitle": "قم بوصف ما تحتاجه ويمكن للموفر إرسال نطاق (الحد الأدنى/الحد الأقصى).",
+  "orderHeaderImmediateTitle": "خدمة فورية",
+  "orderHeaderImmediateSubtitle": "سيتم الاتصال بمزود الخدمة المتاح في أقرب وقت ممكن.",
+  "orderHeaderScheduledTitle": "الخدمة المجدولة",
+  "orderHeaderScheduledSubtitle": "اختر اليوم والوقت الذي سيأتي فيه مقدم الخدمة إليك.",
+  "orderHeaderDefaultTitle": "طلب جديد",
+  "orderHeaderDefaultSubtitle": "قم بوصف الخدمة التي تحتاجها.",
+  "orderEditTitle": "تحرير الطلب",
+  "orderNewTitle": "طلب جديد",
+  "whenServiceNeededLabel": "متى تحتاج الخدمة؟",
+  "categoryLabel": "فئة",
+  "categoryHint": "اختر فئة الخدمة",
+  "orderTitleLabel": "عنوان الطلب",
+  "orderTitleRequiredError": "اكتب عنوانا للطلب.",
+  "orderDescriptionOptionalLabel": "الوصف (اختياري)",
+  "locationApproxLabel": "الموقع التقريبي",
+  "locationSelectedLabel": "تم اختيار الموقع.",
+  "locationSelectPrompt": "اختيار المكان الذي سيتم تنفيذ الخدمة فيه (تقريبي).",
+  "locationAddressHint": "الشارع، الرقم، الطابق، المرجع (اختياري، لكنه يساعد كثيرًا)",
+  "locationGetting": "جارٍ الحصول على الموقع...",
+  "locationUseCurrent": "استخدام الموقع الحالي",
+  "locationChooseOnMap": "اختر على الخريطة",
+  "serviceDateTimeLabel": "تاريخ ووقت الخدمة",
+  "serviceDateTimePick": "اختر اليوم والوقت",
+  "saveChangesButton": "حفظ التغييرات",
+  "submitOrderButton": "طلب الخدمة",
+  "mapSelectTitle": "اختر الموقع على الخريطة",
+  "mapSelectInstruction": "اسحب الخريطة إلى موقع الخدمة التقريبي، ثم قم بالتأكيد.",
+  "mapSelectConfirm": "تأكيد الموقع",
+  "orderDetailsTitle": "تفاصيل الطلب",
+  "orderLoadError": "خطأ في تحميل الطلب: {error}",
+  "orderNotFound": "لم يتم العثور على الطلب.",
+  "scheduledNoDate": "مجدولة (لم يتم تحديد تاريخ)",
+  "orderValueRejectedTitle": "رفض العميل القيمة المقترحة.",
+  "orderValueRejectedBody": "قم بالدردشة مع العميل واقترح قيمة جديدة عند التوافق.",
+  "actionProposeNewValue": "اقتراح قيمة جديدة",
+  "noShowReportedTitle": "تم الإبلاغ عن عدم الحضور",
+  "noShowReportedBy": "تم الإبلاغ بواسطة: {role}",
+  "noShowReportedAt": "في: {date}",
+  "noShowTitle": "عدم الحضور",
+  "noShowDescription": "إذا لم يحضر الشخص الآخر، يمكنك الإبلاغ عنه.",
+  "noShowReportAction": "الإبلاغ عن عدم الحضور",
+  "orderInfoTitle": "معلومات الطلب",
+  "orderInfoIdLabel": "معرف الطلب",
+  "orderInfoCreatedAtLabel": "تم الإنشاء في",
+  "orderInfoStatusLabel": "حالة",
+  "orderInfoModeLabel": "وضع",
+  "orderInfoValueLabel": "قيمة",
+  "orderLocationTitle": "موقع الطلب",
+  "orderDescriptionTitle": "وصف الطلب",
+  "providerMessageTitle": "رسالة المزود",
+  "actionEditOrder": "تحرير الطلب",
+  "actionCancelOrder": "إلغاء الطلب",
+  "cancelOrderTitle": "إلغاء الطلب",
+  "orderCancelInProgressWarning": "الخدمة قيد التقدم بالفعل.\nقد يؤدي الإلغاء الآن إلى استرداد جزء من المبلغ.",
+  "orderCancelConfirmPrompt": "هل أنت متأكد أنك تريد إلغاء هذا الطلب؟",
+  "orderCancelReasonLabel": "سبب الإلغاء",
+  "orderCancelReasonOptionalLabel": "السبب (اختياري)",
+  "orderCancelledSnack": "تم إلغاء الطلب. {message}.",
+  "orderCancelError": "حدث خطأ أثناء إلغاء الطلب: {error}",
+  "noShowReportDialogTitle": "الإبلاغ عن عدم الحضور",
+  "noShowReportDialogDescription": "استخدم هذا فقط إذا لم يظهر الشخص الآخر.",
+  "noShowReasonOptionalLabel": "السبب (اختياري)",
+  "actionReport": "تقرير",
+  "noShowReportSuccess": "تم الإبلاغ عن عدم الحضور.",
+  "noShowReportError": "خطأ في الإبلاغ عن عدم الحضور: {error}",
+  "orderFinalValueTitle": "اقتراح القيمة النهائية الجديدة",
+  "orderFinalValueLabel": "قيمة",
+  "orderFinalValueInvalid": "أدخل قيمة صالحة.",
+  "orderFinalValueSent": "القيمة الجديدة المرسلة إلى العميل.",
+  "orderFinalValueSendError": "خطأ في إرسال قيمة جديدة: {error}",
+  "ratingSentTitle": "تم إرسال التقييم",
+  "ratingProviderTitle": "تصنيف المزود",
+  "ratingPrompt": "اترك تقييمًا من 1 إلى 5.",
+  "ratingCommentLabel": "تعليق (اختياري)",
+  "ratingSendAction": "إرسال التقييم",
+  "ratingSelectError": "اختر التقييم.",
+  "ratingSentSnack": "تم إرسال التقييم.",
+  "ratingSendError": "حدث خطأ أثناء إرسال التقييم: {error}",
+  "timelineCreated": "مخلوق",
+  "timelineAccepted": "مقبول",
+  "timelineInProgress": "في تَقَدم",
+  "timelineCancelled": "تم الإلغاء",
+  "timelineCompleted": "مكتمل",
+  "lookingForProviderBanner": "ما زلنا نبحث عن مزود لهذا الطلب.",
+  "actionView": "منظر",
+  "chatNoMessagesSubtitle": "لا توجد رسائل حتى الآن",
+  "chatPreviewWithTime": "{preview} • {time}",
+  "chatMessageCount": "{count, plural, one{????? ?????} other{{count} ?????}}",
+  "actionClose": "يغلق",
+  "actionOpen": "يفتح",
+  "chatAuthRequired": "تحتاج إلى المصادقة لإرسال الرسائل.",
+  "chatSendError": "خطأ في إرسال الرسالة: {error}",
+  "todayLabel": "اليوم",
+  "yesterdayLabel": "أمس",
+  "chatLoadError": "حدث خطأ أثناء تحميل الرسائل: {error}",
+  "chatEmptyMessage": "لا توجد رسائل حتى الآن.\nأرسل أول واحد!",
+  "chatInputHint": "أكتب رسالة...",
+  "chatLoginHint": "قم بتسجيل الدخول لإرسال الرسائل",
+  "roleLabelSystem": "نظام",
+  "youLabel": "أنت",
+  "distanceMeters": "{meters} م",
+  "distanceKilometers": "{kilometers} كم",
+  "etaLessThanMinute": "<1 دقيقة",
+  "etaMinutes": "{minutes} دقيقة",
+  "etaHours": "{hours} ح",
+  "etaHoursMinutes": "{hours} ح {minutes} م",
+  "mapEtaLabel": "الوقت المتوقع {eta} - {distance}",
+  "mapOpenAction": "افتح الخريطة",
+  "orderMapTitle": "خريطة النظام",
+  "@orderLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportedBy": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "@noShowReportedAt": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "@orderCancelledSnack": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "@orderCancelError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@noShowReportError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@orderFinalValueSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@ratingSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatPreviewWithTime": {
+    "placeholders": {
+      "preview": {},
+      "time": {}
+    }
+  },
+  "@chatMessageCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "@chatSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatLoadError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@distanceMeters": {
+    "placeholders": {
+      "meters": {}
+    }
+  },
+  "@distanceKilometers": {
+    "placeholders": {
+      "kilometers": {}
+    }
+  },
+  "@etaMinutes": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "@etaHours": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "@etaHoursMinutes": {
+    "placeholders": {
+      "hours": {},
+      "minutes": {}
+    }
+  },
+  "@mapEtaLabel": {
+    "placeholders": {
+      "eta": {},
+      "distance": {}
+    }
+  },
+  "orderChatTitle": "الدردشة حول هذا الطلب",
+  "messagesTitle": "رسائل",
+  "messagesSearchHint": "بحث في الرسائل",
+  "messagesLoadError": "خطأ في تحميل المحادثات: {error}",
+  "messagesEmpty": "ليس لديك أية محادثات حتى الآن.\nبمجرد الدردشة مع مقدم الخدمة/العميل، سيظهرون هنا.",
+  "messagesNewConversationTitle": "محادثة جديدة",
+  "messagesNewConversationBody": "لبدء محادثة مع موفر خدمة أو عميل، انتقل إلى \"الطلبات\" أو اقبل طلبًا جديدًا.",
+  "messagesFilterAll": "الجميع",
+  "messagesFilterUnread": "غير مقروءة",
+  "messagesFilterFavorites": "المفضلة",
+  "messagesFilterGroups": "المجموعات",
+  "messagesFilterEmpty": "لا شيء في \"{filter}\"",
+  "@messagesFilterEmpty": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "messagesSearchNoResults": "لم يتم العثور على أي محادثات.",
+  "messagesPinConversation": "تثبيت المحادثة",
+  "messagesUnpinConversation": "إزالة تثبيت المحادثة",
+  "chatPresenceOnline": "متصل",
+  "chatPresenceLastSeenAt": "شوهد آخر مرة في {time}",
+  "chatPresenceLastSeenYesterdayAt": "شوهد آخر مرة بالأمس في {time}",
+  "chatPresenceLastSeenOn": "شوهد آخر مرة في {date} في {time}",
+  "chatImageTooLarge": "الصورة كبيرة جدًا (بحد أقصى 15 ميجابايت).",
+  "chatImageSendError": "خطأ في إرسال الصورة: {error}",
+  "chatFileReadError": "تعذرت قراءة الملف.",
+  "chatFileTooLarge": "الملف كبير جدًا (بحد أقصى 20 ميجابايت).",
+  "chatFileSendError": "خطأ في إرسال الملف: {error}",
+  "chatAudioReadError": "لا يمكن قراءة الصوت.",
+  "chatAudioTooLarge": "الصوت كبير جدًا (بحد أقصى 20 ميجابايت).",
+  "chatAudioSendError": "خطأ في إرسال الصوت: {error}",
+  "chatAttachFile": "إرسال الملف",
+  "chatAttachGallery": "إرسال الصورة (معرض)",
+  "chatAttachCamera": "التقاط صورة (الكاميرا)",
+  "chatAttachAudio": "إرسال الصوت (ملف)",
+  "chatAttachAudioSubtitle": "اختر ملفًا صوتيًا (mp3/m4a/wav/...).",
+  "chatOpenLink": "فتح الرابط",
+  "chatAttachTooltip": "نعلق",
+  "chatSendTooltip": "يرسل",
+  "chatSearchAction": "يبحث",
+  "chatSearchHint": "بحث في الرسائل",
+  "chatSearchEmpty": "اكتب شيئا للبحث.",
+  "chatSearchNoResults": "لم يتم العثور على رسائل.",
+  "chatMediaAction": "الوسائط والروابط والملفات",
+  "chatMediaTitle": "الوسائط والروابط والملفات",
+  "chatMediaPhotosTab": "صور",
+  "chatMediaLinksTab": "روابط",
+  "chatMediaAudioTab": "صوتي",
+  "chatMediaFilesTab": "ملفات",
+  "chatMediaEmptyPhotos": "لا توجد صور بعد.",
+  "chatMediaEmptyLinks": "لا توجد روابط حتى الآن.",
+  "chatMediaEmptyAudio": "لا يوجد صوت بعد.",
+  "chatMediaEmptyFiles": "لا توجد ملفات حتى الآن.",
+  "chatFavoritesAction": "المميزة بنجمة",
+  "chatFavoritesTitle": "الرسائل المميزة بنجمة",
+  "chatFavoritesEmpty": "ليس لديك رسائل مميزة بنجمة حتى الآن.",
+  "chatStarAction": "أضف إلى المفضلة",
+  "chatUnstarAction": "إزالة من المفضلة",
+  "chatViewProviderProfileAction": "عرض الملف الشخصي للمزود",
+  "chatViewCustomerProfileAction": "عرض ملف تعريف العميل",
+  "chatIncomingCall": "مكالمة واردة",
+  "chatCallStartedVideo": "بدأت مكالمة الفيديو",
+  "chatCallStartedVoice": "بدأت المكالمة الصوتية",
+  "chatImageLabel": "صورة",
+  "chatAudioLabel": "صوتي",
+  "chatFileLabel": "ملف",
+  "chatCallEntryLabel": "يتصل",
+  "chatNoSession": "لا توجد جلسة نشطة. قم بتسجيل الدخول للوصول إلى الدردشة.",
+  "chatTitleFallback": "محادثة",
+  "chatVideoCallAction": "مكالمة فيديو",
+  "chatVoiceCallAction": "يتصل",
+  "chatMarkReadAction": "وضع علامة كمقروءة",
+  "chatCallMissingParticipant": "لم يتم تعيين المشارك الآخر لهذا الطلب بعد.",
+  "chatCallStartError": "تعذر بدء المكالمة.",
+  "chatCallMessageVideo": "مكالمة فيديو: {url}",
+  "chatCallMessageVoice": "الاتصال: {url}",
+  "profileProviderTitle": "الملف الشخصي للمزود",
+  "profileCustomerTitle": "الملف الشخصي للعميل",
+  "profileAboutTitle": "عن",
+  "profileLocationTitle": "موقع",
+  "profileServicesTitle": "خدمات",
+  "profilePortfolioTitle": "مَلَفّ",
+  "chatOpenFullAction": "فتح الدردشة الكاملة",
+  "chatOpenFullUnavailable": "لم يتم تعيين المشارك الآخر لهذا الطلب بعد.",
+  "chatReplyAction": "رد",
+  "chatCopyAction": "ينسخ",
+  "chatDeleteAction": "يمسح",
+  "@chatPresenceLastSeenYesterdayAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "@chatPresenceLastSeenOn": {
+    "placeholders": {
+      "date": {},
+      "time": {}
+    }
+  },
+  "@chatImageSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatFileSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatAudioSendError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "@chatCallMessageVideo": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "@chatCallMessageVoice": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "storyNewTitle": "قصة جديدة",
+  "storyPublishing": "قصة النشر...",
+  "storyPublished": "تم نشر القصة! تنتهي صلاحيته خلال 24 ساعة.",
+  "storyPublishError": "حدث خطأ أثناء نشر القصة: {error}",
+  "@storyPublishError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "storyCaptionHint": "التسمية التوضيحية (اختياري)",
+  "actionPublish": "نشر",
+  "snackOrderRemoved": "تمت إزالة الطلب.",
+  "snackClientCancelledOrder": "ألغى العميل الطلب.",
+  "snackOrderCancelled": "تم إلغاء الطلب.",
+  "snackOrderAcceptedByAnother": "قبل مزود آخر الطلب.",
+  "snackOrderUpdated": "تم تحديث الطلب.",
+  "snackUserNotAuthenticated": "لم تتم مصادقة المستخدم.",
+  "snackOrderAcceptedCanQuote": "تم قبول الطلب. يمكنك إرسال الاقتباس في تفاصيل الطلب.",
+  "snackOrderAcceptedSuccess": "تم قبول الطلب.",
+  "snackErrorAcceptingOrder": "خطأ في قبول الطلب: {error}",
+  "@snackErrorAcceptingOrder": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "dialogTitleOrderAccepted": "تم قبول الطلب",
+  "dialogContentQuotePrompt": "هذا الطلب عن طريق الاقتباس.\n\nهل تريد إرسال نطاق الاقتباس الآن؟",
+  "dialogTitleProposeService": "اقتراح الخدمة",
+  "dialogContentProposeService": "حدد النطاق السعري لهذه الخدمة.\nتشمل السفر والعمل.",
+  "labelMinValue": "الحد الأدنى للقيمة",
+  "labelMaxValue": "القيمة القصوى",
+  "labelMessageOptional": "رسالة إلى العميل (اختياري)",
+  "hintExampleValue": "مثال: {value}",
+  "@hintExampleValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "hintProposalMessage": "على سبيل المثال: يشمل السفر. المواد الكبيرة اضافية.",
+  "snackFillValidValues": "أدخل الحد الأدنى والحد الأقصى للقيم الصالحة.",
+  "snackMinCannotBeGreaterThanMax": "لا يمكن أن يكون الحد الأدنى أكبر من الحد الأقصى.",
+  "snackProposalSent": "تم إرسال الاقتراح إلى العميل.",
+  "snackErrorSendingProposal": "خطأ في إرسال الاقتراح: {error}",
+  "@snackErrorSendingProposal": {
+    "placeholders": {
+      "error": {}
+    }
+  }
+}

@@ -40,15 +40,13 @@ service cloud.firestore {
 
     // âœ… Quando estamos fora do match /pedidos, precisamos ler o pedido por ID.
     function isPedidoParticipantById(pedidoId) {
-      let p = pedidoSnap(pedidoId);
-      return signedIn()
-        && p.data != null
-        && p.data is map
-        && (
-          clienteIdFromData(p.data) == uid() ||
-          (p.data.keys().hasAny(['prestadorId']) &&
-            p.data['prestadorId'] == uid())
-        );
+      let p = pedidoSnap(pedidoId).data;
+      return signedIn() && p is map
+        ? (
+          clienteIdFromData(p) == uid() ||
+          (p.keys().hasAny(['prestadorId']) && p['prestadorId'] == uid())
+        )
+        : false;
     }
 
     // âœ… Quando jÃ¡ temos o doc (resource.data), NÃƒO uses get()
@@ -65,6 +63,37 @@ service cloud.firestore {
     function isPrestador() {
       return signedIn()
         && exists(/databases/$(database)/documents/prestadores/$(uid()));
+    }
+
+    // -------------------------
+    // Prestador <-> Pedido matching (business rule)
+    // -------------------------
+    function prestadorData() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/prestadores/$(uid())).data
+        : null;
+    }
+
+    function prestadorMatchesPedido(pedidoData) {
+      let p = prestadorData();
+      let servicos = (p is map && p.keys().hasAny(['servicos']) && p['servicos'] is list)
+        ? p['servicos']
+        : [];
+      let servicosNomes = (p is map && p.keys().hasAny(['servicosNomes']) && p['servicosNomes'] is list)
+        ? p['servicosNomes']
+        : [];
+
+      let servicoId = (pedidoData is map && pedidoData.keys().hasAny(['servicoId']))
+        ? pedidoData['servicoId']
+        : null;
+
+      // Prefer "servicoNome" and fallback to legacy "categoria".
+      let categoria = (pedidoData is map && pedidoData.keys().hasAny(['servicoNome']) && pedidoData['servicoNome'] != null)
+        ? pedidoData['servicoNome']
+        : ((pedidoData is map && pedidoData.keys().hasAny(['categoria'])) ? pedidoData['categoria'] : null);
+
+      return (servicoId is string && servicos.hasAny([servicoId]))
+        || (categoria is string && servicosNomes.hasAny([categoria]));
     }
 
     function pedidoEstado(data) {
@@ -115,13 +144,13 @@ service cloud.firestore {
     // Chat helpers
     // -------------------------
     function isChatParticipantByData(chatData) {
-      return signedIn()
-        && chatData is map
-        && (
+      return signedIn() && chatData is map
+        ? (
           clienteIdFromData(chatData) == uid() ||
           (chatData.keys().hasAny(['prestadorId']) &&
             chatData['prestadorId'] == uid())
-        );
+        )
+        : false;
     }
 
     function chatSnap(chatId) {
@@ -130,15 +159,8 @@ service cloud.firestore {
 
     // Ãštil para subcoleÃ§Ãµes (messages)
     function isChatParticipant(chatId) {
-      let c = chatSnap(chatId);
-      return signedIn()
-        && c.data != null
-        && c.data is map
-        && (
-          clienteIdFromData(c.data) == uid() ||
-          (c.data.keys().hasAny(['prestadorId']) &&
-            c.data['prestadorId'] == uid())
-        );
+      let c = chatSnap(chatId).data;
+      return isChatParticipantByData(c);
     }
 
     function hasTextField(data) {
@@ -176,23 +198,17 @@ service cloud.firestore {
     }
 
     function isCallParticipantByData(callData) {
-      return signedIn()
-        && callData is map
-        && (
+      return signedIn() && callData is map
+        ? (
           (callData.keys().hasAny(['callerId']) && callData['callerId'] == uid()) ||
           (callData.keys().hasAny(['calleeId']) && callData['calleeId'] == uid())
-        );
+        )
+        : false;
     }
 
     function isCallParticipantById(callId) {
-      let c = callSnap(callId);
-      return signedIn()
-        && c.data != null
-        && c.data is map
-        && (
-          (c.data.keys().hasAny(['callerId']) && c.data['callerId'] == uid()) ||
-          (c.data.keys().hasAny(['calleeId']) && c.data['calleeId'] == uid())
-        );
+      let c = callSnap(callId).data;
+      return isCallParticipantByData(c);
     }
 
     // -------------------------
@@ -215,12 +231,33 @@ service cloud.firestore {
       }
     }
 
+    match /users/{userId}/favorites/{prestadorId} {
+      allow read, write: if isSelf(userId) || isAdmin();
+    }
+
     // -------------------------
     // PRESTADORES
     // -------------------------
     match /prestadores/{prestadorId} {
-      allow read: if true; // perfis precisam ser visÃ­veis
-      allow create, update: if isSelf(prestadorId) || isAdmin();
+      allow read: if true; // perfis precisam ser visíveis
+      allow create: if isSelf(prestadorId) || isAdmin();
+      
+      // Owner can update own profile, but cannot self-edit rating aggregates.
+      // Rating aggregates are allowed only for other signed-in users (or backend/admin).
+      allow update: if isAdmin()
+        || (
+          isSelf(prestadorId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .difference(['ratingCount', 'ratingSum', 'ratingAvg'].toSet()).size()
+            == request.resource.data.diff(resource.data).affectedKeys().size()
+        )
+        || (
+          signedIn()
+          && uid() != prestadorId
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .difference(['ratingCount', 'ratingSum', 'ratingAvg', 'updatedAt'].toSet()).size() == 0
+        );
+
       allow delete: if isAdmin() || devMode();
     }
 
@@ -258,6 +295,17 @@ service cloud.firestore {
     }
 
     // -------------------------
+    // STORIES
+    // -------------------------
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if devMode() || isAdmin()
+        || (signedIn() && request.resource.data['prestadorId'] == uid());
+      allow update, delete: if isAdmin() || devMode()
+        || (signedIn() && resource.data['prestadorId'] == uid());
+    }
+
+    // -------------------------
     // PEDIDOS
     // -------------------------
     match /pedidos/{pedidoId} {
@@ -273,13 +321,14 @@ service cloud.firestore {
       allow read: if devMode()
         ? true
         : (isPedidoParticipantByData(resource.data)
-          || (isPrestador() && pedidoAberto(resource.data)));
+          || (isPrestador() && pedidoAberto(resource.data))
+          || isAdmin());
 
       // Atualizar:
       // - cliente/prestador participantes
-      // - prestador pode aceitar/agir num pedido aberto
+      // - prestador pode aceitar/agir num pedido aberto (SÓ se fizer match com o serviço)
       allow update: if (isPedidoParticipantByData(resource.data)
-        || (isPrestador() && pedidoAberto(resource.data)))
+        || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
         && hasValidPedidoEstado(request.resource.data)
         && immutableField('clienteId')
         && immutableField('clientId')
@@ -294,17 +343,19 @@ service cloud.firestore {
     match /chats/{chatId} {
 
       // âœ… GET (doc especÃ­fico): participante via pedido OU via chat
-      allow get: if isPedidoParticipantById(chatId) || isChatParticipantByData(resource.data);
+      allow get: if (resource != null && resource.data is map && isChatParticipantByData(resource.data))
+                  || isPedidoParticipantById(chatId);
 
       // âœ… LIST (queries): usa sÃ³ os campos do prÃ³prio chat
-      allow list: if isChatParticipantByData(resource.data);
+      allow list: if resource != null && resource.data is map && isChatParticipantByData(resource.data);
 
       // Criar meta do chat
       allow create: if isPedidoParticipantById(chatId)
         && request.resource.data['pedidoId'] == chatId;
 
       // Update: participante via pedido ou via chat
-      allow update: if isPedidoParticipantById(chatId) || isChatParticipantByData(resource.data);
+      allow update: if (resource != null && resource.data is map && isChatParticipantByData(resource.data))
+                    || isPedidoParticipantById(chatId);
 
       allow delete: if isAdmin() || devMode();
 
@@ -324,6 +375,11 @@ service cloud.firestore {
 
         allow delete: if isAdmin() || devMode();
       }
+
+      match /typing/{userId} {
+        allow read: if isChatParticipant(chatId);
+        allow create, update, delete: if isChatParticipant(chatId) && isSelf(userId);
+      }
     }
 
     // -------------------------
@@ -335,7 +391,9 @@ service cloud.firestore {
         && request.resource.data['calleeId'] is string;
 
       allow get: if isCallParticipantByData(resource.data);
-      allow list: if signedIn();
+      allow list: if resource != null
+        && resource.data is map
+        && isCallParticipantByData(resource.data);
       allow update: if isCallParticipantByData(resource.data);
       allow delete: if isAdmin() || devMode();
 
@@ -349,6 +407,47 @@ service cloud.firestore {
     }
 
     // -------------------------
+    // SUPPORT TICKETS
+    // -------------------------
+    match /support_tickets/{ticketId} {
+      allow create: if signedIn()
+        && request.resource.data['uid'] == uid();
+      allow read, update, delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // PAYMENTS (admin/backoffice read-only)
+    // -------------------------
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // PAYMENT LEDGER (immutable)
+    // -------------------------
+    match /payment_ledger/{entryId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // SUBSCRIPTIONS (owner + admin read-only)
+    // -------------------------
+    match /subscriptions/{subUid} {
+      allow read: if (signedIn() && uid() == subUid) || isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
+    // REMINDER LOGS (scheduler dedup)
+    // -------------------------
+    match /scheduled_reminder_logs/{logId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    // -------------------------
     // Default deny
     // -------------------------
     match /{document=**} {
@@ -356,5 +455,3 @@ service cloud.firestore {
     }
   }
 }
-
-

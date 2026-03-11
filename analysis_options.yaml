@@ -29,5 +29,20 @@ linter:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+    # Regras para ROBUSTEZ e ESTILO (ChegaJá v2.5)
+    prefer_single_quotes: true
+    always_declare_return_types: true
+    unawaited_futures: true
+    avoid_void_async: true
+    depend_on_referenced_packages: true
+    prefer_final_locals: true
+    require_trailing_commas: true
+    
+    # Boas práticas adicionais
+    avoid_print: true # Evitar print() em produção (usar logger)
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    avoid_empty_else: true
+    cancel_subscriptions: true
+    close_sinks: true
+

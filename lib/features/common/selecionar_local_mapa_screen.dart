@@ -1,7 +1,6 @@
 // lib/features/common/selecionar_local_mapa_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class SelecionarLocalMapaScreen extends StatefulWidget {
   final double? initialLatitude;
@@ -18,19 +17,22 @@ class SelecionarLocalMapaScreen extends StatefulWidget {
       _SelecionarLocalMapaScreenState();
 }
 
-class _SelecionarLocalMapaScreenState
-    extends State<SelecionarLocalMapaScreen> {
-  late final MapController _mapController;
+class _SelecionarLocalMapaScreenState extends State<SelecionarLocalMapaScreen> {
+  GoogleMapController? _mapController;
   LatLng? _selected;
 
   @override
   void initState() {
     super.initState();
-    _mapController = MapController();
-
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
       _selected = LatLng(widget.initialLatitude!, widget.initialLongitude!);
     }
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -40,6 +42,17 @@ class _SelecionarLocalMapaScreenState
           widget.initialLatitude ?? 38.7223, // Lisboa por defeito
           widget.initialLongitude ?? -9.1393,
         );
+
+    final markers = <Marker>{};
+    if (_selected != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('selected'),
+          position: _selected!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -58,46 +71,24 @@ class _SelecionarLocalMapaScreenState
           ),
         ],
       ),
-      body: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter: center,
-          initialZoom: 15,
-          minZoom: 3,
-          maxZoom: 19,
-          onTap: (tapPosition, point) {
-            setState(() {
-              _selected = point;
-            });
-          },
-          interactionOptions: const InteractionOptions(
-            flags: InteractiveFlag.pinchZoom |
-                InteractiveFlag.drag |
-                InteractiveFlag.doubleTapZoom |
-                InteractiveFlag.scrollWheelZoom,
-          ),
+      body: GoogleMap(
+        initialCameraPosition: CameraPosition(
+          target: center,
+          zoom: 15,
         ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.chegaja.app',
-          ),
-          if (_selected != null)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _selected!,
-                  width: 50,
-                  height: 50,
-                  child: const Icon(
-                    Icons.location_pin,
-                    size: 44,
-                    color: Colors.redAccent,
-                  ),
-                ),
-              ],
-            ),
-        ],
+        minMaxZoomPreference: const MinMaxZoomPreference(3, 19),
+        onMapCreated: (controller) {
+          _mapController = controller;
+        },
+        onTap: (point) {
+          setState(() {
+            _selected = point;
+          });
+        },
+        markers: markers,
+        myLocationButtonEnabled: false,
+        myLocationEnabled: false,
+        mapToolbarEnabled: false,
       ),
     );
   }

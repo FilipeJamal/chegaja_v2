@@ -1,8 +1,8 @@
 // lib/features/common/pedido_chat_preview.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
+import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 
 class PedidoChatPreview extends StatefulWidget {
@@ -75,7 +75,8 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
     }
   }
 
-  String get _otherRole => (widget.viewerRole == 'cliente') ? 'prestador' : 'cliente';
+  String get _otherRole =>
+      (widget.viewerRole == 'cliente') ? 'prestador' : 'cliente';
 
   Future<_OtherUserResolved> _resolveOtherUser() async {
     // 1) Se já veio pronto do caller, usa
@@ -84,7 +85,8 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
     final givenOtherId = (widget.otherUserId ?? '').trim();
     final givenPedidoTitulo = (widget.pedidoTitulo ?? '').trim();
 
-    if (givenOtherId.isNotEmpty && (givenName.isNotEmpty || givenPhoto.isNotEmpty)) {
+    if (givenOtherId.isNotEmpty &&
+        (givenName.isNotEmpty || givenPhoto.isNotEmpty)) {
       return _OtherUserResolved(
         otherUserId: givenOtherId,
         otherUserName: givenName.isNotEmpty ? givenName : _fallbackName(),
@@ -137,7 +139,8 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
 
     if (needOtherId || needTitulo) {
       try {
-        final pedidoSnap = await _db.collection('pedidos').doc(widget.pedidoId).get();
+        final pedidoSnap =
+            await _db.collection('pedidos').doc(widget.pedidoId).get();
         final pedido = pedidoSnap.data();
         if (pedido != null) {
           pedidoTitulo ??= _pickFirstString(pedido, const [
@@ -171,7 +174,10 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
     }
 
     otherId = (otherId ?? givenOtherId).trim();
-    pedidoTitulo = (givenPedidoTitulo.isNotEmpty ? givenPedidoTitulo : (pedidoTitulo ?? '')).trim();
+    pedidoTitulo = (givenPedidoTitulo.isNotEmpty
+            ? givenPedidoTitulo
+            : (pedidoTitulo ?? ''))
+        .trim();
 
     if (otherId.isEmpty) {
       // Sem ID do outro user, não tem como buscar nome/foto
@@ -203,13 +209,18 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
     }
 
     final extractedName = _extractName(profile) ?? givenName;
-    final name = extractedName.trim().isNotEmpty ? extractedName.trim() : (_otherRole == 'prestador' ? 'Prestador' : 'Cliente');
+    final name = extractedName.trim().isNotEmpty
+        ? extractedName.trim()
+        : (_otherRole == 'prestador' ? 'Prestador' : 'Cliente');
 
     final photo = (_extractPhoto(profile) ?? givenPhoto).trim();
 
     // 5) (Opcional) cache no chat meta
     try {
-      final cache = <String, dynamic>{'updatedAt': FieldValue.serverTimestamp()};
+      final cache = <String, dynamic>{
+        'pedidoId': widget.pedidoId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
 
       if (_otherRole == 'prestador') {
         cache['prestadorNome'] = name;
@@ -221,7 +232,10 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
 
       if (pedidoTitulo.isNotEmpty) cache['pedidoTitulo'] = pedidoTitulo;
 
-      await _db.collection('chats').doc(widget.pedidoId).set(cache, SetOptions(merge: true));
+      await _db
+          .collection('chats')
+          .doc(widget.pedidoId)
+          .set(cache, SetOptions(merge: true));
     } catch (_) {
       // ignora
     }
@@ -234,9 +248,11 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
     );
   }
 
-  String _fallbackName() => (_otherRole == 'prestador') ? 'Prestador' : 'Cliente';
+  String _fallbackName() =>
+      (_otherRole == 'prestador') ? 'Prestador' : 'Cliente';
 
-  static String? _pickFirstString(Map<String, dynamic> data, List<String> keys) {
+  static String? _pickFirstString(
+      Map<String, dynamic> data, List<String> keys) {
     for (final k in keys) {
       final v = data[k];
       if (v is String && v.trim().isNotEmpty) return v.trim();
@@ -297,8 +313,11 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
 
   @override
   Widget build(BuildContext context) {
-    final df = DateFormat('dd/MM HH:mm');
-    final timeStr = (widget.lastMessageAt != null) ? df.format(widget.lastMessageAt!) : '';
+    // df removed
+    final timeStr = (widget.lastMessageAt != null)
+        ? DateTimeUtils.formatDateTime(widget.lastMessageAt!,
+            locale: Localizations.localeOf(context).toString())
+        : '';
 
     return FutureBuilder<_OtherUserResolved>(
       future: _future,
@@ -307,13 +326,23 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
 
         final other = resolved ??
             _OtherUserResolved(
-              otherUserId: (widget.otherUserId ?? '').trim().isEmpty ? null : widget.otherUserId!.trim(),
-              otherUserName: (widget.otherUserName ?? '').trim().isEmpty ? _fallbackName() : widget.otherUserName!.trim(),
-              otherUserPhotoUrl: (widget.otherUserPhotoUrl ?? '').trim().isEmpty ? null : widget.otherUserPhotoUrl!.trim(),
-              pedidoTitulo: (widget.pedidoTitulo ?? '').trim().isEmpty ? null : widget.pedidoTitulo!.trim(),
+              otherUserId: (widget.otherUserId ?? '').trim().isEmpty
+                  ? null
+                  : widget.otherUserId!.trim(),
+              otherUserName: (widget.otherUserName ?? '').trim().isEmpty
+                  ? _fallbackName()
+                  : widget.otherUserName!.trim(),
+              otherUserPhotoUrl: (widget.otherUserPhotoUrl ?? '').trim().isEmpty
+                  ? null
+                  : widget.otherUserPhotoUrl!.trim(),
+              pedidoTitulo: (widget.pedidoTitulo ?? '').trim().isEmpty
+                  ? null
+                  : widget.pedidoTitulo!.trim(),
             );
 
-        final name = other.otherUserName.trim().isEmpty ? _fallbackName() : other.otherUserName.trim();
+        final name = other.otherUserName.trim().isEmpty
+            ? _fallbackName()
+            : other.otherUserName.trim();
         final photo = (other.otherUserPhotoUrl ?? '').trim();
         final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
@@ -330,8 +359,11 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundImage: (photo.startsWith('http')) ? NetworkImage(photo) : null,
-                      child: (!photo.startsWith('http')) ? Text(initials) : null,
+                      backgroundImage: (photo.startsWith('http'))
+                          ? NetworkImage(photo)
+                          : null,
+                      child:
+                          (!photo.startsWith('http')) ? Text(initials) : null,
                     ),
                     if (widget.hasUnread)
                       Positioned(
@@ -357,14 +389,16 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                         name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         (widget.lastMessage ?? '').trim(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.grey.shade700, fontSize: 13),
                       ),
                       if (pedidoTitulo.isNotEmpty) ...[
                         const SizedBox(height: 2),
@@ -372,7 +406,8 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                           pedidoTitulo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 12),
                         ),
                       ],
                     ],

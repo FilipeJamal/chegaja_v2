@@ -35,7 +35,7 @@ class FirebaseAuth extends FirebasePluginPlatform {
 
   /// Returns an instance using the default [FirebaseApp].
   static FirebaseAuth get instance {
-    FirebaseApp defaultAppInstance = Firebase.app();
+    final FirebaseApp defaultAppInstance = Firebase.app();
 
     return FirebaseAuth.instanceFor(app: defaultAppInstance);
   }
@@ -79,7 +79,7 @@ class FirebaseAuth extends FirebasePluginPlatform {
   /// Do not use with production credentials as emulator traffic is not encrypted.
   Future<void> useAuthEmulator(String host, int port,
       {bool automaticHostMapping = true}) async {
-    String mappedHost = automaticHostMapping ? getMappedHost(host) : host;
+    final String mappedHost = automaticHostMapping ? getMappedHost(host) : host;
 
     await _delegate.useAuthEmulator(mappedHost, port);
   }
@@ -641,7 +641,7 @@ class FirebaseAuth extends FirebasePluginPlatform {
     assert(phoneNumber.isNotEmpty);
     // If we add a recaptcha to the page by creating a new instance, we must
     // also clear that instance before proceeding.
-    bool mustClear = verifier == null;
+    final bool mustClear = verifier == null;
     verifier ??= RecaptchaVerifier(auth: _delegate);
     final result =
         await _delegate.signInWithPhoneNumber(phoneNumber, verifier.delegate);
@@ -846,11 +846,11 @@ class FirebaseAuth extends FirebasePluginPlatform {
         message: 'Password cannot be null or empty',
       );
     }
-    PasswordPolicyApi passwordPolicyApi =
+    final PasswordPolicyApi passwordPolicyApi =
         PasswordPolicyApi(auth.app.options.apiKey);
-    PasswordPolicy passwordPolicy =
+    final PasswordPolicy passwordPolicy =
         await passwordPolicyApi.fetchPasswordPolicy();
-    PasswordPolicyImpl passwordPolicyImpl = PasswordPolicyImpl(passwordPolicy);
+    final PasswordPolicyImpl passwordPolicyImpl = PasswordPolicyImpl(passwordPolicy);
     return passwordPolicyImpl.isPasswordValid(password);
   }
 

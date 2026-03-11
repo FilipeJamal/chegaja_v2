@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ChegaJa</title>
+  <style>
+    html { background: #F6F8F8; }
+    body {
+      width: 720pt;
+      height: 405pt;
+      margin: 0;
+      padding: 0;
+      background: #F6F8F8;
+      color: #111418;
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      overflow: hidden;
+    }
+    * { box-sizing: border-box; }
+    .slide {
+      width: 100%;
+      height: 100%;
+      padding: 24pt 28pt;
+      display: flex;
+      flex-direction: column;
+    }
+    h1, h2, h3, h4, p, ul, ol { margin: 0; }
+    h1 {
+      font-size: 28pt;
+      line-height: 1.12;
+      font-weight: 700;
+    }
+    h2 {
+      font-size: 19pt;
+      line-height: 1.18;
+      font-weight: 700;
+    }
+    h3 {
+      font-size: 14pt;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+    h4 {
+      font-size: 12pt;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: 1pt;
+      text-transform: uppercase;
+      color: #12BA9B;
+    }
+    p, li {
+      font-size: 10.8pt;
+      line-height: 1.32;
+      color: #46515D;
+    }
+    ul, ol { padding-left: 18pt; }
+    li { margin-bottom: 4pt; }
+    .muted { color: #6B7280; }
+    .small { font-size: 9.5pt; line-height: 1.28; }
+    .tiny { font-size: 8.5pt; line-height: 1.2; color: #6B7280; }
+    .brand { color: #12BA9B; }
+    .navy { color: #0B3C5D; }
+    .accent { color: #FF5A5F; }
+    .row {
+      display: flex;
+      gap: 12pt;
+      width: 100%;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 12pt;
+    }
+    .card {
+      background: #FFFFFF;
+      border: 1pt solid #DDE5E8;
+      border-radius: 16pt;
+      padding: 12pt 14pt;
+      box-shadow: 0 6pt 18pt rgba(17, 20, 24, 0.08);
+    }
+    .soft-card {
+      background: #EEF7F5;
+      border: 1pt solid #CFEAE4;
+      border-radius: 16pt;
+      padding: 12pt 14pt;
+    }
+    .tag {
+      display: inline-flex;
+      background: #E9F6F2;
+      border: 1pt solid #CDE9E2;
+      border-radius: 999pt;
+      padding: 4pt 10pt;
+      margin-right: 6pt;
+      margin-bottom: 6pt;
+    }
+    .tag p {
+      font-size: 9.5pt;
+      line-height: 1;
+      color: #0B3C5D;
+      font-weight: 700;
+    }
+    .divider {
+      width: 84pt;
+      height: 4pt;
+      background: #12BA9B;
+      border-radius: 999pt;
+      margin-top: 10pt;
+    }
+    .phone {
+      background: #FFFFFF;
+      border: 1pt solid #D8E2E6;
+      border-radius: 24pt;
+      padding: 8pt;
+      box-shadow: 0 8pt 24pt rgba(17, 20, 24, 0.12);
+    }
+    .phone img {
+      width: 100%;
+      height: auto;
+      border-radius: 16pt;
+      display: block;
+    }
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 8pt;
+      width: 100%;
+      margin-top: 6pt;
+    }
+    .step {
+      flex: 1;
+      min-height: 66pt;
+      background: #FFFFFF;
+      border: 1pt solid #DDE5E8;
+      border-radius: 14pt;
+      padding: 10pt 12pt;
+    }
+    .arrow {
+      width: 18pt;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 10pt;
+    }
+    .arrow p {
+      font-size: 18pt;
+      color: #12BA9B;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      padding-top: 4pt;
+    }
+    .footer-line {
+      width: 100%;
+      height: 1pt;
+      background: #DDE5E8;
+      margin-top: 10pt;
+    }
+    .screenshot-caption {
+      text-align: center;
+      margin-top: 2pt;
+    }
+  </style>
+</head>
+<body>
+
+      <div class="slide">
+        <h4>Fluxo do Prestador</h4>
+        <h2 style="margin-top:8pt;">Como o prestador recebe, filtra e executa trabalho</h2>
+        <div class="row" style="margin-top:12pt;">
+          <div class="col" style="width:55%;">
+            <div class="phone" style="width:94%; margin:0 auto;">
+              <div id="provider-shot" class="placeholder" style="width:100%; height:252pt; border-radius:16pt;"></div>
+            </div>
+            <p class="small screenshot-caption">Home do prestador com estado online, KPIs e pedidos próximos</p>
+          </div>
+          <div class="col" style="width:45%;">
+            <div class="card">
+              <h3>Lógica principal do lado prestador</h3>
+              <ul style="margin-top:8pt;">
+                <li>ativa modo online para começar a receber pedidos</li>
+                <li>define categorias de atuação e raio/localização</li>
+                <li>aceita pedido aberto ou convite direto</li>
+                <li>envia orçamento quando o serviço é por proposta</li>
+              </ul>
+            </div>
+            <div class="soft-card">
+              <h3>Operação diária</h3>
+              <ul style="margin-top:8pt;">
+                <li>acompanha trabalhos ativos e mensagens não lidas</li>
+                <li>inicia serviço, propõe valor final e conclui</li>
+                <li>acede a perfil, pagamentos, configurações, assinatura e KYC</li>
+              </ul>
+            </div>
+            <p class="small" style="margin-top:2pt;">
+              O matching considera categorias, estado online e distância geográfica.
+            </p>
+          </div>
+        </div>
+      </div>
+</body>
+</html>

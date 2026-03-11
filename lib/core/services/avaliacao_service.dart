@@ -39,8 +39,8 @@ class AvaliacaoService {
       final prestadorSnap = await tx.get(prestadorRef);
       final data = prestadorSnap.data() ?? <String, dynamic>{};
 
-      final num countRaw = (data['ratingCount'] ?? 0) as num;
-      final num sumRaw = (data['ratingSum'] ?? 0) as num;
+      final num countRaw = _parseNum(data['ratingCount']);
+      final num sumRaw = _parseNum(data['ratingSum']);
 
       final int newCount = countRaw.toInt() + 1;
       final double newSum = sumRaw.toDouble() + rating.toDouble();
@@ -57,5 +57,11 @@ class AvaliacaoService {
         SetOptions(merge: true),
       );
     });
+  }
+
+  num _parseNum(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value) ?? 0;
+    return 0;
   }
 }

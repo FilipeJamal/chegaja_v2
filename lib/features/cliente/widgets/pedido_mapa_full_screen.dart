@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// Ecrã de mapa em ecrã inteiro, com zoom, arrastar e botões + / - / recentrar
+import 'package:chegaja_v2/core/services/routing_service.dart';
+
+/// Ecra de mapa em ecra inteiro, com zoom, arrastar e botoes + / - / recentrar
 class PedidoMapaFullScreen extends StatefulWidget {
   final LatLng center;
+  final LatLng? destination;
   final double initialZoom;
 
   const PedidoMapaFullScreen({
     super.key,
     required this.center,
+    this.destination,
     this.initialZoom = 16,
   });
 
@@ -18,78 +21,211 @@ class PedidoMapaFullScreen extends StatefulWidget {
 }
 
 class _PedidoMapaFullScreenState extends State<PedidoMapaFullScreen> {
-  late final MapController _mapController;
+  GoogleMapController? _mapController;
   late double _zoom;
+
+  List<LatLng> _routePoints = [];
+  double? _distanceKm;
+  double? _durationMin;
+  bool _loadingRoute = false;
 
   @override
   void initState() {
     super.initState();
-    _mapController = MapController();
     _zoom = widget.initialZoom;
+    if (widget.destination != null) {
+      _fetchRoute();
+    }
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchRoute() async {
+    setState(() => _loadingRoute = true);
+    final result = await RoutingService.instance
+        .getRoute(widget.center, widget.destination!);
+    if (!mounted) return;
+
+    if (result != null) {
+      setState(() {
+        _routePoints = result.points;
+        _distanceKm = result.distanceKm;
+        _durationMin = result.durationMinutes;
+        _loadingRoute = false;
+      });
+      _fitBounds();
+    } else {
+      setState(() => _loadingRoute = false);
+    }
+  }
+
+  void _fitBounds() {
+    final dest = widget.destination;
+    if (dest == null) return;
+    final minLat = [widget.center.latitude, dest.latitude].reduce(
+      (a, b) => a < b ? a : b,
+    );
+    final maxLat = [widget.center.latitude, dest.latitude].reduce(
+      (a, b) => a > b ? a : b,
+    );
+    final minLng = [widget.center.longitude, dest.longitude].reduce(
+      (a, b) => a < b ? a : b,
+    );
+    final maxLng = [widget.center.longitude, dest.longitude].reduce(
+      (a, b) => a > b ? a : b,
+    );
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 50),
+    );
   }
 
   void _zoomIn() {
-    setState(() {
-      _zoom = (_zoom + 1).clamp(3, 19);
-    });
-    _mapController.move(widget.center, _zoom);
+    _mapController?.animateCamera(CameraUpdate.zoomIn());
   }
 
   void _zoomOut() {
-    setState(() {
-      _zoom = (_zoom - 1).clamp(3, 19);
-    });
-    _mapController.move(widget.center, _zoom);
+    _mapController?.animateCamera(CameraUpdate.zoomOut());
   }
 
   void _recenter() {
-    _mapController.move(widget.center, _zoom);
+    if (widget.destination != null && _routePoints.isNotEmpty) {
+      _fitBounds();
+      return;
+    }
+    _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: widget.center, zoom: widget.initialZoom),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final markers = <Marker>{
+      Marker(
+        markerId: const MarkerId('origem'),
+        position: widget.center,
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueRed,
+        ),
+      ),
+    };
+
+    if (widget.destination != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('destino'),
+          position: widget.destination!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
+        ),
+      );
+    }
+
+    final polylines = <Polyline>{};
+    if (_routePoints.isNotEmpty) {
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _routePoints,
+          color: Colors.blueAccent,
+          width: 4,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mapa do pedido'),
       ),
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: widget.center,
-              initialZoom: _zoom,
-              // 👉 Aqui desbloqueias tudo: pinch, arrastar, dois toques, etc.
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
-              ),
-              minZoom: 3,
-              maxZoom: 19,
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: widget.center,
+              zoom: _zoom,
             ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.chegaja.app',
-              ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: widget.center,
-                    width: 40,
-                    height: 40,
-                    child: const Icon(
-                      Icons.location_pin,
-                      size: 40,
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            onMapCreated: (controller) {
+              _mapController = controller;
+            },
+            onCameraMove: (position) {
+              _zoom = position.zoom;
+            },
+            minMaxZoomPreference: const MinMaxZoomPreference(3, 19),
+            markers: markers,
+            polylines: polylines,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            mapToolbarEnabled: false,
           ),
-
-          // Botões de controlo de zoom
+          if (_distanceKm != null && _durationMin != null)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          const Icon(Icons.timer, color: Colors.blue),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_durationMin!.ceil()} min',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        height: 30,
+                        width: 1,
+                        color: Colors.grey.shade300,
+                      ),
+                      Column(
+                        children: [
+                          const Icon(
+                            Icons.directions_car,
+                            color: Colors.black54,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_distanceKm!.toStringAsFixed(1)} km',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             right: 16,
             bottom: 16,
@@ -113,6 +249,12 @@ class _PedidoMapaFullScreenState extends State<PedidoMapaFullScreen> {
               ],
             ),
           ),
+          if (_loadingRoute)
+            const Positioned(
+              right: 16,
+              top: 16,
+              child: CircularProgressIndicator(),
+            ),
         ],
       ),
     );
@@ -137,15 +279,12 @@ class _RoundMapButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: const SizedBox(
+        child: SizedBox(
           width: 40,
           height: 40,
-          child: Icon(
-            Icons.add, // será substituído pelo ícone passado no filho
-          ),
+          child: Icon(icon),
         ),
       ),
     );
   }
 }
-

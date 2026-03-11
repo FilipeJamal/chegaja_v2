@@ -2,17 +2,30 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
-import 'package:intl/intl.dart';
 
+import 'package:chegaja_v2/features/common/smart_search_bar.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
-import 'package:chegaja_v2/core/services/servico_search.dart';
+import 'package:chegaja_v2/core/services/location_data_service.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
+import 'package:chegaja_v2/core/widgets/app_card.dart';
+import 'package:chegaja_v2/core/widgets/app_chip.dart';
+import 'package:chegaja_v2/core/widgets/app_list_tile.dart';
+import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
+import 'package:chegaja_v2/core/widgets/app_state_views.dart';
+import 'package:chegaja_v2/core/widgets/app_tab_bar.dart';
+import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
+import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
 
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
@@ -20,6 +33,10 @@ import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
 import 'package:chegaja_v2/features/common/mensagens/mensagens_tab.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
+import 'package:chegaja_v2/features/common/widgets/stories_carousel_widget.dart';
+import 'package:chegaja_v2/core/widgets/theme_mode_selector_tile.dart';
+import 'package:chegaja_v2/features/common/suporte_screen.dart';
+import 'package:chegaja_v2/features/admin/admin_panel_screen.dart';
 
 /// ---------- HELPERS GERAIS PARA A ABA "PEDIDOS" ----------
 
@@ -53,7 +70,7 @@ String _labelEstadoCliente(Pedido p, AppLocalizations l10n) {
 }
 
 String _buildValorLabelLista(Pedido pedido, AppLocalizations l10n) {
-  final currency = NumberFormat.simpleCurrency(locale: l10n.localeName);
+  final currency = CurrencyUtils.formatter(localeName: l10n.localeName);
   String formatValue(double value) => currency.format(value);
 
   if (pedido.precoFinal != null &&
@@ -87,6 +104,21 @@ String _buildValorLabelLista(Pedido pedido, AppLocalizations l10n) {
   if (max != null) return l10n.valueEstimatedUpTo(formatValue(max));
 
   return l10n.valueUnknown;
+}
+
+Future<String?> _loadRegionLabel() async {
+  final code = await AuthService.getUserRegion();
+  if (code == null || code.trim().isEmpty) return null;
+
+  final normalized = code.trim().toUpperCase();
+  final countries = await LocationDataService.instance.getCountries();
+  for (final c in countries) {
+    if (c.isoCode.toUpperCase() == normalized) {
+      final flag = c.flag.trim();
+      return flag.isNotEmpty ? '${c.name} $flag' : c.name;
+    }
+  }
+  return normalized;
 }
 
 String _labelTipoPrecoCliente(String? tipo, AppLocalizations l10n) {
@@ -165,10 +197,14 @@ class ClienteHomeScreen extends StatefulWidget {
 
 class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   int _currentIndex = 0;
+  String? _activeClienteUid;
+  StreamSubscription<User?>? _authSub;
+  bool _isEnsuringClienteSession = false;
 
   // badge de mensagens não lidas
   StreamSubscription<List<Pedido>>? _pedidosSub;
-  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>> _chatSubs = {};
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+      _chatSubs = {};
   final Map<String, bool> _unreadPorPedido = {};
   bool _hasUnreadMessages = false;
   Stream<List<Pedido>>? _pedidosClienteStream;
@@ -177,19 +213,75 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // ignore: discarded_futures
-    AuthService.setActiveRole('cliente');
-    final user = AuthService.currentUser;
+    unawaited(_ensureClienteSession());
     _servicosStream ??= ServicosRepo.streamServicosAtivos();
-    if (user != null) {
-      _pedidosClienteStream ??= PedidosRepo.streamPedidosDoCliente(user.uid);
-      _pedidosSub = _pedidosClienteStream!.listen(_onPedidosUpdate);
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+      _syncClienteStreams();
+    });
+    _syncClienteStreams();
+  }
+
+  Future<void> _ensureClienteSession() async {
+    if (_isEnsuringClienteSession) return;
+    _isEnsuringClienteSession = true;
+
+    try {
+      await AuthService.ensureSignedInAnonymously().timeout(
+        const Duration(seconds: 12),
+      );
+      await AuthService.setActiveRole('cliente');
+    } catch (error) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[ClienteHome] auth bootstrap error: $error');
+      }
+    } finally {
+      _isEnsuringClienteSession = false;
     }
   }
 
-  void _ensureStreams(String userId) {
-    _pedidosClienteStream ??= PedidosRepo.streamPedidosDoCliente(userId);
+  void _syncClienteStreams() {
+    final user = AuthService.currentUser;
+    if (user == null) {
+      _resetClienteStreams();
+      unawaited(_ensureClienteSession());
+      return;
+    }
+
+    final uid = user.uid;
+    if (_activeClienteUid == uid && _pedidosClienteStream != null) {
+      _servicosStream ??= ServicosRepo.streamServicosAtivos();
+      return;
+    }
+
+    _resetClienteStreams();
+    _activeClienteUid = uid;
+    // Keep UI and internal badge tracking on independent streams.
+    // This avoids a stalled UI stream when one listener receives an error first.
+    _pedidosClienteStream = PedidosRepo.streamPedidosDoCliente(uid);
+    _pedidosSub = PedidosRepo.streamPedidosDoCliente(uid).listen(
+      _onPedidosUpdate,
+      onError: (Object error, StackTrace stackTrace) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[ClienteHome] pedidosSub error: $error');
+        }
+      },
+    );
     _servicosStream ??= ServicosRepo.streamServicosAtivos();
+  }
+
+  void _resetClienteStreams() {
+    _pedidosSub?.cancel();
+    _pedidosSub = null;
+    for (final sub in _chatSubs.values) {
+      sub.cancel();
+    }
+    _chatSubs.clear();
+    _unreadPorPedido.clear();
+    _hasUnreadMessages = false;
+    _pedidosClienteStream = null;
+    _activeClienteUid = null;
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
@@ -220,6 +312,12 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
 
         _chatSubs[p.id] = q.snapshots().listen(
           (snap) => _onMessagesUpdate(p.id, snap.docs),
+          onError: (Object error, StackTrace stackTrace) {
+            if (kDebugMode) {
+              // ignore: avoid_print
+              print('[ClienteHome] chatSub(${p.id}) error: $error');
+            }
+          },
         );
       }
     }
@@ -254,102 +352,49 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
 
   @override
   void dispose() {
-    _pedidosSub?.cancel();
-    for (final sub in _chatSubs.values) {
-      sub.cancel();
-    }
+    _authSub?.cancel();
+    _resetClienteStreams();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final user = AuthService.currentUser;
-    if (user != null) {
-      _ensureStreams(user.uid);
-    } else {
-      _servicosStream ??= ServicosRepo.streamServicosAtivos();
-    }
-    final pages = <Widget>[
-      _ClienteInicioTab(
-        pedidosStream: _pedidosClienteStream,
-        servicosStream: _servicosStream,
-      ),
-      _ClientePedidosTab(pedidosStream: _pedidosClienteStream),
-      const MensagensTab(viewerRole: 'cliente'),
-      _ContaTab(roleLabel: l10n.roleLabelCustomer),
-    ];
-
-    return Scaffold(
-      body: SafeArea(child: pages[_currentIndex]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        showUnselectedLabels: true,
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.home_outlined),
-            activeIcon: const Icon(Icons.home),
-            label: l10n.navHome,
+    _syncClienteStreams();
+    _servicosStream ??= ServicosRepo.streamServicosAtivos();
+    return AppShellScaffold(
+      currentIndex: _currentIndex,
+      onDestinationSelected: (index) => setState(() => _currentIndex = index),
+      destinations: [
+        AppShellDestination(
+          label: l10n.navHome,
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          child: _ClienteInicioTab(
+            pedidosStream: _pedidosClienteStream,
+            servicosStream: _servicosStream,
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.list_alt_outlined),
-            activeIcon: const Icon(Icons.list_alt),
-            label: l10n.navMyOrders,
-          ),
-          BottomNavigationBarItem(
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.chat_bubble_outline),
-                if (_hasUnreadMessages)
-                  const Positioned(
-                    right: -2,
-                    top: -2,
-                    child: SizedBox(
-                      width: 10,
-                      height: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            activeIcon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const Icon(Icons.chat_bubble),
-                if (_hasUnreadMessages)
-                  const Positioned(
-                    right: -2,
-                    top: -2,
-                    child: SizedBox(
-                      width: 10,
-                      height: 10,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            label: l10n.navMessages,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person_outline),
-            activeIcon: const Icon(Icons.person),
-            label: l10n.navProfile,
-          ),
-        ],
-      ),
+        ),
+        AppShellDestination(
+          label: l10n.navMyOrders,
+          icon: Icons.list_alt_outlined,
+          selectedIcon: Icons.list_alt,
+          child: _ClientePedidosTab(pedidosStream: _pedidosClienteStream),
+        ),
+        AppShellDestination(
+          label: l10n.navMessages,
+          icon: Icons.chat_bubble_outline,
+          selectedIcon: Icons.chat_bubble,
+          showBadge: _hasUnreadMessages,
+          child: const MensagensTab(viewerRole: 'cliente'),
+        ),
+        AppShellDestination(
+          label: l10n.navProfile,
+          icon: Icons.person_outline,
+          selectedIcon: Icons.person,
+          child: _ContaTab(roleLabel: l10n.roleLabelCustomer),
+        ),
+      ],
     );
   }
 }
@@ -370,204 +415,214 @@ class _ClienteInicioTab extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final user = AuthService.currentUser;
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double tabHeight = constraints.maxHeight * 0.65;
+        final double tabHeight = constraints.maxHeight * 0.62;
+        final double maxWidth = constraints.maxWidth > AppBreakpoints.tabletMax
+            ? AppBreakpoints.contentMaxTwoColumn
+            : AppBreakpoints.contentMaxSingleColumn;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.homeGreeting,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.homeSubtitle,
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                const SizedBox(height: 16),
-
-                if (user != null)
-                  StreamBuilder<List<Pedido>>(
-                    stream: pedidosStream ??
-                        PedidosRepo.streamPedidosDoCliente(user.uid),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const SizedBox.shrink();
-                      }
-
-                      final pedidos = snapshot.data!;
-                      final pendentesComAcao =
-                          pedidos.where(_temAcaoPendente).toList();
-
-                      if (pendentesComAcao.isEmpty) return const SizedBox.shrink();
-
-                      pendentesComAcao.sort(
-                        (a, b) => a.createdAt.compareTo(b.createdAt),
-                      );
-
-                      final proximo = pendentesComAcao.first;
-                      final textoAcao = _textoAcaoPendente(proximo, l10n);
-
-                      return Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => PedidoDetalheScreen(
-                                    pedidoId: proximo.id,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: primary.withAlpha((0.08 * 255).round()),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Icon(Icons.notifications_active_outlined, size: 22),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          l10n.homePendingTitle,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          textoAcao,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          l10n.homePendingCta,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      );
-                    },
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x2,
+          ),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+                maxWidth: maxWidth,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.homeGreeting,
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.search),
+                        tooltip: 'Pesquisar Prestadores',
+                        onPressed: () {
+                          showSearch(
+                            context: context,
+                            delegate: PrestadorSearchDelegate(),
+                          );
+                        },
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: AppSpacing.x1),
+                  Text(
+                    l10n.homeSubtitle,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x4),
+                  if (user != null)
+                    StreamBuilder<List<Pedido>>(
+                      stream: pedidosStream ??
+                          PedidosRepo.streamPedidosDoCliente(user.uid),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox.shrink();
+                        }
+                        if (snapshot.hasError) {
+                          return const SizedBox.shrink();
+                        }
 
-                if (user != null) ...[
-                  _ClienteMensagensBanner(clienteId: user.uid),
-                  const SizedBox(height: 16),
-                ],
+                        final pedidos = snapshot.data ?? [];
+                        final pendentes = pedidos
+                            .where(_temAcaoPendente)
+                            .toList()
+                          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+                        final pedido =
+                            pendentes.isNotEmpty ? pendentes.first : null;
+                        if (pedido == null) return const SizedBox.shrink();
 
-                SizedBox(
-                  height: tabHeight,
-                  child: StreamBuilder<List<Servico>>(
-                    stream: servicosStream ?? ServicosRepo.streamServicosAtivos(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                        return AppCard(
+                          variant: AppCardVariant.flat,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PedidoDetalheScreen(pedidoId: pedido.id),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.notifications_active_outlined,
+                                size: 22,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: AppSpacing.x3),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.homePendingTitle,
+                                      style: theme.textTheme.labelLarge,
+                                    ),
+                                    const SizedBox(height: AppSpacing.x1),
+                                    Text(
+                                      _textoAcaoPendente(pedido, l10n),
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    const SizedBox(height: AppSpacing.x1),
+                                    Text(
+                                      l10n.homePendingCta,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: AppSpacing.x2),
+                  const StoriesCarouselWidget(),
+                  const SizedBox(height: AppSpacing.x2),
+                  if (user != null)
+                    _ClienteMensagensBanner(clienteId: user.uid),
+                  const SizedBox(height: AppSpacing.x4),
+                  SizedBox(
+                    height: tabHeight,
+                    child: StreamBuilder<List<Servico>>(
+                      stream:
+                          servicosStream ?? ServicosRepo.streamServicosAtivos(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const AppLoadingView();
+                        }
 
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text(
-                            l10n.servicesLoadError(
+                        if (snapshot.hasError) {
+                          return AppErrorView(
+                            message: l10n.servicesLoadError(
                               snapshot.error.toString(),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
+                          );
+                        }
 
-                      final servicos = snapshot.data ?? [];
-                      if (servicos.isEmpty) {
-                        return Center(
-                          child: Text(
-                            l10n.servicesEmptyMessage,
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
+                        final servicos = snapshot.data ?? [];
+                        if (servicos.isEmpty) {
+                          return AppEmptyView(
+                            title: l10n.availableServicesTitle,
+                            message: l10n.servicesEmptyMessage,
+                          );
+                        }
 
-                      final modos = <String>['ORCAMENTO', 'AGENDADO', 'IMEDIATO'];
+                        final modos = <String>[
+                          'ORCAMENTO',
+                          'AGENDADO',
+                          'IMEDIATO',
+                        ];
 
-                      return DefaultTabController(
-                        length: modos.length,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.availableServicesTitle,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                        return DefaultTabController(
+                          length: modos.length,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: AppSpacing.x2),
+                              Text(
+                                l10n.availableServicesTitle,
+                                style: theme.textTheme.titleMedium,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            TabBar(
-                              isScrollable: true,
-                              labelStyle: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              tabs: [
-                                Tab(text: l10n.serviceTabQuote),
-                                Tab(text: l10n.serviceTabScheduled),
-                                Tab(text: l10n.serviceTabImmediate),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: TabBarView(
-                                children: [
-                                  _ListaServicosPorModo(
-                                    modo: 'ORCAMENTO',
-                                    servicos: servicos,
-                                  ),
-                                  _ListaServicosPorModo(
-                                    modo: 'AGENDADO',
-                                    servicos: servicos,
-                                  ),
-                                  _ListaServicosPorModo(
-                                    modo: 'IMEDIATO',
-                                    servicos: servicos,
-                                  ),
+                              const SizedBox(height: AppSpacing.x2),
+                              AppTabBar(
+                                isScrollable: true,
+                                tabs: [
+                                  Tab(text: l10n.serviceTabQuote),
+                                  Tab(text: l10n.serviceTabScheduled),
+                                  Tab(text: l10n.serviceTabImmediate),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              const SizedBox(height: AppSpacing.x2),
+                              Expanded(
+                                child: TabBarView(
+                                  children: [
+                                    _ListaServicosPorModo(
+                                      modo: 'ORCAMENTO',
+                                      servicos: servicos,
+                                    ),
+                                    _ListaServicosPorModo(
+                                      modo: 'AGENDADO',
+                                      servicos: servicos,
+                                    ),
+                                    _ListaServicosPorModo(
+                                      modo: 'IMEDIATO',
+                                      servicos: servicos,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -584,13 +639,15 @@ class _ClienteMensagensBanner extends StatefulWidget {
   const _ClienteMensagensBanner({required this.clienteId});
 
   @override
-  State<_ClienteMensagensBanner> createState() => _ClienteMensagensBannerState();
+  State<_ClienteMensagensBanner> createState() =>
+      _ClienteMensagensBannerState();
 }
 
 class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
   StreamSubscription<List<Pedido>>? _pedidosSub;
 
-  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>> _chatSubs = {};
+  final Map<String, StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+      _chatSubs = {};
   final Map<String, bool> _unreadPorPedido = {};
   final Map<String, DateTime?> _lastUnreadAtPorPedido = {};
   final Map<String, Pedido> _pedidoPorId = {};
@@ -601,8 +658,8 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
   @override
   void initState() {
     super.initState();
-    _pedidosSub =
-        PedidosRepo.streamPedidosDoCliente(widget.clienteId).listen(_onPedidosUpdate);
+    _pedidosSub = PedidosRepo.streamPedidosDoCliente(widget.clienteId)
+        .listen(_onPedidosUpdate);
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
@@ -637,6 +694,15 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
 
         _chatSubs[p.id] = q.snapshots().listen(
           (snap) => _onMessagesUpdate(p.id, snap.docs),
+          onError: (Object error, StackTrace stackTrace) {
+            _unreadPorPedido[p.id] = false;
+            _lastUnreadAtPorPedido[p.id] = null;
+            _recalculateGlobal();
+            if (kDebugMode) {
+              // ignore: avoid_print
+              print('[ClienteHomeBanner] chatSub(${p.id}) error: $error');
+            }
+          },
         );
       }
     }
@@ -692,7 +758,8 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
 
     setState(() {
       _hasUnread = anyUnread;
-      _pedidoMaisRecente = bestPedidoId != null ? _pedidoPorId[bestPedidoId] : null;
+      _pedidoMaisRecente =
+          bestPedidoId != null ? _pedidoPorId[bestPedidoId] : null;
     });
   }
 
@@ -708,14 +775,17 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (!_hasUnread || _pedidoMaisRecente == null) return const SizedBox.shrink();
+    if (!_hasUnread || _pedidoMaisRecente == null) {
+      return const SizedBox.shrink();
+    }
 
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
     final pedido = _pedidoMaisRecente!;
 
-    return GestureDetector(
+    return AppCard(
+      variant: AppCardVariant.flat,
       onTap: () async {
-        ChatService.instance.ensureChatMetaForPedido(pedido.id);
+        await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
         final chatSnap = await FirebaseFirestore.instance
             .collection('chats')
@@ -731,7 +801,7 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
         if (!context.mounted) return;
 
         if (prestadorId.trim().isEmpty) {
-          Navigator.of(context).push(
+          await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => PedidoDetalheScreen(pedidoId: pedido.id),
             ),
@@ -739,7 +809,7 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
           return;
         }
 
-        Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ChatThreadScreen(
               pedidoId: pedido.id,
@@ -752,41 +822,32 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: primary.withAlpha((0.08 * 255).round()),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.mark_chat_unread_outlined, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.unreadMessagesTitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.unreadMessagesCta,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.mark_chat_unread_outlined,
+            size: 22,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.unreadMessagesTitle,
+                  style: theme.textTheme.labelLarge,
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  l10n.unreadMessagesCta,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -808,60 +869,38 @@ class _ListaServicosPorModo extends StatefulWidget {
 }
 
 class _ListaServicosPorModoState extends State<_ListaServicosPorModo> {
-  String _search = '';
-  ServicoSearchIndex<Servico>? _searchIndex;
-  String _searchKey = '';
-
-  void _ensureSearchIndex() {
-    final list = widget.servicos;
-    final key = list.isEmpty
-        ? 'empty'
-        : '${list.length}:${list.first.id}:${list.last.id}';
-    if (_searchIndex != null && _searchKey == key) return;
-    _searchKey = key;
-    _searchIndex = ServicoSearchIndex<Servico>(
-      items: list,
-      id: (s) => s.id,
-      name: (s) => s.name,
-      keywords: (s) => s.keywords,
-      mode: (s) => s.mode,
-    );
-  }
+  // O SmartSearchBar gere a pesquisa agpra. A lista abaixo mostra tudo por defeito.
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final targetMode = _normalizeServicoMode(widget.modo);
-    final query = _search.trim();
-    final filtered = query.isEmpty
-        ? widget.servicos
-            .where((s) => _normalizeServicoMode(s.mode) == targetMode)
-            .toList()
-        : (() {
-            _ensureSearchIndex();
-            final results =
-                _searchIndex?.search(query, limit: 300) ?? const <Servico>[];
-            return results
-                .where((s) => _normalizeServicoMode(s.mode) == targetMode)
-                .toList();
-          })();
+
+    // Mostra apenas a lista completa filtrada pelo modo (Tab atual)
+    final filtered = widget.servicos
+        .where((s) => _normalizeServicoMode(s.mode) == targetMode)
+        .toList();
 
     return Column(
       children: [
-        TextField(
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.search),
-            hintText: l10n.serviceSearchHint,
-            border: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-            ),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-          ),
-          onChanged: (value) => setState(() => _search = value),
+        SmartSearchBar<Servico>(
+          hintText: l10n.serviceSearchHint,
+          allItems: widget.servicos
+              .where((s) => _normalizeServicoMode(s.mode) == targetMode)
+              .toList(),
+          idSelector: (s) => s.id,
+          nameSelector: (s) => s.name,
+          keywordsSelector: (s) => s.keywords,
+          onItemSelected: (servico) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => NovoPedidoScreen(
+                  modo: widget.modo,
+                  servicoInicial: servico,
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 12),
         Expanded(
@@ -910,57 +949,42 @@ class _ServicoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context);
+    final theme = Theme.of(context);
     final icon = _mapIcon(servico.iconKey);
 
-    return InkWell(
+    return AppCard(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            child: Icon(icon, color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  servico.nameForLang(locale.languageCode),
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                AppChip(
+                  label: _descricaoModo(servico.mode, l10n),
+                  variant: AppChipVariant.choice,
+                  size: AppChipSize.sm,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: Colors.grey.shade100,
-              child: Icon(icon, color: Colors.grey.shade800),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    servico.name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _descricaoModo(servico.mode, l10n),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
-        ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
       ),
     );
   }
@@ -1006,9 +1030,10 @@ class _ClientePedidosTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final user = AuthService.currentUser;
     if (user == null) {
-      return Center(child: Text(l10n.userNotAuthenticatedError));
+      return const Center(child: CircularProgressIndicator());
     }
 
     return DefaultTabController(
@@ -1020,24 +1045,35 @@ class _ClientePedidosTab extends StatelessWidget {
           children: [
             Text(
               l10n.myOrdersTitle,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: theme.textTheme.headlineSmall,
             ),
-            const SizedBox(height: 12),
-            TabBar(
-              labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            const SizedBox(height: AppSpacing.x3),
+            AppTabBar(
               tabs: [
                 Tab(text: l10n.ordersTabPending),
                 Tab(text: l10n.ordersTabCompleted),
                 Tab(text: l10n.ordersTabCancelled),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.x2),
             Expanded(
               child: StreamBuilder<List<Pedido>>(
-                stream: pedidosStream ??
-                    PedidosRepo.streamPedidosDoCliente(user.uid),
+                initialData: const <Pedido>[],
+                stream: (pedidosStream ??
+                        PedidosRepo.streamPedidosDoCliente(user.uid))
+                    .timeout(
+                  const Duration(seconds: 12),
+                  onTimeout: (sink) {
+                    if (kDebugMode) {
+                      // ignore: avoid_print
+                      print('[ClientePedidosTab] stream timeout -> empty list');
+                    }
+                    sink.add(const <Pedido>[]);
+                  },
+                ),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
@@ -1054,10 +1090,15 @@ class _ClientePedidosTab extends StatelessWidget {
                   final pedidos = snapshot.data ?? [];
 
                   final pendentes = pedidos
-                      .where((p) => p.estado != 'concluido' && p.estado != 'cancelado')
+                      .where(
+                        (p) =>
+                            p.estado != 'concluido' && p.estado != 'cancelado',
+                      )
                       .toList();
-                  final concluidos = pedidos.where((p) => p.estado == 'concluido').toList();
-                  final cancelados = pedidos.where((p) => p.estado == 'cancelado').toList();
+                  final concluidos =
+                      pedidos.where((p) => p.estado == 'concluido').toList();
+                  final cancelados =
+                      pedidos.where((p) => p.estado == 'cancelado').toList();
 
                   pendentes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
                   concluidos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -1123,6 +1164,7 @@ class _PedidoClienteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     String subtitulo;
     if (pedido.tipoPreco == 'por_orcamento') {
       subtitulo = pedido.modo == 'AGENDADO'
@@ -1141,9 +1183,10 @@ class _PedidoClienteCard extends StatelessWidget {
     final textoAcao = _textoAcaoPendente(pedido, l10n);
 
     final tipoPrecoLabel = _labelTipoPrecoCliente(pedido.tipoPreco, l10n);
-    final tipoPagamentoLabel = _labelTipoPagamentoCliente(pedido.tipoPagamento, l10n);
+    final tipoPagamentoLabel =
+        _labelTipoPagamentoCliente(pedido.tipoPagamento, l10n);
 
-    return InkWell(
+    return AppCard(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -1151,92 +1194,100 @@ class _PedidoClienteCard extends StatelessWidget {
           ),
         );
       },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.assignment_outlined),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    pedido.titulo,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.assignment_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.x2),
+              Expanded(
+                child: Text(
+                  pedido.titulo,
+                  style: theme.textTheme.titleSmall,
                 ),
-                const Icon(Icons.chevron_right),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              pedido.categoria ?? l10n.categoryNotDefined,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitulo,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.orderStateLabel(estadoLabel),
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.orderPriceModelLabel(tipoPrecoLabel),
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.orderPaymentLabel(tipoPagamentoLabel),
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.orderValueLabel(valorLabel),
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-            if (acaoPendente) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  const Icon(Icons.info_outline, size: 16, color: Colors.orange),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      textoAcao,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ],
-            const SizedBox(height: 8),
-            PedidoChatPreview(
-              pedidoId: pedido.id,
-              viewerRole: 'cliente',
+          ),
+          const SizedBox(height: AppSpacing.x1),
+          Text(
+            pedido.categoria ?? l10n.categoryNotDefined,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x1),
+          Text(
+            subtitulo,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x2),
+          Wrap(
+            spacing: AppSpacing.x2,
+            runSpacing: AppSpacing.x2,
+            children: [
+              AppChip(
+                label: estadoLabel,
+                variant: AppChipVariant.status,
+                size: AppChipSize.sm,
+              ),
+              AppChip(
+                label: tipoPrecoLabel,
+                variant: AppChipVariant.choice,
+                size: AppChipSize.sm,
+              ),
+              AppChip(
+                label: tipoPagamentoLabel,
+                variant: AppChipVariant.filter,
+                size: AppChipSize.sm,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.x2),
+          Text(
+            l10n.orderValueLabel(valorLabel),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (acaoPendente) ...[
+            const SizedBox(height: AppSpacing.x2),
+            Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: AppPalette.warning,
+                ),
+                const SizedBox(width: AppSpacing.x1),
+                Expanded(
+                  child: Text(
+                    textoAcao,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppPalette.warning,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.x2),
+          PedidoChatPreview(
+            pedidoId: pedido.id,
+            viewerRole: 'cliente',
+          ),
+        ],
       ),
     );
   }
@@ -1254,42 +1305,138 @@ class _ContaTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.accountTitle(roleLabel),
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+    final theme = Theme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth > AppBreakpoints.tabletMax
+            ? AppBreakpoints.contentMaxSingleColumn
+            : double.infinity;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x5,
+            AppSpacing.x6,
           ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-            title: Text(l10n.accountNameTitle),
-            subtitle: Text(l10n.accountProfileSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ClientePerfilScreen(),
-                ),
-              );
-            },
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.accountTitle(roleLabel),
+                    style: theme.textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.x4),
+                  AppCard(
+                    child: Column(
+                      children: [
+                        AppListTile(
+                          title: Text(l10n.accountNameTitle),
+                          subtitle: Text(l10n.accountProfileSubtitle),
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person_outline),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ClientePerfilScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.x2),
+                        AppListTile(
+                          title: const Text('País / Região'),
+                          subtitle: FutureBuilder<String?>(
+                            future: _loadRegionLabel(),
+                            builder: (context, snapshot) {
+                              final label = snapshot.data;
+                              if (label != null && label.trim().isNotEmpty) {
+                                return Text(label);
+                              }
+                              return const Text('Selecionar...');
+                            },
+                          ),
+                          leading: const Icon(Icons.public),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () async {
+                            await RegionSelectionWidget.show(context);
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.x2),
+                        const ThemeModeSelectorTile(
+                          title: 'Tema',
+                          systemLabel: 'Sistema',
+                          lightLabel: 'Claro',
+                          darkLabel: 'Escuro',
+                        ),
+                        const Divider(height: AppSpacing.x5),
+                        AppListTile(
+                          title: Text(l10n.accountSettings),
+                          leading: const Icon(Icons.settings_outlined),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {},
+                        ),
+                        const SizedBox(height: AppSpacing.x2),
+                        AppListTile(
+                          title: Text(l10n.accountHelpSupport),
+                          leading: const Icon(Icons.help_outline),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const SuporteScreen(userType: 'cliente'),
+                              ),
+                            );
+                          },
+                        ),
+                        FutureBuilder<IdTokenResult?>(
+                          future: FirebaseAuth.instance.currentUser
+                              ?.getIdTokenResult(),
+                          builder: (context, snapshot) {
+                            final claims = snapshot.data?.claims ??
+                                const <String, dynamic>{};
+                            final isAdmin = claims['admin'] == true ||
+                                AppConfig.useFirebaseEmulators;
+                            if (!isAdmin) return const SizedBox.shrink();
+                            return Column(
+                              children: [
+                                const SizedBox(height: AppSpacing.x2),
+                                AppListTile(
+                                  title: const Text('Backoffice Admin'),
+                                  subtitle: const Text(
+                                      'Métricas, suporte e moderação'),
+                                  leading: const Icon(
+                                      Icons.admin_panel_settings_outlined),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AdminPanelScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: Text(l10n.accountSettings),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: Text(l10n.accountHelpSupport),
-            onTap: () {},
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

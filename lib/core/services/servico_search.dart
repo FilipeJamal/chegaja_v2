@@ -48,7 +48,7 @@ class ServicoSearchIndex<T> {
       if (refs == null) continue;
       for (final ref in refs) {
         scores.update(ref.index, (v) => v + ref.weight,
-            ifAbsent: () => ref.weight);
+            ifAbsent: () => ref.weight,);
       }
     }
 
