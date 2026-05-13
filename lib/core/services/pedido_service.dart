@@ -674,6 +674,62 @@ class PedidoService {
     );
   }
 
+  /// 6b) CLIENTE -> rejeita o valor final e devolve o pedido ao servico.
+  ///
+  /// Resultado:
+  /// - statusConfirmacaoValor = "rejeitado_cliente"
+  /// - status = "em_andamento"
+  /// - prestador pode propor um novo valor final
+  Future<void> rejeitarValorFinal({
+    required Pedido pedido,
+    required String clienteId,
+    String? motivo,
+  }) async {
+    _assertOwnership(
+      pedido: pedido,
+      userId: clienteId,
+      role: 'cliente',
+    );
+
+    if (pedido.precoPropostoPrestador == null) {
+      throw Exception('Valor final proposto nao encontrado.');
+    }
+
+    if (pedido.statusConfirmacaoValor != 'pendente_cliente') {
+      throw Exception('Valor final nao esta pendente de confirmacao.');
+    }
+
+    _ensureTransition(
+      pedido: pedido,
+      to: PedidoStateMachine.emAndamento,
+      role: 'cliente',
+    );
+
+    final motivoTrim = motivo?.trim();
+    final descricao = motivoTrim != null && motivoTrim.isNotEmpty
+        ? 'Cliente rejeitou o valor final: $motivoTrim'
+        : 'Cliente rejeitou o valor final';
+
+    await _colPedidos.doc(pedido.id).update({
+      'statusConfirmacaoValor': 'rejeitado_cliente',
+      ..._statusPatch('em_andamento'),
+      ..._historyPatch(
+        evento: 'valor_final_rejeitado',
+        userId: clienteId,
+        descricao: descricao,
+      ),
+    });
+
+    await _logPedidoEvent(
+      name: 'pedido_valor_final_rejeitado',
+      pedidoId: pedido.id,
+      estado: 'em_andamento',
+      modo: pedido.modo,
+      tipoPreco: pedido.tipoPreco,
+      role: 'cliente',
+    );
+  }
+
   /// Helper: ver se o valor final ficou fora da faixa estimada pelo prestador
   static bool valorForaDaFaixa({
     required double valor,

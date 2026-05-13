@@ -16,6 +16,7 @@ Pedido _buildPedido({
   double? valorMinEstimadoPrestador,
   double? valorMaxEstimadoPrestador,
   String statusProposta = 'nenhuma',
+  String statusConfirmacaoValor = 'nenhum',
 }) {
   return Pedido(
     id: id,
@@ -36,7 +37,7 @@ Pedido _buildPedido({
     propostaExpiresAt: null,
     precoPropostoPrestador: precoPropostoPrestador,
     precoFinal: null,
-    statusConfirmacaoValor: 'nenhum',
+    statusConfirmacaoValor: statusConfirmacaoValor,
     commissionPlatform: null,
     earningsProvider: null,
     earningsTotal: null,
@@ -172,6 +173,46 @@ void main() {
           valorFinal: 100,
         ),
         throwsException,
+      );
+    });
+
+    test('rejeitarValorFinal volta pedido para em andamento com historico',
+        () async {
+      final db = FakeFirebaseFirestore();
+      final service = PedidoService(firestore: db, trackAnalytics: false);
+
+      final pedido = _buildPedido(
+        id: 'pedido_rejeita_valor',
+        prestadorId: 'prest_6',
+        estado: PedidoStateMachine.aguardaConfirmacaoValor,
+        precoPropostoPrestador: 120,
+        statusConfirmacaoValor: 'pendente_cliente',
+      );
+      await _seedPedido(db, pedido);
+
+      await service.rejeitarValorFinal(
+        pedido: pedido,
+        clienteId: 'cliente_1',
+        motivo: 'Preciso confirmar o material.',
+      );
+
+      final snap =
+          await db.collection('pedidos').doc('pedido_rejeita_valor').get();
+      final data = snap.data()!;
+
+      expect(data['status'], PedidoStateMachine.emAndamento);
+      expect(data['estado'], PedidoStateMachine.emAndamento);
+      expect(data['statusConfirmacaoValor'], 'rejeitado_cliente');
+      expect(_asDouble(data['precoPropostoPrestador']), 120);
+
+      final historico = data['historico'] as List<dynamic>;
+      expect(historico, isNotEmpty);
+      final ultimoEvento = historico.last as Map<String, dynamic>;
+      expect(ultimoEvento['evento'], 'valor_final_rejeitado');
+      expect(ultimoEvento['userId'], 'cliente_1');
+      expect(
+        ultimoEvento['descricao'],
+        contains('Preciso confirmar o material.'),
       );
     });
 

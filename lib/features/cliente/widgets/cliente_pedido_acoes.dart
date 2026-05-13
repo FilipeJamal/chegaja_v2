@@ -2,7 +2,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
@@ -357,9 +356,10 @@ class _ValorFinalPendenteCard extends StatelessWidget {
               content: Row(
                 children: [
                   SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator()),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(),
+                  ),
                   SizedBox(width: 12),
                   Expanded(child: Text('A iniciar pagamento...')),
                 ],
@@ -419,27 +419,14 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
   Future<void> _rejeitarValor(BuildContext context) async {
     try {
-      final ref =
-          FirebaseFirestore.instance.collection('pedidos').doc(pedido.id);
+      final user = AuthService.currentUser;
+      if (user == null) return;
 
-      await ref.update({
-        // cliente está a dizer que NÃO concorda com o valor proposto
-        'statusConfirmacaoValor': 'rejeitado_cliente',
-
-        // voltamos o fluxo do serviço para "em andamento"
-        'status': 'em_andamento',
-        'estado': 'em_andamento',
-
-        // (opcional) Se quiseres limpar a proposta antiga, podes descomentar:
-        // 'precoPropostoPrestador': null,
-
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // ⚠️ IMPORTANTE:
-      // Este valor "rejeitado_cliente" é o que faz aparecer o banner laranja
-      // no lado do prestador (PedidoDetalheScreen em modo prestador),
-      // com o botão "Propor novo valor".
+      await PedidoService.instance.rejeitarValorFinal(
+        pedido: pedido,
+        clienteId: user.uid,
+        motivo: 'Cliente indicou duvida sobre o valor final.',
+      );
 
       if (!context.mounted) return;
 
