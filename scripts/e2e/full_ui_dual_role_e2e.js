@@ -24,6 +24,7 @@ const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const SHOT_ROOT = process.env.SHOT_DIR || path.join(os.tmpdir(), 'chegaja-e2e-full-ui');
 const SHOT_DIR = path.join(SHOT_ROOT, RUN_ID);
 const PROVIDER_NAME = process.env.E2E_PROVIDER_NAME || `Prestador E2E ${RUN_ID.slice(-6)}`;
+const SCENARIO = resolveScenario(process.argv.slice(2), process.env.E2E_SCENARIO || 'full');
 
 let serviceCatalogCache = null;
 
@@ -35,6 +36,27 @@ fs.mkdirSync(SHOT_DIR, { recursive: true });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const now = () => new Date().toISOString().slice(11, 19);
+
+function resolveScenario(args, fallback) {
+  const allowed = new Set(['full', 'orcamento']);
+  let scenario = fallback || 'full';
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--scenario' && args[index + 1]) {
+      scenario = args[index + 1];
+      index += 1;
+    } else if (arg.startsWith('--scenario=')) {
+      scenario = arg.slice('--scenario='.length);
+    }
+  }
+
+  scenario = `${scenario}`.trim().toLowerCase();
+  if (!allowed.has(scenario)) {
+    throw new Error(`Unsupported E2E scenario "${scenario}". Use one of: ${[...allowed].join(', ')}`);
+  }
+  return scenario;
+}
 
 function probeUrl(urlString, timeoutMs = 2500) {
   return new Promise((resolve) => {
@@ -124,6 +146,77 @@ function tsMillis(value) {
   if (value._seconds != null) return value._seconds * 1000;
   if (value.seconds != null) return value.seconds * 1000;
   return 0;
+}
+
+function asNumber(value) {
+  if (value == null) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function near(value, expected, tolerance = 0.001) {
+  const number = asNumber(value);
+  return number != null && Math.abs(number - expected) <= tolerance;
+}
+
+function hasHistoryEvent(data, eventName) {
+  return Array.isArray(data?.historico) && data.historico.some((item) => `${item?.evento || ''}` === eventName);
+}
+
+function isOrcamentoQuotePending(data, providerUid) {
+  return (
+    data &&
+    (data.estado || data.status) === 'aguarda_resposta_cliente' &&
+    data.prestadorId === providerUid &&
+    data.tipoPreco === 'por_orcamento' &&
+    data.statusProposta === 'pendente_cliente' &&
+    near(data.valorMinEstimadoPrestador, 20) &&
+    near(data.valorMaxEstimadoPrestador, 35) &&
+    hasHistoryEvent(data, 'proposta_enviada')
+  );
+}
+
+function isOrcamentoAccepted(data) {
+  return (
+    data &&
+    (data.estado || data.status) === 'aceito' &&
+    data.tipoPreco === 'por_orcamento' &&
+    data.statusProposta === 'aceita_cliente' &&
+    near(data.valorMinEstimadoPrestador, 20) &&
+    near(data.valorMaxEstimadoPrestador, 35) &&
+    hasHistoryEvent(data, 'proposta_aceita')
+  );
+}
+
+function isOrcamentoFinalPending(data) {
+  return (
+    data &&
+    (data.estado || data.status) === 'aguarda_confirmacao_valor' &&
+    data.statusConfirmacaoValor === 'pendente_cliente' &&
+    data.statusProposta === 'aceita_cliente' &&
+    near(data.precoPropostoPrestador, 30) &&
+    near(data.valorMinEstimadoPrestador, 20) &&
+    near(data.valorMaxEstimadoPrestador, 35) &&
+    hasHistoryEvent(data, 'valor_proposto')
+  );
+}
+
+function isOrcamentoConcluido(data) {
+  return (
+    data &&
+    (data.estado || data.status) === 'concluido' &&
+    data.tipoPreco === 'por_orcamento' &&
+    data.statusProposta === 'aceita_cliente' &&
+    data.statusConfirmacaoValor === 'confirmado_cliente' &&
+    near(data.valorMinEstimadoPrestador, 20) &&
+    near(data.valorMaxEstimadoPrestador, 35) &&
+    near(data.precoFinal, 30) &&
+    near(data.preco, 30) &&
+    near(data.commissionPlatform, 4.5) &&
+    near(data.earningsProvider, 25.5) &&
+    near(data.earningsTotal, 30) &&
+    hasHistoryEvent(data, 'concluido')
+  );
 }
 
 function uniqueNonEmpty(list) {
@@ -1909,6 +2002,83 @@ async function runHappyPathScenario(client, provider, providerUid) {
   return pedidoId;
 }
 
+async function runOrcamentoScenario(client, provider, providerUid) {
+  console.log(`[${now()}] Scenario L2 orçamento min-max`);
+  await gotoRole(client, 'cliente');
+  await seedProviderBase(providerUid, { online: true });
+  await ensureProviderSetupDone(provider);
+  await ensureProviderOnline(provider);
+
+  const baseline = await latestPedidoMeta();
+  const title = await createOrder(client, {
+    titlePrefix: 'E2E-ORCAMENTO',
+    description: 'Fluxo orçamento min-max',
+  });
+  const pedidoId = await waitNewPedidoAfter(baseline.createdAtMs);
+  if (!pedidoId) throw new Error('Pedido not created (orcamento scenario)');
+  await shot(client, '10_orcamento_client_order_created');
+
+  const created = await getPedido(pedidoId);
+  if (created?.tipoPreco !== 'por_orcamento') {
+    throw new Error(`Orçamento pedido expected tipoPreco=por_orcamento, got ${created?.tipoPreco || 'null'}`);
+  }
+
+  await seedProviderBase(providerUid, {
+    online: true,
+    serviceId: created?.servicoId || null,
+    serviceName: created?.servicoNome || created?.categoria || null,
+  });
+  await ensureProviderSetupDone(provider);
+  await ensureProviderOnline(provider);
+
+  await providerAcceptAndQuote(provider, pedidoId, providerUid);
+  await shot(provider, '11_orcamento_provider_quote_sent');
+  const quoted = await waitPedidoWhere(
+    pedidoId,
+    'orcamento proposta min-max pendente',
+    (data) => isOrcamentoQuotePending(data, providerUid),
+    45000,
+  );
+  console.log(
+    `[${now()}] orcamento quote ok pedido=${pedidoId} min=${quoted?.valorMinEstimadoPrestador} max=${quoted?.valorMaxEstimadoPrestador}`,
+  );
+
+  await clientAcceptProvider(client, pedidoId);
+  await shot(client, '12_orcamento_client_accept_provider');
+  await waitPedidoWhere(
+    pedidoId,
+    'orcamento proposta aceita',
+    isOrcamentoAccepted,
+    45000,
+  );
+
+  await providerStart(provider, pedidoId);
+  await shot(provider, '13_orcamento_provider_started');
+
+  await providerSendFinal(provider, pedidoId);
+  await shot(provider, '14_orcamento_provider_final_sent');
+  await waitPedidoWhere(
+    pedidoId,
+    'orcamento valor final pendente',
+    isOrcamentoFinalPending,
+    45000,
+  );
+
+  await clientConfirmFinal(client, pedidoId);
+  await shot(client, '15_orcamento_client_confirmed');
+  const finalData = await waitPedidoWhere(
+    pedidoId,
+    'orcamento concluido',
+    isOrcamentoConcluido,
+    45000,
+  );
+
+  console.log(
+    `[${now()}] orcamento ok pedido=${pedidoId} estado=${finalData?.estado} min=${finalData?.valorMinEstimadoPrestador} max=${finalData?.valorMaxEstimadoPrestador} final=${finalData?.precoFinal} commission=${finalData?.commissionPlatform}`,
+  );
+  return pedidoId;
+}
+
 async function runCancelScenario(client, providerUid) {
   console.log(`[${now()}] Scenario 2/3 cancelamento cliente`);
   await gotoRole(client, 'cliente');
@@ -2041,11 +2211,22 @@ async function smokeTabs(client, provider) {
         `UID invalid client=${clientUid} provider=${providerUid} clientUrl=${client.url()} providerUrl=${provider.url()} clientBody=${clientText.slice(0, 120)} providerBody=${providerText.slice(0, 120)}`,
       );
     }
-    console.log(`[${now()}] UIDs client=${clientUid} provider=${providerUid} providerName=${PROVIDER_NAME}`);
+    console.log(`[${now()}] UIDs client=${clientUid} provider=${providerUid} providerName=${PROVIDER_NAME} scenario=${SCENARIO}`);
 
     await seedProviderBase(providerUid, { online: true });
     await ensureProviderSetupDone(provider);
     await ensureProviderOnline(provider);
+
+    if (SCENARIO === 'orcamento') {
+      const orcamentoPedidoId = await runOrcamentoScenario(client, provider, providerUid);
+      const doneOrcamento = await getPedido(orcamentoPedidoId);
+      console.log(
+        `[${now()}] summary orcamento=${orcamentoPedidoId}:${doneOrcamento?.estado}/${doneOrcamento?.statusProposta}/${doneOrcamento?.statusConfirmacaoValor} final=${doneOrcamento?.precoFinal}`,
+      );
+      console.log(`[${now()}] ORCAMENTO MIN-MAX FLOW OK`);
+      console.log(`[${now()}] screenshots: ${SHOT_DIR}`);
+      return;
+    }
 
     const fullFlowPedidoId = await runHappyPathScenario(client, provider, providerUid);
     const cancelPedidoId = await runCancelScenario(client, providerUid);

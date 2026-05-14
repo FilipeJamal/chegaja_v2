@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js"
+    "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js",
+    "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",
