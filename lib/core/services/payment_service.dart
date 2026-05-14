@@ -5,6 +5,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/utils/platform_caps.dart';
 
 /// Pagamentos (Stripe) — camada Flutter.
 ///
@@ -17,7 +18,8 @@ class PaymentService {
 
   static final PaymentService instance = PaymentService._();
 
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
+  final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
 
   HttpsCallable _callable(String name) {
     return _functions.httpsCallable(name);
@@ -32,6 +34,13 @@ class PaymentService {
     final pid = pedidoId.trim();
     if (pid.isEmpty) {
       throw ArgumentError('pedidoId vazio');
+    }
+    if (!PlatformCaps.supportsStripe) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[Stripe] PaymentSheet indisponivel nesta plataforma.');
+      }
+      return false;
     }
 
     final res = await _callable('payments_createPaymentIntent').call({
@@ -70,6 +79,12 @@ class PaymentService {
 
   /// Cria/recupera conta Connect para o prestador e abre o link de onboarding.
   Future<void> startPrestadorOnboarding() async {
+    if (!PlatformCaps.supportsCloudFunctions) {
+      throw UnsupportedError(
+        'Onboarding Stripe indisponivel nesta plataforma.',
+      );
+    }
+
     final res = await _callable('payments_createOnboardingLink').call();
 
     final data = (res.data is Map)

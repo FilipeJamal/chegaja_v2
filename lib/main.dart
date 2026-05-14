@@ -24,6 +24,7 @@ import 'core/services/remote_config_service.dart';
 import 'core/services/servico_seed.dart';
 import 'core/services/theme_mode_service.dart';
 import 'core/services/user_country_service.dart';
+import 'core/utils/platform_caps.dart';
 import 'firebase_options.dart';
 
 const bool kRunFirebaseEmulatorTests =
@@ -48,6 +49,7 @@ bool _shouldForceWebSemantics() {
 
 Duration _authStartupTimeout() {
   if (kIsWeb) return const Duration(seconds: 12);
+  if (PlatformCaps.isDesktop) return const Duration(seconds: 20);
   return const Duration(seconds: 8);
 }
 
@@ -81,7 +83,9 @@ void _scheduleDeferredStartupTasks() {
 Future<void> _runDeferredStartupTasks() async {
   final bootstrap = Stopwatch()..start();
 
-  if (!kRunFirebaseEmulatorTests && !kFastDevMode) {
+  if (!kRunFirebaseEmulatorTests &&
+      !kFastDevMode &&
+      PlatformCaps.supportsAppCheck) {
     try {
       if (kIsWeb) {
         final siteKey = AppConfig.appCheckWebRecaptchaSiteKey;
@@ -110,9 +114,16 @@ Future<void> _runDeferredStartupTasks() async {
 
   if (!kRunFirebaseEmulatorTests && !kFastDevMode) {
     final pk = AppConfig.stripePublishableKey;
-    if (pk != null && pk.trim().isNotEmpty && !kIsWeb) {
-      Stripe.publishableKey = pk;
-      await Stripe.instance.applySettings();
+    if (pk != null && pk.trim().isNotEmpty && PlatformCaps.supportsStripe) {
+      try {
+        Stripe.publishableKey = pk;
+        await Stripe.instance.applySettings();
+      } catch (e, st) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[Stripe] init ignorado: $e\n$st');
+        }
+      }
     }
   }
 
@@ -173,7 +184,9 @@ Future<void> _runDeferredStartupTasks() async {
     }
   }
 
-  if (!kRunFirebaseEmulatorTests && !kFastDevMode) {
+  if (!kRunFirebaseEmulatorTests &&
+      !kFastDevMode &&
+      PlatformCaps.supportsRemoteConfig) {
     try {
       unawaited(RemoteConfigService.instance.init());
     } catch (e) {
@@ -228,7 +241,7 @@ Future<void> mainCommon(AppConfig config) async {
           options: DefaultFirebaseOptions.currentPlatform,
         );
 
-        if (!kIsWeb && !kRunFirebaseEmulatorTests) {
+        if (PlatformCaps.supportsCrashlytics && !kRunFirebaseEmulatorTests) {
           FlutterError.onError =
               FirebaseCrashlytics.instance.recordFlutterFatalError;
 

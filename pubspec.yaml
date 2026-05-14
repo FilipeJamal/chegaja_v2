@@ -96,6 +96,8 @@ dependency_overrides:
     path: packages/firebase_auth
   firebase_auth_web:
     path: packages/firebase_auth_web
+  flutter_local_notifications_windows:
+    path: packages/flutter_local_notifications_windows_stub
 
 flutter_launcher_icons:
   android: "ic_launcher"

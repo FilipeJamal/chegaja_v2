@@ -23,13 +23,18 @@ class PlatformCaps {
 
   /// Cloud Functions: Web + Android + iOS (+ macOS, se tu quiseres usar)
   /// (Windows/Linux costumam dar MissingPluginException)
-  static bool get supportsCloudFunctions => kIsWeb || isAndroid || isIOS || isMacOS;
+  static bool get supportsCloudFunctions =>
+      kIsWeb || isAndroid || isIOS || isMacOS;
 
   /// Crashlytics: só Android + iOS (não Web / não Windows / não Linux)
   static bool get supportsCrashlytics => isAndroid || isIOS;
 
   /// App Check: Web + Android + iOS (desktop geralmente não)
   static bool get supportsAppCheck => kIsWeb || isAndroid || isIOS;
+
+  /// Remote Config: Web + Android + iOS + macOS.
+  static bool get supportsRemoteConfig =>
+      kIsWeb || isAndroid || isIOS || isMacOS;
 
   /// Stripe: Android + iOS (não Web / não Windows / não Linux)
   static bool get supportsStripe => isAndroid || isIOS;
