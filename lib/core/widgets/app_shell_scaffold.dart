@@ -38,11 +38,17 @@ class AppShellScaffold extends StatelessWidget {
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= AppBreakpoints.desktopMin;
         final compactLabels = constraints.maxWidth < 420;
-        final content = KeyedSubtree(
-          key: ValueKey(
-            'app-shell-page-$currentIndex-${destinations[currentIndex].label}',
-          ),
-          child: destinations[currentIndex].child,
+        final content = IndexedStack(
+          index: currentIndex,
+          children: [
+            for (var index = 0; index < destinations.length; index += 1)
+              KeyedSubtree(
+                key: ValueKey(
+                  'app-shell-page-$index-${destinations[index].label}',
+                ),
+                child: destinations[index].child,
+              ),
+          ],
         );
 
         if (useRail) {
