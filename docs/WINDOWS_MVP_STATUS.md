@@ -322,6 +322,166 @@ M1.5 parcial.
 Nao avancar para M2 Android como "Windows fechado" enquanto Cliente Web + Prestador Windows nao for testado manualmente.
 ```
 
+## M1.6 - Validacao Windows automatizada sem teste manual
+
+Estado: fechado por automacao interna Flutter no Windows.
+
+Motivo da mudanca:
+
+```text
+Windows UI Automation externa ve apenas FLUTTERVIEW.
+Playwright/WinAppDriver/UI Automation nao conseguem clicar de forma confiavel nos botoes Flutter nativos.
+```
+
+Solucao:
+
+```text
+Usar integration_test no proprio Flutter Windows.
+O ator Windows roda UI real com WidgetTester.
+O outro papel e simulado por Firestore/PedidoService contra os emuladores.
+```
+
+Comando principal:
+
+```bash
+flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+```
+
+Script raiz adicionado:
+
+```bash
+npm.cmd run test:windows:cross
+```
+
+Tabela M1.6:
+
+| Fluxo | Metodo | Estado | Evidencia | Observacoes |
+| --- | --- | --- | --- | --- |
+| Cliente Windows + Prestador simulado pedido normal | integration_test Windows | passou | `Cliente Windows UI conclui pedido normal com prestador simulado` | UI cliente cria pedido, prestador simulado aceita/inicia/propoe valor, UI cliente confirma, pedido fica `concluido`. |
+| Prestador Windows + Cliente simulado pedido normal | integration_test Windows | passou | `Prestador Windows UI conclui pedido normal com cliente simulado` | UI prestador ve pedido no feed, aceita, inicia, lanca valor final; cliente simulado confirma. |
+| Cliente Windows + Prestador simulado orcamento | integration_test Windows | passou | `Cliente Windows UI conclui orcamento com prestador simulado` | UI cliente aceita faixa min/max e confirma valor final. |
+| Prestador Windows + Cliente simulado orcamento | integration_test Windows | passou | `Prestador Windows UI conclui orcamento com cliente simulado` | UI prestador aceita pedido, envia faixa `20/35`, inicia e lanca valor `30`; cliente simulado aceita/confirma. |
+| Chat com um lado Windows | integration_test/servico | passou | `Chat com ator Windows escreve e le mensagens do outro lado` | Valida escrita/leitura em `chats/{pedidoId}/messages` com um ator Windows autenticado e resposta simulada. |
+| Anexos Windows | documentado/fallback | pendente nao bloqueante | Storage Emulator Windows indisponivel | Anexos ficam fora do criterio de fecho M1.6; app nao deve crashar, mas upload precisa fallback/teste posterior. |
+
+Validacoes do teste M1.6:
+
+```text
+estado = concluido
+status = concluido
+statusConfirmacaoValor = confirmado_cliente
+precoFinal preenchido
+commissionPlatform preenchido
+earningsProvider preenchido
+earningsTotal preenchido
+historico contem pedido_aceite / servico_iniciado / valor_proposto / concluido
+tipoPreco = por_orcamento nos fluxos de orcamento
+valorMinEstimadoPrestador = 20
+valorMaxEstimadoPrestador = 35
+statusProposta = aceita_cliente
+```
+
+Correcao real encontrada durante M1.6:
+
+```text
+PrestadorHomeScreen reutilizava o mesmo stream do documento prestadores/{uid}
+em dois StreamBuilder diferentes. No Windows/emulador, o primeiro StreamBuilder
+recebia o snapshot e o segundo podia ficar em waiting, deixando a lista
+"Pedidos perto de ti" sem cards mesmo com pedido aberto visivel no Firestore.
+```
+
+Correcao aplicada:
+
+```text
+Separar o stream do resumo/categorias e o stream usado para filtrar pedidos.
+```
+
+Tambem foram adicionadas keys estaveis pequenas para os pontos criticos de UI:
+
+```text
+novo_pedido_titulo_field
+novo_pedido_descricao_field
+novo_pedido_submit_button
+confirmar_valor_button
+cliente_aceitar_proposta_button
+prestador_aceitar_pedido_<pedidoId>
+prestador_iniciar_servico_button
+prestador_lancar_valor_final_button
+valor_final_field
+prestador_enviar_valor_final_button
+orcamento_min_field
+orcamento_max_field
+orcamento_enviar_button
+```
+
+Comando executado:
+
+```bash
+flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+```
+
+Resultado:
+
+```text
+5/5 passou:
+- Cliente Windows UI conclui pedido normal com prestador simulado
+- Prestador Windows UI conclui pedido normal com cliente simulado
+- Cliente Windows UI conclui orcamento com prestador simulado
+- Prestador Windows UI conclui orcamento com cliente simulado
+- Chat com ator Windows escreve e le mensagens do outro lado
+```
+
+Validacao final M1.6:
+
+| Comando | Estado | Observacoes |
+| --- | --- | --- |
+| `flutter test` | passou | 37/37 |
+| `cd functions && npm.cmd test` | passou | 11/11 |
+| `node --check scripts/e2e/full_ui_dual_role_e2e.js` | passou | Sem output. |
+| `npm.cmd run e2e:ui:dual` | passou | Executado sozinho apos restart completo dos emuladores/web-server; `FULL MULTI-SCENARIO FLOW OK`. |
+| `npm.cmd run e2e:ui:orcamento` | passou | Executado sozinho; `ORCAMENTO MIN-MAX FLOW OK`. |
+| `flutter test integration_test/pedido_flow_emulator_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou | 4/4 |
+| `npm.cmd run test:windows:cross` | passou | 5/5 |
+| `flutter build windows --debug` | passou | Build gerado em `build\windows\x64\runner\Debug\chegaja_v2.exe`. |
+| `flutter build windows --release` | passou | Build gerado em `build\windows\x64\runner\Release\chegaja_v2.exe`. |
+
+Nota operacional:
+
+```text
+Os E2E Web devem ser executados em sequencia.
+Rodar `e2e:ui:dual` e `e2e:ui:orcamento` em paralelo disputa os mesmos
+emuladores/web-server e pode gerar timeout/offline falso no Firestore Web.
+```
+
+Logs residuais nao bloqueantes:
+
+```text
+[Analytics] logEvent erro: PlatformException(... firebase_analytics ...)
+flutter_map OSM tile usage warning
+CMake warning do Firebase C++ SDK
+Nuget.exe not found, trying to download or use cached version
+Firestore Web pode imprimir INTERNAL ASSERTION FAILED em E2E com emulador; o fluxo final passou.
+```
+
+Ficheiros alterados nesta fase:
+
+- `integration_test/windows_cross_role_flow_test.dart`
+- `lib/features/cliente/novo_pedido_screen.dart`
+- `lib/features/cliente/widgets/cliente_pedido_acoes.dart`
+- `lib/features/prestador/prestador_home_screen.dart`
+- `lib/features/prestador/widgets/prestador_pedido_acoes.dart`
+- `package.json`
+- `docs/WINDOWS_MVP_STATUS.md`
+
+Decisao:
+
+```text
+M1.6 fechado.
+Windows pode avancar sem teste manual inicial, desde que a validacao final
+continue passando. Anexos/Storage Emulator Windows permanecem pendencia
+tecnica nao bloqueante.
+```
+
 ## Fallbacks Windows ativos
 
 | Area | Fallback |
@@ -333,24 +493,25 @@ Nao avancar para M2 Android como "Windows fechado" enquanto Cliente Web + Presta
 | Remote Config | Desativado no Windows. |
 | Cloud Functions para pagamentos | Bloqueado em `PaymentService` quando a plataforma nao suporta. |
 
-## Pendente depois de M1.5 parcial
+## Pendente depois de M1.6
 
-Ainda precisa de teste manual/automacao nativa:
+Pendente tecnico/QA, sem bloquear M2 Android:
 
-- [ ] Cliente Windows + Prestador Web concluem pedido normal.
-- [ ] Cliente Web + Prestador Windows concluem pedido normal.
-- [ ] Orcamento min/max com Cliente Windows + Prestador Web.
-- [ ] Orcamento min/max com Cliente Web + Prestador Windows.
+- [x] Cliente Windows UI conclui pedido normal com prestador simulado por emulador.
+- [x] Prestador Windows UI conclui pedido normal com cliente simulado por emulador.
+- [x] Orcamento min/max com Cliente Windows UI.
+- [x] Orcamento min/max com Prestador Windows UI.
+- [x] Chat com um lado Windows validado por integration_test/servico.
+- [ ] Teste visual humano futuro dos fluxos cruzados Windows/Web, apenas como QA complementar.
 - [ ] Testar criacao de pedido no Windows com morada/manual quando GPS falhar.
-- [ ] Testar chat com um lado Windows.
 - [ ] Testar upload/anexos no Windows.
 - [ ] Decidir fallback definitivo para Storage Emulator em Windows local.
 - [ ] Avaliar se os warnings de Firestore Windows exigem issue upstream ou upgrade FlutterFire.
 
 ## Proxima fase
 
-Antes de M2 Android, a recomendacao e:
+Se a validacao final completa continuar passando, a recomendacao e:
 
-1. Rodar os quatro fluxos cruzados M1.5 manualmente.
-2. Se houver bloqueio de UI Windows, corrigir antes de Android.
-3. Manter Web como baseline com E2E dual e orcamento.
+1. Avancar para M2 Android.
+2. Manter Web como baseline com E2E dual e orcamento.
+3. Manter M1.6 Windows como regressao automatizada antes de novas mudancas multiplataforma.

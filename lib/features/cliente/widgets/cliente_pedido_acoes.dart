@@ -134,6 +134,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  key: const Key('cliente_rejeitar_proposta_button'),
                   onPressed: () => _recusarPrestador(context),
                   child: const Text('Rejeitar proposta'),
                 ),
@@ -141,6 +142,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
+                  key: const Key('cliente_aceitar_proposta_button'),
                   onPressed: () => _aceitarPrestador(context),
                   child: const Text('Aceitar este prestador'),
                 ),
@@ -315,6 +317,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
+                  key: const Key('cliente_duvida_valor_button'),
                   onPressed: () => _rejeitarValor(context),
                   child: const Text('Tenho uma dúvida'),
                 ),
@@ -322,6 +325,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
+                  key: const Key('confirmar_valor_button'),
                   onPressed: () => _confirmarValor(context),
                   child: const Text('Confirmar valor'),
                 ),

@@ -33,6 +33,8 @@ import 'widgets/prestador_pedido_acoes.dart';
 final Map<String, Set<String>> _ignoradosPorPrestador = <String, Set<String>>{};
 
 const double kCommissionPercent = 0.15;
+const bool _disablePrestadorTrackingForEmulatorTests =
+    bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
 
 String _labelEstado(String estado) {
   switch (estado) {
@@ -315,6 +317,12 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
       return;
     }
 
+    if (_disablePrestadorTrackingForEmulatorTests) {
+      await _trackingSub?.cancel();
+      _trackingSub = null;
+      return;
+    }
+
     if (shouldBeOnline) {
       // Se deve estar online mas nao tem tracking, inicia
       if (_trackingSub == null) {
@@ -393,6 +401,7 @@ class _PrestadorInicioTab extends StatefulWidget {
 
 class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
   Stream<DocumentSnapshot<Map<String, dynamic>>>? _settingsStream;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _pedidosSettingsStream;
   Set<String> _disponiveisIds = <String>{};
   bool _disponiveisCarregados = false;
   bool _processandoRemocoes = false;
@@ -416,10 +425,11 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     if (!widget.roleReady) return;
     final user = AuthService.currentUser;
     if (user == null) return;
-    _settingsStream = FirebaseFirestore.instance
-        .collection('prestadores')
-        .doc(user.uid)
-        .snapshots();
+    final ref = FirebaseFirestore.instance.collection('prestadores').doc(
+          user.uid,
+        );
+    _settingsStream = ref.snapshots();
+    _pedidosSettingsStream = ref.snapshots();
   }
 
   Set<String> get _ignorados {
@@ -581,10 +591,12 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                   ),
                   actions: [
                     TextButton(
+                      key: const Key('prestador_orcamento_dialog_later_button'),
                       onPressed: () => Navigator.of(ctx).pop(false),
                       child: const Text('Mais tarde'),
                     ),
                     TextButton(
+                      key: const Key('prestador_orcamento_dialog_now_button'),
                       onPressed: () => Navigator.of(ctx).pop(true),
                       child: const Text('Enviar agora'),
                     ),
@@ -651,6 +663,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 const SizedBox(height: 16),
                 const Text('Valor mínimo (€)'),
                 TextField(
+                  key: const Key('orcamento_min_field'),
                   controller: minController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -662,6 +675,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 const SizedBox(height: 12),
                 const Text('Valor máximo (€)'),
                 TextField(
+                  key: const Key('orcamento_max_field'),
                   controller: maxController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -673,6 +687,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                 const SizedBox(height: 12),
                 const Text('Mensagem para o cliente (opcional)'),
                 TextField(
+                  key: const Key('orcamento_msg_field'),
                   controller: msgController,
                   maxLines: 2,
                   decoration: const InputDecoration(
@@ -689,6 +704,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
               child: const Text('Cancelar'),
             ),
             TextButton(
+              key: const Key('orcamento_enviar_button'),
               onPressed: () async {
                 final min = double.tryParse(
                   minController.text.replaceAll(',', '.').trim(),
@@ -1125,7 +1141,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
                     return StreamBuilder<
                         DocumentSnapshot<Map<String, dynamic>>>(
-                      stream: _settingsStream,
+                      stream: _pedidosSettingsStream,
                       builder: (context, settingsSnap) {
                         final sdata = settingsSnap.data?.data();
 
@@ -1665,6 +1681,7 @@ class _PedidoDisponivelCard extends StatelessWidget {
     final temDescricao = desc.isNotEmpty;
 
     return Container(
+      key: Key('prestador_pedido_card_${pedido.id}'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1691,11 +1708,13 @@ class _PedidoDisponivelCard extends StatelessWidget {
                 ),
               ),
               TextButton(
+                key: Key('prestador_ignorar_pedido_${pedido.id}'),
                 onPressed: onIgnorar,
                 child: const Text('Ignorar'),
               ),
               const SizedBox(width: 4),
               TextButton(
+                key: Key('prestador_aceitar_pedido_${pedido.id}'),
                 onPressed: onPropor,
                 child: const Text('Aceitar'),
               ),

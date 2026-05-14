@@ -175,6 +175,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
+        key: const Key('prestador_enviar_orcamento_button'),
         icon: const Icon(Icons.request_quote_rounded),
         label: const Text('Enviar orçamento (faixa min/max)'),
         onPressed: () async {
@@ -195,6 +196,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                       Text('Valor mínimo (${CurrencyUtils.currencySymbol()})'),
                       const SizedBox(height: 4),
                       TextField(
+                        key: const Key('orcamento_min_field'),
                         controller: minController,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
@@ -206,6 +208,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                       Text('Valor máximo (${CurrencyUtils.currencySymbol()})'),
                       const SizedBox(height: 4),
                       TextField(
+                        key: const Key('orcamento_max_field'),
                         controller: maxController,
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
@@ -217,6 +220,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                       const Text('Mensagem (opcional)'),
                       const SizedBox(height: 4),
                       TextField(
+                        key: const Key('orcamento_msg_field'),
                         controller: msgController,
                         decoration: const InputDecoration(
                           hintText: 'Ex.: Inclui deslocação',
@@ -231,6 +235,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                     child: const Text('Cancelar'),
                   ),
                   TextButton(
+                    key: const Key('orcamento_enviar_button'),
                     onPressed: () => Navigator.of(ctx).pop(true),
                     child: const Text('Enviar'),
                   ),
@@ -311,6 +316,7 @@ class _AcaoIniciarServico extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
+            key: const Key('prestador_iniciar_servico_button'),
             icon: const Icon(Icons.play_arrow_rounded),
             label: const Text('Iniciar serviço'),
             onPressed: () async {
@@ -419,6 +425,7 @@ class _AcaoLancarValorFinal extends StatelessWidget {
               Text('Valor final a cobrar (${CurrencyUtils.currencySymbol()})'),
               const SizedBox(height: 4),
               TextField(
+                key: const Key('valor_final_field'),
                 controller: controller,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -436,6 +443,7 @@ class _AcaoLancarValorFinal extends StatelessWidget {
               child: const Text('Cancelar'),
             ),
             TextButton(
+              key: const Key('prestador_enviar_valor_final_button'),
               onPressed: () async {
                 final txt = controller.text.replaceAll(',', '.').trim();
                 final valor = double.tryParse(txt);
@@ -557,6 +565,7 @@ class _AcaoLancarValorFinal extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
+            key: const Key('prestador_lancar_valor_final_button'),
             icon: const Icon(Icons.check_circle_outline),
             label: const Text('Terminar serviço e lançar valor final'),
             onPressed: () => _abrirDialogValorFinal(context),

@@ -1,7 +1,8 @@
 {
   "scripts": {
     "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js",
-    "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento"
+    "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento",
+    "test:windows:cross": "flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",

@@ -1080,6 +1080,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('novo_pedido_titulo_field'),
                         controller: _tituloController,
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(
@@ -1103,6 +1104,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
+                        key: const Key('novo_pedido_descricao_field'),
                         controller: _descricaoController,
                         maxLines: 3,
                         decoration: InputDecoration(
@@ -1369,6 +1371,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          key: const Key('novo_pedido_submit_button'),
                           onPressed: _salvando ? null : _submeter,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
