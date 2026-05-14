@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/firebase_options.dart';
 
 const bool _runEmulatorTests =
@@ -16,8 +17,10 @@ late FirebaseApp _providerApp;
 late FirebaseApp _clientApp;
 late FirebaseAuth _providerAuth;
 late FirebaseAuth _clientAuth;
+late FirebaseAuth _defaultAuth;
 late FirebaseFirestore _providerDb;
 late FirebaseFirestore _clientDb;
+late FirebaseFirestore _defaultDb;
 
 String _emulatorHost() {
   if (kIsWeb) return 'localhost';
@@ -47,13 +50,17 @@ Future<void> _initFirebaseApps() async {
 
   _providerAuth = FirebaseAuth.instanceFor(app: _providerApp);
   _clientAuth = FirebaseAuth.instanceFor(app: _clientApp);
+  _defaultAuth = FirebaseAuth.instance;
   _providerDb = FirebaseFirestore.instanceFor(app: _providerApp);
   _clientDb = FirebaseFirestore.instanceFor(app: _clientApp);
+  _defaultDb = FirebaseFirestore.instance;
 
   final host = _emulatorHost();
   try {
+    await _defaultAuth.useAuthEmulator(host, 9099);
     await _providerAuth.useAuthEmulator(host, 9099);
     await _clientAuth.useAuthEmulator(host, 9099);
+    _defaultDb.useFirestoreEmulator(host, 8080);
     _providerDb.useFirestoreEmulator(host, 8080);
     _clientDb.useFirestoreEmulator(host, 8080);
     debugPrint('[TEST] Emulators configured on $host');
@@ -63,6 +70,7 @@ Future<void> _initFirebaseApps() async {
   }
 
   try {
+    _defaultDb.settings = const Settings(persistenceEnabled: false);
     _providerDb.settings = const Settings(persistenceEnabled: false);
     _clientDb.settings = const Settings(persistenceEnabled: false);
   } catch (e) {
@@ -82,8 +90,11 @@ Future<FirebaseApp> _getOrCreateApp(String name) async {
 }
 
 Future<T> _withTimeout<T>(Future<T> future, String label) {
+  final timeout = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+      ? const Duration(seconds: 60)
+      : const Duration(seconds: 30);
   return future.timeout(
-    const Duration(seconds: 30),
+    timeout,
     onTimeout: () {
       debugPrint('[TEST] TIMEOUT: $label');
       throw TimeoutException('Timeout during $label');
@@ -108,7 +119,65 @@ void main() {
     if (_clientAuth.currentUser != null) {
       await _clientAuth.signOut();
     }
+    if (_defaultAuth.currentUser != null) {
+      await _defaultAuth.signOut();
+    }
   });
+
+  testWidgets(
+    'AuthService ensures anonymous default user on emulator',
+    (tester) async {
+      if (!_runEmulatorTests) return;
+      await tester.pump();
+
+      final user = await _withTimeout(
+        AuthService.ensureSignedInAnonymously(),
+        'AuthService anonymous sign-in',
+      );
+
+      expect(user.uid, isNotEmpty);
+      expect(AuthService.currentUser?.uid, user.uid);
+
+      final snap = await _withTimeout(
+        _defaultDb.collection('users').doc(user.uid).get(),
+        'load AuthService user doc',
+      );
+      expect(snap.exists, isTrue);
+      expect(snap.data()?['uid'], user.uid);
+    },
+    skip: !_runEmulatorTests,
+  );
+
+  testWidgets(
+    'AuthService completes before Firestore streams start',
+    (tester) async {
+      if (!_runEmulatorTests) return;
+      await tester.pump();
+
+      final user = await _withTimeout(
+        AuthService.ensureSignedInAnonymously(),
+        'AuthService anonymous sign-in before Firestore stream',
+      );
+      expect(user.uid, isNotEmpty);
+      expect(AuthService.currentUser?.uid, user.uid);
+
+      final sub = _defaultDb
+          .collection('servicos')
+          .where('ativo', isEqualTo: true)
+          .snapshots()
+          .listen(
+        (_) {},
+        onError: (Object error, StackTrace stackTrace) {
+          debugPrint('[TEST] post-auth Firestore stream error: $error');
+        },
+      );
+      addTearDown(sub.cancel);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(AuthService.currentUser?.uid, user.uid);
+    },
+    skip: !_runEmulatorTests,
+  );
 
   testWidgets(
     'automatic flow: prestador accepts open pedido',
@@ -118,7 +187,9 @@ void main() {
 
       debugPrint('[TEST] Step 1: Prestador creates account');
       await _withTimeout(
-          _providerAuth.signInAnonymously(), 'prestador sign-in',);
+        _providerAuth.signInAnonymously(),
+        'prestador sign-in',
+      );
       final prestadorId = _providerAuth.currentUser!.uid;
 
       await _withTimeout(
@@ -189,7 +260,9 @@ void main() {
 
       debugPrint('[TEST] Step 1: Prestador Setup');
       await _withTimeout(
-          _providerAuth.signInAnonymously(), 'prestador sign-in',);
+        _providerAuth.signInAnonymously(),
+        'prestador sign-in',
+      );
       final prestadorId = _providerAuth.currentUser!.uid;
 
       await _withTimeout(

@@ -168,6 +168,13 @@ bool _temAcaoPendente(Pedido p) {
   return false;
 }
 
+Duration _clienteAuthBootstrapTimeout() {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+    return const Duration(seconds: 45);
+  }
+  return const Duration(seconds: 12);
+}
+
 String _textoAcaoPendente(Pedido p, AppLocalizations l10n) {
   if (p.estado == 'cancelado' || p.estado == 'concluido') return '';
 
@@ -214,7 +221,6 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   void initState() {
     super.initState();
     unawaited(_ensureClienteSession());
-    _servicosStream ??= ServicosRepo.streamServicosAtivos();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
       _syncClienteStreams();
     });
@@ -227,9 +233,12 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
 
     try {
       await AuthService.ensureSignedInAnonymously().timeout(
-        const Duration(seconds: 12),
+        _clienteAuthBootstrapTimeout(),
       );
       await AuthService.setActiveRole('cliente');
+      if (mounted) {
+        setState(_syncClienteStreams);
+      }
     } catch (error) {
       if (kDebugMode) {
         // ignore: avoid_print
@@ -281,6 +290,7 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
     _unreadPorPedido.clear();
     _hasUnreadMessages = false;
     _pedidosClienteStream = null;
+    _servicosStream = null;
     _activeClienteUid = null;
   }
 
@@ -361,7 +371,6 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     _syncClienteStreams();
-    _servicosStream ??= ServicosRepo.streamServicosAtivos();
     return AppShellScaffold(
       currentIndex: _currentIndex,
       onDestinationSelected: (index) => setState(() => _currentIndex = index),
@@ -546,80 +555,82 @@ class _ClienteInicioTab extends StatelessWidget {
                   const SizedBox(height: AppSpacing.x4),
                   SizedBox(
                     height: tabHeight,
-                    child: StreamBuilder<List<Servico>>(
-                      stream:
-                          servicosStream ?? ServicosRepo.streamServicosAtivos(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const AppLoadingView();
-                        }
+                    child: user == null
+                        ? const AppLoadingView()
+                        : StreamBuilder<List<Servico>>(
+                            stream: servicosStream ??
+                                ServicosRepo.streamServicosAtivos(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const AppLoadingView();
+                              }
 
-                        if (snapshot.hasError) {
-                          return AppErrorView(
-                            message: l10n.servicesLoadError(
-                              snapshot.error.toString(),
-                            ),
-                          );
-                        }
+                              if (snapshot.hasError) {
+                                return AppErrorView(
+                                  message: l10n.servicesLoadError(
+                                    snapshot.error.toString(),
+                                  ),
+                                );
+                              }
 
-                        final servicos = snapshot.data ?? [];
-                        if (servicos.isEmpty) {
-                          return AppEmptyView(
-                            title: l10n.availableServicesTitle,
-                            message: l10n.servicesEmptyMessage,
-                          );
-                        }
+                              final servicos = snapshot.data ?? [];
+                              if (servicos.isEmpty) {
+                                return AppEmptyView(
+                                  title: l10n.availableServicesTitle,
+                                  message: l10n.servicesEmptyMessage,
+                                );
+                              }
 
-                        final modos = <String>[
-                          'ORCAMENTO',
-                          'AGENDADO',
-                          'IMEDIATO',
-                        ];
+                              final modos = <String>[
+                                'ORCAMENTO',
+                                'AGENDADO',
+                                'IMEDIATO',
+                              ];
 
-                        return DefaultTabController(
-                          length: modos.length,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: AppSpacing.x2),
-                              Text(
-                                l10n.availableServicesTitle,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.x2),
-                              AppTabBar(
-                                isScrollable: true,
-                                tabs: [
-                                  Tab(text: l10n.serviceTabQuote),
-                                  Tab(text: l10n.serviceTabScheduled),
-                                  Tab(text: l10n.serviceTabImmediate),
-                                ],
-                              ),
-                              const SizedBox(height: AppSpacing.x2),
-                              Expanded(
-                                child: TabBarView(
+                              return DefaultTabController(
+                                length: modos.length,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _ListaServicosPorModo(
-                                      modo: 'ORCAMENTO',
-                                      servicos: servicos,
+                                    const SizedBox(height: AppSpacing.x2),
+                                    Text(
+                                      l10n.availableServicesTitle,
+                                      style: theme.textTheme.titleMedium,
                                     ),
-                                    _ListaServicosPorModo(
-                                      modo: 'AGENDADO',
-                                      servicos: servicos,
+                                    const SizedBox(height: AppSpacing.x2),
+                                    AppTabBar(
+                                      isScrollable: true,
+                                      tabs: [
+                                        Tab(text: l10n.serviceTabQuote),
+                                        Tab(text: l10n.serviceTabScheduled),
+                                        Tab(text: l10n.serviceTabImmediate),
+                                      ],
                                     ),
-                                    _ListaServicosPorModo(
-                                      modo: 'IMEDIATO',
-                                      servicos: servicos,
+                                    const SizedBox(height: AppSpacing.x2),
+                                    Expanded(
+                                      child: TabBarView(
+                                        children: [
+                                          _ListaServicosPorModo(
+                                            modo: 'ORCAMENTO',
+                                            servicos: servicos,
+                                          ),
+                                          _ListaServicosPorModo(
+                                            modo: 'AGENDADO',
+                                            servicos: servicos,
+                                          ),
+                                          _ListaServicosPorModo(
+                                            modo: 'IMEDIATO',
+                                            servicos: servicos,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
                   ),
                 ],
               ),

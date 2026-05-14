@@ -49,6 +49,9 @@ bool _shouldForceWebSemantics() {
 
 Duration _authStartupTimeout() {
   if (kIsWeb) return const Duration(seconds: 12);
+  if (defaultTargetPlatform == TargetPlatform.windows) {
+    return const Duration(seconds: 45);
+  }
   if (PlatformCaps.isDesktop) return const Duration(seconds: 20);
   return const Duration(seconds: 8);
 }

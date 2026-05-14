@@ -214,6 +214,114 @@ FIRESTORE (12.3.0) INTERNAL ASSERTION FAILED: Unexpected state
 
 O fluxo passou apos restart limpo dos emuladores e do web-server. Tratar como risco de ambiente/emulador Web a observar, nao como bloqueio de M1 Windows.
 
+## M1.5 — Validacao cruzada Windows/Web
+
+Estado: parcial.
+
+M1.5 encontrou e corrigiu um bloqueio real antes dos fluxos cruzados: no Windows com emuladores, `AuthService.ensureSignedInAnonymously()` podia demorar mais do que os timeouts da UI Cliente e do bootstrap global. A causa pratica era a `ClienteHomeScreen` iniciar o stream de servicos antes de haver utilizador autenticado; no SDK Windows, stream Firestore pre-auth pode prender o cliente nativo. O Cliente Windows ficava com:
+
+```text
+[ClienteHome] auth bootstrap error: TimeoutException after 0:00:12.000000
+[Auth] ensureSignedInAnonymously falhou/timeout: TimeoutException after 0:00:20.000000
+```
+
+Correcoes aplicadas:
+
+- `AppConfig.emulatorHost` normaliza `127.0.0.1`/`::1` para `localhost` no Windows, sem editar `.env`.
+- `AuthService` nao faz pre-wait em `authStateChanges()` antes do primeiro sign-in anonimo no Windows.
+- Timeout de auth no bootstrap Windows subiu para 45s.
+- Timeout de auth da `ClienteHomeScreen` no Windows subiu para 45s.
+- `ClienteHomeScreen` so inicia o stream de servicos depois de existir utilizador autenticado.
+- `integration_test/pedido_flow_emulator_test.dart` ganhou regressao para `AuthService` no app default e abertura de stream Firestore depois do sign-in.
+
+Evidencia automatizada adicional:
+
+```bash
+flutter test integration_test/pedido_flow_emulator_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+```
+
+Resultado:
+
+```text
+4/4 passou:
+- AuthService ensures anonymous default user on emulator
+- AuthService completes before Firestore streams start
+- automatic flow: prestador accepts open pedido
+- manual flow: prestador accepts convite
+```
+
+Arranque runtime Windows apos correcao:
+
+| App Windows | Estado | Evidencia | Observacoes |
+| --- | --- | --- | --- |
+| Cliente | passou | `Emuladores: true (localhost)`, sem `AuthService` timeout, sem `MissingPluginException`, bootstrap terminou em ~38s | Ainda aparecem warnings do plugin Firestore sobre non-platform thread. |
+| Prestador | passou | `Emuladores: true (localhost)`, sem `AuthService` timeout, sem `MissingPluginException`, bootstrap terminou em ~4s | Ainda aparecem warnings do plugin Firestore sobre non-platform thread. |
+
+Tabela dos fluxos M1.5:
+
+| Fluxo | Estado | Evidencia | Observacoes |
+| --- | --- | --- | --- |
+| Cliente Windows + Prestador Web pedido normal | pendente manual | UI nativa Windows nao exposta para automacao; Windows Cliente arranca sem timeout e Web E2E normal segue como baseline | Precisa execucao manual com duas janelas. |
+| Cliente Web + Prestador Windows pedido normal | pendente manual | UI nativa Windows nao exposta para automacao; Windows Prestador arranca sem timeout; integration test Windows valida Auth/Firestore e aceite de pedido por codigo | Este continua sendo o fluxo critico para fechar Windows como app operacional. |
+| Cliente Windows + Prestador Web orcamento | pendente manual | Web E2E orcamento segue como baseline; Windows Cliente arranca sem timeout | Precisa execucao manual do fluxo L2 com Cliente Windows. |
+| Cliente Web + Prestador Windows orcamento | pendente manual | Windows Prestador arranca sem timeout; sem automacao nativa para clicar aceitar/enviar faixa/valor final | Precisa execucao manual do fluxo L2 com Prestador Windows. |
+| Chat com Cliente Windows | pendente manual | Fluxo Web chat/no-show passou no E2E dual; Windows Cliente Auth/Firestore OK em integration test | Precisa confirmar UI de chat nativa. |
+| Chat com Prestador Windows | pendente manual | Fluxo Web chat/no-show passou no E2E dual; Windows Prestador arranca sem timeout | Precisa confirmar UI de chat nativa. |
+| Anexos Windows | pendente | Log runtime: `The Storage Emulator is not available on Windows.` | Anexos nao bloqueiam pedido/orcamento/chat, mas precisam fallback/teste manual fora do Storage Emulator Windows. |
+
+Limite de automacao encontrado:
+
+```text
+Windows UI Automation ve apenas:
+- Window: chegaja_v2
+- Pane: FLUTTERVIEW
+```
+
+Ou seja, botoes/textos Flutter da app Windows nao ficaram acessiveis para clique automatizado por UI Automation neste ambiente. Por isso, os fluxos cruzados reais nao foram marcados como passados.
+
+Comandos executados nesta fase:
+
+```bash
+flutter pub get
+flutter config --enable-windows-desktop
+flutter build windows --debug
+flutter build windows --release
+flutter test integration_test/pedido_flow_emulator_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter run -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --dart-define=DEFAULT_ROLE=cliente
+flutter run -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --dart-define=DEFAULT_ROLE=prestador
+```
+
+Validacao final apos as correcoes:
+
+| Comando | Estado | Observacoes |
+| --- | --- | --- |
+| `flutter test` | passou | 37/37 |
+| `cd functions && npm.cmd test` | passou | 11/11 |
+| `node --check scripts/e2e/full_ui_dual_role_e2e.js` | passou | Sem output. |
+| `npm.cmd run e2e:ui:dual` | passou | Fluxos Web L1/chat/no-show continuam validos. |
+| `npm.cmd run e2e:ui:orcamento` | passou | Fluxo Web L2 concluiu com `ORCAMENTO MIN-MAX FLOW OK`. |
+| `flutter test integration_test/pedido_flow_emulator_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou | 4/4. |
+| `flutter build windows --debug` | passou | Build gerado em `build\windows\x64\runner\Debug\chegaja_v2.exe`. |
+| `flutter build windows --release` | passou | Build gerado em `build\windows\x64\runner\Release\chegaja_v2.exe`. |
+
+Observacao: os E2E Web ainda podem imprimir `FIRESTORE (12.3.0) INTERNAL ASSERTION FAILED: Unexpected state` no console do browser quando usados com emulador. Os cenarios finalizaram corretamente, entao isto fica como warning residual a observar.
+
+Ficheiros alterados nesta fase:
+
+- `lib/core/config/app_config.dart`
+- `lib/core/services/auth_service.dart`
+- `lib/main.dart`
+- `lib/features/cliente/cliente_home_screen.dart`
+- `integration_test/pedido_flow_emulator_test.dart`
+- `docs/WINDOWS_MVP_STATUS.md`
+
+Decisao:
+
+```text
+M1.5 parcial.
+Nao avancar para M2 Android como "Windows fechado" enquanto Cliente Web + Prestador Windows nao for testado manualmente.
+```
+
 ## Fallbacks Windows ativos
 
 | Area | Fallback |
@@ -225,7 +333,7 @@ O fluxo passou apos restart limpo dos emuladores e do web-server. Tratar como ri
 | Remote Config | Desativado no Windows. |
 | Cloud Functions para pagamentos | Bloqueado em `PaymentService` quando a plataforma nao suporta. |
 
-## Pendente para M1.5
+## Pendente depois de M1.5 parcial
 
 Ainda precisa de teste manual/automacao nativa:
 

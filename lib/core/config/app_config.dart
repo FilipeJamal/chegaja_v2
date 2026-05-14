@@ -33,19 +33,29 @@ class AppConfig extends InheritedWidget {
 
   // Emuladores: Ativos se estivermos em Debug ou se .env forçar
   static bool get useFirebaseEmulators {
-     final raw = dotenv.env['USE_FIREBASE_EMULATORS'];
-     if (raw != null && raw.trim().isNotEmpty) {
-       return raw.trim().toLowerCase() == 'true';
-     }
-     return kDebugMode;
+    final raw = dotenv.env['USE_FIREBASE_EMULATORS'];
+    if (raw != null && raw.trim().isNotEmpty) {
+      return raw.trim().toLowerCase() == 'true';
+    }
+    return kDebugMode;
   }
 
   static String get emulatorHost {
     final envHost = dotenv.env['FIREBASE_EMULATOR_HOST'];
     if (envHost != null && envHost.trim().isNotEmpty) {
-      return envHost.trim();
+      final host = envHost.trim();
+      if (!kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.windows &&
+          (host == '127.0.0.1' || host == '::1')) {
+        return 'localhost';
+      }
+      return host;
     }
-    return defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : '127.0.0.1';
+    if (defaultTargetPlatform == TargetPlatform.android) return '10.0.2.2';
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      return 'localhost';
+    }
+    return '127.0.0.1';
   }
 
   static String get functionsRegion {
@@ -56,9 +66,11 @@ class AppConfig extends InheritedWidget {
     return 'europe-west1';
   }
 
-  static String? get appCheckWebRecaptchaSiteKey => dotenv.env['APP_CHECK_WEB_KEY'];
-  
-  static String? get stripePublishableKey => dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+  static String? get appCheckWebRecaptchaSiteKey =>
+      dotenv.env['APP_CHECK_WEB_KEY'];
+
+  static String? get stripePublishableKey =>
+      dotenv.env['STRIPE_PUBLISHABLE_KEY'];
 
   static String? get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
 

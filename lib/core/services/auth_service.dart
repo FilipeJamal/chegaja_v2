@@ -44,9 +44,11 @@ class AuthService {
     await _ensureWebPersistence();
 
     User? user = _auth.currentUser;
-    user ??= await _waitForRestoredUser(
-      timeout: await _restoreTimeoutBeforeAnonymousSignIn(),
-    );
+    if (user == null && !_shouldSkipPreSignInRestoreWait) {
+      user = await _waitForRestoredUser(
+        timeout: await _restoreTimeoutBeforeAnonymousSignIn(),
+      );
+    }
 
     if (user == null) {
       final credentials = await _auth.signInAnonymously();
@@ -96,6 +98,10 @@ class AuthService {
     }
 
     return const Duration(seconds: 2);
+  }
+
+  static bool get _shouldSkipPreSignInRestoreWait {
+    return !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
   }
 
   static Future<bool> _hasSeenUser() async {
