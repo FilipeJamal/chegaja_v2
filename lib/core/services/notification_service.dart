@@ -64,7 +64,8 @@ class NotificationService {
 
     // ✅ Validação de Plataforma (Universal)
     if (!_supportsFcm()) {
-      debugPrint('[NotificationService] FCM não suportado neste OS (Web/Desktop sem vapid?).');
+      debugPrint(
+          '[NotificationService] FCM não suportado neste OS (Web/Desktop sem vapid?).');
       // Mesmo sem FCM, podemos querer iniciar notificações locais para desktops
       // mas o foco aqui é o push via Firebase.
       return;
@@ -119,8 +120,9 @@ class NotificationService {
 
   Future<void> _setupLocalNotifications() async {
     // Configurações de inicialização
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
     // Para iOS/macOS (Darwin)
     const darwinSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -129,7 +131,8 @@ class NotificationService {
     );
 
     // Suporte Linux (opcional, placeholder)
-    const linuxSettings = LinuxInitializationSettings(defaultActionName: 'Open');
+    const linuxSettings =
+        LinuxInitializationSettings(defaultActionName: 'Open');
 
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -166,11 +169,11 @@ class NotificationService {
     if (parts.isNotEmpty) {
       final pedidoId = parts[0];
       final type = parts.length > 1 ? parts[1] : '';
-      
+
       final openChat = type == 'chat' || type == 'chat_message';
-      
+
       if (openChat) {
-         WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           AppNavigator.openChatThread(pedidoId);
         });
       } else {
@@ -218,7 +221,8 @@ class NotificationService {
       // Fallback para Web ou Data-only
       final title = notification?.title;
       final body = notification?.body;
-      final text = [title, body].where((s) => s != null && s.isNotEmpty).join(' — ');
+      final text =
+          [title, body].where((s) => s != null && s.isNotEmpty).join(' — ');
       if (text.isNotEmpty) {
         AppNavigator.showSnack(text);
       }
@@ -226,21 +230,21 @@ class NotificationService {
   }
 
   void _checkWebDeepLink() {
-     final pedidoId = Uri.base.queryParameters['pedidoId'];
-      if (pedidoId != null && pedidoId.trim().isNotEmpty) {
-        final openChat =
-            (Uri.base.queryParameters['openChat'] ?? '').toLowerCase() ==
-                    'true' ||
-                (Uri.base.queryParameters['type'] ?? '').toLowerCase() == 'chat';
+    final pedidoId = Uri.base.queryParameters['pedidoId'];
+    if (pedidoId != null && pedidoId.trim().isNotEmpty) {
+      final openChat =
+          (Uri.base.queryParameters['openChat'] ?? '').toLowerCase() ==
+                  'true' ||
+              (Uri.base.queryParameters['type'] ?? '').toLowerCase() == 'chat';
 
-        if (openChat) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            AppNavigator.openChatThread(pedidoId.trim());
-          });
-        } else {
-          _openPedidoWhenReady(pedidoId.trim());
-        }
+      if (openChat) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          AppNavigator.openChatThread(pedidoId.trim());
+        });
+      } else {
+        _openPedidoWhenReady(pedidoId.trim());
       }
+    }
   }
 
   void _onMessageOpened(RemoteMessage message) {
@@ -274,13 +278,47 @@ class NotificationService {
     _onMessageOpenedSub = null;
     _initialized = false;
   }
+
   Future<void> _ensureTokenPolicy(String uid) async {
     // Implement token policy check if needed
   }
 
-  Future<void> _saveToken({required String uid, required String token}) async {
-    await _db.collection('users').doc(uid).set(
-      {'fcmToken': token},
+  Future<void> _saveToken({required String uid, required String token}) {
+    return saveTokenRecordForTesting(
+      firestore: _db,
+      uid: uid,
+      token: token,
+    );
+  }
+
+  @visibleForTesting
+  static Future<void> saveTokenRecordForTesting({
+    required FirebaseFirestore firestore,
+    required String uid,
+    required String token,
+  }) async {
+    final cleanedToken = token.trim();
+    if (uid.trim().isEmpty || cleanedToken.isEmpty) return;
+
+    final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
+    final userRef = firestore.collection('users').doc(uid);
+
+    await userRef.set(
+      {
+        'fcmToken': cleanedToken,
+        'fcmTokenPlatform': platform,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+
+    // As Cloud Functions enviam push lendo users/{uid}/fcmTokens/{token}.
+    await userRef.collection('fcmTokens').doc(cleanedToken).set(
+      {
+        'token': cleanedToken,
+        'platform': platform,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
       SetOptions(merge: true),
     );
   }

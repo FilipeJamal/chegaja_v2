@@ -49,16 +49,17 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final folder = widget.pedidoId != null
         ? 'pedidos/${widget.pedidoId}/anexos'
-        : 'temp/anexos_$ts'; 
-    
+        : 'temp/anexos_$ts';
+
     // NOTA: Se for temp, depois deveria haver lógica de limpeza, mas para MVP ok.
-    // Melhor: se tivermos user ID, 'temp/{uid}/...'. 
+    // Melhor: se tivermos user ID, 'temp/{uid}/...'.
     // Como não temos acesso fácil ao uid aqui sem AuthService, vamos simplificar.
-    
+
     final path = '$folder/${ts}_$fileName';
     final ref = FirebaseStorage.instance.ref().child(path);
-    final meta = contentType != null ? SettableMetadata(contentType: contentType) : null;
-    
+    final meta =
+        contentType != null ? SettableMetadata(contentType: contentType) : null;
+
     final task = await ref.putData(bytes, meta);
     return await task.ref.getDownloadURL();
   }
@@ -68,18 +69,18 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
     try {
       final picked = await _picker.pickImage(source: source, imageQuality: 80);
       if (picked == null) return;
-      
+
       setState(() => _uploading = true);
       final bytes = await picked.readAsBytes();
       final ext = picked.name.split('.').last;
-      
+
       // Upload
       final url = await _uploadBytes(
         bytes: bytes,
         fileName: picked.name,
         contentType: 'image/$ext',
       );
-      
+
       setState(() {
         _urls.add(url);
         _uploading = false;
@@ -106,7 +107,7 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
       if (bytes == null) return;
 
       setState(() => _uploading = true);
-      
+
       final url = await _uploadBytes(
         bytes: bytes,
         fileName: f.name,
@@ -148,7 +149,10 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final url = _urls[index];
-                final isImage = url.contains('.jpg') || url.contains('.jpeg') || url.contains('.png') || url.contains('image');
+                final isImage = url.contains('.jpg') ||
+                    url.contains('.jpeg') ||
+                    url.contains('.png') ||
+                    url.contains('image');
                 return Stack(
                   children: [
                     Container(
@@ -158,11 +162,14 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                         color: Colors.grey[200],
                         borderRadius: BorderRadius.circular(8),
                         image: isImage
-                            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+                            ? DecorationImage(
+                                image: NetworkImage(url), fit: BoxFit.cover)
                             : null,
                       ),
                       child: !isImage
-                          ? const Center(child: Icon(Icons.insert_drive_file, size: 40, color: Colors.grey))
+                          ? const Center(
+                              child: Icon(Icons.insert_drive_file,
+                                  size: 40, color: Colors.grey))
                           : null,
                     ),
                     if (!widget.readOnly)
@@ -177,7 +184,8 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                               color: Colors.black54,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                            child: const Icon(Icons.close,
+                                size: 14, color: Colors.white),
                           ),
                         ),
                       ),
@@ -186,19 +194,22 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
               },
             ),
           ),
-        
         if (_urls.isNotEmpty) const SizedBox(height: 12),
-
         if (!widget.readOnly)
           Row(
             children: [
               if (_uploading)
                 const Padding(
                   padding: EdgeInsets.only(right: 16.0),
-                  child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
               ElevatedButton.icon(
-                onPressed: _uploading ? null : () => _pickImage(ImageSource.gallery),
+                key: const Key('pedido_anexo_galeria_button'),
+                onPressed:
+                    _uploading ? null : () => _pickImage(ImageSource.gallery),
                 icon: const Icon(Icons.photo),
                 label: const Text('Foto'),
                 style: ElevatedButton.styleFrom(
@@ -209,10 +220,12 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: _uploading ? null : () => _pickImage(ImageSource.camera),
+                key: const Key('pedido_anexo_camera_button'),
+                onPressed:
+                    _uploading ? null : () => _pickImage(ImageSource.camera),
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Câmera'),
-                                style: ElevatedButton.styleFrom(
+                style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[200],
                   foregroundColor: Colors.black87,
                   elevation: 0,
@@ -221,6 +234,7 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
               const SizedBox(width: 8),
               // File picker for completeness
               IconButton(
+                key: const Key('pedido_anexo_arquivo_button'),
                 onPressed: _uploading ? null : _pickFile,
                 icon: const Icon(Icons.attach_file),
                 tooltip: 'Anexar Ficheiro',

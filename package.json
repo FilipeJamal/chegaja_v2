@@ -3,7 +3,8 @@
     "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js",
     "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento",
     "test:windows:cross": "flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true",
-    "test:android:mvp": "flutter test --ignore-timeouts integration_test/android_mvp_flow_test.dart -d android --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true"
+    "test:android:mvp": "flutter test --ignore-timeouts integration_test/android_mvp_flow_test.dart -d android --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true",
+    "test:android:mobile": "flutter test --ignore-timeouts integration_test/android_mobile_real_test.dart -d android --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",

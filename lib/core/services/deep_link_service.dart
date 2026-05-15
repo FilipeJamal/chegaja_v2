@@ -64,6 +64,15 @@ class DeepLinkService {
     });
   }
 
+  @visibleForTesting
+  void handleUriForTesting(Uri uri) => _handleUri(uri);
+
+  @visibleForTesting
+  static String? extractPedidoIdForTesting(Uri uri) => _extractPedidoId(uri);
+
+  @visibleForTesting
+  static bool extractOpenChatForTesting(Uri uri) => _extractOpenChat(uri);
+
   static bool _extractOpenChat(Uri uri) {
     // /chat/<pedidoId> ou host chat
     if (uri.host.toLowerCase() == 'chat') return true;
