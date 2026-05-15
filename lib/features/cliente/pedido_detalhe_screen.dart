@@ -1515,22 +1515,13 @@ class _PedidoTimeline extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            SizedBox(
-              width: 70,
-              child: buildLabel(l10n.timelineCreated, current >= 0),
-            ),
-            SizedBox(
-              width: 80,
-              child: buildLabel(l10n.timelineAccepted, current >= 1),
-            ),
-            SizedBox(
-              width: 90,
+            Expanded(child: buildLabel(l10n.timelineCreated, current >= 0)),
+            Expanded(child: buildLabel(l10n.timelineAccepted, current >= 1)),
+            Expanded(
               child: buildLabel(l10n.timelineInProgress, current >= 2),
             ),
-            SizedBox(
-              width: 80,
+            Expanded(
               child: buildLabel(
                 estado == 'cancelado'
                     ? l10n.timelineCancelled
