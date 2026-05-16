@@ -833,9 +833,10 @@ void main() {
         title: 'M2 Android Chat ${DateTime.now().microsecondsSinceEpoch}',
         tipoPreco: 'a_combinar',
       );
-      await _defaultDb.collection('pedidos').doc(pedidoId).set(
-        {'prestadorId': provider.uid},
-        SetOptions(merge: true),
+      await PedidoService(firestore: _providerDb, trackAnalytics: false)
+          .aceitarPedidoAberto(
+        pedido: await _pedido(_providerDb, pedidoId),
+        prestadorId: provider.uid,
       );
 
       await ChatService(firestore: _defaultDb, auth: _defaultAuth).sendMessage(

@@ -2,7 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
+import 'package:chegaja_v2/core/services/storage_path_policy.dart';
 
 class PedidoAnexosWidget extends StatefulWidget {
   final List<String> initialUrls;
@@ -46,19 +49,27 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
     required String fileName,
     String? contentType,
   }) async {
+    if (bytes.lengthInBytes > StoragePathPolicy.maxPedidoAttachmentBytes) {
+      throw Exception('O anexo nao pode ter mais de 20 MB.');
+    }
+
+    final safeFileName = StoragePathPolicy.safeFileName(fileName);
+    final resolvedContentType = contentType ??
+        StoragePathPolicy.attachmentContentTypeForFileName(safeFileName);
+    if (resolvedContentType == null) {
+      throw Exception('Tipo de ficheiro nao suportado.');
+    }
+
     final ts = DateTime.now().millisecondsSinceEpoch;
     final folder = widget.pedidoId != null
         ? 'pedidos/${widget.pedidoId}/anexos'
-        : 'temp/anexos_$ts';
+        : StoragePathPolicy.tempPedidoAttachmentFolder(
+            userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+          );
 
-    // NOTA: Se for temp, depois deveria haver lógica de limpeza, mas para MVP ok.
-    // Melhor: se tivermos user ID, 'temp/{uid}/...'.
-    // Como não temos acesso fácil ao uid aqui sem AuthService, vamos simplificar.
-
-    final path = '$folder/${ts}_$fileName';
+    final path = '$folder/${ts}_$safeFileName';
     final ref = FirebaseStorage.instance.ref().child(path);
-    final meta =
-        contentType != null ? SettableMetadata(contentType: contentType) : null;
+    final meta = SettableMetadata(contentType: resolvedContentType);
 
     final task = await ref.putData(bytes, meta);
     return await task.ref.getDownloadURL();
@@ -72,13 +83,14 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
 
       setState(() => _uploading = true);
       final bytes = await picked.readAsBytes();
-      final ext = picked.name.split('.').last;
+      final contentType =
+          StoragePathPolicy.attachmentContentTypeForFileName(picked.name);
 
       // Upload
       final url = await _uploadBytes(
         bytes: bytes,
         fileName: picked.name,
-        contentType: 'image/$ext',
+        contentType: contentType,
       );
 
       setState(() {

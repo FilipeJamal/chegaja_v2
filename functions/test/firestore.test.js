@@ -6,7 +6,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
-const PROJECT_ID = "chegaja-v2";
+const PROJECT_ID = "chegaja-ac88d";
 const FIRESTORE_RULES = fs.readFileSync(
     path.resolve(__dirname, "../../firestore.rules"),
     "utf8"
@@ -147,6 +147,74 @@ describe("Firestore Security Rules", () => {
             const provider = testEnv.authenticatedContext("provider1");
             await assertSucceeds(
                 provider.firestore().collection("pedidos").doc("order1").get()
+            );
+        });
+
+        it("should deny provider accepting an open order for another provider id", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                const adminDb = context.firestore();
+                await adminDb.collection("prestadores").doc("provider1").set({
+                    servicos: ["svc1"],
+                    servicosNomes: ["Canalizador"],
+                });
+                await adminDb.collection("pedidos").doc("order_accept_self").set({
+                    clienteId: "client1",
+                    status: "criado",
+                    estado: "criado",
+                    prestadorId: null,
+                    servicoId: "svc1",
+                    servicoNome: "Canalizador",
+                    createdAt: new Date(),
+                });
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_accept_self").update({
+                    status: "aceito",
+                    estado: "aceito",
+                    prestadorId: "provider2",
+                })
+            );
+        });
+
+        it("should allow matching provider to accept an open order for themselves", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                const adminDb = context.firestore();
+                await adminDb.collection("prestadores").doc("provider1").set({
+                    servicos: ["svc1"],
+                    servicosNomes: ["Canalizador"],
+                });
+                await adminDb.collection("pedidos").doc("order_accept_ok").set({
+                    clienteId: "client1",
+                    status: "criado",
+                    estado: "criado",
+                    prestadorId: null,
+                    servicoId: "svc1",
+                    servicoNome: "Canalizador",
+                    createdAt: new Date(),
+                });
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_accept_ok").update({
+                    status: "aceito",
+                    estado: "aceito",
+                    prestadorId: "provider1",
+                })
+            );
+        });
+    });
+
+    describe("FCM tokens", () => {
+        it("should deny writing another user's token subcollection", async () => {
+            const alice = testEnv.authenticatedContext("alice");
+            await assertFails(
+                alice.firestore().collection("users").doc("bob")
+                    .collection("fcmTokens").doc("token1").set({
+                        token: "token1",
+                    })
             );
         });
     });

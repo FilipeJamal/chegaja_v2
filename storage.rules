@@ -1,9 +1,155 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token != null
+        && request.auth.token.keys().hasAny(['admin'])
+        && request.auth.token['admin'] == true;
+    }
+
+    function clienteIdFromData(data) {
+      return data is map
+        ? (data.keys().hasAny(['clienteId'])
+          ? data['clienteId']
+          : (data.keys().hasAny(['clientId']) ? data['clientId'] : null))
+        : null;
+    }
+
+    function pedidoPath(pedidoId) {
+      return /databases/(default)/documents/pedidos/$(pedidoId);
+    }
+
+    function pedidoExists(pedidoId) {
+      return firestore.exists(pedidoPath(pedidoId));
+    }
+
+    function isPedidoParticipant(pedidoId) {
+      return signedIn()
+        && pedidoExists(pedidoId)
+        && (
+          clienteIdFromData(firestore.get(pedidoPath(pedidoId)).data) == uid()
+          || (
+            firestore.get(pedidoPath(pedidoId)).data.keys().hasAny(['prestadorId'])
+            && firestore.get(pedidoPath(pedidoId)).data['prestadorId'] == uid()
+          )
+        );
+    }
+
+    function isSupportedAttachmentType(contentType) {
+      return contentType is string
+        && (
+          contentType.matches('image/.*')
+          || contentType == 'application/pdf'
+          || contentType == 'text/plain'
+        );
+    }
+
+    function isSupportedImageType(contentType) {
+      return contentType is string && contentType.matches('image/.*');
+    }
+
+    function validUpload(maxBytes) {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= maxBytes
+        && isSupportedAttachmentType(request.resource.contentType);
+    }
+
+    function validImageUpload(maxBytes) {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= maxBytes
+        && isSupportedImageType(request.resource.contentType);
+    }
+
+    match /pedidos/{pedidoId}/anexos/{fileName} {
+      allow read: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+        && validUpload(20 * 1024 * 1024);
+      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+    }
+
+    match /temp/{userId}/anexos/{fileName} {
+      allow read: if signedIn() && (uid() == userId || isAdmin());
+      allow create, update: if signedIn()
+        && (uid() == userId || isAdmin())
+        && validUpload(20 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == userId || isAdmin());
+    }
+
+    match /chats/{pedidoId}/images/{fileName} {
+      allow read: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+        && validImageUpload(15 * 1024 * 1024);
+      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+    }
+
+    match /chats/{pedidoId}/files/{fileName} {
+      allow read: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+        && validUpload(20 * 1024 * 1024);
+      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+    }
+
+    match /users/{userId}/{fileName} {
+      allow read: if signedIn() || isAdmin();
+      allow create, update: if signedIn()
+        && (uid() == userId || isAdmin())
+        && validImageUpload(10 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == userId || isAdmin());
+    }
+
+    match /portfolio/{userId}/{fileName} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && (uid() == userId || isAdmin())
+        && validImageUpload(10 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == userId || isAdmin());
+    }
+
+    match /prestadores/{prestadorId}/{fileName} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && (uid() == prestadorId || isAdmin())
+        && validImageUpload(10 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == prestadorId || isAdmin());
+    }
+
+    match /prestadores/{prestadorId}/portfolio/{fileName} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && (uid() == prestadorId || isAdmin())
+        && validImageUpload(10 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == prestadorId || isAdmin());
+    }
+
+    match /kyc/{prestadorId}/{fileName} {
+      allow read: if signedIn() && (uid() == prestadorId || isAdmin());
+      allow create, update: if signedIn()
+        && (uid() == prestadorId || isAdmin())
+        && validUpload(20 * 1024 * 1024);
+      allow delete: if isAdmin();
+    }
+
+    match /stories/{prestadorId}/{fileName} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && (uid() == prestadorId || isAdmin())
+        && validImageUpload(20 * 1024 * 1024);
+      allow delete: if signedIn() && (uid() == prestadorId || isAdmin());
+    }
+
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
-

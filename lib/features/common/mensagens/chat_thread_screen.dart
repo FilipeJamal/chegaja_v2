@@ -15,6 +15,7 @@ import 'package:record/record.dart';
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/call_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/services/storage_path_policy.dart';
 import 'package:chegaja_v2/core/utils/url_bytes_loader.dart';
 import 'package:chegaja_v2/features/common/mensagens/call_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_favorites_screen.dart';
@@ -544,11 +545,22 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       setState(() => _uploading = true);
 
       final fileName = _safeFileName(f.name.isNotEmpty ? f.name : 'file');
+      final contentType =
+          StoragePathPolicy.attachmentContentTypeForFileName(fileName);
+      if (contentType == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tipo de ficheiro nao suportado.')),
+        );
+        return;
+      }
+
       final ts = DateTime.now().millisecondsSinceEpoch;
 
       final url = await _uploadBytes(
         bytes: bytes,
         path: 'chats/${widget.pedidoId}/files/${ts}_$fileName',
+        contentType: contentType,
       );
 
       await ChatService.instance.sendMessage(

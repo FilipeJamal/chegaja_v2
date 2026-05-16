@@ -140,6 +140,20 @@ service cloud.firestore {
         request.resource.data[field] == resource.data[field];
     }
 
+    function fieldValueOrNull(data, field) {
+      return data is map && data.keys().hasAny([field])
+        ? data[field]
+        : null;
+    }
+
+    function validPrestadorIdTransition() {
+      let currentPrestadorId = fieldValueOrNull(resource.data, 'prestadorId');
+      let nextPrestadorId = fieldValueOrNull(request.resource.data, 'prestadorId');
+      return currentPrestadorId == null
+        ? (nextPrestadorId == null || nextPrestadorId == uid())
+        : nextPrestadorId == currentPrestadorId;
+    }
+
     // -------------------------
     // Chat helpers
     // -------------------------
@@ -330,6 +344,7 @@ service cloud.firestore {
       allow update: if (isPedidoParticipantByData(resource.data)
         || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
         && hasValidPedidoEstado(request.resource.data)
+        && validPrestadorIdTransition()
         && immutableField('clienteId')
         && immutableField('clientId')
         && immutableField('createdAt');
