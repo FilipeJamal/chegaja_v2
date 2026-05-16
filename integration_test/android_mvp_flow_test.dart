@@ -275,9 +275,12 @@ Future<void> _tapByKeyWithScroll(
     if (finder.evaluate().isNotEmpty) {
       await tester.ensureVisible(finder);
       await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(finder);
-      await tester.pump(const Duration(milliseconds: 300));
-      return;
+      final hitTestableFinder = finder.hitTestable();
+      if (hitTestableFinder.evaluate().isNotEmpty) {
+        await tester.tap(hitTestableFinder);
+        await tester.pump(const Duration(milliseconds: 300));
+        return;
+      }
     }
 
     final scrollables = find.byType(SingleChildScrollView);
@@ -296,6 +299,16 @@ Future<void> _tapByKeyWithScroll(
   throw TestFailure(
     'Widget nao encontrado: $label. Textos visiveis: $visibleTexts',
   );
+}
+
+String _visibleTexts(WidgetTester tester) {
+  return tester
+      .widgetList<Text>(find.byType(Text))
+      .map((text) => text.data)
+      .whereType<String>()
+      .where((text) => text.trim().isNotEmpty)
+      .take(40)
+      .join(' | ');
 }
 
 Future<String> _createPedidoWithClienteUi(
@@ -323,20 +336,41 @@ Future<String> _createPedidoWithClienteUi(
     find.byKey(const Key('novo_pedido_titulo_field')),
     title,
   );
-  await _tapByKey(tester, 'novo_pedido_submit_button', 'submeter pedido');
+  await tester.testTextInput.receiveAction(TextInputAction.done);
+  await tester.pump(const Duration(milliseconds: 500));
+  await _tapByKeyWithScroll(
+    tester,
+    'novo_pedido_submit_button',
+    'submeter pedido',
+  );
 
-  return _eventually(
-    () async {
+  final deadline = DateTime.now().add(const Duration(seconds: 75));
+  Object? lastError;
+  final seenTitles = <String>{};
+  while (DateTime.now().isBefore(deadline)) {
+    try {
       final qs = await _defaultDb
           .collection('pedidos')
           .where('clienteId', isEqualTo: clienteId)
           .get();
       for (final doc in qs.docs) {
-        if (doc.data()['titulo'] == title) return doc.id;
+        final data = doc.data();
+        final docTitle = data['titulo']?.toString();
+        if (docTitle != null) seenTitles.add(docTitle);
+        if (docTitle == title) return doc.id;
       }
-      return null;
-    },
-    'pedido criado por UI cliente',
+    } catch (error) {
+      lastError = error;
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  }
+
+  throw TimeoutException(
+    'Timeout aguardando pedido criado por UI cliente. '
+    'Titulos vistos para cliente: ${seenTitles.join(' || ')}. '
+    'Textos visiveis: ${_visibleTexts(tester)}. '
+    'Ultimo erro: $lastError',
   );
 }
 
