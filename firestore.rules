@@ -121,6 +121,8 @@ service cloud.firestore {
     function hasValidPedidoEstado(data) {
       return data is map
         && data.keys().hasAny(['status', 'estado'])
+        && (!data.keys().hasAll(['status', 'estado']) ||
+          data['status'] == data['estado'])
         && (!data.keys().hasAny(['status']) ||
           isValidPedidoEstadoValue(data['status']))
         && (!data.keys().hasAny(['estado']) ||
@@ -146,12 +148,328 @@ service cloud.firestore {
         : null;
     }
 
+    function isPedidoClienteActor() {
+      return signedIn() && clienteIdFromData(resource.data) == uid();
+    }
+
+    function isPedidoPrestadorActorForUpdate() {
+      let currentPrestadorId = fieldValueOrNull(resource.data, 'prestadorId');
+      let nextPrestadorId = fieldValueOrNull(request.resource.data, 'prestadorId');
+      return signedIn()
+        && (currentPrestadorId == uid() ||
+          (currentPrestadorId == null && nextPrestadorId == uid()));
+    }
+
+    function isAllowedClientePedidoTransition(from, to) {
+      return (from == 'criado' &&
+          (to == 'aguarda_resposta_prestador' || to == 'cancelado'))
+        || (from == 'aguarda_resposta_prestador' && to == 'cancelado')
+        || (from == 'aguarda_resposta_cliente' &&
+          (to == 'aceito' || to == 'criado' || to == 'cancelado'))
+        || (from == 'aceito' && to == 'cancelado')
+        || (from == 'em_andamento' && to == 'cancelado')
+        || (from == 'aguarda_confirmacao_valor' &&
+          (to == 'concluido' || to == 'em_andamento' || to == 'cancelado'));
+    }
+
+    function isAllowedPrestadorPedidoTransition(from, to) {
+      return (from == 'criado' &&
+          (to == 'aceito' || to == 'aguarda_resposta_cliente'))
+        || (from == 'aguarda_resposta_prestador' &&
+          (to == 'aceito' || to == 'criado'))
+        || (from == 'aguarda_resposta_cliente' && to == 'criado')
+        || (from == 'aceito' &&
+          (to == 'em_andamento' || to == 'aguarda_resposta_cliente' ||
+            to == 'criado'))
+        || (from == 'em_andamento' &&
+          (to == 'aguarda_confirmacao_valor' || to == 'cancelado'))
+        || (from == 'aguarda_confirmacao_valor' && to == 'cancelado');
+    }
+
+    function validPedidoStateTransition() {
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return currentEstado == nextEstado
+        || (isPedidoClienteActor() &&
+          isAllowedClientePedidoTransition(currentEstado, nextEstado))
+        || (isPedidoPrestadorActorForUpdate() &&
+          isAllowedPrestadorPedidoTransition(currentEstado, nextEstado));
+    }
+
     function validPrestadorIdTransition() {
       let currentPrestadorId = fieldValueOrNull(resource.data, 'prestadorId');
       let nextPrestadorId = fieldValueOrNull(request.resource.data, 'prestadorId');
-      return currentPrestadorId == null
-        ? (nextPrestadorId == null || nextPrestadorId == uid())
-        : nextPrestadorId == currentPrestadorId;
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return currentPrestadorId == nextPrestadorId
+        || (
+          currentPrestadorId == null &&
+          nextPrestadorId == uid() &&
+          isAllowedPrestadorPedidoTransition(currentEstado, nextEstado)
+        )
+        || (
+          currentPrestadorId == null &&
+          isPedidoClienteActor() &&
+          currentEstado == 'criado' &&
+          nextEstado == 'aguarda_resposta_prestador' &&
+          nextPrestadorId is string
+        )
+        || (
+          currentPrestadorId != null &&
+          nextPrestadorId == null &&
+          (
+            (
+              isPedidoClienteActor() &&
+              currentEstado == 'aguarda_resposta_cliente' &&
+              nextEstado == 'criado'
+            ) ||
+            (
+              currentPrestadorId == uid() &&
+              nextEstado == 'criado' &&
+              isAllowedPrestadorPedidoTransition(currentEstado, nextEstado)
+            )
+          )
+        );
+    }
+
+    function fieldUnchanged(field) {
+      return fieldValueOrNull(request.resource.data, field) ==
+        fieldValueOrNull(resource.data, field);
+    }
+
+    function finalPricingFieldsUnchanged() {
+      return fieldUnchanged('precoFinal')
+        && fieldUnchanged('preco')
+        && fieldUnchanged('commissionPlatform')
+        && fieldUnchanged('earningsProvider')
+        && fieldUnchanged('earningsTotal');
+    }
+
+    function finalProposalFieldsUnchanged() {
+      return fieldUnchanged('precoPropostoPrestador')
+        && fieldUnchanged('statusConfirmacaoValor');
+    }
+
+    function fieldNullOrMissing(data, field) {
+      return !(data is map) || !data.keys().hasAny([field]) || data[field] == null;
+    }
+
+    function numberWithin(actual, expected) {
+      return actual is number
+        && expected is number
+        && actual >= expected - 0.01
+        && actual <= expected + 0.01;
+    }
+
+    function clearsFinalPricingFields() {
+      return fieldNullOrMissing(request.resource.data, 'precoFinal')
+        && fieldNullOrMissing(request.resource.data, 'preco')
+        && fieldNullOrMissing(request.resource.data, 'commissionPlatform')
+        && fieldNullOrMissing(request.resource.data, 'earningsProvider')
+        && fieldNullOrMissing(request.resource.data, 'earningsTotal');
+    }
+
+    function validFinalPricingConfirmation() {
+      let finalPrice = fieldValueOrNull(request.resource.data, 'precoFinal');
+      let proposedPrice = fieldValueOrNull(resource.data, 'precoPropostoPrestador');
+      let commission = fieldValueOrNull(request.resource.data, 'commissionPlatform');
+      let providerEarnings = fieldValueOrNull(request.resource.data, 'earningsProvider');
+      let total = fieldValueOrNull(request.resource.data, 'earningsTotal');
+      return isPedidoClienteActor()
+        && pedidoEstado(resource.data) == 'aguarda_confirmacao_valor'
+        && pedidoEstado(request.resource.data) == 'concluido'
+        && request.resource.data['statusConfirmacaoValor'] == 'confirmado_cliente'
+        && request.resource.data.keys().hasAll([
+          'precoFinal',
+          'preco',
+          'commissionPlatform',
+          'earningsProvider',
+          'earningsTotal'
+        ])
+        && numberWithin(finalPrice, proposedPrice)
+        && numberWithin(fieldValueOrNull(request.resource.data, 'preco'), finalPrice)
+        && numberWithin(total, finalPrice)
+        && numberWithin(commission, finalPrice * 0.15)
+        && numberWithin(providerEarnings, finalPrice * 0.85);
+    }
+
+    function validFinalPricingUpdate() {
+      let nextEstado = pedidoEstado(request.resource.data);
+      return finalPricingFieldsUnchanged()
+        ? true
+        : (clearsFinalPricingFields() &&
+          (
+            nextEstado == 'criado' ||
+            nextEstado == 'aguarda_resposta_prestador' ||
+            nextEstado == 'aguarda_resposta_cliente'
+          ));
+    }
+
+    function validFinalProposalUpdate() {
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return finalProposalFieldsUnchanged()
+        ? true
+        : ((
+          isPedidoPrestadorActorForUpdate()
+          && currentEstado == 'em_andamento'
+          && nextEstado == 'aguarda_confirmacao_valor'
+          && fieldValueOrNull(request.resource.data, 'precoPropostoPrestador') is number
+          && fieldValueOrNull(request.resource.data, 'precoPropostoPrestador') > 0
+          && request.resource.data['statusConfirmacaoValor'] == 'pendente_cliente'
+        )
+        || (
+          isPedidoClienteActor()
+          && currentEstado == 'aguarda_confirmacao_valor'
+          && nextEstado == 'concluido'
+          && request.resource.data['statusConfirmacaoValor'] == 'confirmado_cliente'
+        )
+        || (
+          isPedidoClienteActor()
+          && currentEstado == 'aguarda_confirmacao_valor'
+          && nextEstado == 'em_andamento'
+          && request.resource.data['statusConfirmacaoValor'] == 'rejeitado_cliente'
+        )
+        || (
+          fieldNullOrMissing(request.resource.data, 'precoPropostoPrestador')
+          && (
+            !request.resource.data.keys().hasAny(['statusConfirmacaoValor']) ||
+            request.resource.data['statusConfirmacaoValor'] == 'nenhum'
+          )
+          && (
+            nextEstado == 'criado' ||
+            nextEstado == 'aguarda_resposta_prestador' ||
+            nextEstado == 'aguarda_resposta_cliente'
+          )
+        ));
+    }
+
+    function validPedidoEconomicUpdate() {
+      return (
+          pedidoEstado(resource.data) == 'aguarda_confirmacao_valor' &&
+          pedidoEstado(request.resource.data) == 'concluido'
+        )
+        ? validFinalPricingConfirmation()
+        : (validFinalPricingUpdate() && validFinalProposalUpdate());
+    }
+
+    function immutablePedidoIdentity() {
+      return clienteIdFromData(request.resource.data) == clienteIdFromData(resource.data)
+        && fieldValueOrNull(request.resource.data, 'clientId') ==
+          fieldValueOrNull(resource.data, 'clientId')
+        && fieldValueOrNull(request.resource.data, 'createdAt') ==
+          fieldValueOrNull(resource.data, 'createdAt');
+    }
+
+    function validPedidoOpenAccept() {
+      return isPrestador()
+        && pedidoAberto(resource.data)
+        && prestadorMatchesPedido(resource.data)
+        && hasValidPedidoEstado(request.resource.data)
+        && pedidoEstado(request.resource.data) == 'aceito'
+        && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoClientManualInvite() {
+      return isPedidoClienteActor()
+        && pedidoEstado(resource.data) == 'criado'
+        && pedidoEstado(request.resource.data) == 'aguarda_resposta_prestador'
+        && fieldValueOrNull(resource.data, 'prestadorId') == null
+        && fieldValueOrNull(request.resource.data, 'prestadorId') is string
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoProviderQuoteProposal() {
+      let minValue = fieldValueOrNull(request.resource.data, 'valorMinEstimadoPrestador');
+      let maxValue = fieldValueOrNull(request.resource.data, 'valorMaxEstimadoPrestador');
+      return isPedidoPrestadorActorForUpdate()
+        && prestadorMatchesPedido(resource.data)
+        && hasValidPedidoEstado(request.resource.data)
+        && isAllowedPrestadorPedidoTransition(
+          pedidoEstado(resource.data),
+          pedidoEstado(request.resource.data)
+        )
+        && pedidoEstado(request.resource.data) == 'aguarda_resposta_cliente'
+        && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()
+        && minValue is number
+        && maxValue is number
+        && minValue > 0
+        && maxValue >= minValue
+        && request.resource.data['statusProposta'] == 'pendente_cliente'
+        && request.resource.data['statusConfirmacaoValor'] == 'nenhum'
+        && fieldNullOrMissing(request.resource.data, 'precoPropostoPrestador')
+        && clearsFinalPricingFields()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoProviderFinalProposal() {
+      let proposedPrice = fieldValueOrNull(request.resource.data, 'precoPropostoPrestador');
+      return isPedidoPrestadorActorForUpdate()
+        && hasValidPedidoEstado(request.resource.data)
+        && pedidoEstado(resource.data) == 'em_andamento'
+        && pedidoEstado(request.resource.data) == 'aguarda_confirmacao_valor'
+        && proposedPrice is number
+        && proposedPrice > 0
+        && request.resource.data['statusConfirmacaoValor'] == 'pendente_cliente'
+        && finalPricingFieldsUnchanged()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoProviderStartService() {
+      return isPedidoPrestadorActorForUpdate()
+        && hasValidPedidoEstado(request.resource.data)
+        && pedidoEstado(resource.data) == 'aceito'
+        && pedidoEstado(request.resource.data) == 'em_andamento'
+        && finalPricingFieldsUnchanged()
+        && finalProposalFieldsUnchanged()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoClientFinalConfirmation() {
+      return validFinalPricingConfirmation()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoGenericUpdate() {
+      return (isPedidoParticipantByData(resource.data)
+        || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
+        && validPedidoStateTransition()
+        && validPrestadorIdTransition()
+        && validPedidoEconomicUpdate()
+        && immutablePedidoIdentity();
+    }
+
+    function validPedidoUpdate() {
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return !hasValidPedidoEstado(request.resource.data)
+        ? false
+        : (
+          currentEstado == 'criado' && nextEstado == 'aceito'
+            ? validPedidoOpenAccept()
+            : (
+              currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
+                ? validPedidoClientManualInvite()
+                : (
+                  nextEstado == 'aguarda_resposta_cliente'
+                    ? validPedidoProviderQuoteProposal()
+                    : (
+                      currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
+                        ? validPedidoProviderFinalProposal()
+                        : (
+                          currentEstado == 'aceito' && nextEstado == 'em_andamento'
+                            ? validPedidoProviderStartService()
+                            : (
+                              currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
+                                ? validPedidoClientFinalConfirmation()
+                                : validPedidoGenericUpdate()
+                            )
+                        )
+                    )
+                )
+            )
+        );
     }
 
     // -------------------------
@@ -341,13 +659,7 @@ service cloud.firestore {
       // Atualizar:
       // - cliente/prestador participantes
       // - prestador pode aceitar/agir num pedido aberto (SÓ se fizer match com o serviço)
-      allow update: if (isPedidoParticipantByData(resource.data)
-        || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
-        && hasValidPedidoEstado(request.resource.data)
-        && validPrestadorIdTransition()
-        && immutableField('clienteId')
-        && immutableField('clientId')
-        && immutableField('createdAt');
+      allow update: if validPedidoUpdate();
 
       allow delete: if isAdmin() || devMode();
     }

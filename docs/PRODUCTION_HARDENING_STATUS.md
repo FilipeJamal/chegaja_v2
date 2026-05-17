@@ -1,6 +1,6 @@
 # Production Hardening Status - M2.7
 
-Data: 2026-05-16
+Data: 2026-05-17
 
 ## Estado
 
@@ -27,6 +27,9 @@ M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
 | KYC | endurecido | owner/admin podem ler; terceiros negados | Caminho `kyc/{prestadorId}/{file}` nao fica publico. |
 | Perfis/portfolio/stories | limitado | owner escreve; leitura publica apenas onde esperado | Imagens limitadas por tipo e tamanho. |
 | Firestore pedidos | endurecido | teste bloqueia aceitar pedido para outro prestador | Prestador compativel so pode aceitar pedido aberto para o proprio UID. |
+| Firestore estados de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Regras espelham a state machine principal e bloqueiam reabrir pedidos finais. |
+| Firestore valores de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Preco final/comissao/ganhos so passam no fluxo de confirmacao com divisao esperada. |
+| Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
 | Upload de anexos no app | ajustado | `StoragePathPolicy` | Sanitiza nomes, define MIME e bloqueia tipos nao suportados. |
 
@@ -75,14 +78,36 @@ Foi adicionada validacao para a transicao de `prestadorId` em pedidos:
 - pedido aberto com `prestadorId == null` pode continuar sem prestador;
 - prestador compativel pode aceitar apenas se o novo `prestadorId` for o proprio UID;
 - pedido ja atribuido nao pode trocar `prestadorId` por outro UID via cliente.
+- cliente pode convidar manualmente um prestador a partir de `criado` para
+  `aguarda_resposta_prestador`;
+- cliente/prestador podem limpar `prestadorId` apenas nos fluxos previstos de
+  rejeicao/desistencia para `criado`.
 
 Isto reduz o risco de um prestador manipular um pedido aberto para atribui-lo a
 outra conta.
+
+M2.7.1 adicionou uma camada especifica para estados e valores:
+
+- `status` e `estado`, quando ambos existem, devem ter o mesmo valor;
+- transicoes finais de `concluido` e `cancelado` nao podem voltar para estados
+  operacionais;
+- cliente nao consegue alterar `earningsProvider`/ganhos do prestador;
+- prestador nao consegue escrever diretamente `precoFinal`, comissao ou ganhos;
+- confirmacao final so passa de `aguarda_confirmacao_valor` para `concluido`
+  quando `precoFinal` bate com `precoPropostoPrestador` e a divisao 15%/85%
+  esta consistente.
+
+O mapa de estados e campos protegidos esta documentado em:
+
+```text
+docs/PEDIDO_STATE_MACHINE.md
+```
 
 ## Testes adicionados
 
 ```text
 functions/test/storage.test.js
+functions/test/firestore.test.js
 test/core/storage_path_policy_test.dart
 ```
 
@@ -95,6 +120,24 @@ Cobertura nova:
 - pasta temporaria exige UID autenticado;
 - KYC nao e publico para outros utilizadores;
 - caminhos e MIME de anexos sao normalizados no app.
+- convite manual de cliente para prestador continua permitido;
+- cliente nao consegue manipular ganhos do prestador;
+- prestador nao consegue manipular preco final/comissao;
+- pedidos `concluido` e `cancelado` nao reabrem;
+- prestador consegue iniciar servico, enviar faixa de orcamento e propor valor
+  final pelos ramos curtos das regras;
+- confirmacao final com comissao adulterada e negada;
+- confirmacao final correta continua permitida.
+
+## Hardening de bootstrap Auth/Firestore
+
+Durante os testes Android em emulador, o primeiro acesso Firestore apos
+`signInAnonymously` pode devolver `cloud_firestore/unavailable` enquanto o
+emulador ainda estabiliza a ligacao. M2.7.1 adicionou retry curto apenas para a
+leitura/escrita inicial de `users/{uid}` no `AuthService`.
+
+Isto nao altera permissoes nem identidade do utilizador; apenas evita falha
+transitoria no arranque local/mobile.
 
 ## Riscos restantes
 
@@ -103,7 +146,7 @@ Cobertura nova:
 | Push real Android | pendente M2.6 | Validar em telemovel fisico. |
 | Picker/upload real Android | pendente M2.6 | Validar em telemovel fisico com Storage real/emulado. |
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
-| Campos economicos em `pedidos` | parcial | Antes de pagamentos reais, migrar calculos criticos para Functions/admin. |
+| Campos economicos em `pedidos` | endurecido parcial | Regras validam valores hoje; antes de pagamentos reais, migrar calculos criticos para Functions/admin. |
 | Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
 
@@ -119,6 +162,17 @@ npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:
 flutter build apk --release
 flutter build appbundle --release
 ```
+
+Ultima bateria M2.7.1:
+
+| Comando | Resultado |
+| --- | --- |
+| `npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cmd test"` | passou, 30/30 |
+| `flutter test` | passou, 47/47 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"` | passou, 5/5 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"` | passou, 4/4 |
+| `flutter build apk --release` | passou, `build/app/outputs/flutter-apk/app-release.apk` |
+| `flutter build appbundle --release` | passou, `build/app/outputs/bundle/release/app-release.aab` |
 
 ## Decisao
 

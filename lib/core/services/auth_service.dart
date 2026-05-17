@@ -14,6 +14,13 @@ class AuthService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   static Future<User>? _pendingAnonymousEnsure;
   static const String _seenUserFlagKey = 'auth.seenPersistedUser';
+  static const List<Duration> _firestoreBootstrapRetryDelays = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 8),
+    Duration(seconds: 12),
+  ];
 
   static DocumentReference<Map<String, dynamic>> get userRef {
     final uid = _auth.currentUser?.uid;
@@ -61,32 +68,70 @@ class AuthService {
     if (user == null) {
       throw Exception('Falha ao autenticar utilizador anonimo.');
     }
+    final signedUser = user;
 
     await _markUserSeen();
 
-    final userDocRef = _db.collection('users').doc(user.uid);
+    final userDocRef = _db.collection('users').doc(signedUser.uid);
 
     // Se ja existir, nao sobrescrevemos campos importantes,
     // mas garantimos default region se nao existir.
-    final doc = await userDocRef.get();
+    final doc = await _withFirestoreBootstrapRetry(userDocRef.get);
     if (!doc.exists) {
-      await userDocRef.set(
-        {
-          'uid': user.uid,
-          'isAnonymous': user.isAnonymous,
-          'region': 'PT',
-          'lastLoginAt': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
+      await _withFirestoreBootstrapRetry(
+        () => userDocRef.set(
+          {
+            'uid': signedUser.uid,
+            'isAnonymous': signedUser.isAnonymous,
+            'region': 'PT',
+            'lastLoginAt': FieldValue.serverTimestamp(),
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        ),
       );
     } else {
-      await userDocRef.update({
-        'lastLoginAt': FieldValue.serverTimestamp(),
-      });
+      await _withFirestoreBootstrapRetry(
+        () => userDocRef.update({
+          'lastLoginAt': FieldValue.serverTimestamp(),
+        }),
+      );
     }
 
-    return user;
+    return signedUser;
+  }
+
+  static Future<T> _withFirestoreBootstrapRetry<T>(
+    Future<T> Function() action,
+  ) async {
+    Object? lastError;
+    StackTrace? lastStackTrace;
+
+    for (var attempt = 0;
+        attempt <= _firestoreBootstrapRetryDelays.length;
+        attempt++) {
+      try {
+        return await action();
+      } on FirebaseException catch (error, stackTrace) {
+        if (!_isTransientFirestoreBootstrapError(error) ||
+            attempt == _firestoreBootstrapRetryDelays.length) {
+          rethrow;
+        }
+        lastError = error;
+        lastStackTrace = stackTrace;
+      }
+
+      await Future<void>.delayed(_firestoreBootstrapRetryDelays[attempt]);
+    }
+
+    Error.throwWithStackTrace(lastError!, lastStackTrace!);
+  }
+
+  static bool _isTransientFirestoreBootstrapError(FirebaseException error) {
+    return error.plugin == 'cloud_firestore' &&
+        (error.code == 'unavailable' ||
+            error.code == 'deadline-exceeded' ||
+            error.code == 'internal');
   }
 
   static Future<Duration> _restoreTimeoutBeforeAnonymousSignIn() async {

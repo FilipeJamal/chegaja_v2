@@ -109,6 +109,31 @@ describe("Firestore Security Rules", () => {
     });
 
     describe("Pedidos Collection", () => {
+        async function seedPedido(id, data) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore().collection("pedidos").doc(id).set({
+                    clienteId: "client1",
+                    status: "criado",
+                    estado: "criado",
+                    prestadorId: null,
+                    servicoId: "svc1",
+                    servicoNome: "Canalizador",
+                    createdAt: new Date(),
+                    ...data,
+                });
+            });
+        }
+
+        async function seedProvider(id, data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore().collection("prestadores").doc(id).set({
+                    servicos: ["svc1"],
+                    servicosNomes: ["Canalizador"],
+                    ...data,
+                });
+            });
+        }
+
         it("should allow a client to create a valid order", async () => {
             const client = testEnv.authenticatedContext("client1");
             await assertSucceeds(
@@ -202,6 +227,209 @@ describe("Firestore Security Rules", () => {
                     status: "aceito",
                     estado: "aceito",
                     prestadorId: "provider1",
+                })
+            );
+        });
+
+        it("should allow a client to invite a provider manually", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite", {
+                status: "criado",
+                estado: "criado",
+                prestadorId: null,
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("pedidos").doc("order_manual_invite").update({
+                    status: "aguarda_resposta_prestador",
+                    estado: "aguarda_resposta_prestador",
+                    prestadorId: "provider1",
+                })
+            );
+        });
+
+        it("should deny client manipulation of provider earnings", async () => {
+            await seedPedido("order_client_earnings_attack", {
+                status: "em_andamento",
+                estado: "em_andamento",
+                prestadorId: "provider1",
+                precoPropostoPrestador: 100,
+                commissionPlatform: 15,
+                earningsProvider: 85,
+                earningsTotal: 100,
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_client_earnings_attack").update({
+                    earningsProvider: 999,
+                })
+            );
+        });
+
+        it("should deny provider manipulation of final price fields", async () => {
+            await seedPedido("order_provider_price_attack", {
+                status: "em_andamento",
+                estado: "em_andamento",
+                prestadorId: "provider1",
+                precoPropostoPrestador: 100,
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_provider_price_attack").update({
+                    precoFinal: 200,
+                    commissionPlatform: 0,
+                    earningsProvider: 200,
+                    earningsTotal: 200,
+                })
+            );
+        });
+
+        it("should deny reopening a concluded order", async () => {
+            await seedPedido("order_reopen_concluded", {
+                status: "concluido",
+                estado: "concluido",
+                prestadorId: "provider1",
+                precoFinal: 100,
+                commissionPlatform: 15,
+                earningsProvider: 85,
+                earningsTotal: 100,
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_reopen_concluded").update({
+                    status: "em_andamento",
+                    estado: "em_andamento",
+                })
+            );
+        });
+
+        it("should deny reopening a cancelled order", async () => {
+            await seedPedido("order_reopen_cancelled", {
+                status: "cancelado",
+                estado: "cancelado",
+                prestadorId: "provider1",
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_reopen_cancelled").update({
+                    status: "aceito",
+                    estado: "aceito",
+                })
+            );
+        });
+
+        it("should deny final confirmation with manipulated commission split", async () => {
+            await seedPedido("order_bad_commission", {
+                status: "aguarda_confirmacao_valor",
+                estado: "aguarda_confirmacao_valor",
+                prestadorId: "provider1",
+                precoPropostoPrestador: 100,
+                statusConfirmacaoValor: "pendente_cliente",
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_bad_commission").update({
+                    status: "concluido",
+                    estado: "concluido",
+                    precoFinal: 100,
+                    preco: 100,
+                    statusConfirmacaoValor: "confirmado_cliente",
+                    commissionPlatform: 99,
+                    earningsProvider: 1,
+                    earningsTotal: 100,
+                    concluidoEm: new Date(),
+                })
+            );
+        });
+
+        it("should allow final confirmation with the expected commission split", async () => {
+            await seedPedido("order_good_commission", {
+                status: "aguarda_confirmacao_valor",
+                estado: "aguarda_confirmacao_valor",
+                prestadorId: "provider1",
+                precoPropostoPrestador: 100,
+                statusConfirmacaoValor: "pendente_cliente",
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("pedidos").doc("order_good_commission").update({
+                    status: "concluido",
+                    estado: "concluido",
+                    precoFinal: 100,
+                    preco: 100,
+                    statusConfirmacaoValor: "confirmado_cliente",
+                    commissionPlatform: 15,
+                    earningsProvider: 85,
+                    earningsTotal: 100,
+                    concluidoEm: new Date(),
+                })
+            );
+        });
+
+        it("should allow assigned provider to start service", async () => {
+            await seedPedido("order_start_service", {
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_start_service").update({
+                    status: "em_andamento",
+                    estado: "em_andamento",
+                })
+            );
+        });
+
+        it("should allow assigned provider to send quote range", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_quote_range", {
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_quote_range").update({
+                    status: "aguarda_resposta_cliente",
+                    estado: "aguarda_resposta_cliente",
+                    prestadorId: "provider1",
+                    valorMinEstimadoPrestador: 20,
+                    valorMaxEstimadoPrestador: 35,
+                    statusProposta: "pendente_cliente",
+                    statusConfirmacaoValor: "nenhum",
+                    precoPropostoPrestador: null,
+                    precoFinal: null,
+                    commissionPlatform: null,
+                    earningsProvider: null,
+                    earningsTotal: null,
+                })
+            );
+        });
+
+        it("should allow assigned provider to propose final value", async () => {
+            await seedPedido("order_final_value", {
+                status: "em_andamento",
+                estado: "em_andamento",
+                prestadorId: "provider1",
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_final_value").update({
+                    status: "aguarda_confirmacao_valor",
+                    estado: "aguarda_confirmacao_valor",
+                    precoPropostoPrestador: 100,
+                    statusConfirmacaoValor: "pendente_cliente",
                 })
             );
         });
