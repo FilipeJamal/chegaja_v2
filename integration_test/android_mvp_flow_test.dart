@@ -616,7 +616,12 @@ void main() {
 
       await _clientConfirmsValueUi(tester, pedidoId);
 
-      final finalPedido = await _pedido(_defaultDb, pedidoId);
+      final finalPedido = await _waitPedido(
+        _defaultDb,
+        pedidoId,
+        (p) => p.estado == 'concluido',
+        'pedido concluido apos confirmacao UI',
+      );
       expect(finalPedido.estado, 'concluido');
       expect(finalPedido.status, 'concluido');
       expect(finalPedido.statusConfirmacaoValor, 'confirmado_cliente');
@@ -670,7 +675,12 @@ void main() {
         valorFinal: 25,
       );
 
-      final finalPedido = await _pedido(_defaultDb, pedidoId);
+      final finalPedido = await _waitPedido(
+        _defaultDb,
+        pedidoId,
+        (p) => p.estado == 'concluido',
+        'orcamento concluido apos confirmacao direta',
+      );
       expect(finalPedido.estado, 'concluido');
       expect(finalPedido.statusConfirmacaoValor, 'confirmado_cliente');
       _expectMoney(finalPedido, 25);
@@ -737,7 +747,12 @@ void main() {
 
       await _clientConfirmsValueUi(tester, pedidoId);
 
-      final finalPedido = await _pedido(_defaultDb, pedidoId);
+      final finalPedido = await _waitPedido(
+        _defaultDb,
+        pedidoId,
+        (p) => p.estado == 'concluido',
+        'orcamento concluido apos confirmacao direta',
+      );
       expect(finalPedido.tipoPreco, 'por_orcamento');
       expect(finalPedido.valorMinEstimadoPrestador, 20);
       expect(finalPedido.valorMaxEstimadoPrestador, 35);

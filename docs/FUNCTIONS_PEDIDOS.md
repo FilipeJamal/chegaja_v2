@@ -1,4 +1,4 @@
-# Functions de Pedidos - M2.7.2 / M2.7.3
+# Functions de Pedidos - M2.7.2 / M2.7.3 / M2.7.4
 
 Data: 2026-05-17
 
@@ -137,6 +137,50 @@ Detalhes em:
 docs/ANDROID_FUNCTIONS_EMULATOR_TESTS.md
 ```
 
+## Deploy real M2.7.4
+
+As Functions foram publicadas no Firebase real em `chegaja-ac88d`:
+
+```powershell
+npx.cmd firebase deploy --only functions --project chegaja-ac88d
+```
+
+No deploy M2.7.4, `proporValorFinalPedido` e
+`confirmarValorFinalPedido` foram criadas em `europe-west1`. O smoke real
+confirmou o caminho:
+
+```text
+PedidoService/REST smoke -> Cloud Functions callable -> Admin SDK -> Firestore
+```
+
+E validou:
+
+- prestador atribuido chama `proporValorFinalPedido`;
+- cliente do pedido chama `confirmarValorFinalPedido`;
+- pedido termina em `concluido`;
+- `commissionPlatform` fica em 15%;
+- `earningsProvider` fica em 85%;
+- `lastAuthoritativeFunction` fica em `confirmarValorFinalPedido`;
+- tentativa direta de adulterar `commissionPlatform` e negada com 403.
+
+Comando de smoke:
+
+```powershell
+npm.cmd run smoke:firebase:production
+```
+
+O script fica em:
+
+```text
+scripts/smoke/firebase_production_smoke.js
+```
+
+Detalhes completos do deploy:
+
+```text
+docs/FIREBASE_DEPLOYMENT_STATUS.md
+```
+
 ## Firestore Rules
 
 As regras continuam a validar o caminho direto legado para nao quebrar os
@@ -174,4 +218,5 @@ npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:
 npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"
 flutter build apk --release
 flutter build appbundle --release
+npm.cmd run smoke:firebase:production
 ```

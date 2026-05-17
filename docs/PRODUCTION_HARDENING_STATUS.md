@@ -17,6 +17,7 @@ M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
 M2.7.1: avancado em estados, pedidos e valores
 M2.7.2: avancado em Functions autoritativas para valores
 M2.7.3: avancado em testes Android com Functions Emulator
+M2.7.4: avancado com deploy controlado Firebase e smoke real
 ```
 
 ## Alteracoes aplicadas
@@ -34,6 +35,8 @@ M2.7.3: avancado em testes Android com Functions Emulator
 | Firestore valores de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Preco final/comissao/ganhos so passam no fluxo de confirmacao com divisao esperada. |
 | Functions de valores | avancado M2.7.2 | `functions/test/pedidoFunctions.test.js` | Prestador propoe valor final e cliente confirma por Cloud Functions/Admin SDK. |
 | Android com Functions Emulator | avancado M2.7.3 | `integration_test/android_functions_flow_test.dart` | Fluxo Android valida proposta/confirmacao por callable no emulador. |
+| Deploy Firebase real | avancado M2.7.4 | `docs/FIREBASE_DEPLOYMENT_STATUS.md` | Firestore Rules, Storage Rules e Functions publicados em `chegaja-ac88d`. |
+| Smoke Firebase real | avancado M2.7.4 | `npm.cmd run smoke:firebase:production` | Fluxo pedido + Functions + Storage validado contra producao. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
@@ -133,12 +136,26 @@ M2.7.3 adicionou prova Android/emulador para esse caminho:
   da proposta e `lastAuthoritativeFunction = confirmarValorFinalPedido` depois
   da conclusao.
 
+M2.7.4 publicou esse hardening no Firebase real:
+
+- `firestore.rules` foi publicado em `chegaja-ac88d`;
+- `storage.rules` foi publicado em `chegaja-ac88d`;
+- as Cloud Functions foram publicadas em `europe-west1`;
+- `proporValorFinalPedido` e `confirmarValorFinalPedido` foram criadas no
+  ambiente real;
+- o service account do Firebase Storage recebeu
+  `roles/firebaserules.firestoreServiceAgent` para permitir que Storage Rules
+  avaliem participantes do pedido via Firestore;
+- `npm.cmd run smoke:firebase:production` validou Auth, Firestore, Functions,
+  Storage, split 15%/85% e bloqueios 403 em producao.
+
 O mapa de estados e campos protegidos esta documentado em:
 
 ```text
 docs/PEDIDO_STATE_MACHINE.md
 docs/FUNCTIONS_PEDIDOS.md
 docs/ANDROID_FUNCTIONS_EMULATOR_TESTS.md
+docs/FIREBASE_DEPLOYMENT_STATUS.md
 ```
 
 ## Testes adicionados
@@ -151,6 +168,7 @@ integration_test/android_functions_flow_test.dart
 test/core/storage_path_policy_test.dart
 test/core/pedido_service_test.dart
 scripts/test/run_android_integration_test.test.js
+scripts/smoke/firebase_production_smoke.js
 ```
 
 Cobertura nova:
@@ -183,6 +201,12 @@ Cobertura nova:
   chamado com `--functions-emulator`;
 - Android em emulador chama `proporValorFinalPedido` e
   `confirmarValorFinalPedido` via Functions Emulator.
+- smoke real cria pedido, aceita, inicia, propoe valor final, confirma por
+  Functions reais e valida `lastAuthoritativeFunction`;
+- smoke real confirma `commissionPlatform = 15%` e `earningsProvider = 85%`;
+- smoke real confirma upload permitido em `temp/{uid}/anexos`;
+- smoke real confirma upload permitido em `pedidos/{pedidoId}/anexos` para
+  participante e negado para outsider.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -202,6 +226,9 @@ transitoria no arranque local/mobile.
 | Picker/upload real Android | pendente M2.6 | Validar em telemovel fisico com Storage real/emulado. |
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
 | Campos economicos em `pedidos` | backend autoritativo testado em Android/emulador | M2.7.3 prova um fluxo Android usando Functions Emulator; caminho direto permanece para fake/unitarios e scripts sem Functions. |
+| Deploy real Firebase | avancado M2.7.4 | Firestore Rules, Storage Rules e Functions publicados; smoke real passou. |
+| Node.js 20 Functions | divida futura | Runtime depreciado em 2026-04-30 e decommission previsto para 2026-10-30; planear upgrade antes disso. |
+| `firebase-functions` desatualizado | divida futura | Firebase CLI recomenda upgrade; avaliar em fase separada por risco de breaking changes. |
 | Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
 
@@ -231,6 +258,18 @@ Ultima bateria M2.7.3:
 | `npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"` | passou, 1/1 |
 | `flutter build apk --release` | passou, `build/app/outputs/flutter-apk/app-release.apk` |
 | `flutter build appbundle --release` | passou, `build/app/outputs/bundle/release/app-release.aab` |
+
+Validacao M2.7.4:
+
+| Comando | Resultado |
+| --- | --- |
+| `npx.cmd firebase login:list` | passou, conta `bentojamalfilipe@gmail.com` |
+| `npx.cmd firebase use` | passou, projeto `chegaja-ac88d` |
+| `npx.cmd firebase deploy --only firestore:rules --project chegaja-ac88d` | passou |
+| `npx.cmd firebase deploy --only storage --project chegaja-ac88d` | passou |
+| `npx.cmd firebase deploy --only functions --project chegaja-ac88d` | passou |
+| IAM `roles/firebaserules.firestoreServiceAgent` para Firebase Storage service account | aplicado |
+| `npm.cmd run smoke:firebase:production` | passou |
 
 ## Decisao
 

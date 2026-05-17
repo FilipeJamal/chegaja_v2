@@ -6,7 +6,8 @@
     "test:windows:cross": "flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true",
     "test:android:mvp": "node scripts/run_android_integration_test.js integration_test/android_mvp_flow_test.dart",
     "test:android:mobile": "node scripts/run_android_integration_test.js integration_test/android_mobile_real_test.dart",
-    "test:android:functions": "node scripts/run_android_integration_test.js --functions-emulator integration_test/android_functions_flow_test.dart"
+    "test:android:functions": "node scripts/run_android_integration_test.js --functions-emulator integration_test/android_functions_flow_test.dart",
+    "smoke:firebase:production": "node scripts/smoke/firebase_production_smoke.js"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",
