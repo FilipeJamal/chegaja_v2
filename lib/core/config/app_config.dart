@@ -59,7 +59,12 @@ class AppConfig extends InheritedWidget {
   }
 
   static String get functionsRegion {
-    final envRegion = dotenv.env['FIREBASE_FUNCTIONS_REGION'];
+    String? envRegion;
+    try {
+      envRegion = dotenv.env['FIREBASE_FUNCTIONS_REGION'];
+    } catch (_) {
+      envRegion = null;
+    }
     if (envRegion != null && envRegion.trim().isNotEmpty) {
       return envRegion.trim();
     }

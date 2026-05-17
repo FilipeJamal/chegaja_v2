@@ -224,6 +224,38 @@ void main() {
       expect(gateway.confirmacoes, ['pedido_functions']);
     });
 
+    test('flag de Functions Emulator prioriza caminho autoritativo', () async {
+      const runningFunctionsEmulatorTest = bool.fromEnvironment(
+        'RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS',
+        defaultValue: false,
+      );
+      if (!runningFunctionsEmulatorTest) return;
+
+      final db = FakeFirebaseFirestore();
+      final gateway = _FakePedidoValueFunctionsGateway();
+      final service = PedidoService(
+        firestore: db,
+        trackAnalytics: false,
+        valueFunctionsGateway: gateway,
+      );
+
+      final pedido = _buildPedido(
+        id: 'pedido_functions_flag',
+        prestadorId: 'prest_3',
+        estado: PedidoStateMachine.emAndamento,
+      );
+      await _seedPedido(db, pedido);
+
+      await service.proporValorFinal(
+        pedido: pedido,
+        prestadorId: 'prest_3',
+        valorFinal: 125,
+      );
+
+      expect(gateway.propostas.single['pedidoId'], 'pedido_functions_flag');
+      expect(gateway.propostas.single['valorFinal'], 125);
+    });
+
     test('confirmarValorFinal rejeita valor diferente do proposto', () async {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);

@@ -11,6 +11,10 @@ import 'package:chegaja_v2/core/utils/pedido_state_machine.dart';
 
 const bool _runFirebaseEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+const bool _runFirebaseFunctionsEmulatorTests = bool.fromEnvironment(
+  'RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS',
+  defaultValue: false,
+);
 
 abstract class PedidoValueFunctionsGateway {
   Future<void> proporValorFinalPedido({
@@ -72,13 +76,15 @@ class PedidoService {
         _trackAnalytics = trackAnalytics,
         _valueFunctionsGateway = valueFunctionsGateway,
         _useAuthoritativeValueFunctions = useAuthoritativeValueFunctions ??
-            (firestore == null && !_runFirebaseEmulatorTests);
+            (_runFirebaseFunctionsEmulatorTests ||
+                (firestore == null && !_runFirebaseEmulatorTests));
 
   PedidoService._()
       : _db = FirebaseFirestore.instance,
         _trackAnalytics = true,
         _valueFunctionsGateway = null,
-        _useAuthoritativeValueFunctions = !_runFirebaseEmulatorTests;
+        _useAuthoritativeValueFunctions =
+            _runFirebaseFunctionsEmulatorTests || !_runFirebaseEmulatorTests;
 
   static final PedidoService instance = PedidoService._();
 

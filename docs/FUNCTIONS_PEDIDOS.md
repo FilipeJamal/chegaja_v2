@@ -1,4 +1,4 @@
-# Functions de Pedidos - M2.7.2
+# Functions de Pedidos - M2.7.2 / M2.7.3
 
 Data: 2026-05-17
 
@@ -115,6 +115,28 @@ porque os scripts Android atuais sobem Auth/Firestore/Storage mas nao sobem o
 emulador de Functions. Em builds normais, esse define nao existe e o caminho
 autoritativo volta a ser Cloud Functions.
 
+M2.7.3 adicionou uma flag separada:
+
+```text
+--dart-define=RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS=true
+```
+
+Quando esta flag esta ativa, `PedidoService` volta a usar o caminho
+autoritativo mesmo com `RUN_FIREBASE_EMULATOR_TESTS=true`. Isto permite testar
+Android contra Auth/Firestore/Storage/Functions Emulator.
+
+O script dedicado e:
+
+```powershell
+npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"
+```
+
+Detalhes em:
+
+```text
+docs/ANDROID_FUNCTIONS_EMULATOR_TESTS.md
+```
+
 ## Firestore Rules
 
 As regras continuam a validar o caminho direto legado para nao quebrar os
@@ -137,6 +159,9 @@ Cobertura principal:
 npx.cmd firebase emulators:exec --only firestore "cd functions && npx.cmd mocha test/pedidoFunctions.test.js --exit --timeout 30000"
 npx.cmd firebase emulators:exec --only firestore "cd functions && npx.cmd mocha test/firestore.test.js --grep spoofing --exit --timeout 30000"
 flutter test test\core\pedido_service_test.dart --plain-name "usa Functions autoritativas"
+flutter test test\core\pedido_service_test.dart --plain-name "flag de Functions Emulator" --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --dart-define=RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS=true
+npm.cmd run test:scripts
+npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"
 ```
 
 Validacao completa da fase:
@@ -146,6 +171,7 @@ npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cm
 flutter test
 npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"
 npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"
+npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"
 flutter build apk --release
 flutter build appbundle --release
 ```

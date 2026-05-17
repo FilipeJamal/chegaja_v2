@@ -16,6 +16,7 @@ M2.6: avancado tecnicamente, pendente de Android fisico
 M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
 M2.7.1: avancado em estados, pedidos e valores
 M2.7.2: avancado em Functions autoritativas para valores
+M2.7.3: avancado em testes Android com Functions Emulator
 ```
 
 ## Alteracoes aplicadas
@@ -32,6 +33,7 @@ M2.7.2: avancado em Functions autoritativas para valores
 | Firestore estados de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Regras espelham a state machine principal e bloqueiam reabrir pedidos finais. |
 | Firestore valores de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Preco final/comissao/ganhos so passam no fluxo de confirmacao com divisao esperada. |
 | Functions de valores | avancado M2.7.2 | `functions/test/pedidoFunctions.test.js` | Prestador propoe valor final e cliente confirma por Cloud Functions/Admin SDK. |
+| Android com Functions Emulator | avancado M2.7.3 | `integration_test/android_functions_flow_test.dart` | Fluxo Android valida proposta/confirmacao por callable no emulador. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
@@ -117,11 +119,26 @@ M2.7.2 adicionou o caminho backend autoritativo para valores finais:
 - `lastAuthoritativeFunction` e escrito apenas pelo Admin SDK e nao pode ser
   falsificado por cliente/prestador nas regras Firestore.
 
+M2.7.3 adicionou prova Android/emulador para esse caminho:
+
+- `scripts/run_android_integration_test.js` aceita `--functions-emulator`;
+- `npm.cmd run test:android:functions` executa
+  `integration_test/android_functions_flow_test.dart`;
+- o comando sobe Auth, Firestore, Storage e Functions Emulator;
+- o app recebe `RUN_FIREBASE_EMULATOR_TESTS=true` e
+  `RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS=true`;
+- com a flag de Functions ativa, `PedidoService` chama as callables mesmo em
+  ambiente de emulador;
+- o teste valida `lastAuthoritativeFunction = proporValorFinalPedido` depois
+  da proposta e `lastAuthoritativeFunction = confirmarValorFinalPedido` depois
+  da conclusao.
+
 O mapa de estados e campos protegidos esta documentado em:
 
 ```text
 docs/PEDIDO_STATE_MACHINE.md
 docs/FUNCTIONS_PEDIDOS.md
+docs/ANDROID_FUNCTIONS_EMULATOR_TESTS.md
 ```
 
 ## Testes adicionados
@@ -130,8 +147,10 @@ docs/FUNCTIONS_PEDIDOS.md
 functions/test/storage.test.js
 functions/test/firestore.test.js
 functions/test/pedidoFunctions.test.js
+integration_test/android_functions_flow_test.dart
 test/core/storage_path_policy_test.dart
 test/core/pedido_service_test.dart
+scripts/test/run_android_integration_test.test.js
 ```
 
 Cobertura nova:
@@ -160,6 +179,10 @@ Cobertura nova:
 - nao cliente nao consegue confirmar valor final pela Function;
 - pedido fora de `aguarda_confirmacao_valor` nao conclui pela Function;
 - cliente nao consegue falsificar `lastAuthoritativeFunction`.
+- runner Android injeta `RUN_FIREBASE_FUNCTIONS_EMULATOR_TESTS=true` quando
+  chamado com `--functions-emulator`;
+- Android em emulador chama `proporValorFinalPedido` e
+  `confirmarValorFinalPedido` via Functions Emulator.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -178,7 +201,7 @@ transitoria no arranque local/mobile.
 | Push real Android | pendente M2.6 | Validar em telemovel fisico. |
 | Picker/upload real Android | pendente M2.6 | Validar em telemovel fisico com Storage real/emulado. |
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
-| Campos economicos em `pedidos` | backend autoritativo iniciado | M2.7.2 migrou proposta/confirmacao final para Functions; manter compatibilidade direta validada nos testes ate todos os fluxos de emulador usarem Functions. |
+| Campos economicos em `pedidos` | backend autoritativo testado em Android/emulador | M2.7.3 prova um fluxo Android usando Functions Emulator; caminho direto permanece para fake/unitarios e scripts sem Functions. |
 | Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
 
@@ -191,18 +214,21 @@ npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cm
 flutter test
 npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"
 npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"
+npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"
 flutter build apk --release
 flutter build appbundle --release
 ```
 
-Ultima bateria M2.7.2:
+Ultima bateria M2.7.3:
 
 | Comando | Resultado |
 | --- | --- |
-| `npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cmd test"` | passou, 37/37 |
-| `flutter test` | passou, 48/48 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter test` | passou, 49/49 |
 | `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"` | passou, 5/5 |
 | `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"` | passou, 4/4 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"` | passou, 1/1 |
 | `flutter build apk --release` | passou, `build/app/outputs/flutter-apk/app-release.apk` |
 | `flutter build appbundle --release` | passou, `build/app/outputs/bundle/release/app-release.aab` |
 
