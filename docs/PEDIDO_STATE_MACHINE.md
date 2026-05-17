@@ -1,4 +1,4 @@
-# Pedido State Machine - M2.7.1
+# Pedido State Machine - M2.7.1 / M2.7.2
 
 Data: 2026-05-17
 
@@ -103,9 +103,22 @@ A confirmacao final so e permitida quando:
 - `commissionPlatform` bate com 15% do valor final;
 - `earningsProvider` bate com 85% do valor final.
 
-Antes de pagamentos reais, o calculo final deve migrar para Cloud
-Functions/admin. A regra atual reduz manipulacao direta, mas ainda nao substitui
-um backend autoritativo para dinheiro real.
+M2.7.2 iniciou a migracao desse calculo para Cloud Functions/Admin SDK. O
+caminho de producao da app chama `confirmarValorFinalPedido`, que le
+`precoPropostoPrestador`, calcula a divisao 15%/85% no backend e escreve os
+campos finais como admin.
+
+As regras Firestore ainda mantem a confirmacao direta validada para preservar
+os testes e fluxos de emulador que nao sobem Functions. Mesmo nesse caminho, a
+divisao tem de bater exatamente com a regra 15%/85%. O marcador
+`lastAuthoritativeFunction` e protegido: cliente/prestador nao podem falsificar
+que uma escrita veio do backend.
+
+Documento complementar:
+
+```text
+docs/FUNCTIONS_PEDIDOS.md
+```
 
 ## Testes de seguranca
 
@@ -123,4 +136,7 @@ Cobertura em `functions/test/firestore.test.js`:
 - pedido `concluido` nao volta para `em_andamento`;
 - pedido `cancelado` nao volta para `aceito`;
 - confirmacao final com comissao adulterada e negada;
-- confirmacao final com divisao esperada e permitida.
+- confirmacao final com divisao esperada e permitida;
+- cliente nao consegue falsificar `lastAuthoritativeFunction`;
+- Functions cobrem proposta final, confirmacao final, calculo 15%/85%, ator
+  errado e estado invalido.

@@ -161,6 +161,74 @@ function getClienteId(data) {
   return (data.clienteId || data.clientId || '').toString();
 }
 
+function getPedidoEstado(data) {
+  if (!data) return '';
+  return String(data.status || data.estado || '').trim();
+}
+
+function cleanString(value) {
+  return (value || '').toString().trim();
+}
+
+function roundMoney(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  return Math.round(num * 100) / 100;
+}
+
+function calculatePedidoEconomics(finalValue) {
+  const value = roundMoney(finalValue);
+  if (value === null || value <= 0) {
+    throw new HttpsError('invalid-argument', 'Valor final invalido.');
+  }
+
+  const commissionRate = Number(getEnv('DEFAULT_COMMISSION_RATE', '0.15')) || 0.15;
+  const commissionPlatform = roundMoney(value * commissionRate);
+  const earningsProvider = roundMoney(value - commissionPlatform);
+
+  return {
+    precoFinal: value,
+    preco: value,
+    commissionPlatform,
+    earningsProvider,
+    earningsTotal: value,
+  };
+}
+
+function historyItem({ evento, userId, descricao }) {
+  return {
+    evento,
+    userId,
+    descricao: descricao || null,
+    timestamp: Timestamp.now(),
+    source: 'cloud_functions',
+  };
+}
+
+function requireCallableUid(uid) {
+  const cleanUid = cleanString(uid);
+  if (!cleanUid) {
+    throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
+  }
+  return cleanUid;
+}
+
+function requirePedidoId(data) {
+  const pedidoId = cleanString(data && data.pedidoId);
+  if (!pedidoId) {
+    throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
+  }
+  return pedidoId;
+}
+
+function requirePositiveMoney(value, fieldName) {
+  const money = roundMoney(value);
+  if (money === null || money <= 0) {
+    throw new HttpsError('invalid-argument', `${fieldName} invalido.`);
+  }
+  return money;
+}
+
 function ensureAdmin(auth) {
   if (useEmulators) {
     return;
@@ -656,7 +724,131 @@ exports.onPedidoCreated = onDocumentCreated(
 );
 
 // ------------------------------------------------------------
-// 4) Stripe Connect + Pagamentos
+// 4) Pedidos - valores finais autoritativos
+// ------------------------------------------------------------
+
+async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
+  const actorUid = requireCallableUid(uid);
+  const pedidoId = requirePedidoId(data);
+  const valorFinal = requirePositiveMoney(
+    data && (data.valorFinal ?? data.precoPropostoPrestador),
+    'valorFinal'
+  );
+  const comentario = safeText(data && data.comentario, 500);
+
+  const pedidoRef = firestore.collection('pedidos').doc(pedidoId);
+
+  await firestore.runTransaction(async (tx) => {
+    const snap = await tx.get(pedidoRef);
+    if (!snap.exists) {
+      throw new HttpsError('not-found', 'Pedido nao encontrado.');
+    }
+
+    const pedido = snap.data() || {};
+    const prestadorId = cleanString(pedido.prestadorId);
+    const estado = getPedidoEstado(pedido);
+
+    if (prestadorId !== actorUid) {
+      throw new HttpsError('permission-denied', 'Apenas o prestador atribuido pode propor o valor final.');
+    }
+
+    if (estado !== 'em_andamento') {
+      throw new HttpsError('failed-precondition', 'Pedido nao esta em andamento.');
+    }
+
+    tx.update(pedidoRef, {
+      precoPropostoPrestador: valorFinal,
+      statusConfirmacaoValor: 'pendente_cliente',
+      estado: 'aguarda_confirmacao_valor',
+      status: 'aguarda_confirmacao_valor',
+      ...(comentario ? { mensagemPropostaPrestador: comentario } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+      historico: FieldValue.arrayUnion(historyItem({
+        evento: 'valor_proposto',
+        userId: actorUid,
+        descricao: `Prestador propos valor final: ${valorFinal}`,
+      })),
+      lastAuthoritativeFunction: 'proporValorFinalPedido',
+    });
+  });
+
+  logger.info(`[pedidos] valor final proposto pedido=${pedidoId} prestador=${actorUid}`);
+  return { ok: true, pedidoId, valorFinal };
+}
+
+async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) {
+  const actorUid = requireCallableUid(uid);
+  const pedidoId = requirePedidoId(data);
+  let economics;
+
+  await firestore.runTransaction(async (tx) => {
+    const pedidoRef = firestore.collection('pedidos').doc(pedidoId);
+    const snap = await tx.get(pedidoRef);
+    if (!snap.exists) {
+      throw new HttpsError('not-found', 'Pedido nao encontrado.');
+    }
+
+    const pedido = snap.data() || {};
+    const clienteId = cleanString(getClienteId(pedido));
+    const estado = getPedidoEstado(pedido);
+    const statusConfirmacaoValor = cleanString(pedido.statusConfirmacaoValor || 'nenhum');
+    const proposedValue = requirePositiveMoney(
+      pedido.precoPropostoPrestador,
+      'precoPropostoPrestador'
+    );
+
+    if (clienteId !== actorUid) {
+      throw new HttpsError('permission-denied', 'Apenas o cliente do pedido pode confirmar o valor final.');
+    }
+
+    if (estado !== 'aguarda_confirmacao_valor' || statusConfirmacaoValor !== 'pendente_cliente') {
+      throw new HttpsError('failed-precondition', 'Valor final nao esta pendente de confirmacao.');
+    }
+
+    economics = calculatePedidoEconomics(proposedValue);
+
+    tx.update(pedidoRef, {
+      ...economics,
+      statusConfirmacaoValor: 'confirmado_cliente',
+      estado: 'concluido',
+      status: 'concluido',
+      concluidoEm: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      historico: FieldValue.arrayUnion(historyItem({
+        evento: 'concluido',
+        userId: actorUid,
+        descricao: `Cliente confirmou valor final: ${economics.precoFinal}`,
+      })),
+      lastAuthoritativeFunction: 'confirmarValorFinalPedido',
+    });
+  });
+
+  logger.info(`[pedidos] valor final confirmado pedido=${pedidoId} cliente=${actorUid}`);
+  return { ok: true, pedidoId, ...economics };
+}
+
+exports.proporValorFinalPedido = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => proporValorFinalPedidoCore({
+    uid: req.auth && req.auth.uid,
+    data: req.data || {},
+  })
+);
+
+exports.confirmarValorFinalPedido = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => confirmarValorFinalPedidoCore({
+    uid: req.auth && req.auth.uid,
+    data: req.data || {},
+  })
+);
+
+// ------------------------------------------------------------
+// 5) Stripe Connect + Pagamentos
 // ------------------------------------------------------------
 
 function getStripe() {
@@ -2067,3 +2259,12 @@ exports.scheduled_expireRequests = onSchedule(
     logger.info(`[expireRequests] Cancelados ${count} pedidos expirados.`);
   }
 );
+
+exports.__test__ = {
+  db,
+  pedidos: {
+    calculatePedidoEconomics,
+    confirmarValorFinalPedidoCore,
+    proporValorFinalPedidoCore,
+  },
+};

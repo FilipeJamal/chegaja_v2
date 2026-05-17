@@ -14,6 +14,8 @@ M0: fechado
 M2.5: parcial
 M2.6: avancado tecnicamente, pendente de Android fisico
 M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
+M2.7.1: avancado em estados, pedidos e valores
+M2.7.2: avancado em Functions autoritativas para valores
 ```
 
 ## Alteracoes aplicadas
@@ -29,6 +31,8 @@ M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
 | Firestore pedidos | endurecido | teste bloqueia aceitar pedido para outro prestador | Prestador compativel so pode aceitar pedido aberto para o proprio UID. |
 | Firestore estados de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Regras espelham a state machine principal e bloqueiam reabrir pedidos finais. |
 | Firestore valores de pedidos | endurecido M2.7.1 | `functions/test/firestore.test.js` | Preco final/comissao/ganhos so passam no fluxo de confirmacao com divisao esperada. |
+| Functions de valores | avancado M2.7.2 | `functions/test/pedidoFunctions.test.js` | Prestador propoe valor final e cliente confirma por Cloud Functions/Admin SDK. |
+| Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
 | Upload de anexos no app | ajustado | `StoragePathPolicy` | Sanitiza nomes, define MIME e bloqueia tipos nao suportados. |
@@ -97,10 +101,27 @@ M2.7.1 adicionou uma camada especifica para estados e valores:
   quando `precoFinal` bate com `precoPropostoPrestador` e a divisao 15%/85%
   esta consistente.
 
+M2.7.2 adicionou o caminho backend autoritativo para valores finais:
+
+- `proporValorFinalPedido` exige auth, confirma que o UID e o prestador do
+  pedido, exige estado `em_andamento` e grava a proposta final via Admin SDK;
+- `confirmarValorFinalPedido` exige auth, confirma que o UID e o cliente do
+  pedido, exige `aguarda_confirmacao_valor` + `pendente_cliente`, calcula
+  `precoFinal`, `preco`, `commissionPlatform`, `earningsProvider` e
+  `earningsTotal` no backend e conclui o pedido;
+- a app Flutter usa esse caminho nas instancias reais de `PedidoService`;
+- testes com Firestore injetado continuam a usar o caminho direto validado
+  pelas regras para preservar os fluxos de emulador sem Functions;
+- `RUN_FIREBASE_EMULATOR_TESTS=true` mantem `PedidoService.instance` no caminho
+  direto porque os scripts Android sobem Auth/Firestore/Storage, nao Functions;
+- `lastAuthoritativeFunction` e escrito apenas pelo Admin SDK e nao pode ser
+  falsificado por cliente/prestador nas regras Firestore.
+
 O mapa de estados e campos protegidos esta documentado em:
 
 ```text
 docs/PEDIDO_STATE_MACHINE.md
+docs/FUNCTIONS_PEDIDOS.md
 ```
 
 ## Testes adicionados
@@ -108,7 +129,9 @@ docs/PEDIDO_STATE_MACHINE.md
 ```text
 functions/test/storage.test.js
 functions/test/firestore.test.js
+functions/test/pedidoFunctions.test.js
 test/core/storage_path_policy_test.dart
+test/core/pedido_service_test.dart
 ```
 
 Cobertura nova:
@@ -126,8 +149,17 @@ Cobertura nova:
 - pedidos `concluido` e `cancelado` nao reabrem;
 - prestador consegue iniciar servico, enviar faixa de orcamento e propor valor
   final pelos ramos curtos das regras;
+- cliente consegue aceitar proposta de orcamento pelo ramo curto das regras;
 - confirmacao final com comissao adulterada e negada;
 - confirmacao final correta continua permitida.
+- prestador atribuido consegue propor valor final pela Function;
+- outro prestador nao consegue propor valor final pela Function;
+- cliente correto consegue confirmar valor final pela Function;
+- a Function calcula 15%/85% e ignora campos economicos adulterados enviados
+  pelo cliente;
+- nao cliente nao consegue confirmar valor final pela Function;
+- pedido fora de `aguarda_confirmacao_valor` nao conclui pela Function;
+- cliente nao consegue falsificar `lastAuthoritativeFunction`.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -146,7 +178,7 @@ transitoria no arranque local/mobile.
 | Push real Android | pendente M2.6 | Validar em telemovel fisico. |
 | Picker/upload real Android | pendente M2.6 | Validar em telemovel fisico com Storage real/emulado. |
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
-| Campos economicos em `pedidos` | endurecido parcial | Regras validam valores hoje; antes de pagamentos reais, migrar calculos criticos para Functions/admin. |
+| Campos economicos em `pedidos` | backend autoritativo iniciado | M2.7.2 migrou proposta/confirmacao final para Functions; manter compatibilidade direta validada nos testes ate todos os fluxos de emulador usarem Functions. |
 | Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
 
@@ -163,12 +195,12 @@ flutter build apk --release
 flutter build appbundle --release
 ```
 
-Ultima bateria M2.7.1:
+Ultima bateria M2.7.2:
 
 | Comando | Resultado |
 | --- | --- |
-| `npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cmd test"` | passou, 30/30 |
-| `flutter test` | passou, 47/47 |
+| `npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter test` | passou, 48/48 |
 | `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"` | passou, 5/5 |
 | `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"` | passou, 4/4 |
 | `flutter build apk --release` | passou, `build/app/outputs/flutter-apk/app-release.apk` |

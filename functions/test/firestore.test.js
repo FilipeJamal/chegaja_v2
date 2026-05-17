@@ -373,6 +373,32 @@ describe("Firestore Security Rules", () => {
             );
         });
 
+        it("should deny client spoofing authoritative function marker", async () => {
+            await seedPedido("order_spoof_authoritative_marker", {
+                status: "aguarda_confirmacao_valor",
+                estado: "aguarda_confirmacao_valor",
+                prestadorId: "provider1",
+                precoPropostoPrestador: 100,
+                statusConfirmacaoValor: "pendente_cliente",
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_spoof_authoritative_marker").update({
+                    status: "concluido",
+                    estado: "concluido",
+                    precoFinal: 100,
+                    preco: 100,
+                    statusConfirmacaoValor: "confirmado_cliente",
+                    commissionPlatform: 15,
+                    earningsProvider: 85,
+                    earningsTotal: 100,
+                    concluidoEm: new Date(),
+                    lastAuthoritativeFunction: "confirmarValorFinalPedido",
+                })
+            );
+        });
+
         it("should allow assigned provider to start service", async () => {
             await seedPedido("order_start_service", {
                 status: "aceito",
@@ -412,6 +438,32 @@ describe("Firestore Security Rules", () => {
                     commissionPlatform: null,
                     earningsProvider: null,
                     earningsTotal: null,
+                })
+            );
+        });
+
+        it("should allow client to accept provider quote range", async () => {
+            await seedPedido("order_accept_quote_range", {
+                status: "aguarda_resposta_cliente",
+                estado: "aguarda_resposta_cliente",
+                prestadorId: "provider1",
+                valorMinEstimadoPrestador: 20,
+                valorMaxEstimadoPrestador: 35,
+                statusProposta: "pendente_cliente",
+                statusConfirmacaoValor: "nenhum",
+                precoPropostoPrestador: null,
+                precoFinal: null,
+                commissionPlatform: null,
+                earningsProvider: null,
+                earningsTotal: null,
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("pedidos").doc("order_accept_quote_range").update({
+                    status: "aceito",
+                    estado: "aceito",
+                    statusProposta: "aceita_cliente",
                 })
             );
         });

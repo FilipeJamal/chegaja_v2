@@ -62,6 +62,29 @@ Future<void> _seedPedido(FakeFirebaseFirestore db, Pedido pedido) async {
 
 double _asDouble(dynamic value) => (value as num).toDouble();
 
+class _FakePedidoValueFunctionsGateway implements PedidoValueFunctionsGateway {
+  final propostas = <Map<String, dynamic>>[];
+  final confirmacoes = <String>[];
+
+  @override
+  Future<void> proporValorFinalPedido({
+    required String pedidoId,
+    required double valorFinal,
+    String? comentario,
+  }) async {
+    propostas.add({
+      'pedidoId': pedidoId,
+      'valorFinal': valorFinal,
+      'comentario': comentario,
+    });
+  }
+
+  @override
+  Future<void> confirmarValorFinalPedido({required String pedidoId}) async {
+    confirmacoes.add(pedidoId);
+  }
+}
+
 void main() {
   group('PedidoService', () {
     test('enviarPropostaFaixa atualiza proposta e estado', () async {
@@ -152,6 +175,53 @@ void main() {
       expect(_asDouble(data['commissionPlatform']), closeTo(15.0, 0.001));
       expect(_asDouble(data['earningsProvider']), closeTo(85.0, 0.001));
       expect(_asDouble(data['earningsTotal']), closeTo(100.0, 0.001));
+    });
+
+    test('usa Functions autoritativas quando ativadas para valores finais',
+        () async {
+      final db = FakeFirebaseFirestore();
+      final gateway = _FakePedidoValueFunctionsGateway();
+      final service = PedidoService(
+        firestore: db,
+        trackAnalytics: false,
+        valueFunctionsGateway: gateway,
+        useAuthoritativeValueFunctions: true,
+      );
+
+      final pedido = _buildPedido(
+        id: 'pedido_functions',
+        prestadorId: 'prest_3',
+        estado: PedidoStateMachine.emAndamento,
+      );
+      await _seedPedido(db, pedido);
+
+      await service.proporValorFinal(
+        pedido: pedido,
+        prestadorId: 'prest_3',
+        valorFinal: 100,
+        comentario: 'Servico terminado',
+      );
+
+      expect(gateway.propostas, hasLength(1));
+      expect(gateway.propostas.single['pedidoId'], 'pedido_functions');
+      expect(gateway.propostas.single['valorFinal'], 100);
+      expect(gateway.propostas.single['comentario'], 'Servico terminado');
+
+      final pedidoPendente = _buildPedido(
+        id: 'pedido_functions',
+        prestadorId: 'prest_3',
+        estado: PedidoStateMachine.aguardaConfirmacaoValor,
+        precoPropostoPrestador: 100,
+        statusConfirmacaoValor: 'pendente_cliente',
+      );
+
+      await service.confirmarValorFinal(
+        pedido: pedidoPendente,
+        clienteId: 'cliente_1',
+        valorFinal: 100,
+      );
+
+      expect(gateway.confirmacoes, ['pedido_functions']);
     });
 
     test('confirmarValorFinal rejeita valor diferente do proposto', () async {

@@ -1,11 +1,58 @@
 // lib/core/services/pedido_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/pedido_historico_item.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/services/analytics_service.dart';
 import 'package:chegaja_v2/core/utils/pedido_state_machine.dart';
+
+const bool _runFirebaseEmulatorTests =
+    bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+
+abstract class PedidoValueFunctionsGateway {
+  Future<void> proporValorFinalPedido({
+    required String pedidoId,
+    required double valorFinal,
+    String? comentario,
+  });
+
+  Future<void> confirmarValorFinalPedido({required String pedidoId});
+}
+
+class FirebasePedidoValueFunctionsGateway
+    implements PedidoValueFunctionsGateway {
+  FirebasePedidoValueFunctionsGateway({FirebaseFunctions? functions})
+      : _functions = functions ??
+            FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
+
+  final FirebaseFunctions _functions;
+
+  HttpsCallable _callable(String name) => _functions.httpsCallable(name);
+
+  @override
+  Future<void> proporValorFinalPedido({
+    required String pedidoId,
+    required double valorFinal,
+    String? comentario,
+  }) async {
+    await _callable('proporValorFinalPedido').call({
+      'pedidoId': pedidoId,
+      'valorFinal': valorFinal,
+      if (comentario != null && comentario.trim().isNotEmpty)
+        'comentario': comentario.trim(),
+    });
+  }
+
+  @override
+  Future<void> confirmarValorFinalPedido({required String pedidoId}) async {
+    await _callable('confirmarValorFinalPedido').call({
+      'pedidoId': pedidoId,
+    });
+  }
+}
 
 /// Serviço central de fluxo de pedidos:
 /// - Prestador envia faixa de preço (mín/máx)
@@ -19,20 +66,32 @@ class PedidoService {
   PedidoService({
     FirebaseFirestore? firestore,
     bool trackAnalytics = true,
+    PedidoValueFunctionsGateway? valueFunctionsGateway,
+    bool? useAuthoritativeValueFunctions,
   })  : _db = firestore ?? FirebaseFirestore.instance,
-        _trackAnalytics = trackAnalytics;
+        _trackAnalytics = trackAnalytics,
+        _valueFunctionsGateway = valueFunctionsGateway,
+        _useAuthoritativeValueFunctions = useAuthoritativeValueFunctions ??
+            (firestore == null && !_runFirebaseEmulatorTests);
 
   PedidoService._()
       : _db = FirebaseFirestore.instance,
-        _trackAnalytics = true;
+        _trackAnalytics = true,
+        _valueFunctionsGateway = null,
+        _useAuthoritativeValueFunctions = !_runFirebaseEmulatorTests;
 
   static final PedidoService instance = PedidoService._();
 
   final FirebaseFirestore _db;
   final bool _trackAnalytics;
+  final PedidoValueFunctionsGateway? _valueFunctionsGateway;
+  final bool _useAuthoritativeValueFunctions;
 
   CollectionReference<Map<String, dynamic>> get _colPedidos =>
       _db.collection('pedidos');
+
+  PedidoValueFunctionsGateway get _authoritativeValueFunctions =>
+      _valueFunctionsGateway ?? FirebasePedidoValueFunctionsGateway();
 
   /// Taxa de comissão SIMULADA (15%).
   static const double _commissionRateSimulada = 0.15;
@@ -583,6 +642,25 @@ class PedidoService {
       to: PedidoStateMachine.aguardaConfirmacaoValor,
       role: 'prestador',
     );
+
+    if (_useAuthoritativeValueFunctions) {
+      await _authoritativeValueFunctions.proporValorFinalPedido(
+        pedidoId: pedido.id,
+        valorFinal: valorFinal,
+        comentario: comentario,
+      );
+
+      await _logPedidoEvent(
+        name: 'pedido_valor_final_proposto',
+        pedidoId: pedido.id,
+        estado: 'aguarda_confirmacao_valor',
+        modo: pedido.modo,
+        tipoPreco: pedido.tipoPreco,
+        role: 'prestador',
+      );
+      return;
+    }
+
     await ref.update({
       'precoPropostoPrestador': valorFinal,
       'statusConfirmacaoValor': 'pendente_cliente',
@@ -638,15 +716,32 @@ class PedidoService {
       role: 'cliente',
     );
 
-    final double commission = valorFinal * _commissionRateSimulada;
-    final double earningsProvider = valorFinal - commission;
-    final double earningsTotal = valorFinal;
-
     _ensureTransition(
       pedido: pedido,
       to: PedidoStateMachine.concluido,
       role: 'cliente',
     );
+
+    if (_useAuthoritativeValueFunctions) {
+      await _authoritativeValueFunctions.confirmarValorFinalPedido(
+        pedidoId: pedido.id,
+      );
+
+      await _logPedidoEvent(
+        name: 'pedido_concluido',
+        pedidoId: pedido.id,
+        estado: 'concluido',
+        modo: pedido.modo,
+        tipoPreco: pedido.tipoPreco,
+        role: 'cliente',
+      );
+      return;
+    }
+
+    final double commission = valorFinal * _commissionRateSimulada;
+    final double earningsProvider = valorFinal - commission;
+    final double earningsTotal = valorFinal;
+
     await _colPedidos.doc(pedido.id).update({
       'precoFinal': valorFinal,
       'preco': valorFinal, // compatibilidade com código antigo

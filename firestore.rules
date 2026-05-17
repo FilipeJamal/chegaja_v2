@@ -250,6 +250,10 @@ service cloud.firestore {
         && fieldUnchanged('statusConfirmacaoValor');
     }
 
+    function authoritativePedidoFieldsUnchanged() {
+      return fieldUnchanged('lastAuthoritativeFunction');
+    }
+
     function fieldNullOrMissing(data, field) {
       return !(data is map) || !data.keys().hasAny([field]) || data[field] == null;
     }
@@ -426,6 +430,19 @@ service cloud.firestore {
         && immutablePedidoIdentity();
     }
 
+    function validPedidoClientAcceptQuote() {
+      return isPedidoClienteActor()
+        && hasValidPedidoEstado(request.resource.data)
+        && pedidoEstado(resource.data) == 'aguarda_resposta_cliente'
+        && pedidoEstado(request.resource.data) == 'aceito'
+        && fieldValueOrNull(request.resource.data, 'prestadorId') ==
+          fieldValueOrNull(resource.data, 'prestadorId')
+        && request.resource.data['statusProposta'] == 'aceita_cliente'
+        && finalPricingFieldsUnchanged()
+        && finalProposalFieldsUnchanged()
+        && immutablePedidoIdentity();
+    }
+
     function validPedidoClientFinalConfirmation() {
       return validFinalPricingConfirmation()
         && immutablePedidoIdentity();
@@ -445,7 +462,9 @@ service cloud.firestore {
       let nextEstado = pedidoEstado(request.resource.data);
       return !hasValidPedidoEstado(request.resource.data)
         ? false
-        : (
+        : (!authoritativePedidoFieldsUnchanged()
+          ? false
+          : (
           currentEstado == 'criado' && nextEstado == 'aceito'
             ? validPedidoOpenAccept()
             : (
@@ -458,17 +477,22 @@ service cloud.firestore {
                       currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
                         ? validPedidoProviderFinalProposal()
                         : (
-                          currentEstado == 'aceito' && nextEstado == 'em_andamento'
-                            ? validPedidoProviderStartService()
+                          currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
+                            ? validPedidoClientAcceptQuote()
                             : (
-                              currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
-                                ? validPedidoClientFinalConfirmation()
-                                : validPedidoGenericUpdate()
+                              currentEstado == 'aceito' && nextEstado == 'em_andamento'
+                                ? validPedidoProviderStartService()
+                                : (
+                                  currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
+                                    ? validPedidoClientFinalConfirmation()
+                                    : validPedidoGenericUpdate()
+                                )
                             )
                         )
                     )
                 )
             )
+          )
         );
     }
 
