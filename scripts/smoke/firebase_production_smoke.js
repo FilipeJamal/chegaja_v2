@@ -6,12 +6,38 @@ const API_KEY =
 const STORAGE_BUCKET =
   process.env.FIREBASE_STORAGE_BUCKET ||
   'chegaja-ac88d.firebasestorage.app';
+const SMOKE_PREFIX = 'm274_smoke_';
 
-const runId = `m274_smoke_${Date.now()}`;
+const smokeOptions = parseSmokeOptions(process.argv.slice(2));
+const runId = `${SMOKE_PREFIX}${Date.now()}`;
 const serviceId = `${runId}_service`;
 const serviceName = `Servico smoke M2.7.4 ${runId}`;
 const pedidoId = `${runId}_pedido`;
 const finalValue = 120;
+
+function parseSmokeOptions(argv) {
+  const options = {
+    cleanup: false,
+    keepEvidence: true,
+  };
+
+  for (const arg of argv) {
+    if (arg === '--cleanup') {
+      options.cleanup = true;
+      options.keepEvidence = false;
+    } else if (arg === '--keep-evidence') {
+      options.keepEvidence = true;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+
+  if (options.cleanup && argv.includes('--keep-evidence')) {
+    throw new Error('Use either --cleanup or --keep-evidence, not both.');
+  }
+
+  return options;
+}
 
 function assert(condition, message) {
   if (!condition) {
@@ -224,6 +250,8 @@ async function main() {
     activeRole: 'cliente',
     roles: { cliente: true },
     region: 'PT',
+    smokeRunId: runId,
+    smokePrefix: SMOKE_PREFIX,
     updatedAt: new Date(),
   });
 
@@ -233,6 +261,19 @@ async function main() {
     activeRole: 'prestador',
     roles: { prestador: true },
     region: 'PT',
+    smokeRunId: runId,
+    smokePrefix: SMOKE_PREFIX,
+    updatedAt: new Date(),
+  });
+
+  await setDoc(outsider.idToken, `users/${outsider.uid}`, {
+    uid: outsider.uid,
+    isAnonymous: true,
+    activeRole: 'cliente',
+    roles: { cliente: true },
+    region: 'PT',
+    smokeRunId: runId,
+    smokePrefix: SMOKE_PREFIX,
     updatedAt: new Date(),
   });
 
@@ -243,6 +284,8 @@ async function main() {
     servicosNomes: [serviceName],
     radiusKm: 50,
     lastLocation: { lat: 38.7223, lng: -9.1393 },
+    smokeRunId: runId,
+    smokePrefix: SMOKE_PREFIX,
     updatedAt: new Date(),
   });
 
@@ -266,6 +309,8 @@ async function main() {
     latitude: null,
     longitude: null,
     enderecoTexto: 'Smoke M2.7.4',
+    smokeRunId: runId,
+    smokePrefix: SMOKE_PREFIX,
   });
 
   await getDoc(provider.idToken, `pedidos/${pedidoId}`);
@@ -345,6 +390,23 @@ async function main() {
     expectStatus: 403,
   });
   console.log(`[M2.7.4 smoke] outsider attachment upload denied (${deniedUpload.status})`);
+
+  if (smokeOptions.cleanup) {
+    const { cleanupSmokeData } = require('../admin/cleanup_smoke_data');
+    const cleanupResult = await cleanupSmokeData({
+      prefix: runId,
+      projectId: PROJECT_ID,
+      storageBucket: STORAGE_BUCKET,
+      dryRun: false,
+      confirm: true,
+    });
+    console.log(
+      `[M2.7.4 smoke] cleanup firestoreDocs=${cleanupResult.firestoreDocs} ` +
+      `storageFiles=${cleanupResult.storageFiles} authUsers=${cleanupResult.authUsers}`,
+    );
+  } else if (smokeOptions.keepEvidence) {
+    console.log(`[M2.7.4 smoke] evidence kept prefix=${runId}`);
+  }
 
   console.log('[M2.7.4 smoke] OK');
 }

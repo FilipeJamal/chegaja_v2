@@ -170,6 +170,12 @@ function cleanString(value) {
   return (value || '').toString().trim();
 }
 
+function maskIdentifier(value) {
+  const text = cleanString(value);
+  if (text.length <= 8) return text ? '***' : '';
+  return `${text.slice(0, 4)}...${text.slice(-4)}`;
+}
+
 function roundMoney(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return null;
@@ -737,6 +743,7 @@ async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
   const comentario = safeText(data && data.comentario, 500);
 
   const pedidoRef = firestore.collection('pedidos').doc(pedidoId);
+  let previousStatus = '';
 
   await firestore.runTransaction(async (tx) => {
     const snap = await tx.get(pedidoRef);
@@ -747,6 +754,7 @@ async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
     const pedido = snap.data() || {};
     const prestadorId = cleanString(pedido.prestadorId);
     const estado = getPedidoEstado(pedido);
+    previousStatus = estado;
 
     if (prestadorId !== actorUid) {
       throw new HttpsError('permission-denied', 'Apenas o prestador atribuido pode propor o valor final.');
@@ -772,7 +780,14 @@ async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
     });
   });
 
-  logger.info(`[pedidos] valor final proposto pedido=${pedidoId} prestador=${actorUid}`);
+  logger.info('[pedidos] valor final proposto', {
+    functionName: 'proporValorFinalPedido',
+    pedidoId,
+    prestadorId: maskIdentifier(actorUid),
+    previousStatus,
+    newStatus: 'aguarda_confirmacao_valor',
+    valueCents: moneyToCents(valorFinal),
+  });
   return { ok: true, pedidoId, valorFinal };
 }
 
@@ -780,6 +795,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
   const actorUid = requireCallableUid(uid);
   const pedidoId = requirePedidoId(data);
   let economics;
+  let previousStatus = '';
 
   await firestore.runTransaction(async (tx) => {
     const pedidoRef = firestore.collection('pedidos').doc(pedidoId);
@@ -792,6 +808,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
     const clienteId = cleanString(getClienteId(pedido));
     const estado = getPedidoEstado(pedido);
     const statusConfirmacaoValor = cleanString(pedido.statusConfirmacaoValor || 'nenhum');
+    previousStatus = estado;
     const proposedValue = requirePositiveMoney(
       pedido.precoPropostoPrestador,
       'precoPropostoPrestador'
@@ -823,7 +840,16 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
     });
   });
 
-  logger.info(`[pedidos] valor final confirmado pedido=${pedidoId} cliente=${actorUid}`);
+  logger.info('[pedidos] valor final confirmado', {
+    functionName: 'confirmarValorFinalPedido',
+    pedidoId,
+    clienteId: maskIdentifier(actorUid),
+    previousStatus,
+    newStatus: 'concluido',
+    valueCents: moneyToCents(economics && economics.precoFinal),
+    commissionCents: moneyToCents(economics && economics.commissionPlatform),
+    providerEarningsCents: moneyToCents(economics && economics.earningsProvider),
+  });
   return { ok: true, pedidoId, ...economics };
 }
 

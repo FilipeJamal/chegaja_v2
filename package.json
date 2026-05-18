@@ -2,12 +2,14 @@
   "scripts": {
     "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js",
     "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento",
-    "test:scripts": "node scripts/test/run_android_integration_test.test.js",
+    "test:scripts": "node scripts/test/run_android_integration_test.test.js && node scripts/test/cleanup_smoke_data.test.js",
     "test:windows:cross": "flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true",
     "test:android:mvp": "node scripts/run_android_integration_test.js integration_test/android_mvp_flow_test.dart",
     "test:android:mobile": "node scripts/run_android_integration_test.js integration_test/android_mobile_real_test.dart",
     "test:android:functions": "node scripts/run_android_integration_test.js --functions-emulator integration_test/android_functions_flow_test.dart",
-    "smoke:firebase:production": "node scripts/smoke/firebase_production_smoke.js"
+    "smoke:firebase:production": "node scripts/smoke/firebase_production_smoke.js",
+    "admin:cleanup:smoke:dry": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run",
+    "admin:cleanup:smoke": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --confirm"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",

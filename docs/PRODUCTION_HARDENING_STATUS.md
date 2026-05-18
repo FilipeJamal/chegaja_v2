@@ -19,6 +19,7 @@ M2.7.2: avancado em Functions autoritativas para valores
 M2.7.3: avancado em testes Android com Functions Emulator
 M2.7.4: avancado com deploy controlado Firebase e smoke real
 M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
+M2.8: iniciado em operacoes de producao, limpeza e observabilidade
 ```
 
 ## Alteracoes aplicadas
@@ -41,6 +42,10 @@ M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
 | Runtime Functions | avancado M2.7.5 | `npx.cmd firebase functions:list --project chegaja-ac88d --json` | 27/27 Functions em `nodejs22`. |
 | Dependencias Functions | avancado M2.7.5 | `functions/package.json` | `firebase-functions ^7.2.5` e `firebase-admin ^13.10.0`. |
 | Fecho M2.7 | fechado | `docs/PRODUCTION_HARDENING_STATUS.md` | M2.7 fechada sem fechar M2.6. |
+| Runbook producao | iniciado M2.8 | `docs/PRODUCTION_RUNBOOK.md` | Operacoes de deploy, smoke, cleanup, logs e troubleshooting. |
+| Cleanup smoke | iniciado M2.8 | `scripts/admin/cleanup_smoke_data.js` | Dry-run por defeito, prefixo obrigatorio e delete so com `--confirm`. |
+| Smoke cleanup opcional | iniciado M2.8 | `scripts/smoke/firebase_production_smoke.js` | `--keep-evidence` mantem comportamento; `--cleanup` e opt-in. |
+| Logs Functions pedidos | iniciado M2.8 | `functions/index.js` | Logs estruturados com UID mascarado e status anterior/novo. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
@@ -185,6 +190,8 @@ test/core/storage_path_policy_test.dart
 test/core/pedido_service_test.dart
 scripts/test/run_android_integration_test.test.js
 scripts/smoke/firebase_production_smoke.js
+scripts/admin/cleanup_smoke_data.js
+scripts/test/cleanup_smoke_data.test.js
 ```
 
 Cobertura nova:
@@ -223,6 +230,31 @@ Cobertura nova:
 - smoke real confirma upload permitido em `temp/{uid}/anexos`;
 - smoke real confirma upload permitido em `pedidos/{pedidoId}/anexos` para
   participante e negado para outsider.
+- cleanup de smoke exige prefixo explicito, faz dry-run por defeito e bloqueia
+  delete sem `--confirm`;
+- smoke de producao aceita `--keep-evidence` e `--cleanup` sem alterar o modo
+  padrao de manter evidencia;
+- logs de `proporValorFinalPedido` e `confirmarValorFinalPedido` usam UID
+  mascarado e campos estruturados.
+
+## M2.8 - Operacoes de producao
+
+M2.8 foi iniciada depois do fecho da M2.7 para melhorar manutencao segura em
+producao, sem adicionar funcionalidades grandes.
+
+Entrou nesta primeira etapa:
+
+- `docs/PRODUCTION_RUNBOOK.md` com login Firebase, pre-checks, deploy separado,
+  smoke real, cleanup, functions:list, logs e troubleshooting;
+- `scripts/admin/cleanup_smoke_data.js` para limpeza admin de dados de smoke;
+- scripts npm `admin:cleanup:smoke:dry` e `admin:cleanup:smoke`;
+- `npm.cmd run smoke:firebase:production -- --keep-evidence`;
+- `npm.cmd run smoke:firebase:production -- --cleanup`;
+- campos `smokeRunId` e `smokePrefix` no smoke para permitir cleanup futuro;
+- logs estruturados e com UIDs mascarados nas Functions autoritativas de
+  valores.
+
+Nao houve deploy real nesta etapa da M2.8.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -249,6 +281,8 @@ transitoria no arranque local/mobile.
 | Package id final | futuro, nao bloqueante para M2.7 | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro, nao bloqueante para M2.7 | Publicar `assetlinks.json` nos dominios reais. |
 | Play Store | futuro, nao bloqueante para M2.7 | Preparar depois de Android fisico e package id final. |
+| Limpeza de dados de smoke antigos | iniciado M2.8 | Script admin criado; executar primeiro em dry-run antes de qualquer delete real. |
+| Observabilidade Functions | iniciado M2.8 | Logs estruturados adicionados para proposta/confirmacao de valor. |
 
 ## Comandos de validacao M2.7
 
@@ -305,6 +339,19 @@ Validacao M2.7.5:
 | `npx.cmd firebase functions:list --project chegaja-ac88d --json` | passou, 27/27 em `nodejs22` |
 | `npm.cmd run smoke:firebase:production` | passou |
 | `npm.cmd audit --omit=dev --json` | sem critico/alto/moderado; 9 lows restantes |
+
+Validacao inicial M2.8:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter test` | passou, 49/49 |
+
+Observacao: smoke real de producao nao foi repetido nesta etapa para evitar
+criar dados reais sem necessidade. O modo `--cleanup` ficou preparado, mas deve
+ser usado apenas quando houver credencial Admin SDK local segura e intencao
+explicita de apagar dados de teste.
 
 ## Decisao
 
