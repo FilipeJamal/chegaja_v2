@@ -23,6 +23,7 @@ M2.8: iniciado em operacoes de producao, limpeza e observabilidade
 M2.8.1: avancado em cleanup auditavel e validacao controlada
 M2.8.2: avancado em health check de producao sem criar dados
 M2.8.3: avancado em CI de validacao sem deploy
+M2.8.4: em validacao remota do CI
 ```
 
 ## Alteracoes aplicadas
@@ -50,6 +51,7 @@ M2.8.3: avancado em CI de validacao sem deploy
 | Cleanup auditavel | avancado M2.8.1 | `scripts/test/cleanup_smoke_data.test.js` | `--verbose`, `--json` e `--confirm-prefix` cobertos por teste. |
 | Health check producao | avancado M2.8.2 | `scripts/health/firebase_production_health.js` | Verifica Firebase CLI, projeto, Functions nodejs22 e audit sem escrever dados. |
 | CI sem deploy | avancado M2.8.3 | `.github/workflows/ci.yml` | Roda scripts, Firebase Emulator Suite e Flutter tests sem tocar em producao. |
+| CI remoto | em validacao M2.8.4 | GitHub Actions run `26020214617` | Falha inicial por Java 17; workflow atualizado para Java 21 exigido pelo Firebase Emulator Suite. |
 | Smoke cleanup opcional | iniciado M2.8 | `scripts/smoke/firebase_production_smoke.js` | `--keep-evidence` mantem comportamento; `--cleanup` e opt-in. |
 | Logs Functions pedidos | iniciado M2.8 | `functions/index.js` | Logs estruturados com UID mascarado e status anterior/novo. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
@@ -297,12 +299,21 @@ M2.8.3 adicionou CI de validacao sem deploy:
 
 - workflow `.github/workflows/ci.yml`;
 - dispara em `push` e `pull_request` para `main`;
-- configura Node.js 22, Java 17 e Flutter stable;
+- configura Node.js 22, Java 21 e Flutter stable;
 - usa `npm ci`, `cd functions && npm ci` e `flutter pub get`;
 - roda `npm run test:scripts`;
 - roda `npx firebase emulators:exec --only firestore,storage,functions "cd functions && npm test"`;
 - roda `flutter test --no-pub`;
 - nao faz deploy, smoke real, health real, cleanup real nem Android emulator.
+
+M2.8.4 iniciou a validacao remota do CI:
+
+- run GitHub Actions `26020214617` executou o workflow `CI sem deploy` no commit
+  `19512aac9958604f7073f8e4d974f4b33c7edbc1`;
+- a falha ocorreu no passo Firebase Emulator Suite porque `firebase-tools`
+  exige Java 21 ou superior;
+- o workflow foi ajustado de Java 17 para Java 21, mantendo CI sem deploy e sem
+  credenciais de producao.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -333,6 +344,7 @@ transitoria no arranque local/mobile.
 | Plano de cleanup visivel | avancado M2.8.1 | Dry-run verbose/json lista docs, files e uids antes de qualquer delete. |
 | Health check sem escrita | avancado M2.8.2 | `health:firebase:production` valida producao sem criar dados reais. |
 | CI automatico sem deploy | avancado M2.8.3 | Workflow valida push/PR sem credenciais de producao. |
+| CI remoto | em validacao M2.8.4 | Falha inicial por Java 17 corrigida para Java 21. |
 | Observabilidade Functions | iniciado M2.8 | Logs estruturados adicionados para proposta/confirmacao de valor. |
 
 ## Comandos de validacao M2.7
@@ -428,6 +440,13 @@ Validacao M2.8.3:
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
 | `flutter test` | passou, 49/49 |
+
+Validacao M2.8.4:
+
+| Comando/evidencia | Resultado |
+| --- | --- |
+| GitHub Actions run `26020214617` para commit `19512aac9958604f7073f8e4d974f4b33c7edbc1` | falhou no Firebase Emulator Suite por Java 17 |
+| Ajuste `.github/workflows/ci.yml` | Java atualizado para 21, sem adicionar deploy/smoke/health/cleanup/Android emulator |
 
 ## Decisao
 

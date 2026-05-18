@@ -158,7 +158,7 @@ push para main
 pull_request para main
 ```
 
-O CI configura Node.js 22, Java 17 e Flutter stable, instala dependencias com
+O CI configura Node.js 22, Java 21 e Flutter stable, instala dependencias com
 `npm ci`, `cd functions && npm ci` e `flutter pub get`, depois roda:
 
 ```powershell
