@@ -1,14 +1,18 @@
-# Firebase Deployment Status - M2.7.4
+# Firebase Deployment Status - M2.7.4 / M2.7.5
 
-Data: 2026-05-17
+Data: 2026-05-18
 
 ## Estado
 
 M2.7.4 publicou no Firebase real o hardening de regras e Functions preparado
-nas fases M2.7.1, M2.7.2 e M2.7.3.
+nas fases M2.7.1, M2.7.2 e M2.7.3. M2.7.5 migrou as Functions para Node.js 22
+e confirmou o smoke real apos o redeploy.
 
 Isto nao fecha M2.6, porque Android fisico continua pendente para push real,
 upload nativo real e permissoes nativas negadas.
+
+Com M2.7.5 aplicada, a M2.7 fica fechada como hardening de producao. As
+pendencias restantes pertencem a M2.6 ou a fases futuras.
 
 ## Ambiente
 
@@ -215,13 +219,13 @@ criticos/altos/moderados sem `--force`. Os 9 lows restantes exigem
 10.3.0 / `firebase-functions` 4.9.0, por isso ficaram documentados como
 divida futura em vez de serem forcados nesta fase.
 
-## Estado apos M2.7.4
+## Estado apos M2.7.5
 
 ```text
 M0     - fechado
 M2.5   - parcial
 M2.6   - avancado tecnicamente, pendente de Android fisico
-M2.7   - avancado
+M2.7   - fechado
 M2.7.1 - avancado em estados, pedidos e valores
 M2.7.2 - avancado em Functions autoritativas para valores
 M2.7.3 - avancado em testes Android com Functions Emulator
@@ -229,6 +233,21 @@ M2.7.4 - avancado com deploy controlado Firebase e smoke real
 M2.7.5 - avancado com runtime Functions Node.js 22 e smoke real
 ```
 
-M2.7 ainda nao deve ser marcada como fechada automaticamente. A decisao de
-fechar M2.7 deve considerar a divida tecnica remanescente e se a validacao
-real de Firebase e suficiente para o objetivo da fase.
+Decisao:
+
+```text
+M2.7 - fechado em 2026-05-18
+```
+
+O fecho fica limitado ao hardening de producao: regras Firebase, Functions
+autoritativas, deploy real, smoke real, runtime Node.js 22 e documentacao. M2.6
+continua aberta ate haver Android fisico para provar push real, upload nativo
+real de anexos e permissoes nativas negadas.
+
+Dividas restantes nao bloqueantes para M2.7:
+
+- 9 lows em `npm audit --omit=dev`, sem critico/alto/moderado, que exigiriam
+  `--force` com downgrade/breaking change;
+- package id final;
+- HTTPS App Links;
+- Play Store.

@@ -1,10 +1,10 @@
 # Production Hardening Status - M2.7
 
-Data: 2026-05-17
+Data: 2026-05-18
 
 ## Estado
 
-M2.7 foi iniciada para endurecer a base de producao enquanto M2.6 continua
+M2.7 esta fechada. A fase endureceu a base de producao enquanto M2.6 continua
 bloqueada por falta de Android fisico.
 
 Estado oficial:
@@ -13,7 +13,7 @@ Estado oficial:
 M0: fechado
 M2.5: parcial
 M2.6: avancado tecnicamente, pendente de Android fisico
-M2.7: iniciado / avancado em seguranca Firebase e preparacao de QA real
+M2.7: fechado
 M2.7.1: avancado em estados, pedidos e valores
 M2.7.2: avancado em Functions autoritativas para valores
 M2.7.3: avancado em testes Android com Functions Emulator
@@ -40,6 +40,7 @@ M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
 | Smoke Firebase real | avancado M2.7.4 | `npm.cmd run smoke:firebase:production` | Fluxo pedido + Functions + Storage validado contra producao. |
 | Runtime Functions | avancado M2.7.5 | `npx.cmd firebase functions:list --project chegaja-ac88d --json` | 27/27 Functions em `nodejs22`. |
 | Dependencias Functions | avancado M2.7.5 | `functions/package.json` | `firebase-functions ^7.2.5` e `firebase-admin ^13.10.0`. |
+| Fecho M2.7 | fechado | `docs/PRODUCTION_HARDENING_STATUS.md` | M2.7 fechada sem fechar M2.6. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
@@ -240,13 +241,14 @@ transitoria no arranque local/mobile.
 | Push real Android | pendente M2.6 | Validar em telemovel fisico. |
 | Picker/upload real Android | pendente M2.6 | Validar em telemovel fisico com Storage real/emulado. |
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
-| Campos economicos em `pedidos` | backend autoritativo testado em Android/emulador | M2.7.3 prova um fluxo Android usando Functions Emulator; caminho direto permanece para fake/unitarios e scripts sem Functions. |
-| Deploy real Firebase | avancado M2.7.4 | Firestore Rules, Storage Rules e Functions publicados; smoke real passou. |
+| Campos economicos em `pedidos` | fechado M2.7 | Functions autoritativas, testes de regras, Android Functions Emulator e smoke real passaram. |
+| Deploy real Firebase | fechado M2.7 | Firestore Rules, Storage Rules e Functions publicados; smoke real passou. |
 | Node.js 20 Functions | resolvido M2.7.5 | Runtime migrado para Node.js 22 e 27/27 Functions confirmadas em `nodejs22`. |
 | `firebase-functions` desatualizado | resolvido M2.7.5 | Atualizado para `^7.2.5`; smoke real passou. |
-| Audit prod Functions | parcial | `npm audit --omit=dev` sem critico/alto/moderado; restam 9 lows que exigem `--force` com downgrade/breaking change. |
-| Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
-| HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
+| Audit prod Functions | divida futura, nao bloqueante | `npm audit --omit=dev` sem critico/alto/moderado; restam 9 lows que exigem `--force` com downgrade/breaking change. |
+| Package id final | futuro, nao bloqueante para M2.7 | Definir antes de Play Store/Firebase Android final. |
+| HTTPS App Links | futuro, nao bloqueante para M2.7 | Publicar `assetlinks.json` nos dominios reais. |
+| Play Store | futuro, nao bloqueante para M2.7 | Preparar depois de Android fisico e package id final. |
 
 ## Comandos de validacao M2.7
 
@@ -306,5 +308,28 @@ Validacao M2.7.5:
 
 ## Decisao
 
-M2.7 nao fecha M2.6. Ela melhora seguranca, estabilidade e readiness enquanto a
-validacao em Android fisico continua bloqueada.
+M2.7 fica fechada em 2026-05-18.
+
+Motivo do fecho:
+
+- Storage deixou de ser publico e passou a ser protegido por caminhos, owner,
+  participante/admin, tipo e tamanho;
+- Firestore Rules passaram a bloquear manipulacoes perigosas de pedidos,
+  estados, prestador e valores;
+- valores finais, comissao e ganhos passaram para Functions autoritativas;
+- Android/emulador passou a validar o caminho `PedidoService -> Cloud Functions
+  callable -> Admin SDK -> Firestore`;
+- Firestore Rules, Storage Rules e Functions foram publicados em
+  `chegaja-ac88d`;
+- smoke real de producao validou o fluxo pedido + Functions + Storage;
+- runtime Functions foi migrado para Node.js 22 e 27/27 Functions ficaram em
+  `nodejs22`;
+- `firebase-functions` e `firebase-admin` foram atualizados sem trocar o projeto
+  para ESM.
+
+M2.7 nao fecha M2.6. A validacao em Android fisico continua pendente para push
+real, upload nativo real de anexos e permissoes nativas negadas.
+
+As dividas restantes nao bloqueiam o fecho da M2.7: 9 lows no audit de
+dependencias de producao sem critico/alto/moderado, package id final, HTTPS App
+Links e Play Store ficam para fases futuras.
