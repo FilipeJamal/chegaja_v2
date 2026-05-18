@@ -1,0 +1,59 @@
+name: CI sem deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    name: Validacoes sem deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install root Node dependencies
+        run: npm ci
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Test scripts
+        run: npm run test:scripts
+
+      - name: Test Firebase rules and Functions with emulators
+        run: npx firebase emulators:exec --only firestore,storage,functions "cd functions && npm test"
+
+      - name: Flutter tests
+        run: flutter test --no-pub

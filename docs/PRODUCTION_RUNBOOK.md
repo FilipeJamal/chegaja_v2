@@ -143,6 +143,44 @@ Usar para validacao rapida diaria ou antes de deploy quando nao se quer criar
 dados reais. Isto nao substitui o smoke real quando houver mudanca critica em
 regras, Functions ou Storage.
 
+## CI sem deploy
+
+Workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+Dispara em:
+
+```text
+push para main
+pull_request para main
+```
+
+O CI configura Node.js 22, Java 17 e Flutter stable, instala dependencias com
+`npm ci`, `cd functions && npm ci` e `flutter pub get`, depois roda:
+
+```powershell
+npm run test:scripts
+npx firebase emulators:exec --only firestore,storage,functions "cd functions && npm test"
+flutter test --no-pub
+```
+
+O CI nao executa:
+
+```text
+deploy Firebase
+smoke:firebase:production
+health:firebase:production
+admin:cleanup:smoke
+testes Android com emulador
+testes Windows desktop
+```
+
+Deploy, smoke real, health de producao e cleanup continuam manuais/controlados
+por este runbook.
+
 ## Limpeza segura de dados de smoke
 
 Dry-run por defeito:
