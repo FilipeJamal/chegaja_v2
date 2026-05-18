@@ -1,11 +1,12 @@
-# Production Hardening Status - M2.7
+# Production Hardening Status - M2.8
 
 Data: 2026-05-18
 
 ## Estado
 
-M2.7 esta fechada. A fase endureceu a base de producao enquanto M2.6 continua
-bloqueada por falta de Android fisico.
+M2.7 e M2.8 estao fechadas. A M2.7 endureceu a base de producao enquanto M2.6
+continua bloqueada por falta de Android fisico. A M2.8 organizou operacoes de
+producao, limpeza controlada, health check e CI sem deploy.
 
 Estado oficial:
 
@@ -19,11 +20,11 @@ M2.7.2: avancado em Functions autoritativas para valores
 M2.7.3: avancado em testes Android com Functions Emulator
 M2.7.4: avancado com deploy controlado Firebase e smoke real
 M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
-M2.8: iniciado em operacoes de producao, limpeza e observabilidade
+M2.8: fechado em operacoes de producao, limpeza e observabilidade
 M2.8.1: avancado em cleanup auditavel e validacao controlada
 M2.8.2: avancado em health check de producao sem criar dados
 M2.8.3: avancado em CI de validacao sem deploy
-M2.8.4: em validacao remota do CI
+M2.8.4: fechado com validacao remota do CI
 ```
 
 ## Alteracoes aplicadas
@@ -51,7 +52,7 @@ M2.8.4: em validacao remota do CI
 | Cleanup auditavel | avancado M2.8.1 | `scripts/test/cleanup_smoke_data.test.js` | `--verbose`, `--json` e `--confirm-prefix` cobertos por teste. |
 | Health check producao | avancado M2.8.2 | `scripts/health/firebase_production_health.js` | Verifica Firebase CLI, projeto, Functions nodejs22 e audit sem escrever dados. |
 | CI sem deploy | avancado M2.8.3 | `.github/workflows/ci.yml` | Roda scripts, Firebase Emulator Suite e Flutter tests sem tocar em producao. |
-| CI remoto | em validacao M2.8.4 | GitHub Actions runs `26020214617` e `26020690374` | Falhas remotas iniciais corrigidas: Java 21 para Firebase Emulator Suite e `.env` temporario para asset Flutter. |
+| CI remoto | fechado M2.8.4 | GitHub Actions run `26020994920` | CI sem deploy passou no GitHub Actions apos corrigir Java 21 e `.env` temporario. |
 | Smoke cleanup opcional | iniciado M2.8 | `scripts/smoke/firebase_production_smoke.js` | `--keep-evidence` mantem comportamento; `--cleanup` e opt-in. |
 | Logs Functions pedidos | iniciado M2.8 | `functions/index.js` | Logs estruturados com UID mascarado e status anterior/novo. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
@@ -320,6 +321,12 @@ M2.8.4 iniciou a validacao remota do CI:
   no runner remoto;
 - o workflow passou a criar um `.env` temporario a partir de `.env.example`,
   sem commitar segredos e sem tocar em producao.
+- run GitHub Actions `26020994920` executou o workflow `CI sem deploy` no commit
+  `dc4f9a1791d33540ecfb77b6b0eee7d13c9d42e6` e passou:
+  `npm run test:scripts`, Firebase Emulator Suite e `flutter test --no-pub`.
+- a anotacao remota sobre Actions baseadas em Node.js 20 foi registada como
+  divida operacional futura; nao bloqueou o CI nem exigiu credenciais de
+  producao.
 
 ## Hardening de bootstrap Auth/Firestore
 
@@ -350,7 +357,7 @@ transitoria no arranque local/mobile.
 | Plano de cleanup visivel | avancado M2.8.1 | Dry-run verbose/json lista docs, files e uids antes de qualquer delete. |
 | Health check sem escrita | avancado M2.8.2 | `health:firebase:production` valida producao sem criar dados reais. |
 | CI automatico sem deploy | avancado M2.8.3 | Workflow valida push/PR sem credenciais de producao. |
-| CI remoto | em validacao M2.8.4 | Falhas iniciais corrigidas para Java 21 e `.env` temporario no runner. |
+| CI remoto | fechado M2.8.4 | Run `26020994920` passou no GitHub Actions sem deploy. |
 | Observabilidade Functions | iniciado M2.8 | Logs estruturados adicionados para proposta/confirmacao de valor. |
 
 ## Comandos de validacao M2.7
@@ -455,12 +462,30 @@ Validacao M2.8.4:
 | Ajuste `.github/workflows/ci.yml` | Java atualizado para 21, sem adicionar deploy/smoke/health/cleanup/Android emulator |
 | GitHub Actions run `26020690374` para commit `ce4f9741f4d21921d921e7b53a42391ef6fcb0ff` | Firebase Emulator Suite passou; `flutter test --no-pub` falhou por asset `.env` ausente |
 | Ajuste `.github/workflows/ci.yml` | `.env` temporario criado a partir de `.env.example`, sem segredos no Git |
+| GitHub Actions run `26020994920` para commit `dc4f9a1791d33540ecfb77b6b0eee7d13c9d42e6` | passou no workflow `CI sem deploy` |
+| Anotacao GitHub Actions Node.js 20 | nao bloqueante; acompanhar atualizacao futura de actions/runner |
 
 ## Decisao
 
-M2.7 fica fechada em 2026-05-18.
+M2.8 fica fechada em 2026-05-18.
 
 Motivo do fecho:
+
+- runbook de producao cobre login Firebase, projeto esperado, pre-checks,
+  deploy separado, smoke, health check, cleanup e troubleshooting;
+- cleanup de smoke tem dry-run por defeito, plano auditavel, JSON e
+  `--confirm-prefix` obrigatorio para delete;
+- health check de producao e read-only e valida login, projeto, Functions
+  `nodejs22`, contagem de Functions e audit sem criar dados;
+- CI sem deploy passou localmente e no GitHub Actions, validando scripts,
+  Firestore/Storage/Functions em emuladores e Flutter tests;
+- o CI nao executa deploy, smoke real, health real, cleanup real nem Android
+  emulator;
+- as falhas remotas iniciais foram corrigidas sem introduzir credenciais ou
+  operacoes em producao: Java 21 para Firebase Emulator Suite e `.env`
+  temporario a partir de `.env.example`.
+
+M2.7 tambem permanece fechada:
 
 - Storage deixou de ser publico e passou a ser protegido por caminhos, owner,
   participante/admin, tipo e tamanho;
@@ -477,9 +502,10 @@ Motivo do fecho:
 - `firebase-functions` e `firebase-admin` foram atualizados sem trocar o projeto
   para ESM.
 
-M2.7 nao fecha M2.6. A validacao em Android fisico continua pendente para push
+M2.8 nao fecha M2.6. A validacao em Android fisico continua pendente para push
 real, upload nativo real de anexos e permissoes nativas negadas.
 
-As dividas restantes nao bloqueiam o fecho da M2.7: 9 lows no audit de
-dependencias de producao sem critico/alto/moderado, package id final, HTTPS App
-Links e Play Store ficam para fases futuras.
+As dividas restantes nao bloqueiam o fecho da M2.8: 9 lows no audit de
+dependencias de producao sem critico/alto/moderado, anotacao futura dos GitHub
+Actions baseados em Node.js 20, package id final, HTTPS App Links e Play Store
+ficam para fases futuras.

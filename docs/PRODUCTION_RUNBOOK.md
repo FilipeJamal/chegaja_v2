@@ -183,6 +183,18 @@ testes Windows desktop
 Deploy, smoke real, health de producao e cleanup continuam manuais/controlados
 por este runbook.
 
+Evidencia de validacao remota:
+
+```text
+GitHub Actions run: 26020994920
+Commit: dc4f9a1791d33540ecfb77b6b0eee7d13c9d42e6
+Resultado: passou
+```
+
+Observacao: o runner pode apresentar uma anotacao nao bloqueante sobre actions
+baseadas em Node.js 20. Isto nao falhou o CI; acompanhar numa fase futura se o
+GitHub exigir novo ajuste de actions/runner.
+
 ## Limpeza segura de dados de smoke
 
 Dry-run por defeito:
