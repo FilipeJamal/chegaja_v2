@@ -8,8 +8,9 @@
     "test:android:mobile": "node scripts/run_android_integration_test.js integration_test/android_mobile_real_test.dart",
     "test:android:functions": "node scripts/run_android_integration_test.js --functions-emulator integration_test/android_functions_flow_test.dart",
     "smoke:firebase:production": "node scripts/smoke/firebase_production_smoke.js",
-    "admin:cleanup:smoke:dry": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run",
-    "admin:cleanup:smoke": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --confirm"
+    "admin:cleanup:smoke:dry": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run --verbose",
+    "admin:cleanup:smoke:json": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run --json",
+    "admin:cleanup:smoke": "node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --confirm --confirm-prefix=m274_smoke_ --verbose"
   },
   "dependencies": {
     "firebase-tools": "^15.5.1",

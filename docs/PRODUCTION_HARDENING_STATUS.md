@@ -20,6 +20,7 @@ M2.7.3: avancado em testes Android com Functions Emulator
 M2.7.4: avancado com deploy controlado Firebase e smoke real
 M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
 M2.8: iniciado em operacoes de producao, limpeza e observabilidade
+M2.8.1: avancado em cleanup auditavel e validacao controlada
 ```
 
 ## Alteracoes aplicadas
@@ -44,6 +45,7 @@ M2.8: iniciado em operacoes de producao, limpeza e observabilidade
 | Fecho M2.7 | fechado | `docs/PRODUCTION_HARDENING_STATUS.md` | M2.7 fechada sem fechar M2.6. |
 | Runbook producao | iniciado M2.8 | `docs/PRODUCTION_RUNBOOK.md` | Operacoes de deploy, smoke, cleanup, logs e troubleshooting. |
 | Cleanup smoke | iniciado M2.8 | `scripts/admin/cleanup_smoke_data.js` | Dry-run por defeito, prefixo obrigatorio e delete so com `--confirm`. |
+| Cleanup auditavel | avancado M2.8.1 | `scripts/test/cleanup_smoke_data.test.js` | `--verbose`, `--json` e `--confirm-prefix` cobertos por teste. |
 | Smoke cleanup opcional | iniciado M2.8 | `scripts/smoke/firebase_production_smoke.js` | `--keep-evidence` mantem comportamento; `--cleanup` e opt-in. |
 | Logs Functions pedidos | iniciado M2.8 | `functions/index.js` | Logs estruturados com UID mascarado e status anterior/novo. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
@@ -256,6 +258,19 @@ Entrou nesta primeira etapa:
 
 Nao houve deploy real nesta etapa da M2.8.
 
+M2.8.1 reforcou o cleanup antes de qualquer uso destrutivo:
+
+- `--verbose` lista cada Firestore doc, Storage file e Auth uid;
+- `--json` gera o plano completo em formato parseavel;
+- `--confirm` agora exige `--confirm-prefix=<prefixo>` igual ao `--prefix`;
+- `admin:cleanup:smoke:dry` passou a usar `--verbose`;
+- foi adicionado `admin:cleanup:smoke:json`;
+- o smoke `--cleanup` passa `confirmPrefix` internamente com o `runId`;
+- testes cobrem prefixo obrigatorio, prefixo curto, prefixo com path/pattern,
+  argumento desconhecido, dry-run sem delete, JSON/verbose e confirm-prefix.
+
+Nao foi executado cleanup real com `--confirm` nesta etapa.
+
 ## Hardening de bootstrap Auth/Firestore
 
 Durante os testes Android em emulador, o primeiro acesso Firestore apos
@@ -282,6 +297,7 @@ transitoria no arranque local/mobile.
 | HTTPS App Links | futuro, nao bloqueante para M2.7 | Publicar `assetlinks.json` nos dominios reais. |
 | Play Store | futuro, nao bloqueante para M2.7 | Preparar depois de Android fisico e package id final. |
 | Limpeza de dados de smoke antigos | iniciado M2.8 | Script admin criado; executar primeiro em dry-run antes de qualquer delete real. |
+| Plano de cleanup visivel | avancado M2.8.1 | Dry-run verbose/json lista docs, files e uids antes de qualquer delete. |
 | Observabilidade Functions | iniciado M2.8 | Logs estruturados adicionados para proposta/confirmacao de valor. |
 
 ## Comandos de validacao M2.7
@@ -352,6 +368,13 @@ Observacao: smoke real de producao nao foi repetido nesta etapa para evitar
 criar dados reais sem necessidade. O modo `--cleanup` ficou preparado, mas deve
 ser usado apenas quando houver credencial Admin SDK local segura e intencao
 explicita de apagar dados de teste.
+
+Validacao M2.8.1:
+
+| Comando | Resultado |
+| --- | --- |
+| `node scripts/test/cleanup_smoke_data.test.js` | passou |
+| `npm.cmd run test:scripts` | passou |
 
 ## Decisao
 

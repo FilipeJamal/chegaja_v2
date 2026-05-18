@@ -13,6 +13,9 @@ function resolveCleanupOptions(argv = process.argv.slice(2)) {
     storageBucket: DEFAULT_STORAGE_BUCKET,
     dryRun: true,
     confirm: false,
+    confirmPrefix: '',
+    verbose: false,
+    json: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -24,11 +27,20 @@ function resolveCleanupOptions(argv = process.argv.slice(2)) {
     } else if (arg === '--confirm') {
       options.confirm = true;
       options.dryRun = false;
+    } else if (arg === '--verbose') {
+      options.verbose = true;
+    } else if (arg === '--json') {
+      options.json = true;
     } else if (arg === '--prefix') {
       i += 1;
       options.prefix = argv[i] || '';
     } else if (arg.startsWith('--prefix=')) {
       options.prefix = arg.slice('--prefix='.length);
+    } else if (arg === '--confirm-prefix') {
+      i += 1;
+      options.confirmPrefix = argv[i] || '';
+    } else if (arg.startsWith('--confirm-prefix=')) {
+      options.confirmPrefix = arg.slice('--confirm-prefix='.length);
     } else if (arg === '--project') {
       i += 1;
       options.projectId = argv[i] || '';
@@ -67,6 +79,17 @@ function validateCleanupOptions(options) {
     throw new Error('--bucket is required.');
   }
   options.prefix = prefix;
+
+  if (options.confirm) {
+    const confirmPrefix = String(options.confirmPrefix || '').trim();
+    if (!confirmPrefix) {
+      throw new Error('--confirm-prefix is required when using --confirm.');
+    }
+    if (confirmPrefix !== prefix) {
+      throw new Error('--confirm-prefix must match --prefix exactly.');
+    }
+    options.confirmPrefix = confirmPrefix;
+  }
 }
 
 function unique(values) {
@@ -105,16 +128,52 @@ function buildCleanupPlan({
   };
 }
 
+function summarizePlan(plan) {
+  return {
+    firestoreDocs: plan.firestorePaths.length,
+    storageFiles: plan.storageFiles.length,
+    authUsers: plan.authUids.length,
+  };
+}
+
+function formatPlanReport(plan, { json = false, verbose = false } = {}) {
+  const summary = summarizePlan(plan);
+  if (json) {
+    return JSON.stringify({
+      summary,
+      firestorePaths: plan.firestorePaths,
+      storageFiles: plan.storageFiles,
+      authUids: plan.authUids,
+    }, null, 2);
+  }
+
+  const lines = [
+    `[cleanup_smoke_data] firestoreDocs=${summary.firestoreDocs}`,
+    `[cleanup_smoke_data] storageFiles=${summary.storageFiles}`,
+    `[cleanup_smoke_data] authUsers=${summary.authUsers}`,
+  ];
+
+  if (verbose) {
+    lines.push('[cleanup_smoke_data] firestorePaths:');
+    lines.push(...plan.firestorePaths.map((item) => `  doc: ${item}`));
+    lines.push('[cleanup_smoke_data] storageFiles:');
+    lines.push(...plan.storageFiles.map((item) => `  storage: ${item}`));
+    lines.push('[cleanup_smoke_data] authUids:');
+    lines.push(...plan.authUids.map((item) => `  auth: ${item}`));
+  }
+
+  return lines.join('\n');
+}
+
 async function applyCleanupPlan(plan, deps, { dryRun = true, confirm = false } = {}) {
   if (!dryRun && !confirm) {
     throw new Error('--confirm is required when dry-run is disabled.');
   }
 
   const summary = {
-    firestoreDocs: plan.firestorePaths.length,
-    storageFiles: plan.storageFiles.length,
-    authUsers: plan.authUids.length,
+    ...summarizePlan(plan),
     dryRun,
+    plan,
   };
 
   if (dryRun) return summary;
@@ -244,6 +303,9 @@ Options:
   --prefix <value>   Required smoke prefix or exact smoke run id.
   --dry-run          Default. Print counts only; does not delete.
   --confirm          Required for deletion.
+  --confirm-prefix   Required with --confirm. Must match --prefix exactly.
+  --verbose          Print every Firestore path, Storage file and Auth uid.
+  --json             Print the cleanup plan as JSON.
   --project <id>     Firebase project. Default: ${DEFAULT_PROJECT_ID}
   --bucket <name>    Storage bucket. Default: ${DEFAULT_STORAGE_BUCKET}
 `);
@@ -256,12 +318,15 @@ async function main() {
     return;
   }
 
+  const result = await cleanupSmokeData(options);
+  if (options.json) {
+    console.log(formatPlanReport(result.plan, { json: true }));
+    return;
+  }
+
   console.log(`[cleanup_smoke_data] project=${options.projectId} bucket=${options.storageBucket}`);
   console.log(`[cleanup_smoke_data] prefix=${options.prefix} dryRun=${options.dryRun}`);
-  const result = await cleanupSmokeData(options);
-  console.log(`[cleanup_smoke_data] firestoreDocs=${result.firestoreDocs}`);
-  console.log(`[cleanup_smoke_data] storageFiles=${result.storageFiles}`);
-  console.log(`[cleanup_smoke_data] authUsers=${result.authUsers}`);
+  console.log(formatPlanReport(result.plan, { verbose: options.verbose }));
   console.log(`[cleanup_smoke_data] ${result.dryRun ? 'DRY_RUN_ONLY' : 'DELETED'}`);
 }
 
@@ -277,6 +342,7 @@ module.exports = {
   applyCleanupPlan,
   buildCleanupPlan,
   cleanupSmokeData,
+  formatPlanReport,
   resolveCleanupOptions,
   validateCleanupOptions,
 };

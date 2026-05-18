@@ -3,6 +3,7 @@ const assert = require('assert');
 const {
   applyCleanupPlan,
   buildCleanupPlan,
+  formatPlanReport,
   resolveCleanupOptions,
 } = require('../admin/cleanup_smoke_data');
 
@@ -10,11 +11,23 @@ const defaultOptions = resolveCleanupOptions(['--prefix=m274_smoke_']);
 assert.strictEqual(defaultOptions.prefix, 'm274_smoke_');
 assert.strictEqual(defaultOptions.dryRun, true);
 assert.strictEqual(defaultOptions.confirm, false);
+assert.strictEqual(defaultOptions.verbose, false);
+assert.strictEqual(defaultOptions.json, false);
 
-const confirmedOptions = resolveCleanupOptions(['--prefix', 'm274_smoke_', '--confirm']);
+const verboseOptions = resolveCleanupOptions(['--prefix=m274_smoke_', '--verbose', '--json']);
+assert.strictEqual(verboseOptions.verbose, true);
+assert.strictEqual(verboseOptions.json, true);
+
+const confirmedOptions = resolveCleanupOptions([
+  '--prefix',
+  'm274_smoke_',
+  '--confirm',
+  '--confirm-prefix=m274_smoke_',
+]);
 assert.strictEqual(confirmedOptions.prefix, 'm274_smoke_');
 assert.strictEqual(confirmedOptions.dryRun, false);
 assert.strictEqual(confirmedOptions.confirm, true);
+assert.strictEqual(confirmedOptions.confirmPrefix, 'm274_smoke_');
 
 assert.throws(
   () => resolveCleanupOptions([]),
@@ -24,6 +37,30 @@ assert.throws(
 assert.throws(
   () => resolveCleanupOptions(['--prefix=abc']),
   /too short/,
+);
+
+assert.throws(
+  () => resolveCleanupOptions(['--prefix=m274_smoke_/bad']),
+  /plain smoke id prefix/,
+);
+
+assert.throws(
+  () => resolveCleanupOptions(['--prefix=m274_smoke_', '--unknown']),
+  /Unknown argument/,
+);
+
+assert.throws(
+  () => resolveCleanupOptions(['--prefix=m274_smoke_', '--confirm']),
+  /--confirm-prefix is required/,
+);
+
+assert.throws(
+  () => resolveCleanupOptions([
+    '--prefix=m274_smoke_',
+    '--confirm',
+    '--confirm-prefix=wrong_prefix_',
+  ]),
+  /must match --prefix/,
 );
 
 const plan = buildCleanupPlan({
@@ -57,6 +94,21 @@ assert.deepStrictEqual(plan.storageFiles.sort(), [
   'pedidos/m274_smoke_1_pedido/anexos/m274_smoke_1.png',
   'temp/client1/anexos/m274_smoke_1.png',
 ].sort());
+
+const verboseReport = formatPlanReport(plan, { verbose: true });
+assert(verboseReport.includes('pedidos/m274_smoke_1_pedido'));
+assert(verboseReport.includes('storage: pedidos/m274_smoke_1_pedido/anexos/m274_smoke_1.png'));
+assert(verboseReport.includes('auth: client1'));
+
+const jsonReport = JSON.parse(formatPlanReport(plan, { json: true }));
+assert.deepStrictEqual(jsonReport.summary, {
+  firestoreDocs: 4,
+  storageFiles: 2,
+  authUsers: 2,
+});
+assert.deepStrictEqual(jsonReport.firestorePaths, plan.firestorePaths);
+assert.deepStrictEqual(jsonReport.storageFiles, plan.storageFiles);
+assert.deepStrictEqual(jsonReport.authUids, plan.authUids);
 
 const deletes = [];
 const fakeDeps = {

@@ -399,6 +399,7 @@ async function main() {
       storageBucket: STORAGE_BUCKET,
       dryRun: false,
       confirm: true,
+      confirmPrefix: runId,
     });
     console.log(
       `[M2.7.4 smoke] cleanup firestoreDocs=${cleanupResult.firestoreDocs} ` +

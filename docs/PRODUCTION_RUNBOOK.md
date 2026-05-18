@@ -115,13 +115,27 @@ Dry-run por defeito:
 npm.cmd run admin:cleanup:smoke:dry
 ```
 
-Com prefixo explicito:
+Esse comando usa `--verbose` e lista o plano auditavel antes de qualquer delete.
+
+Dry-run em JSON:
 
 ```powershell
-node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run
+npm.cmd run admin:cleanup:smoke:json
 ```
 
-Apagar exige `--confirm`:
+Com prefixo explicito em texto:
+
+```powershell
+node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run --verbose
+```
+
+Com prefixo explicito em JSON:
+
+```powershell
+node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --dry-run --json
+```
+
+Apagar exige `--confirm` e tambem repetir o prefixo em `--confirm-prefix`:
 
 ```powershell
 npm.cmd run admin:cleanup:smoke
@@ -130,7 +144,7 @@ npm.cmd run admin:cleanup:smoke
 Ou:
 
 ```powershell
-node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --confirm
+node scripts/admin/cleanup_smoke_data.js --prefix=m274_smoke_ --confirm --confirm-prefix=m274_smoke_ --verbose
 ```
 
 O script so deve ser usado para dados de teste controlados. Ele procura:
@@ -144,12 +158,24 @@ Storage em temp/{uid}/anexos contendo o prefixo
 Auth users ligados a docs users com smokeRunId
 ```
 
+O dry-run verbose mostra:
+
+```text
+doc: pedidos/...
+doc: users/...
+doc: prestadores/...
+storage: pedidos/.../anexos/...
+storage: temp/.../anexos/...
+auth: uid...
+```
+
 Dados de smoke criados antes da M2.8 podem nao ter `smokeRunId` em `users`.
 Nesses casos, o script ainda consegue encontrar pedidos por id prefixado, mas
 users/Auth/temp uploads antigos devem ser revistos manualmente antes de qualquer
 delete.
 
-Antes de apagar, verificar o output do dry-run.
+Antes de apagar, verificar o output do dry-run. Se o plano listar algo fora do
+prefixo esperado, nao executar `--confirm`.
 
 ## Verificar runtime das Functions
 
