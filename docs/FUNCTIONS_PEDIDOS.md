@@ -1,4 +1,4 @@
-# Functions de Pedidos - M2.7.2 / M2.7.3 / M2.7.4
+# Functions de Pedidos - M2.7.2 / M2.7.3 / M2.7.4 / M2.7.5
 
 Data: 2026-05-17
 
@@ -181,6 +181,49 @@ Detalhes completos do deploy:
 docs/FIREBASE_DEPLOYMENT_STATUS.md
 ```
 
+## Runtime M2.7.5
+
+M2.7.5 migrou as Functions de Node.js 20 para Node.js 22 antes de fechar a
+fase de hardening.
+
+Alteracoes em `functions/package.json`:
+
+```json
+{
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^7.2.5"
+  }
+}
+```
+
+O projeto continua em CommonJS (`main: "index.js"`), sem migracao para ESM.
+
+Deploy:
+
+```powershell
+npx.cmd firebase deploy --only functions --project chegaja-ac88d
+```
+
+Confirmacao:
+
+```powershell
+npx.cmd firebase functions:list --project chegaja-ac88d --json
+```
+
+Resumo:
+
+```text
+FUNCTION_COUNT=27
+RUNTIMES=nodejs22=27
+```
+
+Depois do deploy, `npm.cmd run smoke:firebase:production` voltou a validar o
+fluxo autoritativo de valores e anexos contra o Firebase real.
+
 ## Firestore Rules
 
 As regras continuam a validar o caminho direto legado para nao quebrar os
@@ -219,4 +262,5 @@ npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd
 flutter build apk --release
 flutter build appbundle --release
 npm.cmd run smoke:firebase:production
+npx.cmd firebase functions:list --project chegaja-ac88d --json
 ```

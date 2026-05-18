@@ -18,6 +18,7 @@ M2.7.1: avancado em estados, pedidos e valores
 M2.7.2: avancado em Functions autoritativas para valores
 M2.7.3: avancado em testes Android com Functions Emulator
 M2.7.4: avancado com deploy controlado Firebase e smoke real
+M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
 ```
 
 ## Alteracoes aplicadas
@@ -37,6 +38,8 @@ M2.7.4: avancado com deploy controlado Firebase e smoke real
 | Android com Functions Emulator | avancado M2.7.3 | `integration_test/android_functions_flow_test.dart` | Fluxo Android valida proposta/confirmacao por callable no emulador. |
 | Deploy Firebase real | avancado M2.7.4 | `docs/FIREBASE_DEPLOYMENT_STATUS.md` | Firestore Rules, Storage Rules e Functions publicados em `chegaja-ac88d`. |
 | Smoke Firebase real | avancado M2.7.4 | `npm.cmd run smoke:firebase:production` | Fluxo pedido + Functions + Storage validado contra producao. |
+| Runtime Functions | avancado M2.7.5 | `npx.cmd firebase functions:list --project chegaja-ac88d --json` | 27/27 Functions em `nodejs22`. |
+| Dependencias Functions | avancado M2.7.5 | `functions/package.json` | `firebase-functions ^7.2.5` e `firebase-admin ^13.10.0`. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
 | Auth bootstrap mobile | endurecido M2.7.1 | `npm.cmd run test:android:mvp` | Retry curto para primeira leitura/escrita Firestore apos login anonimo. |
 | FCM tokens | coberto por teste | teste nega escrita em token de outro utilizador | Mantem `users/{uid}/fcmTokens/{token}` owner/admin. |
@@ -149,6 +152,18 @@ M2.7.4 publicou esse hardening no Firebase real:
 - `npm.cmd run smoke:firebase:production` validou Auth, Firestore, Functions,
   Storage, split 15%/85% e bloqueios 403 em producao.
 
+M2.7.5 migrou as Functions para runtime suportado:
+
+- `functions/package.json` mudou `engines.node` de `20` para `22`;
+- `firebase-functions` foi atualizado de `^5.0.1` para `^7.2.5`;
+- `firebase-admin` foi atualizado de `^12.7.0` para `^13.10.0`;
+- CommonJS foi mantido, sem migracao para ESM;
+- `npx.cmd firebase deploy --only functions --project chegaja-ac88d`
+  atualizou as Functions em Node.js 22 (2nd Gen);
+- `npx.cmd firebase functions:list --project chegaja-ac88d --json` confirmou
+  `FUNCTION_COUNT=27` e `RUNTIMES=nodejs22=27`;
+- `npm.cmd run smoke:firebase:production` passou apos o deploy.
+
 O mapa de estados e campos protegidos esta documentado em:
 
 ```text
@@ -227,8 +242,9 @@ transitoria no arranque local/mobile.
 | Permissoes nativas negadas | pendente M2.6 | Validar notificacoes, galeria e camera negadas. |
 | Campos economicos em `pedidos` | backend autoritativo testado em Android/emulador | M2.7.3 prova um fluxo Android usando Functions Emulator; caminho direto permanece para fake/unitarios e scripts sem Functions. |
 | Deploy real Firebase | avancado M2.7.4 | Firestore Rules, Storage Rules e Functions publicados; smoke real passou. |
-| Node.js 20 Functions | divida futura | Runtime depreciado em 2026-04-30 e decommission previsto para 2026-10-30; planear upgrade antes disso. |
-| `firebase-functions` desatualizado | divida futura | Firebase CLI recomenda upgrade; avaliar em fase separada por risco de breaking changes. |
+| Node.js 20 Functions | resolvido M2.7.5 | Runtime migrado para Node.js 22 e 27/27 Functions confirmadas em `nodejs22`. |
+| `firebase-functions` desatualizado | resolvido M2.7.5 | Atualizado para `^7.2.5`; smoke real passou. |
+| Audit prod Functions | parcial | `npm audit --omit=dev` sem critico/alto/moderado; restam 9 lows que exigem `--force` com downgrade/breaking change. |
 | Package id final | futuro | Definir antes de Play Store/Firebase Android final. |
 | HTTPS App Links | futuro | Publicar `assetlinks.json` nos dominios reais. |
 
@@ -270,6 +286,23 @@ Validacao M2.7.4:
 | `npx.cmd firebase deploy --only functions --project chegaja-ac88d` | passou |
 | IAM `roles/firebaserules.firestoreServiceAgent` para Firebase Storage service account | aplicado |
 | `npm.cmd run smoke:firebase:production` | passou |
+
+Validacao M2.7.5:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter test` | passou, 49/49 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mvp"` | passou, 5/5 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:android:mobile"` | passou, 4/4 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage,functions "npm.cmd run test:android:functions"` | passou, 1/1 |
+| `flutter build apk --release` | passou, `build/app/outputs/flutter-apk/app-release.apk` |
+| `flutter build appbundle --release` | passou, `build/app/outputs/bundle/release/app-release.aab` |
+| `npx.cmd firebase deploy --only functions --project chegaja-ac88d` | passou, Node.js 22 (2nd Gen) |
+| `npx.cmd firebase functions:list --project chegaja-ac88d --json` | passou, 27/27 em `nodejs22` |
+| `npm.cmd run smoke:firebase:production` | passou |
+| `npm.cmd audit --omit=dev --json` | sem critico/alto/moderado; 9 lows restantes |
 
 ## Decisao
 

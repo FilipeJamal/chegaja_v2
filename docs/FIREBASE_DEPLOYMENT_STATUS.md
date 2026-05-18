@@ -130,6 +130,91 @@ O smoke cria dados reais isolados com prefixo `m274_smoke_`. Como as regras de
 producao nao permitem delete de pedidos/users por cliente comum, estes registos
 ficam como evidencia rastreavel ate haver rotina admin de limpeza.
 
+## M2.7.5 - Runtime Functions
+
+Data: 2026-05-18
+
+M2.7.5 tratou a divida tecnica registrada no deploy M2.7.4: runtime Node.js
+20 depreciado e `firebase-functions` desatualizado.
+
+Alteracoes:
+
+| Item | Antes | Depois |
+| --- | --- | --- |
+| `functions/package.json` `engines.node` | `20` | `22` |
+| `firebase-functions` | `^5.0.1` | `^7.2.5` |
+| `firebase-admin` | `^12.7.0` | `^13.10.0` |
+| Module system | CommonJS | CommonJS, sem migracao para ESM |
+
+Referencia oficial:
+
+- `https://cloud.google.com/functions/docs/runtime-support`
+- `https://firebase.google.com/docs/functions/manage-functions?gen=2nd#set_node.js_version`
+
+O deploy foi feito apenas para Functions:
+
+```powershell
+npx.cmd firebase deploy --only functions --project chegaja-ac88d
+```
+
+O Firebase CLI reportou update em:
+
+```text
+Node.js 22 (2nd Gen)
+```
+
+Confirmacao pos-deploy:
+
+```powershell
+npx.cmd firebase functions:list --project chegaja-ac88d --json
+```
+
+Resultado resumido:
+
+```text
+FUNCTION_COUNT=27
+RUNTIMES=nodejs22=27
+```
+
+Smoke real pos-deploy:
+
+```powershell
+npm.cmd run smoke:firebase:production
+```
+
+Resultado:
+
+```text
+[M2.7.4 smoke] authoritative pedido flow concluded with 15/85 split
+[M2.7.4 smoke] malicious direct economic update denied (403)
+[M2.7.4 smoke] allowed temp attachment upload succeeded
+[M2.7.4 smoke] allowed pedido attachment upload succeeded
+[M2.7.4 smoke] outsider attachment upload denied (403)
+[M2.7.4 smoke] OK
+```
+
+Audit de dependencias de producao:
+
+```powershell
+cd functions
+npm.cmd audit --omit=dev --json
+```
+
+Resultado resumido:
+
+```text
+critical: 0
+high: 0
+moderate: 0
+low: 9
+```
+
+Foi executado `npm.cmd audit fix --omit=dev`, que removeu os achados
+criticos/altos/moderados sem `--force`. Os 9 lows restantes exigem
+`npm audit fix --force` e downgrade/breaking change para `firebase-admin`
+10.3.0 / `firebase-functions` 4.9.0, por isso ficaram documentados como
+divida futura em vez de serem forcados nesta fase.
+
 ## Estado apos M2.7.4
 
 ```text
@@ -141,6 +226,7 @@ M2.7.1 - avancado em estados, pedidos e valores
 M2.7.2 - avancado em Functions autoritativas para valores
 M2.7.3 - avancado em testes Android com Functions Emulator
 M2.7.4 - avancado com deploy controlado Firebase e smoke real
+M2.7.5 - avancado com runtime Functions Node.js 22 e smoke real
 ```
 
 M2.7 ainda nao deve ser marcada como fechada automaticamente. A decisao de
