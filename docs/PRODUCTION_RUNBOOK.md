@@ -159,7 +159,9 @@ pull_request para main
 ```
 
 O CI configura Node.js 22, Java 21 e Flutter stable, instala dependencias com
-`npm ci`, `cd functions && npm ci` e `flutter pub get`, depois roda:
+`npm ci`, `cd functions && npm ci`, cria um `.env` temporario a partir de
+`.env.example` para satisfazer o asset Flutter sem segredos, executa
+`flutter pub get`, depois roda:
 
 ```powershell
 npm run test:scripts

@@ -46,6 +46,9 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      - name: Prepare Flutter env asset
+        run: cp .env.example .env
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
