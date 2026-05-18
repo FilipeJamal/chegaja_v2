@@ -21,6 +21,7 @@ M2.7.4: avancado com deploy controlado Firebase e smoke real
 M2.7.5: avancado com runtime Functions Node.js 22 e fecho tecnico
 M2.8: iniciado em operacoes de producao, limpeza e observabilidade
 M2.8.1: avancado em cleanup auditavel e validacao controlada
+M2.8.2: avancado em health check de producao sem criar dados
 ```
 
 ## Alteracoes aplicadas
@@ -46,6 +47,7 @@ M2.8.1: avancado em cleanup auditavel e validacao controlada
 | Runbook producao | iniciado M2.8 | `docs/PRODUCTION_RUNBOOK.md` | Operacoes de deploy, smoke, cleanup, logs e troubleshooting. |
 | Cleanup smoke | iniciado M2.8 | `scripts/admin/cleanup_smoke_data.js` | Dry-run por defeito, prefixo obrigatorio e delete so com `--confirm`. |
 | Cleanup auditavel | avancado M2.8.1 | `scripts/test/cleanup_smoke_data.test.js` | `--verbose`, `--json` e `--confirm-prefix` cobertos por teste. |
+| Health check producao | avancado M2.8.2 | `scripts/health/firebase_production_health.js` | Verifica Firebase CLI, projeto, Functions nodejs22 e audit sem escrever dados. |
 | Smoke cleanup opcional | iniciado M2.8 | `scripts/smoke/firebase_production_smoke.js` | `--keep-evidence` mantem comportamento; `--cleanup` e opt-in. |
 | Logs Functions pedidos | iniciado M2.8 | `functions/index.js` | Logs estruturados com UID mascarado e status anterior/novo. |
 | Marcador backend autoritativo | endurecido M2.7.2 | `functions/test/firestore.test.js` | Cliente/prestador nao conseguem falsificar `lastAuthoritativeFunction`. |
@@ -194,6 +196,8 @@ scripts/test/run_android_integration_test.test.js
 scripts/smoke/firebase_production_smoke.js
 scripts/admin/cleanup_smoke_data.js
 scripts/test/cleanup_smoke_data.test.js
+scripts/health/firebase_production_health.js
+scripts/test/firebase_production_health.test.js
 ```
 
 Cobertura nova:
@@ -238,6 +242,7 @@ Cobertura nova:
   padrao de manter evidencia;
 - logs de `proporValorFinalPedido` e `confirmarValorFinalPedido` usam UID
   mascarado e campos estruturados.
+- health check de producao valida CLI/projeto/Functions/audit sem criar dados.
 
 ## M2.8 - Operacoes de producao
 
@@ -271,6 +276,18 @@ M2.8.1 reforcou o cleanup antes de qualquer uso destrutivo:
 
 Nao foi executado cleanup real com `--confirm` nesta etapa.
 
+M2.8.2 adicionou um health check read-only para producao:
+
+- `npm.cmd run health:firebase:production`;
+- valida `firebase login:list`;
+- valida projeto ativo `chegaja-ac88d`;
+- valida `functions:list --json`;
+- exige 27 Functions em `nodejs22`;
+- executa `npm audit --omit=dev --json` em `functions`;
+- falha se houver vulnerabilidade critical/high/moderate;
+- aceita lows como divida documentada;
+- nao cria pedidos, nao faz upload e nao apaga dados.
+
 ## Hardening de bootstrap Auth/Firestore
 
 Durante os testes Android em emulador, o primeiro acesso Firestore apos
@@ -298,6 +315,7 @@ transitoria no arranque local/mobile.
 | Play Store | futuro, nao bloqueante para M2.7 | Preparar depois de Android fisico e package id final. |
 | Limpeza de dados de smoke antigos | iniciado M2.8 | Script admin criado; executar primeiro em dry-run antes de qualquer delete real. |
 | Plano de cleanup visivel | avancado M2.8.1 | Dry-run verbose/json lista docs, files e uids antes de qualquer delete. |
+| Health check sem escrita | avancado M2.8.2 | `health:firebase:production` valida producao sem criar dados reais. |
 | Observabilidade Functions | iniciado M2.8 | Logs estruturados adicionados para proposta/confirmacao de valor. |
 
 ## Comandos de validacao M2.7
@@ -375,6 +393,16 @@ Validacao M2.8.1:
 | --- | --- |
 | `node scripts/test/cleanup_smoke_data.test.js` | passou |
 | `npm.cmd run test:scripts` | passou |
+
+Validacao M2.8.2:
+
+| Comando | Resultado |
+| --- | --- |
+| `node scripts/test/firebase_production_health.test.js` | passou |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter test` | passou, 49/49 |
+| `npm.cmd run health:firebase:production` | passou, read-only, 27 Functions em `nodejs22`, audit sem critical/high/moderate |
 
 ## Decisao
 

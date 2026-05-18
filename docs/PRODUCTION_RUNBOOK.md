@@ -107,6 +107,42 @@ O modo `--cleanup` usa Admin SDK. A maquina precisa ter credencial admin local
 segura, por exemplo `GOOGLE_APPLICATION_CREDENTIALS`, ou outra credencial ADC
 valida. Nao guardar essa credencial no repositorio.
 
+## Health check de producao
+
+Validacao read-only, sem criar pedidos, uploads ou deletes:
+
+```powershell
+npm.cmd run health:firebase:production
+```
+
+O health check verifica:
+
+```text
+Firebase CLI autenticado
+projeto ativo chegaja-ac88d
+functions:list com 27 Functions
+todas as Functions em nodejs22
+npm audit --omit=dev em functions sem critical/high/moderate
+```
+
+Output esperado:
+
+```text
+firebaseLogin=ok
+project=chegaja-ac88d
+functionCount=27
+runtimes=nodejs22=27
+auditCritical=0
+auditHigh=0
+auditModerate=0
+auditLow=9
+status=OK
+```
+
+Usar para validacao rapida diaria ou antes de deploy quando nao se quer criar
+dados reais. Isto nao substitui o smoke real quando houver mudanca critica em
+regras, Functions ou Storage.
+
 ## Limpeza segura de dados de smoke
 
 Dry-run por defeito:
