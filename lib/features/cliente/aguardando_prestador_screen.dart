@@ -1,4 +1,5 @@
 // lib/features/cliente/aguardando_prestador_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
@@ -6,7 +7,10 @@ import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/politica_reembolso.dart';
+import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 class AguardandoPrestadorScreen extends StatefulWidget {
   final String pedidoId;
@@ -21,8 +25,7 @@ class AguardandoPrestadorScreen extends StatefulWidget {
       _AguardandoPrestadorScreenState();
 }
 
-class _AguardandoPrestadorScreenState
-    extends State<AguardandoPrestadorScreen> {
+class _AguardandoPrestadorScreenState extends State<AguardandoPrestadorScreen> {
   /// Evita chamar navegação duas vezes
   bool _foiParaDetalhe = false;
 
@@ -39,7 +42,9 @@ class _AguardandoPrestadorScreenState
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Um prestador aceitou o teu pedido.'),
+        content: Text(
+          'Prestador encontrado. Abre o detalhe para combinar os proximos passos.',
+        ),
       ),
     );
 
@@ -89,10 +94,11 @@ class _AguardandoPrestadorScreenState
       );
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Erro ao recriar pedido depois de cancelamento: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            'Não foi possível procurar outro prestador automaticamente: $e',
+            'Nao conseguimos procurar outro prestador automaticamente. Tenta criar um novo pedido.',
           ),
         ),
       );
@@ -182,9 +188,10 @@ class _AguardandoPrestadorScreenState
       Navigator.of(context).pop(); // fecha este ecrã
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Erro ao cancelar pedido no aguardando prestador: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao cancelar pedido: $e'),
+          content: Text(PedidoFlowPresenter.errorMessage('cancelOrder')),
         ),
       );
     }
@@ -205,39 +212,31 @@ class _AguardandoPrestadorScreenState
           stream: PedidosRepo.streamPedidoPorId(widget.pedidoId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const AppLoadingView(label: 'A procurar o teu pedido...');
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Text(
-                  'Erro a carregar pedido: ${snapshot.error}',
-                  textAlign: TextAlign.center,
-                ),
+              if (kDebugMode) {
+                debugPrint(
+                  '[AguardandoPrestador] stream error: ${snapshot.error}',
+                );
+              }
+              return const AppErrorView(
+                message:
+                    'Nao conseguimos acompanhar este pedido agora. Tenta novamente daqui a pouco.',
               );
             }
 
             final pedido = snapshot.data;
 
             if (pedido == null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Pedido não encontrado.\n'
-                      'Talvez tenha sido removido ou cancelado.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Voltar'),
-                    ),
-                  ],
-                ),
+              return PedidoEmptyState(
+                title: 'Pedido nao encontrado',
+                message:
+                    'Talvez este pedido tenha sido cancelado ou ainda nao esteja disponivel.',
+                icon: Icons.search_off_rounded,
+                actionLabel: 'Voltar',
+                onAction: () => Navigator.of(context).pop(),
               );
             }
 
@@ -247,11 +246,10 @@ class _AguardandoPrestadorScreenState
             final bool canceladoPeloCliente =
                 pedido.estado == 'cancelado' && canceladoPor == 'cliente';
 
-            final bool prestadorAceitouOuServico =
-                pedido.estado == 'aceito' ||
-                    pedido.estado == 'aguarda_resposta_cliente' ||
-                    pedido.estado == 'em_andamento' ||
-                    pedido.estado == 'aguarda_confirmacao_valor';
+            final bool prestadorAceitouOuServico = pedido.estado == 'aceito' ||
+                pedido.estado == 'aguarda_resposta_cliente' ||
+                pedido.estado == 'em_andamento' ||
+                pedido.estado == 'aguarda_confirmacao_valor';
 
             // 1) Prestador aceitou → vai para ecrã de detalhe (onde podes ter mapa/ETA)
             if (prestadorAceitouOuServico) {
@@ -261,8 +259,7 @@ class _AguardandoPrestadorScreenState
               return _buildMensagemCentro(
                 primary,
                 titulo: 'Prestador encontrado',
-                subtitulo:
-                    'Um prestador aceitou o teu pedido.\n'
+                subtitulo: 'Um prestador aceitou o teu pedido.\n'
                     'A abrir detalhes do serviço...',
                 mostrarLoader: true,
                 mostrarBotoes: false,
@@ -280,8 +277,7 @@ class _AguardandoPrestadorScreenState
               return _buildMensagemCentro(
                 primary,
                 titulo: 'Pedido cancelado',
-                subtitulo:
-                    'Este pedido já foi cancelado.\n'
+                subtitulo: 'Este pedido já foi cancelado.\n'
                     'Se ainda precisares de ajuda, cria um novo pedido.',
                 mostrarLoader: false,
                 mostrarBotoes: false,

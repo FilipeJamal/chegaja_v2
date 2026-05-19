@@ -19,6 +19,7 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 class NovoPedidoScreen extends StatefulWidget {
   /// Entrada do pedido: 'IMEDIATO', 'AGENDADO' ou 'ORCAMENTO' (atalho para preço por orçamento).
@@ -538,8 +539,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
 
         if (!mounted) return;
 
+        final feedback = PedidoFlowPresenter.creationSuccess(manual: manual);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.orderCreatedSuccess)),
+          SnackBar(
+            content: Text('${feedback.title}. ${feedback.message}'),
+          ),
         );
 
         if (manual) {
@@ -567,13 +571,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      debugPrint('Erro ao salvar pedido: $e');
+      final feedback = PedidoFlowPresenter.creationError(editing: isEditing);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isEditing
-                ? l10n.orderUpdateError(e.toString())
-                : l10n.orderCreateError(e.toString()),
-          ),
+          content: Text('${feedback.message} ${feedback.nextStep}'),
         ),
       );
     } finally {

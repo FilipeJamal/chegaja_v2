@@ -9,6 +9,7 @@ import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/payment_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart'; // import AuthService
 import 'package:chegaja_v2/core/utils/currency_utils.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 /// Widget principal de ações do cliente num pedido.
 ///
@@ -54,6 +55,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
     final max = pedido.valorMaxEstimadoPrestador;
     final mensagem = pedido.mensagemPropostaPrestador?.trim();
     final expires = pedido.propostaExpiresAt;
+    final copy = PedidoFlowPresenter.clientProposalCopy(pedido);
 
     String expiresTxt = '';
     if (expires != null) {
@@ -92,12 +94,17 @@ class _PropostaPrestadorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Reve a estimativa do prestador',
-            style: TextStyle(
+          Text(
+            copy.title,
+            style: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            copy.body,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
           const SizedBox(height: 6),
           Text(
@@ -137,7 +144,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
                 child: OutlinedButton(
                   key: const Key('cliente_rejeitar_proposta_button'),
                   onPressed: () => _recusarPrestador(context),
-                  child: const Text('Rejeitar proposta'),
+                  child: Text(copy.secondaryActionLabel!),
                 ),
               ),
               const SizedBox(width: 8),
@@ -145,7 +152,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
                 child: ElevatedButton(
                   key: const Key('cliente_aceitar_proposta_button'),
                   onPressed: () => _aceitarPrestador(context),
-                  child: const Text('Aceitar este prestador'),
+                  child: Text(copy.primaryActionLabel),
                 ),
               ),
             ],
@@ -168,16 +175,17 @@ class _PropostaPrestadorCard extends StatelessWidget {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Prestador escolhido com sucesso.'),
+        SnackBar(
+          content: Text(PedidoFlowPresenter.successMessage('acceptProposal')),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
+      debugPrint('Erro ao aceitar proposta: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao aceitar prestador: $e'),
+          content: Text(PedidoFlowPresenter.errorMessage('acceptProposal')),
         ),
       );
     }
@@ -196,18 +204,17 @@ class _PropostaPrestadorCard extends StatelessWidget {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Proposta rejeitada. O pedido volta a ficar disponível.',
-          ),
+        SnackBar(
+          content: Text(PedidoFlowPresenter.successMessage('rejectProposal')),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
+      debugPrint('Erro ao rejeitar proposta: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao rejeitar proposta: $e'),
+          content: Text(PedidoFlowPresenter.errorMessage('rejectProposal')),
         ),
       );
     }
@@ -256,6 +263,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
     final valor = pedido.precoPropostoPrestador ?? pedido.precoFinal ?? 0;
     final acimaFaixa = _estaAcimaFaixa;
     final faixaTexto = _textoFaixa;
+    final copy = PedidoFlowPresenter.clientFinalValueCopy(pedido);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -269,9 +277,9 @@ class _ValorFinalPendenteCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Confirma o valor final',
-            style: TextStyle(
+          Text(
+            copy.title,
+            style: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
@@ -306,9 +314,9 @@ class _ValorFinalPendenteCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
-          const Text(
-            'Ao confirmares, o backend conclui o pedido e calcula automaticamente comissao e ganhos.',
-            style: TextStyle(
+          Text(
+            copy.nextStep!,
+            style: const TextStyle(
               fontSize: 12,
               color: Colors.black54,
             ),
@@ -320,7 +328,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
                 child: OutlinedButton(
                   key: const Key('cliente_duvida_valor_button'),
                   onPressed: () => _rejeitarValor(context),
-                  child: const Text('Tenho uma dúvida'),
+                  child: Text(copy.secondaryActionLabel!),
                 ),
               ),
               const SizedBox(width: 8),
@@ -328,7 +336,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
                 child: ElevatedButton(
                   key: const Key('confirmar_valor_button'),
                   onPressed: () => _confirmarValor(context),
-                  child: const Text('Confirmar valor'),
+                  child: Text(copy.primaryActionLabel),
                 ),
               ),
             ],
@@ -407,8 +415,9 @@ class _ValorFinalPendenteCard extends StatelessWidget {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Valor final confirmado. O pedido ficou concluido.'),
+        SnackBar(
+          content:
+              Text(PedidoFlowPresenter.successMessage('confirmFinalValue')),
         ),
       );
     } catch (e) {
@@ -416,10 +425,8 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
       debugPrint('Erro ao confirmar valor final: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Nao conseguimos confirmar o valor agora. Tenta novamente.',
-          ),
+        SnackBar(
+          content: Text(PedidoFlowPresenter.errorMessage('confirmFinalValue')),
         ),
       );
     }
@@ -439,11 +446,8 @@ class _ValorFinalPendenteCard extends StatelessWidget {
       if (!context.mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Avisámos o prestador que tens dúvidas sobre o valor.\n'
-            'Podes falar com ele pelo chat e combinar um novo valor.',
-          ),
+        SnackBar(
+          content: Text(PedidoFlowPresenter.successMessage('rejectFinalValue')),
         ),
       );
     } catch (e) {
@@ -451,10 +455,8 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
       debugPrint('Erro ao registar duvida sobre valor final: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Nao conseguimos registar a duvida agora. Tenta novamente.',
-          ),
+        SnackBar(
+          content: Text(PedidoFlowPresenter.errorMessage('rejectFinalValue')),
         ),
       );
     }

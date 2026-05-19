@@ -27,6 +27,8 @@ import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_banners.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_chat_widgets.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_contato_section.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_final_state_panel.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_info_row.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_mapa_osm.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_next_action_card.dart';
@@ -352,6 +354,13 @@ class PedidoDetalheScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   PedidoTimeline(estado: pedido.estado),
+                  if (pedido.estado == 'concluido' ||
+                      pedido.estado == 'cancelado') ...[
+                    const SizedBox(height: 12),
+                    PedidoFinalStatePanel(
+                      data: PedidoFlowPresenter.finalStateFor(pedido),
+                    ),
+                  ],
                   const SizedBox(height: 12),
 
                   if (aguardandoRespostaPrestador) ...[
@@ -780,8 +789,13 @@ class PedidoDetalheScreen extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        debugPrint('Erro ao enviar convite ao prestador: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao enviar convite: $e')),
+          const SnackBar(
+            content: Text(
+              'Nao conseguimos enviar o convite agora. Tenta novamente.',
+            ),
+          ),
         );
       }
     }
@@ -950,9 +964,10 @@ class PedidoDetalheScreen extends StatelessWidget {
       Navigator.of(context).pop();
     } catch (e) {
       if (!context.mounted) return;
+      debugPrint('Erro ao cancelar pedido: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.orderCancelError(e.toString())),
+          content: Text(PedidoFlowPresenter.errorMessage('cancelOrder')),
         ),
       );
     }
@@ -1158,9 +1173,10 @@ class PedidoDetalheScreen extends StatelessWidget {
       Navigator.of(context).pop();
     } catch (e) {
       if (!context.mounted) return;
+      debugPrint('Erro ao cancelar trabalho: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.cancelJobError(e.toString())),
+          content: Text(PedidoFlowPresenter.errorMessage('cancelOrder')),
         ),
       );
     }
@@ -1226,11 +1242,11 @@ class PedidoDetalheScreen extends StatelessWidget {
                   );
                 } catch (e) {
                   if (!context.mounted) return;
+                  debugPrint('Erro ao enviar novo valor final: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        l10n.orderFinalValueSendError(e.toString()),
-                      ),
+                          PedidoFlowPresenter.errorMessage('sendFinalValue')),
                     ),
                   );
                 }

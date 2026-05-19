@@ -7,6 +7,7 @@ import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 class PrestadorPedidoAcoes extends StatelessWidget {
   final Pedido pedido;
@@ -56,6 +57,7 @@ class _AcaoResponderConvite extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
     final uid = user?.uid;
+    final copy = PedidoFlowPresenter.providerInviteCopy(pedido);
 
     if (uid == null) return const SizedBox.shrink();
     if (pedido.prestadorId != null && pedido.prestadorId != uid) {
@@ -65,9 +67,9 @@ class _AcaoResponderConvite extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Convite direto do cliente. Queres aceitar este serviço?',
-          style: TextStyle(fontSize: 12, color: Colors.black54),
+        Text(
+          copy.body,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         const SizedBox(height: 8),
         Row(
@@ -82,18 +84,27 @@ class _AcaoResponderConvite extends StatelessWidget {
                     );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Convite recusado.')),
+                        SnackBar(
+                          content: Text(
+                            PedidoFlowPresenter.successMessage('refuseInvite'),
+                          ),
+                        ),
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
+                      debugPrint('Erro ao recusar convite: $e');
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erro ao recusar: $e')),
+                        SnackBar(
+                          content: Text(
+                            PedidoFlowPresenter.errorMessage('refuseInvite'),
+                          ),
+                        ),
                       );
                     }
                   }
                 },
-                child: const Text('Recusar'),
+                child: Text(copy.secondaryActionLabel!),
               ),
             ),
             const SizedBox(width: 8),
@@ -107,18 +118,27 @@ class _AcaoResponderConvite extends StatelessWidget {
                     );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Convite aceite.')),
+                        SnackBar(
+                          content: Text(
+                            PedidoFlowPresenter.successMessage('acceptInvite'),
+                          ),
+                        ),
                       );
                     }
                   } catch (e) {
                     if (context.mounted) {
+                      debugPrint('Erro ao aceitar convite: $e');
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erro ao aceitar: $e')),
+                        SnackBar(
+                          content: Text(
+                            PedidoFlowPresenter.errorMessage('acceptInvite'),
+                          ),
+                        ),
                       );
                     }
                   }
                 },
-                child: const Text('Aceitar'),
+                child: Text(copy.primaryActionLabel),
               ),
             ),
           ],
@@ -135,13 +155,27 @@ class _AcaoAguardandoRespostaCliente extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copy = PedidoFlowPresenter.providerWaitingClientCopy(pedido);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Aguardando resposta do cliente.',
-          style: TextStyle(fontSize: 12, color: Colors.black54),
+        Text(
+          copy.title,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
+        const SizedBox(height: 6),
+        Text(
+          copy.body,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
+        if (copy.nextStep != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            copy.nextStep!,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+        ],
         if (pedido.precoPropostoPrestador != null) ...[
           const SizedBox(height: 6),
           Text(
@@ -283,17 +317,19 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
 
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Orçamento enviado.')),
+                SnackBar(
+                  content:
+                      Text(PedidoFlowPresenter.successMessage('sendEstimate')),
+                ),
               );
             }
           } catch (e) {
             if (context.mounted) {
               debugPrint('Erro ao enviar estimativa: $e');
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Nao conseguimos enviar a estimativa agora. Tenta novamente.',
-                  ),
+                SnackBar(
+                  content:
+                      Text(PedidoFlowPresenter.errorMessage('sendEstimate')),
                 ),
               );
             }
@@ -312,6 +348,7 @@ class _AcaoIniciarServico extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isAgendado = pedido.modo == 'AGENDADO';
+    final copy = PedidoFlowPresenter.providerStartCopy(pedido);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +366,7 @@ class _AcaoIniciarServico extends StatelessWidget {
           child: ElevatedButton.icon(
             key: const Key('prestador_iniciar_servico_button'),
             icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Iniciar serviço'),
+            label: Text(copy.primaryActionLabel),
             onPressed: () async {
               // Regra especial para AGENDADO:
               // não permitir iniciar muito antes da hora agendada.
@@ -386,13 +423,22 @@ class _AcaoIniciarServico extends StatelessWidget {
                 );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Serviço iniciado.')),
+                    SnackBar(
+                      content: Text(
+                        PedidoFlowPresenter.successMessage('startService'),
+                      ),
+                    ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
+                  debugPrint('Falha ao iniciar servico: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erro ao iniciar serviço: $e')),
+                    SnackBar(
+                      content: Text(
+                        PedidoFlowPresenter.errorMessage('startService'),
+                      ),
+                    ),
                   );
                 }
               }
@@ -412,19 +458,20 @@ class _AcaoLancarValorFinal extends StatelessWidget {
 
   Future<void> _abrirDialogValorFinal(BuildContext context) async {
     final controller = TextEditingController();
+    final copy = PedidoFlowPresenter.providerFinalValueCopy(pedido);
 
     final valorDigitado = await showDialog<double>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Lançar valor final'),
+          title: Text(copy.title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Este e o valor final do servico. O cliente ainda precisa confirmar antes do pedido ficar concluido.',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
+              Text(
+                copy.body,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
               const SizedBox(height: 12),
               if (pedido.valorMinEstimadoPrestador != null ||
@@ -514,7 +561,7 @@ class _AcaoLancarValorFinal extends StatelessWidget {
                 if (!ctx.mounted) return;
                 Navigator.of(ctx).pop(valor);
               },
-              child: const Text('Enviar ao cliente'),
+              child: Text(copy.primaryActionLabel),
             ),
           ],
         );
@@ -534,9 +581,9 @@ class _AcaoLancarValorFinal extends StatelessWidget {
       );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Valor final enviado ao cliente para confirmação.',
+              PedidoFlowPresenter.successMessage('sendFinalValue'),
             ),
           ),
         );
@@ -545,9 +592,9 @@ class _AcaoLancarValorFinal extends StatelessWidget {
       if (context.mounted) {
         debugPrint('Erro ao enviar valor final: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Nao conseguimos enviar o valor final agora. Tenta novamente.',
+              PedidoFlowPresenter.errorMessage('sendFinalValue'),
             ),
           ),
         );

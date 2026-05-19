@@ -13,7 +13,7 @@ M2.8: fechado
 M2.9: iniciado
 M2.9.1: avancado em detalhe do pedido UX
 M2.9.2: avancado em lista de pedidos UX
-M2.9.3: iniciado em beta web flow pack
+M2.9.3: avancado em beta web flow pack
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -173,17 +173,40 @@ melhorar o fluxo completo Cliente <-> Prestador no Web, do pedido criado ate
 conclusao ou cancelamento
 ```
 
-Escopo previsto:
+Escopo implementado:
 
 ```text
-criacao de pedido com feedback e proximo passo claros
-prestador aceitar, iniciar e enviar valor com textos melhores
-cliente aceitar/rejeitar proposta com clareza
-cliente confirmar/rejeitar valor final com menos ambiguidade
-historico simples apos conclusao/cancelamento
-consistencia entre lista e detalhe
-pequenos ajustes de navegacao ligados ao fluxo
+feedback pos-criacao de pedido
+aguardando prestador com loading/erro humano
+UX Cliente para proposta e valor final
+UX Prestador para convite, estimativa, inicio e valor final
+painel de estados finais no detalhe
+mensagens de erro sem excecao bruta nos fluxos alterados
+keys de fluxo preservadas
+consistencia entre lista e detalhe via presenters de pedido
 ```
+
+Arquivos principais:
+
+```text
+lib/features/cliente/widgets/pedido_flow_presenter.dart
+lib/features/cliente/widgets/pedido_final_state_panel.dart
+lib/features/cliente/novo_pedido_screen.dart
+lib/features/cliente/aguardando_prestador_screen.dart
+lib/features/cliente/pedido_detalhe_screen.dart
+lib/features/cliente/widgets/cliente_pedido_acoes.dart
+lib/features/prestador/widgets/prestador_pedido_acoes.dart
+test/features/cliente/widgets/pedido_flow_presenter_test.dart
+test/features/cliente/widgets/pedido_final_state_panel_test.dart
+```
+
+Evidencia M2.9.3:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 69/69 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
 
 Fora do escopo continua:
 
