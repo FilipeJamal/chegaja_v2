@@ -12,6 +12,7 @@ M2.7: fechado
 M2.8: fechado
 M2.9: iniciado
 M2.9.1: avancado em detalhe do pedido UX
+M2.9.2: planeado em lista de pedidos UX
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -77,3 +78,47 @@ Validacoes locais:
   utilizador final; detalhes ficam em `debugPrint`.
 - Texto de pedido concluido evita prometer avaliacao quando essa acao nao esta
   garantida no contexto.
+
+## M2.9.2 - Lista de Pedidos UX
+
+Spec criada:
+
+```text
+docs/superpowers/specs/2026-05-19-m2-9-2-lista-pedidos-ux-design.md
+```
+
+Objetivo:
+
+```text
+melhorar a forma como Cliente e Prestador encontram, entendem e abrem pedidos
+```
+
+Escopo previsto:
+
+```text
+cards de pedidos com estado claro
+proxima acao resumida no card
+separacao visual entre ativos, concluidos e cancelados
+empty states mais humanos
+loading e erro mais claros
+reuso do PedidoStatusPresenter quando fizer sentido
+```
+
+Fora do escopo continua:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+pagamentos reais
+Play Store
+package id final
+HTTPS App Links
+Android fisico
+fecho da M2.6
+```
