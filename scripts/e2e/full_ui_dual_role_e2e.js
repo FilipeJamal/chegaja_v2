@@ -899,7 +899,11 @@ async function clickNearInputSend(page) {
 }
 
 async function isQuoteDialogOpen(page) {
-  const hasTitle = await page.getByText(/Enviar or.amento|Propor servi.o/i).first().isVisible().catch(() => false);
+  const hasTitle = await page
+    .getByText(/Enviar estimativa|Enviar or.amento|Propor servi.o/i)
+    .first()
+    .isVisible()
+    .catch(() => false);
   const hasMin = await page.getByText(/Valor m[ií]nimo/i).first().isVisible().catch(() => false);
   return hasTitle && hasMin;
 }
@@ -1563,7 +1567,11 @@ async function providerAcceptAndQuote(provider, pedidoId, providerUid) {
       (await provider.getByText(/Proposta enviada/i).first().isVisible().catch(() => false));
     if (uiAlreadyQuoted) return;
 
-    const quoteClicked = await tryClick(provider, /Enviar or.amento.*faixa|min\/max|request_quote|orcamento|quote|propor servi.o/i, 1700);
+    const quoteClicked = await tryClick(
+      provider,
+      /Enviar estimativa(?: ao cliente)?|Enviar or.amento.*faixa|min\/max|request_quote|orcamento|quote|propor servi.o/i,
+      1700,
+    );
     if (!quoteClicked) {
       await provider.mouse.click(640, 246).catch(() => {});
     }

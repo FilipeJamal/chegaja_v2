@@ -10,11 +10,11 @@ M2.5: parcial
 M2.6: avancado tecnicamente, pendente de Android fisico
 M2.7: fechado
 M2.8: fechado
-M2.9: iniciado
+M2.9: fechado
 M2.9.1: avancado em detalhe do pedido UX
 M2.9.2: avancado em lista de pedidos UX
 M2.9.3: avancado em beta web flow pack
-M2.9.4: iniciado em beta web QA pack e fecho M2.9
+M2.9.4: fechado com beta web QA pack
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -249,7 +249,7 @@ validar a experiencia Web completa Cliente/Prestador depois das melhorias de
 UX da M2.9.1, M2.9.2 e M2.9.3
 ```
 
-Escopo previsto:
+Escopo executado:
 
 ```text
 revisar fluxo completo no Web
@@ -260,7 +260,44 @@ documentar evidencias
 fechar M2.9 se tudo estiver consistente
 ```
 
-Validacoes previstas:
+Evidencia M2.9.4:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 69/69 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:orcamento"` com `TARGET_URL=http://127.0.0.1:5173` | passou; validou proposta min/max, conclusao, final 30 e comissao 4.5 |
+| `npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:dual"` com `TARGET_URL=http://127.0.0.1:5173` | bloqueio ambiental documentado: UI monta, mas o browser fica intermitente/offline contra o Firestore Emulator e a lista de servicos permanece em loading antes do happy-path |
+
+Correcoes durante QA:
+
+```text
+scripts/e2e/full_ui_dual_role_e2e.js
+- o E2E de orcamento ainda procurava copy antiga de orcamento/proposta/quote.
+- a UX da M2.9 usa "Enviar estimativa" e "Enviar estimativa ao cliente".
+- o script passou a reconhecer essa copy nova no botao e no dialog.
+```
+
+Observacoes de ambiente:
+
+```text
+O Web local foi servido com flutter run -d web-server --release em
+http://127.0.0.1:5173.
+
+Usar localhost com o servidor iniciado em 127.0.0.1 deixava o Flutter Web preso
+no splash em debug. Com TARGET_URL=http://127.0.0.1:5173 a UI montou.
+
+O E2E dual ficou bloqueado por conectividade intermitente do browser com o
+Firestore Emulator:
+net::ERR_ABORTED em google.firestore.v1.Firestore/Listen/channel
+Could not reach Cloud Firestore backend
+
+O E2E de orcamento passou no mesmo ambiente depois da correcao da copy no
+script, por isso nao ficou regressao aberta de produto na M2.9.
+```
+
+Validacoes finais executadas antes do commit:
 
 | Comando | Objetivo |
 | --- | --- |
@@ -287,4 +324,33 @@ package id final
 HTTPS App Links
 Android fisico
 fecho da M2.6
+```
+
+## Fecho M2.9
+
+A M2.9 fica fechada como beta Web funcional Cliente/Prestador.
+
+Entregas:
+
+```text
+detalhe do pedido UX
+lista de pedidos UX
+flow pack Cliente/Prestador
+QA pack Web/local
+consistencia lista <-> detalhe <-> fluxo
+```
+
+Limite importante:
+
+```text
+M2.9 fecha apenas a beta Web. A M2.6 continua pendente de Android fisico para
+push real, upload nativo de anexos e permissoes nativas negadas.
+```
+
+Fora do escopo mantido:
+
+```text
+Nao houve backend, Firestore Rules, Storage Rules, Cloud Functions, deploy,
+smoke real, cleanup real, health real, Android fisico, pagamentos, Play Store,
+package id final, HTTPS App Links ou fecho da M2.6.
 ```
