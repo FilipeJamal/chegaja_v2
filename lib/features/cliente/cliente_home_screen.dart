@@ -17,7 +17,6 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
-import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
 import 'package:chegaja_v2/core/widgets/app_chip.dart';
 import 'package:chegaja_v2/core/widgets/app_list_tile.dart';
@@ -30,6 +29,10 @@ import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart'
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_list_card.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
 import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
 import 'package:chegaja_v2/features/common/mensagens/mensagens_tab.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
@@ -39,72 +42,6 @@ import 'package:chegaja_v2/features/common/suporte_screen.dart';
 import 'package:chegaja_v2/features/admin/admin_panel_screen.dart';
 
 /// ---------- HELPERS GERAIS PARA A ABA "PEDIDOS" ----------
-
-String _labelEstadoCliente(Pedido p, AppLocalizations l10n) {
-  if (p.estado == 'cancelado') {
-    if (p.canceladoPor == 'cliente') return l10n.statusCancelledByYou;
-    if (p.canceladoPor == 'prestador') return l10n.statusCancelledByProvider;
-    return l10n.statusCancelled;
-  }
-
-  switch (p.estado) {
-    case 'criado':
-      return l10n.statusLookingForProvider;
-    case 'aguarda_resposta_prestador':
-      return 'Aguardando resposta do prestador';
-    case 'aguarda_proposta_prestador':
-      return l10n.statusProviderPreparingQuote;
-    case 'aguarda_resposta_cliente':
-      return l10n.statusQuoteToDecide;
-    case 'aceito':
-      return l10n.statusProviderFound;
-    case 'em_andamento':
-      return l10n.statusServiceInProgress;
-    case 'aguarda_confirmacao_valor':
-      return l10n.statusAwaitingValueConfirmation;
-    case 'concluido':
-      return l10n.statusServiceCompleted;
-    default:
-      return p.estado;
-  }
-}
-
-String _buildValorLabelLista(Pedido pedido, AppLocalizations l10n) {
-  final currency = CurrencyUtils.formatter(localeName: l10n.localeName);
-  String formatValue(double value) => currency.format(value);
-
-  if (pedido.precoFinal != null &&
-      pedido.statusConfirmacaoValor == 'confirmado_cliente') {
-    return formatValue(pedido.precoFinal!);
-  }
-
-  if (pedido.precoPropostoPrestador != null &&
-      pedido.statusConfirmacaoValor == 'pendente_cliente') {
-    return l10n.valueToConfirm(formatValue(pedido.precoPropostoPrestador!));
-  }
-
-  if (pedido.precoFinal != null) {
-    return formatValue(pedido.precoFinal!);
-  }
-
-  if (pedido.precoPropostoPrestador != null) {
-    return l10n.valueProposed(formatValue(pedido.precoPropostoPrestador!));
-  }
-
-  final min = pedido.valorMinEstimadoPrestador;
-  final max = pedido.valorMaxEstimadoPrestador;
-
-  if (min != null && max != null) {
-    return l10n.valueEstimatedRange(
-      formatValue(min),
-      formatValue(max),
-    );
-  }
-  if (min != null) return l10n.valueEstimatedFrom(formatValue(min));
-  if (max != null) return l10n.valueEstimatedUpTo(formatValue(max));
-
-  return l10n.valueUnknown;
-}
 
 Future<String?> _loadRegionLabel() async {
   final code = await AuthService.getUserRegion();
@@ -1085,16 +1022,17 @@ class _ClientePedidosTab extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const AppLoadingView(label: 'A carregar pedidos...');
                   }
                   if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        l10n.ordersLoadError(
-                          snapshot.error.toString(),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    if (kDebugMode) {
+                      // ignore: avoid_print
+                      print(
+                          '[ClientePedidosTab] stream error: ${snapshot.error}');
+                    }
+                    return const AppErrorView(
+                      message:
+                          'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
                     );
                   }
 
@@ -1119,15 +1057,21 @@ class _ClientePedidosTab extends StatelessWidget {
                     children: [
                       _ListaPedidosCliente(
                         pedidos: pendentes,
-                        mensagemVazio: l10n.ordersEmptyPending,
+                        emptyTitle: 'Sem pedidos ativos',
+                        emptyMessage:
+                            'Quando criares um pedido, ele aparece aqui ate ser concluido ou cancelado.',
                       ),
                       _ListaPedidosCliente(
                         pedidos: concluidos,
-                        mensagemVazio: l10n.ordersEmptyCompleted,
+                        emptyTitle: 'Sem pedidos concluidos',
+                        emptyMessage:
+                            'Os pedidos concluidos ficam guardados aqui para consulta.',
                       ),
                       _ListaPedidosCliente(
                         pedidos: cancelados,
-                        mensagemVazio: l10n.ordersEmptyCancelled,
+                        emptyTitle: 'Sem pedidos cancelados',
+                        emptyMessage:
+                            'Pedidos cancelados aparecem aqui quando existirem.',
                       ),
                     ],
                   );
@@ -1143,17 +1087,23 @@ class _ClientePedidosTab extends StatelessWidget {
 
 class _ListaPedidosCliente extends StatelessWidget {
   final List<Pedido> pedidos;
-  final String mensagemVazio;
+  final String emptyTitle;
+  final String emptyMessage;
 
   const _ListaPedidosCliente({
     required this.pedidos,
-    required this.mensagemVazio,
+    required this.emptyTitle,
+    required this.emptyMessage,
   });
 
   @override
   Widget build(BuildContext context) {
     if (pedidos.isEmpty) {
-      return Center(child: Text(mensagemVazio, textAlign: TextAlign.center));
+      return PedidoEmptyState(
+        title: emptyTitle,
+        message: emptyMessage,
+        icon: Icons.assignment_outlined,
+      );
     }
 
     return ListView.separated(
@@ -1175,29 +1125,21 @@ class _PedidoClienteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    String subtitulo;
-    if (pedido.tipoPreco == 'por_orcamento') {
-      subtitulo = pedido.modo == 'AGENDADO'
-          ? l10n.orderQuoteScheduled
-          : l10n.orderQuoteImmediate;
-    } else if (pedido.modo == 'AGENDADO') {
-      subtitulo = l10n.orderScheduled;
-    } else {
-      subtitulo = l10n.orderImmediate;
-    }
-
-    final estadoLabel = _labelEstadoCliente(pedido, l10n);
-    final valorLabel = _buildValorLabelLista(pedido, l10n);
-
-    final acaoPendente = _temAcaoPendente(pedido);
-    final textoAcao = _textoAcaoPendente(pedido, l10n);
-
     final tipoPrecoLabel = _labelTipoPrecoCliente(pedido.tipoPreco, l10n);
     final tipoPagamentoLabel =
         _labelTipoPagamentoCliente(pedido.tipoPagamento, l10n);
+    final listData = PedidoListPresenter.dataFor(
+      pedido,
+      role: PedidoViewerRole.cliente,
+      localeName: l10n.localeName,
+    );
 
-    return AppCard(
+    return PedidoListCard(
+      data: listData,
+      metaLabels: [
+        tipoPrecoLabel,
+        tipoPagamentoLabel,
+      ],
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -1205,100 +1147,9 @@ class _PedidoClienteCard extends StatelessWidget {
           ),
         );
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.assignment_outlined,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: AppSpacing.x2),
-              Expanded(
-                child: Text(
-                  pedido.titulo,
-                  style: theme.textTheme.titleSmall,
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x1),
-          Text(
-            pedido.categoria ?? l10n.categoryNotDefined,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x1),
-          Text(
-            subtitulo,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.x2),
-          Wrap(
-            spacing: AppSpacing.x2,
-            runSpacing: AppSpacing.x2,
-            children: [
-              AppChip(
-                label: estadoLabel,
-                variant: AppChipVariant.status,
-                size: AppChipSize.sm,
-              ),
-              AppChip(
-                label: tipoPrecoLabel,
-                variant: AppChipVariant.choice,
-                size: AppChipSize.sm,
-              ),
-              AppChip(
-                label: tipoPagamentoLabel,
-                variant: AppChipVariant.filter,
-                size: AppChipSize.sm,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.x2),
-          Text(
-            l10n.orderValueLabel(valorLabel),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (acaoPendente) ...[
-            const SizedBox(height: AppSpacing.x2),
-            Row(
-              children: [
-                const Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: AppPalette.warning,
-                ),
-                const SizedBox(width: AppSpacing.x1),
-                Expanded(
-                  child: Text(
-                    textoAcao,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppPalette.warning,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.x2),
-          PedidoChatPreview(
-            pedidoId: pedido.id,
-            viewerRole: 'cliente',
-          ),
-        ],
+      footer: PedidoChatPreview(
+        pedidoId: pedido.id,
+        viewerRole: 'cliente',
       ),
     );
   }

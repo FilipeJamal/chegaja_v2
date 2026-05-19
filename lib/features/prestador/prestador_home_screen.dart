@@ -18,8 +18,13 @@ import 'package:chegaja_v2/core/services/location_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
+import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_list_card.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
 import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
 import 'package:chegaja_v2/features/common/mensagens/mensagens_tab.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
@@ -35,29 +40,6 @@ final Map<String, Set<String>> _ignoradosPorPrestador = <String, Set<String>>{};
 const double kCommissionPercent = 0.15;
 const bool _disablePrestadorTrackingForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
-
-String _labelEstado(String estado) {
-  switch (estado) {
-    case 'criado':
-      return 'À espera de prestador';
-    case 'aguarda_resposta_prestador':
-      return 'Convite pendente';
-    case 'aguarda_resposta_cliente':
-      return 'Proposta a aguardar cliente';
-    case 'aceito':
-      return 'Aceito, por iniciar';
-    case 'em_andamento':
-      return 'Em andamento';
-    case 'aguarda_confirmacao_valor':
-      return 'A aguardar confirmação do valor';
-    case 'concluido':
-      return 'Concluído';
-    case 'cancelado':
-      return 'Cancelado';
-    default:
-      return estado;
-  }
-}
 
 String _labelTipoPreco(String tipo) {
   switch (tipo) {
@@ -1111,15 +1093,21 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                   stream: PedidosRepo.streamPedidosDisponiveis(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const AppLoadingView(
+                        label: 'A carregar pedidos...',
+                      );
                     }
 
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Erro a carregar pedidos: ${snapshot.error}',
-                          textAlign: TextAlign.center,
-                        ),
+                      if (kDebugMode) {
+                        // ignore: avoid_print
+                        print(
+                          '[PrestadorHome] pedidos disponiveis error: ${snapshot.error}',
+                        );
+                      }
+                      return const AppErrorView(
+                        message:
+                            'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
                       );
                     }
 
@@ -1130,12 +1118,10 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
                     if (pedidos.isEmpty) {
                       _atualizarDisponiveis(const <Pedido>[]);
-                      return Padding(
-                        padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                        child: Text(
-                          '${l10n.noOrdersAvailableMessage}\n${l10n.providerHomeSubtitle}',
-                          textAlign: TextAlign.center,
-                        ),
+                      return PedidoEmptyState(
+                        title: l10n.noOrdersAvailableMessage,
+                        message: l10n.providerHomeSubtitle,
+                        icon: Icons.search_off_rounded,
                       );
                     }
 
@@ -1148,37 +1134,27 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                         if (settingsSnap.connectionState ==
                                 ConnectionState.waiting &&
                             sdata == null) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
+                          return const AppLoadingView(
+                            label: 'A carregar configuracao...',
                           );
                         }
 
                         if (sdata == null) {
                           _resetDisponiveis();
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Configura a tua área de atuação para receber pedidos compatíveis.',
-                                  textAlign: TextAlign.center,
+                          return PedidoEmptyState(
+                            title: 'Configura a tua area de atuacao',
+                            message:
+                                'Seleciona categorias para receber pedidos compativeis.',
+                            icon: Icons.tune,
+                            actionLabel: 'Configurar',
+                            onAction: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const PrestadorSettingsScreen(),
                                 ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const PrestadorSettingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.tune),
-                                  label: const Text('Configurar'),
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           );
                         }
 
@@ -1196,30 +1172,20 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
                         if (!hasCategorias) {
                           _resetDisponiveis();
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(top: 8.0, bottom: 16.0),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Seleciona as categorias que fazes para receber pedidos.',
-                                  textAlign: TextAlign.center,
+                          return PedidoEmptyState(
+                            title: 'Seleciona categorias',
+                            message:
+                                'Escolhe os servicos que fazes para receber pedidos.',
+                            icon: Icons.list_alt,
+                            actionLabel: 'Selecionar categorias',
+                            onAction: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const PrestadorSettingsScreen(),
                                 ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const PrestadorSettingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.list_alt),
-                                  label: const Text('Selecionar categorias'),
-                                ),
-                              ],
-                            ),
+                              );
+                            },
                           );
                         }
 
@@ -1234,12 +1200,11 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                         final isOnline = (sdata['isOnline'] as bool?) ?? false;
                         if (!isOnline) {
                           _resetDisponiveis();
-                          return const Padding(
-                            padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                            child: Text(
-                              'Estás offline. Ativa o modo online para receber pedidos.',
-                              textAlign: TextAlign.center,
-                            ),
+                          return const PedidoEmptyState(
+                            title: 'Estas offline',
+                            message:
+                                'Ativa o modo online para receber pedidos compativeis.',
+                            icon: Icons.wifi_off_rounded,
                           );
                         }
 
@@ -1277,13 +1242,11 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                         _atualizarDisponiveis(filtered);
 
                         if (filtered.isEmpty) {
-                          return const Padding(
-                            padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                            child: Text(
-                              'Sem pedidos compatíveis agora.\n'
-                              'Ajusta serviços/raio ou atualiza a localização.',
-                              textAlign: TextAlign.center,
-                            ),
+                          return const PedidoEmptyState(
+                            title: 'Sem pedidos compativeis agora',
+                            message:
+                                'Ajusta servicos/raio ou atualiza a localizacao.',
+                            icon: Icons.search_off_rounded,
                           );
                         }
 
@@ -1303,8 +1266,6 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
 
                             return _PedidoDisponivelCard(
                               pedido: pedido,
-                              titulo: pedido.titulo,
-                              categoria: pedido.categoria,
                               descricao: pedido.descricao,
                               agendadoPara: pedido.agendadoPara,
                               modo: pedido.modo,
@@ -1641,8 +1602,6 @@ class _KpiCard extends StatelessWidget {
 
 class _PedidoDisponivelCard extends StatelessWidget {
   final Pedido pedido;
-  final String titulo;
-  final String? categoria;
   final String? descricao;
   final DateTime? agendadoPara;
   final String modo;
@@ -1654,8 +1613,6 @@ class _PedidoDisponivelCard extends StatelessWidget {
 
   const _PedidoDisponivelCard({
     required this.pedido,
-    required this.titulo,
-    required this.categoria,
     required this.descricao,
     required this.agendadoPara,
     required this.modo,
@@ -1668,8 +1625,6 @@ class _PedidoDisponivelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final linhaCategoria = categoria ?? 'Categoria não definida';
-
     String linhaAgendamento;
     if (modo == 'AGENDADO' && agendadoPara != null) {
       linhaAgendamento = 'Agendado: ${df.format(agendadoPara!)}';
@@ -1679,75 +1634,37 @@ class _PedidoDisponivelCard extends StatelessWidget {
 
     final desc = (descricao ?? '').trim();
     final temDescricao = desc.isNotEmpty;
+    final listData = PedidoListPresenter.dataFor(
+      pedido,
+      role: PedidoViewerRole.prestador,
+    );
 
-    return Container(
+    return PedidoListCard(
       key: Key('prestador_pedido_card_${pedido.id}'),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.location_on_outlined),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  titulo,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              TextButton(
-                key: Key('prestador_ignorar_pedido_${pedido.id}'),
-                onPressed: onIgnorar,
-                child: const Text('Ignorar'),
-              ),
-              const SizedBox(width: 4),
-              TextButton(
-                key: Key('prestador_aceitar_pedido_${pedido.id}'),
-                onPressed: onPropor,
-                child: const Text('Aceitar'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            linhaCategoria,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            linhaAgendamento,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            tipoPrecoLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          Text(
-            tipoPagamentoLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          if (temDescricao) ...[
-            const SizedBox(height: 6),
-            Text(
+      data: listData,
+      metaLabels: [
+        tipoPrecoLabel,
+        tipoPagamentoLabel,
+        linhaAgendamento,
+      ],
+      trailingActions: [
+        TextButton(
+          key: Key('prestador_ignorar_pedido_${pedido.id}'),
+          onPressed: onIgnorar,
+          child: const Text('Ignorar'),
+        ),
+        TextButton(
+          key: Key('prestador_aceitar_pedido_${pedido.id}'),
+          onPressed: onPropor,
+          child: const Text('Aceitar'),
+        ),
+      ],
+      footer: temDescricao
+          ? Text(
               desc,
               style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-          ],
-        ],
-      ),
+            )
+          : null,
     );
   }
 }
@@ -1761,7 +1678,7 @@ class _PrestadorPedidosTab extends StatelessWidget {
 
     if (user == null) {
       unawaited(AuthService.ensureSignedInAnonymously());
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView(label: 'A preparar sessão...');
     }
 
     final df = DateFormat('dd/MM HH:mm');
@@ -1792,15 +1709,21 @@ class _PrestadorPedidosTab extends StatelessWidget {
                 stream: PedidosRepo.streamPedidosDoPrestador(user.uid),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const AppLoadingView(
+                      label: 'A carregar trabalhos...',
+                    );
                   }
 
                   if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Erro a carregar trabalhos: ${snapshot.error}',
-                        textAlign: TextAlign.center,
-                      ),
+                    if (kDebugMode) {
+                      // ignore: avoid_print
+                      print(
+                        '[PrestadorPedidosTab] trabalhos stream error: ${snapshot.error}',
+                      );
+                    }
+                    return const AppErrorView(
+                      message:
+                          'Nao conseguimos carregar os trabalhos agora. Tenta novamente daqui a pouco.',
                     );
                   }
 
@@ -1820,20 +1743,25 @@ class _PrestadorPedidosTab extends StatelessWidget {
                     children: [
                       _PrestadorListaPedidos(
                         pedidos: emAberto,
-                        mensagemVazio:
-                            'Ainda não tens trabalhos em aberto.\nVai à aba Início e aceita um pedido.',
+                        emptyTitle: 'Sem trabalhos em aberto',
+                        emptyMessage:
+                            'Vai a Inicio para aceitar pedidos compativeis quando estiveres online.',
                         df: df,
                         podeCancelar: true,
                       ),
                       _PrestadorListaPedidos(
                         pedidos: concluidos,
-                        mensagemVazio: 'Ainda não tens trabalhos concluídos.',
+                        emptyTitle: 'Sem trabalhos concluidos',
+                        emptyMessage:
+                            'Os trabalhos concluidos ficam aqui para consulta.',
                         df: df,
                         podeCancelar: false,
                       ),
                       _PrestadorListaPedidos(
                         pedidos: cancelados,
-                        mensagemVazio: 'Ainda não tens trabalhos cancelados.',
+                        emptyTitle: 'Sem trabalhos cancelados',
+                        emptyMessage:
+                            'Trabalhos cancelados aparecem aqui quando existirem.',
                         df: df,
                         podeCancelar: false,
                       ),
@@ -1851,13 +1779,15 @@ class _PrestadorPedidosTab extends StatelessWidget {
 
 class _PrestadorListaPedidos extends StatelessWidget {
   final List<Pedido> pedidos;
-  final String mensagemVazio;
+  final String emptyTitle;
+  final String emptyMessage;
   final DateFormat df;
   final bool podeCancelar;
 
   const _PrestadorListaPedidos({
     required this.pedidos,
-    required this.mensagemVazio,
+    required this.emptyTitle,
+    required this.emptyMessage,
     required this.df,
     required this.podeCancelar,
   });
@@ -1865,11 +1795,10 @@ class _PrestadorListaPedidos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (pedidos.isEmpty) {
-      return Center(
-        child: Text(
-          mensagemVazio,
-          textAlign: TextAlign.center,
-        ),
+      return PedidoEmptyState(
+        title: emptyTitle,
+        message: emptyMessage,
+        icon: Icons.work_outline,
       );
     }
 
@@ -2034,20 +1963,14 @@ class _PrestadorPedidoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String subtitulo;
-    if (pedido.modo == 'AGENDADO' && pedido.agendadoPara != null) {
-      subtitulo = 'Agendado: ${df.format(pedido.agendadoPara!)}';
-    } else {
-      subtitulo = 'Serviço imediato';
-    }
-
-    final categoria = pedido.categoria ?? 'Categoria não definida';
     final desc = pedido.descricao.trim();
     final temDescricao = desc.isNotEmpty;
-
-    final estadoLabel = _labelEstado(pedido.estado);
     final tipoPrecoLabel = _labelTipoPreco(pedido.tipoPreco);
     final tipoPagamentoLabel = _labelTipoPagamento(pedido.tipoPagamento);
+    final listData = PedidoListPresenter.dataFor(
+      pedido,
+      role: PedidoViewerRole.prestador,
+    );
 
     final bool isConcluido = pedido.estado == 'concluido';
 
@@ -2082,84 +2005,38 @@ class _PrestadorPedidoCard extends StatelessWidget {
     final bool mostrarCancelar =
         podeCancelar && pedido.estado != 'aguarda_resposta_prestador';
 
-    final card = Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
+    final valueFooter = <Widget>[
+      if (valorClienteLabel != null)
+        Text(
+          valorClienteLabel,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      if (valorPrestadorLabel != null)
+        Text(
+          valorPrestadorLabel,
+          style: const TextStyle(fontSize: 11, color: Colors.black87),
+        ),
+    ];
+
+    return PedidoListCard(
+      data: listData,
+      metaLabels: [
+        tipoPrecoLabel,
+        tipoPagamentoLabel,
+      ],
+      onTap: () => _abrirDetalhe(context),
+      footer: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.task_alt_outlined),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  pedido.titulo,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _abrirDetalhe(context),
-                icon: const Icon(Icons.open_in_new),
-                tooltip: 'Ver detalhe',
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            categoria,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitulo,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Estado: $estadoLabel',
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            tipoPrecoLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          Text(
-            tipoPagamentoLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
           if (temDescricao) ...[
-            const SizedBox(height: 6),
             Text(
               desc,
               style: const TextStyle(fontSize: 12, color: Colors.black87),
             ),
+            const SizedBox(height: 8),
           ],
-          if (valorClienteLabel != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              valorClienteLabel,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
-          if (valorPrestadorLabel != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              valorPrestadorLabel,
-              style: const TextStyle(fontSize: 11, color: Colors.black87),
-            ),
-          ],
+          ...valueFooter,
+          if (valueFooter.isNotEmpty) const SizedBox(height: 8),
           const SizedBox(height: 8),
           PedidoChatPreview(
             pedidoId: pedido.id,
@@ -2182,12 +2059,6 @@ class _PrestadorPedidoCard extends StatelessWidget {
           ],
         ],
       ),
-    );
-
-    return InkWell(
-      onTap: () => _abrirDetalhe(context),
-      borderRadius: BorderRadius.circular(18),
-      child: card,
     );
   }
 }

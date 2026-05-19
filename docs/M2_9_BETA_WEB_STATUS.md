@@ -12,7 +12,7 @@ M2.7: fechado
 M2.8: fechado
 M2.9: iniciado
 M2.9.1: avancado em detalhe do pedido UX
-M2.9.2: planeado em lista de pedidos UX
+M2.9.2: avancado em lista de pedidos UX
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -99,16 +99,38 @@ Objetivo:
 melhorar a forma como Cliente e Prestador encontram, entendem e abrem pedidos
 ```
 
-Escopo previsto:
+Escopo implementado:
 
 ```text
 cards de pedidos com estado claro
-proxima acao resumida no card
-separacao visual entre ativos, concluidos e cancelados
-empty states mais humanos
-loading e erro mais claros
-reuso do PedidoStatusPresenter quando fizer sentido
+proxima acao resumida por Cliente/Prestador
+distincao entre pedidos ativos, concluidos e cancelados
+empty states estruturados
+loading e erros mais humanos
+preservacao das keys e acoes do Prestador
+reuso do PedidoStatusPresenter via presenter de lista
+texto claro para faixa estimada, valor proposto e valor final
 ```
+
+Arquivos principais:
+
+```text
+lib/features/cliente/widgets/pedido_list_presenter.dart
+lib/features/cliente/widgets/pedido_list_card.dart
+lib/features/cliente/widgets/pedido_empty_state.dart
+lib/features/cliente/cliente_home_screen.dart
+lib/features/prestador/prestador_home_screen.dart
+test/features/cliente/widgets/pedido_list_presenter_test.dart
+test/features/cliente/widgets/pedido_list_card_test.dart
+```
+
+Evidencia M2.9.2:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 61/61 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
 
 Fora do escopo continua:
 
