@@ -14,6 +14,7 @@ M2.9: iniciado
 M2.9.1: avancado em detalhe do pedido UX
 M2.9.2: avancado em lista de pedidos UX
 M2.9.3: avancado em beta web flow pack
+M2.9.4: iniciado em beta web QA pack e fecho M2.9
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -207,6 +208,61 @@ Evidencia M2.9.3:
 | `flutter test` | passou, 69/69 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+Fora do escopo continua:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+pagamentos reais
+Play Store
+package id final
+HTTPS App Links
+Android fisico
+fecho da M2.6
+```
+
+## M2.9.4 - Beta Web QA Pack e Fecho M2.9
+
+Spec criada:
+
+```text
+docs/superpowers/specs/2026-05-19-m2-9-4-beta-web-qa-pack-design.md
+```
+
+Objetivo:
+
+```text
+validar a experiencia Web completa Cliente/Prestador depois das melhorias de
+UX da M2.9.1, M2.9.2 e M2.9.3
+```
+
+Escopo previsto:
+
+```text
+revisar fluxo completo no Web
+rodar E2E/local existente quando o ambiente estiver disponivel
+corrigir pequenos bugs de UX encontrados durante QA
+confirmar consistencia lista <-> detalhe <-> fluxo
+documentar evidencias
+fechar M2.9 se tudo estiver consistente
+```
+
+Validacoes previstas:
+
+| Comando | Objetivo |
+| --- | --- |
+| `flutter test` | regressao Flutter/widgets |
+| `npm.cmd run test:scripts` | scripts operacionais locais |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | regras/Functions no Emulator Suite |
+| `npm.cmd run e2e:ui:dual` | fluxo Web dual-role existente |
+| `npm.cmd run e2e:ui:orcamento` | fluxo Web de orcamento/valor existente |
 
 Fora do escopo continua:
 
