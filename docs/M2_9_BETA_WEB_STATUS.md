@@ -87,6 +87,12 @@ Spec criada:
 docs/superpowers/specs/2026-05-19-m2-9-2-lista-pedidos-ux-design.md
 ```
 
+Plano criado:
+
+```text
+docs/superpowers/plans/2026-05-19-m2-9-2-lista-pedidos-ux.md
+```
+
 Objetivo:
 
 ```text
