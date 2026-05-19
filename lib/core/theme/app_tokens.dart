@@ -177,9 +177,26 @@ class AppBreakpoints {
   AppBreakpoints._();
 
   static const double mobileMax = 599;
+  static const double tabletMin = 600;
   static const double tabletMax = 1023;
   static const double desktopMin = 1024;
+  static const double wideDesktopMin = 1280;
 
-  static const double contentMaxSingleColumn = 480;
+  static const double contentMaxSingleColumn = 520;
   static const double contentMaxTwoColumn = 960;
+  static const double contentMaxDashboard = 1180;
+  static const double contentMaxWide = 1320;
+}
+
+class AppLayout {
+  AppLayout._();
+
+  static const double mobileHorizontalPadding = AppSpacing.x4;
+  static const double tabletHorizontalPadding = AppSpacing.x6;
+  static const double desktopHorizontalPadding = AppSpacing.x7;
+
+  static const double desktopSidePanelWidth = 360;
+  static const double desktopRailGap = AppSpacing.x6;
+  static const double sectionGap = AppSpacing.x5;
+  static const double pageGap = AppSpacing.x7;
 }
