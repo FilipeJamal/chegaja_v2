@@ -1,6 +1,7 @@
 // lib/features/cliente/widgets/pedido_timeline.dart
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 /// Visual stepper showing order progress: Criado → Aceito → Em Andamento → Concluído/Cancelado.
@@ -12,24 +13,7 @@ class PedidoTimeline extends StatelessWidget {
     required this.estado,
   });
 
-  int _stepIndex() {
-    switch (estado) {
-      case 'criado':
-      case 'aguarda_resposta_prestador':
-      case 'aguarda_resposta_cliente':
-        return 0;
-      case 'aceito':
-        return 1;
-      case 'em_andamento':
-      case 'aguarda_confirmacao_valor':
-        return 2;
-      case 'concluido':
-      case 'cancelado':
-        return 3;
-      default:
-        return 0;
-    }
-  }
+  int _stepIndex() => PedidoStatusPresenter.timelineStepFor(estado);
 
   @override
   Widget build(BuildContext context) {

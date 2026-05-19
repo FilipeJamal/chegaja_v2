@@ -1,4 +1,5 @@
 // lib/features/prestador/widgets/prestador_pedido_acoes.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
@@ -177,7 +178,7 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
       child: ElevatedButton.icon(
         key: const Key('prestador_enviar_orcamento_button'),
         icon: const Icon(Icons.request_quote_rounded),
-        label: const Text('Enviar orçamento (faixa min/max)'),
+        label: const Text('Enviar estimativa ao cliente'),
         onPressed: () async {
           final minController = TextEditingController();
           final maxController = TextEditingController();
@@ -187,12 +188,17 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
             context: context,
             builder: (ctx) {
               return AlertDialog(
-                title: const Text('Enviar orçamento'),
+                title: const Text('Enviar estimativa'),
                 content: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text(
+                        'Esta faixa ajuda o cliente a decidir. O valor final so deve ser enviado quando o servico terminar.',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 12),
                       Text('Valor mínimo (${CurrencyUtils.currencySymbol()})'),
                       const SizedBox(height: 4),
                       TextField(
@@ -282,8 +288,13 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
             }
           } catch (e) {
             if (context.mounted) {
+              debugPrint('Erro ao enviar estimativa: $e');
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Erro ao enviar orçamento: $e')),
+                const SnackBar(
+                  content: Text(
+                    'Nao conseguimos enviar a estimativa agora. Tenta novamente.',
+                  ),
+                ),
               );
             }
           }
@@ -411,6 +422,11 @@ class _AcaoLancarValorFinal extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                'Este e o valor final do servico. O cliente ainda precisa confirmar antes do pedido ficar concluido.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
               if (pedido.valorMinEstimadoPrestador != null ||
                   pedido.valorMaxEstimadoPrestador != null) ...[
                 Text(
@@ -527,8 +543,13 @@ class _AcaoLancarValorFinal extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        debugPrint('Erro ao enviar valor final: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao enviar valor final: $e')),
+          const SnackBar(
+            content: Text(
+              'Nao conseguimos enviar o valor final agora. Tenta novamente.',
+            ),
+          ),
         );
       }
     }

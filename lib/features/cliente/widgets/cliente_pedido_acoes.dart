@@ -1,6 +1,7 @@
 // lib/features/cliente/widgets/cliente_pedido_acoes.dart
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
@@ -70,11 +71,11 @@ class _PropostaPrestadorCard extends StatelessWidget {
     String faixaTexto;
     if (min != null && max != null) {
       faixaTexto =
-          'Estimativa: ${CurrencyUtils.format(min)} a ${CurrencyUtils.format(max)}';
+          'Faixa estimada: ${CurrencyUtils.format(min)} a ${CurrencyUtils.format(max)}';
     } else if (min != null) {
-      faixaTexto = 'Estimativa: desde ${CurrencyUtils.format(min)}';
+      faixaTexto = 'Faixa estimada: desde ${CurrencyUtils.format(min)}';
     } else if (max != null) {
-      faixaTexto = 'Estimativa: até ${CurrencyUtils.format(max)}';
+      faixaTexto = 'Faixa estimada: ate ${CurrencyUtils.format(max)}';
     } else {
       faixaTexto = 'Sem valor estimado.';
     }
@@ -92,7 +93,7 @@ class _PropostaPrestadorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Tens uma proposta de prestador',
+            'Reve a estimativa do prestador',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
@@ -269,7 +270,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Valor final do serviço',
+            'Confirma o valor final',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
@@ -277,7 +278,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Total cobrado: ${CurrencyUtils.format(valor)}',
+            'Valor final enviado pelo prestador: ${CurrencyUtils.format(valor)}',
             style: const TextStyle(
               fontSize: 13,
               color: Colors.black87,
@@ -306,7 +307,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           const Text(
-            'Confirma o valor ou indica que tens uma dúvida.',
+            'Ao confirmares, o backend conclui o pedido e calcula automaticamente comissao e ganhos.',
             style: TextStyle(
               fontSize: 12,
               color: Colors.black54,
@@ -342,7 +343,7 @@ class _ValorFinalPendenteCard extends StatelessWidget {
     if (valor == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erro: valor final não encontrado.'),
+          content: Text('Nao conseguimos encontrar o valor final.'),
         ),
       );
       return;
@@ -407,15 +408,18 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Serviço concluído e valor confirmado.'),
+          content: Text('Valor final confirmado. O pedido ficou concluido.'),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
 
+      debugPrint('Erro ao confirmar valor final: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao confirmar valor: $e'),
+        const SnackBar(
+          content: Text(
+            'Nao conseguimos confirmar o valor agora. Tenta novamente.',
+          ),
         ),
       );
     }
@@ -445,9 +449,12 @@ class _ValorFinalPendenteCard extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
 
+      debugPrint('Erro ao registar duvida sobre valor final: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao registar dúvida: $e'),
+        const SnackBar(
+          content: Text(
+            'Nao conseguimos registar a duvida agora. Tenta novamente.',
+          ),
         ),
       );
     }

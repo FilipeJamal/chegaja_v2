@@ -29,6 +29,9 @@ import 'package:chegaja_v2/features/cliente/widgets/pedido_chat_widgets.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_contato_section.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_info_row.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_mapa_osm.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_next_action_card.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_status_summary.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_timeline.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/widgets/chat_audio_player.dart';
@@ -166,8 +169,24 @@ class PedidoDetalheScreen extends StatelessWidget {
 
             if (snapshot.hasError) {
               return Center(
-                child: Text(
-                  l10n.orderLoadError(snapshot.error.toString()),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 40),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Nao conseguimos carregar este pedido agora.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        child: const Text('Voltar'),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -176,7 +195,25 @@ class PedidoDetalheScreen extends StatelessWidget {
 
             if (pedido == null) {
               return Center(
-                child: Text(l10n.orderNotFound),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.search_off_rounded, size: 40),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.orderNotFound,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        child: const Text('Voltar'),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
 
@@ -205,6 +242,17 @@ class PedidoDetalheScreen extends StatelessWidget {
               pedido,
               l10n,
               currencyFormat,
+            );
+            final viewerRole = isCliente
+                ? PedidoViewerRole.cliente
+                : PedidoViewerRole.prestador;
+            final statusSummary = PedidoStatusPresenter.summaryFor(
+              pedido,
+              role: viewerRole,
+            );
+            final nextAction = PedidoStatusPresenter.nextActionFor(
+              pedido,
+              role: viewerRole,
             );
 
             final bool estaProcurandoPrestador = (pedido.estado == 'criado' ||
@@ -252,6 +300,11 @@ class PedidoDetalheScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Cabeçalho
+                  PedidoStatusSummary(data: statusSummary),
+                  const SizedBox(height: 12),
+                  PedidoNextActionCard(data: nextAction),
+                  const SizedBox(height: 16),
+
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
