@@ -13,6 +13,7 @@ M2.8: fechado
 M2.9: iniciado
 M2.9.1: avancado em detalhe do pedido UX
 M2.9.2: avancado em lista de pedidos UX
+M2.9.3: iniciado em beta web flow pack
 ```
 
 ## M2.9.1 - Detalhe do Pedido UX
@@ -131,6 +132,52 @@ Evidencia M2.9.2:
 | `flutter test` | passou, 61/61 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+Fora do escopo continua:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+pagamentos reais
+Play Store
+package id final
+HTTPS App Links
+Android fisico
+fecho da M2.6
+```
+
+## M2.9.3 - Beta Web Flow Pack
+
+Spec criada:
+
+```text
+docs/superpowers/specs/2026-05-19-m2-9-3-beta-web-flow-pack-design.md
+```
+
+Objetivo:
+
+```text
+melhorar o fluxo completo Cliente <-> Prestador no Web, do pedido criado ate
+conclusao ou cancelamento
+```
+
+Escopo previsto:
+
+```text
+criacao de pedido com feedback e proximo passo claros
+prestador aceitar, iniciar e enviar valor com textos melhores
+cliente aceitar/rejeitar proposta com clareza
+cliente confirmar/rejeitar valor final com menos ambiguidade
+historico simples apos conclusao/cancelamento
+consistencia entre lista e detalhe
+pequenos ajustes de navegacao ligados ao fluxo
+```
 
 Fora do escopo continua:
 
