@@ -17,11 +17,14 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
+import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
-import 'package:chegaja_v2/core/widgets/app_chip.dart';
+import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
 import 'package:chegaja_v2/core/widgets/app_list_tile.dart';
+import 'package:chegaja_v2/core/widgets/app_section_header.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/widgets/app_tab_bar.dart';
 import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
@@ -30,6 +33,7 @@ import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
+import 'package:chegaja_v2/features/cliente/widgets/cliente_home_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
@@ -40,6 +44,10 @@ import 'package:chegaja_v2/features/common/widgets/stories_carousel_widget.dart'
 import 'package:chegaja_v2/core/widgets/theme_mode_selector_tile.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 import 'package:chegaja_v2/features/admin/admin_panel_screen.dart';
+
+final GlobalKey _clienteServicesAnchorKey = GlobalKey(
+  debugLabel: 'cliente_home_services_anchor',
+);
 
 /// ---------- HELPERS GERAIS PARA A ABA "PEDIDOS" ----------
 
@@ -358,225 +366,431 @@ class _ClienteInicioTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final user = AuthService.currentUser;
-    final theme = Theme.of(context);
+    return AppPageScaffold(
+      width: AppContentWidth.dashboard,
+      child: _ClienteHomeDashboard(
+        pedidosStream: pedidosStream,
+        servicosStream: servicosStream,
+        user: user,
+        onSearch: () {
+          showSearch(
+            context: context,
+            delegate: PrestadorSearchDelegate(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ClienteHomeDashboard extends StatelessWidget {
+  const _ClienteHomeDashboard({
+    required this.pedidosStream,
+    required this.servicosStream,
+    required this.user,
+    required this.onSearch,
+  });
+
+  final Stream<List<Pedido>>? pedidosStream;
+  final Stream<List<Servico>>? servicosStream;
+  final User? user;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double tabHeight = constraints.maxHeight * 0.62;
-        final double maxWidth = constraints.maxWidth > AppBreakpoints.tabletMax
-            ? AppBreakpoints.contentMaxTwoColumn
-            : AppBreakpoints.contentMaxSingleColumn;
+        final isDesktop = constraints.maxWidth >= AppBreakpoints.desktopMin;
+        final mainColumn = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClienteHomeHero(
+              greeting: l10n.homeGreeting,
+              title: l10n.homeSubtitle,
+              subtitle:
+                  'Escolhe um servico, acompanha propostas e fala com o prestador sem perder contexto.',
+              primaryActionLabel: 'Escolher servico',
+              onPrimaryAction: () => _scrollToServices(context),
+              onSearch: onSearch,
+            ),
+            const SizedBox(height: AppSpacing.x5),
+            const StoriesCarouselWidget(),
+            const SizedBox(height: AppSpacing.x5),
+            _ClienteServicesStreamSection(
+              user: user,
+              servicosStream: servicosStream,
+            ),
+          ],
+        );
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.x5,
-            AppSpacing.x5,
-            AppSpacing.x5,
-            AppSpacing.x2,
+        final sideColumn = _ClienteHomeSideColumn(
+          user: user,
+          pedidosStream: pedidosStream,
+        );
+
+        if (!isDesktop) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              mainColumn,
+              const SizedBox(height: AppSpacing.x5),
+              sideColumn,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 7, child: mainColumn),
+            const SizedBox(width: AppSpacing.x6),
+            Expanded(flex: 4, child: sideColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+void _scrollToServices(BuildContext context) {
+  final targetContext = _clienteServicesAnchorKey.currentContext;
+  if (targetContext == null) return;
+  Scrollable.ensureVisible(
+    targetContext,
+    duration: const Duration(milliseconds: 260),
+    curve: Curves.easeOutCubic,
+  );
+}
+
+class _ClienteServicesStreamSection extends StatelessWidget {
+  const _ClienteServicesStreamSection({
+    required this.user,
+    required this.servicosStream,
+  });
+
+  final User? user;
+  final Stream<List<Servico>>? servicosStream;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    if (user == null) {
+      return const AppLoadingView(label: 'A preparar a tua area de cliente...');
+    }
+
+    return StreamBuilder<List<Servico>>(
+      stream: servicosStream ?? ServicosRepo.streamServicosAtivos(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoadingView(
+            label: 'A carregar servicos disponiveis...',
+          );
+        }
+
+        if (snapshot.hasError) {
+          return const AppErrorView(
+            message:
+                'Nao conseguimos carregar os servicos agora. Verifica a ligacao e tenta novamente.',
+          );
+        }
+
+        final servicos = snapshot.data ?? const <Servico>[];
+        if (servicos.isEmpty) {
+          return const ClienteHomeEmptyServices();
+        }
+
+        return _ClienteServicesCatalog(
+          key: _clienteServicesAnchorKey,
+          servicos: servicos,
+          title: l10n.availableServicesTitle,
+          subtitle:
+              'Escolhe uma categoria para iniciar um pedido com mais contexto.',
+        );
+      },
+    );
+  }
+}
+
+class _ClienteServicesCatalog extends StatefulWidget {
+  const _ClienteServicesCatalog({
+    super.key,
+    required this.servicos,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final List<Servico> servicos;
+  final String title;
+  final String subtitle;
+
+  @override
+  State<_ClienteServicesCatalog> createState() =>
+      _ClienteServicesCatalogState();
+}
+
+class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
+  String _selectedMode = 'ORCAMENTO';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context);
+    final modes = <String, String>{
+      'ORCAMENTO': l10n.serviceTabQuote,
+      'AGENDADO': l10n.serviceTabScheduled,
+      'IMEDIATO': l10n.serviceTabImmediate,
+    };
+
+    final filtered = widget.servicos
+        .where(
+          (servico) => _normalizeServicoMode(servico.mode) == _selectedMode,
+        )
+        .toList();
+
+    return ClienteServicesSection(
+      title: widget.title,
+      subtitle: widget.subtitle,
+      search: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SmartSearchBar<Servico>(
+            hintText: l10n.serviceSearchHint,
+            allItems: filtered,
+            idSelector: (s) => s.id,
+            nameSelector: (s) => s.name,
+            keywordsSelector: (s) => s.keywords,
+            onItemSelected: (servico) => _openNovoPedido(
+              context: context,
+              modo: _selectedMode,
+              servico: servico,
+            ),
           ),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-                maxWidth: maxWidth,
+          const SizedBox(height: AppSpacing.x3),
+          Wrap(
+            spacing: AppSpacing.x2,
+            runSpacing: AppSpacing.x2,
+            children: [
+              for (final entry in modes.entries)
+                ChoiceChip(
+                  label: Text(entry.value),
+                  selected: _selectedMode == entry.key,
+                  onSelected: (_) => setState(() => _selectedMode = entry.key),
+                ),
+            ],
+          ),
+        ],
+      ),
+      children: [
+        if (filtered.isEmpty)
+          const ClienteHomeEmptyServices()
+        else
+          for (final servico in filtered)
+            ClienteServiceTile(
+              servico: servico,
+              localeCode: locale.languageCode,
+              modeLabel: modes[_selectedMode] ?? _selectedMode,
+              onTap: () => _openNovoPedido(
+                context: context,
+                modo: _selectedMode,
+                servico: servico,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.homeGreeting,
-                        style: theme.textTheme.headlineSmall,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        tooltip: 'Pesquisar Prestadores',
-                        onPressed: () {
-                          showSearch(
-                            context: context,
-                            delegate: PrestadorSearchDelegate(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.x1),
-                  Text(
-                    l10n.homeSubtitle,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x4),
-                  if (user != null)
-                    StreamBuilder<List<Pedido>>(
-                      stream: pedidosStream ??
-                          PedidosRepo.streamPedidosDoCliente(user.uid),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const SizedBox.shrink();
-                        }
-                        if (snapshot.hasError) {
-                          return const SizedBox.shrink();
-                        }
+            ),
+      ],
+    );
+  }
 
-                        final pedidos = snapshot.data ?? [];
-                        final pendentes = pedidos
-                            .where(_temAcaoPendente)
-                            .toList()
-                          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-                        final pedido =
-                            pendentes.isNotEmpty ? pendentes.first : null;
-                        if (pedido == null) return const SizedBox.shrink();
+  void _openNovoPedido({
+    required BuildContext context,
+    required String modo,
+    required Servico servico,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NovoPedidoScreen(
+          modo: modo,
+          servicoInicial: servico,
+        ),
+      ),
+    );
+  }
+}
 
-                        return AppCard(
-                          variant: AppCardVariant.flat,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    PedidoDetalheScreen(pedidoId: pedido.id),
-                              ),
-                            );
-                          },
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.notifications_active_outlined,
-                                size: 22,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: AppSpacing.x3),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.homePendingTitle,
-                                      style: theme.textTheme.labelLarge,
-                                    ),
-                                    const SizedBox(height: AppSpacing.x1),
-                                    Text(
-                                      _textoAcaoPendente(pedido, l10n),
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                    const SizedBox(height: AppSpacing.x1),
-                                    Text(
-                                      l10n.homePendingCta,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  const SizedBox(height: AppSpacing.x2),
-                  const StoriesCarouselWidget(),
-                  const SizedBox(height: AppSpacing.x2),
-                  if (user != null)
-                    _ClienteMensagensBanner(clienteId: user.uid),
-                  const SizedBox(height: AppSpacing.x4),
-                  SizedBox(
-                    height: tabHeight,
-                    child: user == null
-                        ? const AppLoadingView()
-                        : StreamBuilder<List<Servico>>(
-                            stream: servicosStream ??
-                                ServicosRepo.streamServicosAtivos(),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const AppLoadingView();
-                              }
+class _ClienteHomeSideColumn extends StatelessWidget {
+  const _ClienteHomeSideColumn({
+    required this.user,
+    required this.pedidosStream,
+  });
 
-                              if (snapshot.hasError) {
-                                return AppErrorView(
-                                  message: l10n.servicesLoadError(
-                                    snapshot.error.toString(),
-                                  ),
-                                );
-                              }
+  final User? user;
+  final Stream<List<Pedido>>? pedidosStream;
 
-                              final servicos = snapshot.data ?? [];
-                              if (servicos.isEmpty) {
-                                return AppEmptyView(
-                                  title: l10n.availableServicesTitle,
-                                  message: l10n.servicesEmptyMessage,
-                                );
-                              }
+  @override
+  Widget build(BuildContext context) {
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
 
-                              final modos = <String>[
-                                'ORCAMENTO',
-                                'AGENDADO',
-                                'IMEDIATO',
-                              ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ClientePendingActionPanel(
+          clienteId: user!.uid,
+          pedidosStream: pedidosStream,
+        ),
+        const SizedBox(height: AppSpacing.x4),
+        _ClienteActiveOrdersPanel(
+          clienteId: user!.uid,
+          pedidosStream: pedidosStream,
+        ),
+        const SizedBox(height: AppSpacing.x4),
+        _ClienteMensagensBanner(clienteId: user!.uid),
+      ],
+    );
+  }
+}
 
-                              return DefaultTabController(
-                                length: modos.length,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: AppSpacing.x2),
-                                    Text(
-                                      l10n.availableServicesTitle,
-                                      style: theme.textTheme.titleMedium,
-                                    ),
-                                    const SizedBox(height: AppSpacing.x2),
-                                    AppTabBar(
-                                      isScrollable: true,
-                                      tabs: [
-                                        Tab(text: l10n.serviceTabQuote),
-                                        Tab(text: l10n.serviceTabScheduled),
-                                        Tab(text: l10n.serviceTabImmediate),
-                                      ],
-                                    ),
-                                    const SizedBox(height: AppSpacing.x2),
-                                    Expanded(
-                                      child: TabBarView(
-                                        children: [
-                                          _ListaServicosPorModo(
-                                            modo: 'ORCAMENTO',
-                                            servicos: servicos,
-                                          ),
-                                          _ListaServicosPorModo(
-                                            modo: 'AGENDADO',
-                                            servicos: servicos,
-                                          ),
-                                          _ListaServicosPorModo(
-                                            modo: 'IMEDIATO',
-                                            servicos: servicos,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+class _ClientePendingActionPanel extends StatelessWidget {
+  const _ClientePendingActionPanel({
+    required this.clienteId,
+    required this.pedidosStream,
+  });
+
+  final String clienteId;
+  final Stream<List<Pedido>>? pedidosStream;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return StreamBuilder<List<Pedido>>(
+      stream: pedidosStream ?? PedidosRepo.streamPedidosDoCliente(clienteId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        final pendentes = (snapshot.data ?? const <Pedido>[])
+            .where(_temAcaoPendente)
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (pendentes.isEmpty) return const SizedBox.shrink();
+        final pedido = pendentes.first;
+
+        return ClienteHomeOperationsPanel(
+          title: l10n.homePendingTitle,
+          message: _textoAcaoPendente(pedido, l10n),
+          actionLabel: l10n.homePendingCta,
+          onAction: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PedidoDetalheScreen(pedidoId: pedido.id),
             ),
           ),
         );
       },
     );
   }
+}
+
+class _ClienteActiveOrdersPanel extends StatelessWidget {
+  const _ClienteActiveOrdersPanel({
+    required this.clienteId,
+    required this.pedidosStream,
+  });
+
+  final String clienteId;
+  final Stream<List<Pedido>>? pedidosStream;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return StreamBuilder<List<Pedido>>(
+      stream: pedidosStream ?? PedidosRepo.streamPedidosDoCliente(clienteId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+
+        final ativos = (snapshot.data ?? const <Pedido>[])
+            .where((pedido) => !_pedidoEstaFinalizado(pedido))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (ativos.isEmpty) {
+          return const AppActionPanel(
+            key: Key('cliente_home_active_orders_panel'),
+            title: 'Sem pedidos ativos',
+            message:
+                'Quando criares um pedido, acompanhas aqui o proximo passo.',
+            icon: Icons.receipt_long_outlined,
+            tone: AppStatusTone.neutral,
+          );
+        }
+
+        final pedido = ativos.first;
+        final cardData = PedidoListPresenter.dataFor(
+          pedido,
+          role: PedidoViewerRole.cliente,
+        );
+
+        return Column(
+          key: const Key('cliente_home_active_orders_panel'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSectionHeader(
+              title: 'Pedido em curso',
+              subtitle: 'Continua de onde paraste.',
+              dense: true,
+              trailing: ativos.length > 1
+                  ? AppStatusPill(
+                      label: '${ativos.length} ativos',
+                      tone: AppStatusTone.info,
+                      size: AppStatusPillSize.sm,
+                    )
+                  : null,
+            ),
+            PedidoListCard(
+              data: cardData,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PedidoDetalheScreen(pedidoId: pedido.id),
+                ),
+              ),
+            ),
+            if (ativos.length > 1) ...[
+              const SizedBox(height: AppSpacing.x2),
+              Text(
+                'Ve mais pedidos na aba Pedidos.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+bool _pedidoEstaFinalizado(Pedido pedido) {
+  final status = pedido.status.toLowerCase().trim();
+  final estado = pedido.estado.toLowerCase().trim();
+  return status == 'concluido' ||
+      status == 'cancelado' ||
+      estado == 'concluido' ||
+      estado == 'cancelado';
 }
 
 /// ---------- BANNER NOVAS MENSAGENS (CLIENTE) ----------
@@ -727,12 +941,13 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
     final pedido = _pedidoMaisRecente!;
 
-    return AppCard(
-      variant: AppCardVariant.flat,
-      onTap: () async {
+    return ClienteHomeMessagesPanel(
+      title: l10n.unreadMessagesTitle,
+      message: l10n.unreadMessagesCta,
+      actionLabel: l10n.unreadMessagesCta,
+      onAction: () async {
         await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
         final chatSnap = await FirebaseFirestore.instance
@@ -770,203 +985,11 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
           ),
         );
       },
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.mark_chat_unread_outlined,
-            size: 22,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: AppSpacing.x3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.unreadMessagesTitle,
-                  style: theme.textTheme.labelLarge,
-                ),
-                const SizedBox(height: AppSpacing.x1),
-                Text(
-                  l10n.unreadMessagesCta,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
 
 /// ---------- LISTA SERVIÇOS ----------
-
-class _ListaServicosPorModo extends StatefulWidget {
-  final String modo;
-  final List<Servico> servicos;
-
-  const _ListaServicosPorModo({
-    required this.modo,
-    required this.servicos,
-  });
-
-  @override
-  State<_ListaServicosPorModo> createState() => _ListaServicosPorModoState();
-}
-
-class _ListaServicosPorModoState extends State<_ListaServicosPorModo> {
-  // O SmartSearchBar gere a pesquisa agpra. A lista abaixo mostra tudo por defeito.
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final targetMode = _normalizeServicoMode(widget.modo);
-
-    // Mostra apenas a lista completa filtrada pelo modo (Tab atual)
-    final filtered = widget.servicos
-        .where((s) => _normalizeServicoMode(s.mode) == targetMode)
-        .toList();
-
-    return Column(
-      children: [
-        SmartSearchBar<Servico>(
-          hintText: l10n.serviceSearchHint,
-          allItems: widget.servicos
-              .where((s) => _normalizeServicoMode(s.mode) == targetMode)
-              .toList(),
-          idSelector: (s) => s.id,
-          nameSelector: (s) => s.name,
-          keywordsSelector: (s) => s.keywords,
-          onItemSelected: (servico) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => NovoPedidoScreen(
-                  modo: widget.modo,
-                  servicoInicial: servico,
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Text(
-                    l10n.serviceSearchEmpty,
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              : ListView.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final servico = filtered[index];
-                    return _ServicoCard(
-                      servico: servico,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => NovoPedidoScreen(
-                              modo: widget.modo,
-                              servicoInicial: servico,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ServicoCard extends StatelessWidget {
-  final Servico servico;
-  final VoidCallback onTap;
-
-  const _ServicoCard({
-    required this.servico,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final locale = Localizations.localeOf(context);
-    final theme = Theme.of(context);
-    final icon = _mapIcon(servico.iconKey);
-
-    return AppCard(
-      onTap: onTap,
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            child: Icon(icon, color: theme.colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(width: AppSpacing.x3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  servico.nameForLang(locale.languageCode),
-                  style: theme.textTheme.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.x1),
-                AppChip(
-                  label: _descricaoModo(servico.mode, l10n),
-                  variant: AppChipVariant.choice,
-                  size: AppChipSize.sm,
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _descricaoModo(String mode, AppLocalizations l10n) {
-  switch (mode) {
-    case 'IMEDIATO':
-      return l10n.serviceModeImmediateDescription;
-    case 'AGENDADO':
-      return l10n.serviceModeScheduledDescription;
-    case 'POR_PROPOSTA':
-      return l10n.serviceModeQuoteDescription;
-    default:
-      return mode;
-  }
-}
-
-IconData _mapIcon(String? iconKey) {
-  switch (iconKey) {
-    case 'cleaning':
-      return Icons.cleaning_services_outlined;
-    case 'plumber':
-      return Icons.plumbing_outlined;
-    case 'electric':
-      return Icons.flash_on_outlined;
-    case 'move':
-      return Icons.local_shipping_outlined;
-    case 'pet':
-      return Icons.pets_outlined;
-    default:
-      return Icons.miscellaneous_services_outlined;
-  }
-}
 
 /// ---------- ABA "PEDIDOS" ----------
 
@@ -1028,7 +1051,8 @@ class _ClientePedidosTab extends StatelessWidget {
                     if (kDebugMode) {
                       // ignore: avoid_print
                       print(
-                          '[ClientePedidosTab] stream error: ${snapshot.error}');
+                        '[ClientePedidosTab] stream error: ${snapshot.error}',
+                      );
                     }
                     return const AppErrorView(
                       message:

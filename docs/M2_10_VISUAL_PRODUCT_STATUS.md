@@ -9,6 +9,7 @@ M2.9: fechado
 M2.10: iniciado
 M2.10.1: spec visual audit e design direction
 M2.10.2: avancado com design system foundation
+M2.10.3: avancado com Home Cliente redesign
 ```
 
 ## Objetivo da M2.10
@@ -57,5 +58,60 @@ fechar M2.6
 | Comando | Resultado |
 | --- | --- |
 | `flutter test` | passou, 76/76 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## M2.10.3
+
+Escopo:
+
+```text
+Home Cliente recomposta com AppPageScaffold e AppContentShell
+hero operacional com CTA principal
+servicos em tiles responsivos
+secao de servicos sem altura fixa baseada no viewport
+painel lateral de pendencias, pedidos ativos e mensagens
+loading, empty e erro mais humanos
+desktop/Web/Windows com composicao de dashboard
+mobile preservado em uma coluna direta
+```
+
+Componentes criados:
+
+```text
+ClienteHomeHero
+ClienteServicesSection
+ClienteServiceTile
+ClienteHomeOperationsPanel
+ClienteHomeMessagesPanel
+ClienteHomeEmptyServices
+```
+
+Fora do escopo mantido:
+
+```text
+Home Prestador
+detalhe/listas inteiras
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+Android fisico
+pagamentos
+Play Store
+package id final
+HTTPS App Links
+fechar M2.6
+```
+
+## Evidencia M2.10.3
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 82/82 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
