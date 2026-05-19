@@ -10,6 +10,7 @@ M2.10: iniciado
 M2.10.1: spec visual audit e design direction
 M2.10.2: avancado com design system foundation
 M2.10.3: avancado com Home Cliente redesign
+M2.10.4: avancado com Home Prestador redesign
 ```
 
 ## Objetivo da M2.10
@@ -113,5 +114,60 @@ fechar M2.6
 | Comando | Resultado |
 | --- | --- |
 | `flutter test` | passou, 82/82 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## M2.10.4
+
+Escopo:
+
+```text
+Home Prestador recomposta como painel operacional
+disponibilidade online/offline como comando principal
+metricas com AppMetricTile
+trabalho em destaque com AppActionPanel
+categorias como painel operacional
+pedidos disponiveis em cards responsivos
+desktop/Web/Windows com composicao em coluna principal e lateral
+mobile preservado em uma coluna direta
+keys Aceitar/Ignorar/orcamento preservadas
+```
+
+Componentes criados:
+
+```text
+PrestadorAvailabilityPanel
+PrestadorMetricStrip
+PrestadorNextWorkPanel
+PrestadorCategoriesPanel
+PrestadorCategoriesChips
+PrestadorAvailableOrdersSection
+PrestadorAvailableOrderCard
+```
+
+Fora do escopo mantido:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+Android fisico
+pagamentos
+Play Store
+package id final
+HTTPS App Links
+fechar M2.6
+```
+
+## Evidencia M2.10.4
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 90/90 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |

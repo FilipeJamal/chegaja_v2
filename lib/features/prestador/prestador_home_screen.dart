@@ -17,6 +17,8 @@ import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
+import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
+import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 
@@ -32,6 +34,7 @@ import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_perfil_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_settings_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_pagamentos_screen.dart';
+import 'package:chegaja_v2/features/prestador/widgets/prestador_home_components.dart';
 
 import 'widgets/prestador_pedido_acoes.dart';
 
@@ -753,6 +756,206 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     setState(() => _ignorados.add(pedido.id));
   }
 
+  Widget _buildPedidosDisponiveisSection({
+    required BuildContext context,
+    required AppLocalizations l10n,
+    required DateFormat df,
+  }) {
+    if (!widget.roleReady) {
+      return const AppLoadingView(label: 'A preparar pedidos...');
+    }
+
+    return StreamBuilder<List<Pedido>>(
+      stream: PedidosRepo.streamPedidosDisponiveis(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const PrestadorAvailableOrdersSection(
+            count: 0,
+            child: AppLoadingView(label: 'A carregar pedidos compativeis...'),
+          );
+        }
+
+        if (snapshot.hasError) {
+          if (kDebugMode) {
+            // ignore: avoid_print
+            print(
+              '[PrestadorHome] pedidos disponiveis error: ${snapshot.error}',
+            );
+          }
+          return const PrestadorAvailableOrdersSection(
+            count: 0,
+            child: AppErrorView(
+              message:
+                  'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
+            ),
+          );
+        }
+
+        var pedidos = snapshot.data ?? [];
+        pedidos = pedidos.where((p) => !_ignorados.contains(p.id)).toList();
+
+        if (pedidos.isEmpty) {
+          _atualizarDisponiveis(const <Pedido>[]);
+          return PrestadorAvailableOrdersSection(
+            count: 0,
+            child: PedidoEmptyState(
+              title: l10n.noOrdersAvailableMessage,
+              message: l10n.providerHomeSubtitle,
+              icon: Icons.search_off_rounded,
+            ),
+          );
+        }
+
+        return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: _pedidosSettingsStream,
+          builder: (context, settingsSnap) {
+            final sdata = settingsSnap.data?.data();
+
+            if (settingsSnap.connectionState == ConnectionState.waiting &&
+                sdata == null) {
+              return const PrestadorAvailableOrdersSection(
+                count: 0,
+                child: AppLoadingView(label: 'A carregar configuracao...'),
+              );
+            }
+
+            if (sdata == null) {
+              _resetDisponiveis();
+              return PrestadorAvailableOrdersSection(
+                count: 0,
+                child: PedidoEmptyState(
+                  title: 'Configura a tua area de atuacao',
+                  message:
+                      'Seleciona categorias para receber pedidos compativeis.',
+                  icon: Icons.tune,
+                  actionLabel: 'Configurar',
+                  onAction: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PrestadorSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+
+            final servicos =
+                (sdata['servicos'] as List?)?.whereType<String>().toSet() ??
+                    <String>{};
+            final servicosNomes = (sdata['servicosNomes'] as List?)
+                    ?.whereType<String>()
+                    .toSet() ??
+                <String>{};
+            final hasCategorias =
+                servicos.isNotEmpty || servicosNomes.isNotEmpty;
+
+            if (!hasCategorias) {
+              _resetDisponiveis();
+              return PrestadorAvailableOrdersSection(
+                count: 0,
+                child: PedidoEmptyState(
+                  title: 'Seleciona categorias',
+                  message:
+                      'Escolhe os servicos que fazes para receber pedidos.',
+                  icon: Icons.list_alt,
+                  actionLabel: 'Selecionar categorias',
+                  onAction: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PrestadorSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+
+            final radiusKm = (sdata['radiusKm'] as num?)?.toDouble() ?? 10.0;
+            final lastLoc = sdata['lastLocation'] as Map<String, dynamic>?;
+            final lat = (lastLoc?['lat'] as num?)?.toDouble();
+            final lng = (lastLoc?['lng'] as num?)?.toDouble();
+            final isOnline = (sdata['isOnline'] as bool?) ?? false;
+
+            if (!isOnline) {
+              _resetDisponiveis();
+              return const PrestadorAvailableOrdersSection(
+                count: 0,
+                child: PedidoEmptyState(
+                  title: 'Estas offline',
+                  message:
+                      'Ativa o modo online para receber pedidos compativeis.',
+                  icon: Icons.wifi_off_rounded,
+                ),
+              );
+            }
+
+            bool matchesService(Pedido p) {
+              if (servicos.contains(p.servicoId)) return true;
+              final nome = p.servicoNome ?? p.categoria;
+              return nome != null && servicosNomes.contains(nome);
+            }
+
+            bool matchesDistance(Pedido p) {
+              if (lat == null || lng == null) return true;
+              if (p.latitude == null || p.longitude == null) return true;
+
+              final distKm = LocationService.instance.distanceKm(
+                lat1: lat,
+                lng1: lng,
+                lat2: p.latitude!,
+                lng2: p.longitude!,
+              );
+
+              return distKm <= radiusKm;
+            }
+
+            final filtered = pedidos
+                .where((p) => matchesService(p) && matchesDistance(p))
+                .toList();
+
+            _atualizarDisponiveis(filtered);
+
+            if (filtered.isEmpty) {
+              return const PrestadorAvailableOrdersSection(
+                count: 0,
+                child: PedidoEmptyState(
+                  title: 'Sem pedidos compativeis agora',
+                  message: 'Ajusta servicos/raio ou atualiza a localizacao.',
+                  icon: Icons.search_off_rounded,
+                ),
+              );
+            }
+
+            return PrestadorAvailableOrdersSection(
+              count: filtered.length,
+              child: AppResponsiveGrid(
+                minItemWidth: 340,
+                spacing: AppSpacing.x3,
+                runSpacing: AppSpacing.x3,
+                children: [
+                  for (final pedido in filtered)
+                    PrestadorAvailableOrderCard(
+                      pedido: pedido,
+                      descricao: pedido.descricao,
+                      agendadoPara: pedido.agendadoPara,
+                      modo: pedido.modo,
+                      tipoPrecoLabel: _labelTipoPreco(pedido.tipoPreco),
+                      tipoPagamentoLabel:
+                          _labelTipoPagamento(pedido.tipoPagamento),
+                      df: df,
+                      onAceitar: () => _aceitarPedido(context, pedido),
+                      onIgnorar: () => _ignorarPedido(pedido),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.roleReady) {
@@ -761,7 +964,6 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     }
 
     final l10n = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
     final user = AuthService.currentUser;
 
     if (user == null) {
@@ -826,103 +1028,66 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
         final Pedido? trabalhoDestaque =
             pendentesComAcao.isNotEmpty ? pendentesComAcao.first : null;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.providerHomeGreeting,
-                style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.providerHomeSubtitle,
-                style: const TextStyle(fontSize: 16, color: Colors.black54),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.online
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                      color: widget.online ? Colors.green : Colors.grey,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        widget.online ? 'Estás ONLINE' : 'Estás OFFLINE',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: widget.online
-                              ? Colors.green[700]
-                              : Colors.black87,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: widget.online,
-                      thumbColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.selected)) {
-                            return primary;
-                          }
-                          return Colors.grey.shade400;
-                        },
-                      ),
-                      onChanged: (value) async {
-                        widget.onToggleOnline(value);
-                        final user = AuthService.currentUser;
-                        if (user != null) {
-                          await LocationService.instance
-                              .updatePrestadorLastLocation(
-                            prestadorId: user.uid,
-                            isOnline: value,
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  _KpiCard(
-                    label: 'Ganhos hoje (líquido)',
-                    value: liquidoHojeStr,
-                    icon: Icons.euro_outlined,
-                    subtitle: 'Bruto: $brutoHojeStr | Taxa: $taxaHojeStr',
+        final categoriasPanel =
+            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: _settingsStream,
+          builder: (context, settingsSnap) {
+            final data = settingsSnap.data?.data() ?? <String, dynamic>{};
+            final servicosNomes = (data['servicosNomes'] as List?)
+                    ?.whereType<String>()
+                    .toList() ??
+                <String>[];
+            final loading =
+                settingsSnap.connectionState == ConnectionState.waiting &&
+                    data.isEmpty;
+
+            return PrestadorCategoriesPanel(
+              categories: servicosNomes,
+              loading: loading,
+              onEdit: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PrestadorSettingsScreen(),
                   ),
-                  const SizedBox(width: 12),
-                  _KpiCard(
-                    label: 'Serviços este mês',
-                    value: servicosMesStr,
-                    icon: Icons.work_outline,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              if (trabalhoDestaque != null) ...[
-                GestureDetector(
-                  // ✅ corrigido: antes estava a usar "pedido" que não existia
-                  onTap: () {
+                );
+              },
+            );
+          },
+        );
+
+        final pedidosDisponiveis = _buildPedidosDisponiveisSection(
+          context: context,
+          l10n: l10n,
+          df: df,
+        );
+
+        return AppPageScaffold(
+          title: l10n.providerHomeGreeting,
+          subtitle: l10n.providerHomeSubtitle,
+          width: AppContentWidth.wide,
+          child: _PrestadorInicioDashboard(
+            online: widget.online,
+            onToggleOnline: (value) async {
+              widget.onToggleOnline(value);
+              final user = AuthService.currentUser;
+              if (user != null) {
+                await LocationService.instance.updatePrestadorLastLocation(
+                  prestadorId: user.uid,
+                  isOnline: value,
+                );
+              }
+            },
+            liquidoHojeStr: liquidoHojeStr,
+            brutoHojeStr: brutoHojeStr,
+            taxaHojeStr: taxaHojeStr,
+            servicosMesStr: servicosMesStr,
+            trabalhoDestaque: trabalhoDestaque,
+            trabalhoDestaqueTexto: trabalhoDestaque == null
+                ? null
+                : _textoAcaoPendentePrestador(trabalhoDestaque),
+            onOpenTrabalhoDestaque: trabalhoDestaque == null
+                ? null
+                : () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => PedidoDetalheScreen(
@@ -932,360 +1097,123 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                       ),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.notifications_active_outlined,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tens um trabalho para gerir',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _textoAcaoPendentePrestador(trabalhoDestaque),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'Toca aqui para abrir o próximo trabalho.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              _PrestadorMensagensBanner(prestadorId: user.uid),
-              const SizedBox(height: 16),
-              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                stream: _settingsStream,
-                builder: (context, settingsSnap) {
-                  final data = settingsSnap.data?.data() ?? <String, dynamic>{};
-                  final servicosNomes = (data['servicosNomes'] as List?)
-                          ?.whereType<String>()
-                          .toList() ??
-                      <String>[];
-                  final hasCategorias = servicosNomes.isNotEmpty;
-
-                  if (settingsSnap.connectionState == ConnectionState.waiting &&
-                      data.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
-                      child: LinearProgressIndicator(),
-                    );
-                  }
-
-                  return Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.category_outlined, color: primary),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Categorias de atuação',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Usamos as categorias para filtrar pedidos compatíveis.',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
-                        ),
-                        const SizedBox(height: 10),
-                        if (!hasCategorias)
-                          const Text(
-                            'Nenhuma categoria selecionada.',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.black54),
-                          )
-                        else
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: servicosNomes
-                                .map((s) => Chip(label: Text(s)))
-                                .toList(),
-                          ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const PrestadorSettingsScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.add),
-                            label: Text(
-                              hasCategorias
-                                  ? 'Adicionar ou editar categorias'
-                                  : 'Selecionar categorias',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const Text(
-                'Pedidos perto de ti',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              if (!widget.roleReady)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8.0, bottom: 16.0),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else
-                StreamBuilder<List<Pedido>>(
-                  stream: PedidosRepo.streamPedidosDisponiveis(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const AppLoadingView(
-                        label: 'A carregar pedidos...',
-                      );
-                    }
-
-                    if (snapshot.hasError) {
-                      if (kDebugMode) {
-                        // ignore: avoid_print
-                        print(
-                          '[PrestadorHome] pedidos disponiveis error: ${snapshot.error}',
-                        );
-                      }
-                      return const AppErrorView(
-                        message:
-                            'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
-                      );
-                    }
-
-                    var pedidos = snapshot.data ?? [];
-                    pedidos = pedidos
-                        .where((p) => !_ignorados.contains(p.id))
-                        .toList();
-
-                    if (pedidos.isEmpty) {
-                      _atualizarDisponiveis(const <Pedido>[]);
-                      return PedidoEmptyState(
-                        title: l10n.noOrdersAvailableMessage,
-                        message: l10n.providerHomeSubtitle,
-                        icon: Icons.search_off_rounded,
-                      );
-                    }
-
-                    return StreamBuilder<
-                        DocumentSnapshot<Map<String, dynamic>>>(
-                      stream: _pedidosSettingsStream,
-                      builder: (context, settingsSnap) {
-                        final sdata = settingsSnap.data?.data();
-
-                        if (settingsSnap.connectionState ==
-                                ConnectionState.waiting &&
-                            sdata == null) {
-                          return const AppLoadingView(
-                            label: 'A carregar configuracao...',
-                          );
-                        }
-
-                        if (sdata == null) {
-                          _resetDisponiveis();
-                          return PedidoEmptyState(
-                            title: 'Configura a tua area de atuacao',
-                            message:
-                                'Seleciona categorias para receber pedidos compativeis.',
-                            icon: Icons.tune,
-                            actionLabel: 'Configurar',
-                            onAction: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const PrestadorSettingsScreen(),
-                                ),
-                              );
-                            },
-                          );
-                        }
-
-                        final servicos = (sdata['servicos'] as List?)
-                                ?.whereType<String>()
-                                .toSet() ??
-                            <String>{};
-
-                        final servicosNomes = (sdata['servicosNomes'] as List?)
-                                ?.whereType<String>()
-                                .toSet() ??
-                            <String>{};
-                        final hasCategorias =
-                            servicos.isNotEmpty || servicosNomes.isNotEmpty;
-
-                        if (!hasCategorias) {
-                          _resetDisponiveis();
-                          return PedidoEmptyState(
-                            title: 'Seleciona categorias',
-                            message:
-                                'Escolhe os servicos que fazes para receber pedidos.',
-                            icon: Icons.list_alt,
-                            actionLabel: 'Selecionar categorias',
-                            onAction: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const PrestadorSettingsScreen(),
-                                ),
-                              );
-                            },
-                          );
-                        }
-
-                        final radiusKm =
-                            (sdata['radiusKm'] as num?)?.toDouble() ?? 10.0;
-
-                        final lastLoc =
-                            sdata['lastLocation'] as Map<String, dynamic>?;
-                        final lat = (lastLoc?['lat'] as num?)?.toDouble();
-                        final lng = (lastLoc?['lng'] as num?)?.toDouble();
-
-                        final isOnline = (sdata['isOnline'] as bool?) ?? false;
-                        if (!isOnline) {
-                          _resetDisponiveis();
-                          return const PedidoEmptyState(
-                            title: 'Estas offline',
-                            message:
-                                'Ativa o modo online para receber pedidos compativeis.',
-                            icon: Icons.wifi_off_rounded,
-                          );
-                        }
-
-                        bool matchesService(Pedido p) {
-                          if (servicos.contains(p.servicoId)) return true;
-                          final nome = p.servicoNome ?? p.categoria;
-                          if (nome != null && servicosNomes.contains(nome)) {
-                            return true;
-                          }
-                          return false;
-                        }
-
-                        bool matchesDistance(Pedido p) {
-                          if (lat == null || lng == null) return true;
-                          if (p.latitude == null || p.longitude == null) {
-                            return true;
-                          }
-
-                          final distKm = LocationService.instance.distanceKm(
-                            lat1: lat,
-                            lng1: lng,
-                            lat2: p.latitude!,
-                            lng2: p.longitude!,
-                          );
-
-                          return distKm <= radiusKm;
-                        }
-
-                        final filtered = pedidos
-                            .where(
-                              (p) => matchesService(p) && matchesDistance(p),
-                            )
-                            .toList();
-
-                        _atualizarDisponiveis(filtered);
-
-                        if (filtered.isEmpty) {
-                          return const PedidoEmptyState(
-                            title: 'Sem pedidos compativeis agora',
-                            message:
-                                'Ajusta servicos/raio ou atualiza a localizacao.',
-                            icon: Icons.search_off_rounded,
-                          );
-                        }
-
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final pedido = filtered[index];
-
-                            final tipoPrecoLabel =
-                                _labelTipoPreco(pedido.tipoPreco);
-                            final tipoPagamentoLabel =
-                                _labelTipoPagamento(pedido.tipoPagamento);
-
-                            return _PedidoDisponivelCard(
-                              pedido: pedido,
-                              descricao: pedido.descricao,
-                              agendadoPara: pedido.agendadoPara,
-                              modo: pedido.modo,
-                              tipoPrecoLabel: tipoPrecoLabel,
-                              tipoPagamentoLabel: tipoPagamentoLabel,
-                              df: df,
-                              onPropor: () => _aceitarPedido(context, pedido),
-                              onIgnorar: () => _ignorarPedido(pedido),
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              const SizedBox(height: 16),
-            ],
+            mensagens: _PrestadorMensagensBanner(prestadorId: user.uid),
+            categorias: categoriasPanel,
+            pedidosDisponiveis: pedidosDisponiveis,
           ),
         );
       },
+    );
+  }
+}
+
+class _PrestadorInicioDashboard extends StatelessWidget {
+  const _PrestadorInicioDashboard({
+    required this.online,
+    required this.onToggleOnline,
+    required this.liquidoHojeStr,
+    required this.brutoHojeStr,
+    required this.taxaHojeStr,
+    required this.servicosMesStr,
+    required this.trabalhoDestaque,
+    required this.trabalhoDestaqueTexto,
+    required this.onOpenTrabalhoDestaque,
+    required this.mensagens,
+    required this.categorias,
+    required this.pedidosDisponiveis,
+  });
+
+  final bool online;
+  final ValueChanged<bool> onToggleOnline;
+  final String liquidoHojeStr;
+  final String brutoHojeStr;
+  final String taxaHojeStr;
+  final String servicosMesStr;
+  final Pedido? trabalhoDestaque;
+  final String? trabalhoDestaqueTexto;
+  final VoidCallback? onOpenTrabalhoDestaque;
+  final Widget mensagens;
+  final Widget categorias;
+  final Widget pedidosDisponiveis;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PrestadorAvailabilityPanel(
+          online: online,
+          onChanged: onToggleOnline,
+        ),
+        const SizedBox(height: AppSpacing.x4),
+        PrestadorMetricStrip(
+          liquidoHoje: liquidoHojeStr,
+          brutoHoje: brutoHojeStr,
+          taxaHoje: taxaHojeStr,
+          servicosMes: servicosMesStr,
+        ),
+        const SizedBox(height: AppSpacing.x5),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final desktop = constraints.maxWidth >= AppBreakpoints.desktopMin;
+            final nextWorkPanel = trabalhoDestaque != null &&
+                    trabalhoDestaqueTexto != null &&
+                    onOpenTrabalhoDestaque != null
+                ? PrestadorNextWorkPanel(
+                    pedido: trabalhoDestaque!,
+                    actionText: trabalhoDestaqueTexto!,
+                    onOpen: onOpenTrabalhoDestaque!,
+                  )
+                : null;
+
+            final mainColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (nextWorkPanel != null) ...[
+                  nextWorkPanel,
+                  const SizedBox(height: AppSpacing.x4),
+                ],
+                pedidosDisponiveis,
+              ],
+            );
+
+            final sideColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                mensagens,
+                const SizedBox(height: AppSpacing.x4),
+                categorias,
+              ],
+            );
+
+            if (!desktop) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (nextWorkPanel != null) ...[
+                    nextWorkPanel,
+                    const SizedBox(height: AppSpacing.x4),
+                  ],
+                  mensagens,
+                  const SizedBox(height: AppSpacing.x4),
+                  categorias,
+                  const SizedBox(height: AppSpacing.x5),
+                  pedidosDisponiveis,
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 7, child: mainColumn),
+                const SizedBox(width: AppSpacing.x5),
+                Expanded(flex: 3, child: sideColumn),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -1520,151 +1448,6 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final String? subtitle;
-
-  const _KpiCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: primary),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle!,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.black54),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PedidoDisponivelCard extends StatelessWidget {
-  final Pedido pedido;
-  final String? descricao;
-  final DateTime? agendadoPara;
-  final String modo;
-  final String tipoPrecoLabel;
-  final String tipoPagamentoLabel;
-  final DateFormat df;
-  final VoidCallback onPropor;
-  final VoidCallback onIgnorar;
-
-  const _PedidoDisponivelCard({
-    required this.pedido,
-    required this.descricao,
-    required this.agendadoPara,
-    required this.modo,
-    required this.tipoPrecoLabel,
-    required this.tipoPagamentoLabel,
-    required this.df,
-    required this.onPropor,
-    required this.onIgnorar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    String linhaAgendamento;
-    if (modo == 'AGENDADO' && agendadoPara != null) {
-      linhaAgendamento = 'Agendado: ${df.format(agendadoPara!)}';
-    } else {
-      linhaAgendamento = 'Serviço imediato';
-    }
-
-    final desc = (descricao ?? '').trim();
-    final temDescricao = desc.isNotEmpty;
-    final listData = PedidoListPresenter.dataFor(
-      pedido,
-      role: PedidoViewerRole.prestador,
-    );
-
-    return PedidoListCard(
-      key: Key('prestador_pedido_card_${pedido.id}'),
-      data: listData,
-      metaLabels: [
-        tipoPrecoLabel,
-        tipoPagamentoLabel,
-        linhaAgendamento,
-      ],
-      trailingActions: [
-        TextButton(
-          key: Key('prestador_ignorar_pedido_${pedido.id}'),
-          onPressed: onIgnorar,
-          child: const Text('Ignorar'),
-        ),
-        TextButton(
-          key: Key('prestador_aceitar_pedido_${pedido.id}'),
-          onPressed: onPropor,
-          child: const Text('Aceitar'),
-        ),
-      ],
-      footer: temDescricao
-          ? Text(
-              desc,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            )
-          : null,
     );
   }
 }
