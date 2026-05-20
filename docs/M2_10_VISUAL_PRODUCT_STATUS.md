@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: planeado product UI alignment
+M2.10.7: avancado com componentes globais UI
 ```
 
 ## Objetivo da M2.10
@@ -341,4 +341,54 @@ Decisao de implementacao:
 Nao redesenhar telas de forma isolada.
 Criar primeiro os componentes globais reutilizaveis da UI de produto.
 Aplicar depois em Mensagens, Pedidos e Conta/Perfil preservando fluxos e keys.
+```
+
+## M2.10.7 - Bloco 2 Componentes Globais
+
+Componentes criados:
+
+```text
+AppAvatar
+AppUnreadBadge
+AppProductHeader
+AppPremiumSearchBar
+AppFilterButton
+AppSegmentedTabs
+```
+
+Ficheiros criados:
+
+```text
+lib/core/widgets/app_avatar.dart
+lib/core/widgets/app_unread_badge.dart
+lib/core/widgets/app_product_header.dart
+lib/core/widgets/app_premium_search_bar.dart
+lib/core/widgets/app_filter_button.dart
+lib/core/widgets/app_segmented_tabs.dart
+test/core/widgets/app_product_ui_components_test.dart
+```
+
+Cobertura adicionada:
+
+```text
+fallback de avatar por inicial
+indicador online no avatar
+badge de nao lidas com contador
+badge com limite visual 99+
+search bar chamando onChanged
+botao de filtro chamando onPressed
+segmented tabs chamando onChanged
+product header com titulo, subtitulo, notificacao e avatar
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 110/110 |
+
+Proximo bloco recomendado:
+
+```text
+M2.10.7 - Bloco 3: navegacao global
 ```
