@@ -8,11 +8,13 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
+import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 import 'package:chegaja_v2/features/cliente/favoritos_screen.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 
@@ -680,7 +682,33 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _header(),
+          AccountProfileSummary(
+            name: _nomeCtrl.text,
+            roleLabel: 'Cliente',
+            photoUrl: _photoUrl,
+            statusLabel: 'Perfil ativo',
+            statusIcon: Icons.verified_user_outlined,
+            statusTone: AppStatusTone.info,
+            metrics: [
+              AccountProfileMetric(
+                label: 'Localizacao',
+                value: _cidadeCtrl.text.trim().isEmpty
+                    ? 'Por definir'
+                    : _cidadeCtrl.text.trim(),
+                icon: Icons.location_on_outlined,
+                tone: AppStatusTone.info,
+              ),
+              AccountProfileMetric(
+                label: 'Contacto',
+                value:
+                    _phoneCtrl.text.trim().isEmpty ? 'Por definir' : 'Guardado',
+                icon: Icons.phone_outlined,
+                tone: AppStatusTone.success,
+              ),
+            ],
+            onEditPressed: _pickAndUploadProfilePhoto,
+            editLabel: 'Alterar foto',
+          ),
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.favorite, color: Colors.red),

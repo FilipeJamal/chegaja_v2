@@ -23,6 +23,8 @@ import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
 import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
+import 'package:chegaja_v2/core/widgets/app_card.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
@@ -32,6 +34,8 @@ import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart
 import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
 import 'package:chegaja_v2/features/common/mensagens/mensagens_tab.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
+import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
 
 import 'package:chegaja_v2/features/prestador/prestador_perfil_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_settings_screen.dart';
@@ -364,7 +368,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
           label: l10n.navProfile,
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
-          child: _ContaTab(roleLabel: l10n.roleLabelProvider),
+          child: _ContaPremiumTab(roleLabel: l10n.roleLabelProvider),
         ),
       ],
     );
@@ -2024,4 +2028,114 @@ class _ContaTab extends StatelessWidget {
       },
     );
   }
+}
+
+class _ContaPremiumTab extends StatelessWidget {
+  const _ContaPremiumTab({required this.roleLabel});
+
+  final String roleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final user = FirebaseAuth.instance.currentUser;
+    final name = _accountDisplayNameFor(user, fallback: roleLabel);
+
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
+        child: AppContentShell(
+          width: AppContentWidth.medium,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppProductHeader(
+                title: l10n.accountTitle(roleLabel),
+                subtitle:
+                    'Gere perfil profissional, disponibilidade e definicoes.',
+                showBrand: false,
+              ),
+              const SizedBox(height: AppSpacing.x5),
+              AccountProfileSummary(
+                name: name,
+                roleLabel: roleLabel,
+                photoUrl: user?.photoURL,
+                statusLabel: 'Perfil profissional',
+                statusIcon: Icons.workspace_premium_outlined,
+                statusTone: AppStatusTone.success,
+                onEditPressed: () => _openPrestadorPerfil(context),
+              ),
+              const SizedBox(height: AppSpacing.x5),
+              AppCard(
+                child: Column(
+                  children: [
+                    SettingsListTile(
+                      icon: Icons.person_outline_rounded,
+                      iconColor: AppPalette.accentBlue,
+                      title: l10n.providerAccountProfileTitle,
+                      subtitle: l10n.providerAccountProfileSubtitle,
+                      showDivider: true,
+                      onTap: () => _openPrestadorPerfil(context),
+                    ),
+                    SettingsListTile(
+                      icon: Icons.payments_outlined,
+                      iconColor: AppPalette.success,
+                      title: 'Pagamentos',
+                      subtitle: 'Ativar recebimentos online quando disponivel',
+                      showDivider: true,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PrestadorPagamentosScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    SettingsListTile(
+                      icon: Icons.settings_outlined,
+                      title: 'Definicoes',
+                      subtitle: 'Preferencias do prestador',
+                      showDivider: true,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PrestadorSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    SettingsListTile(
+                      icon: Icons.help_outline_rounded,
+                      iconColor: AppPalette.warning,
+                      title: l10n.accountHelpSupport,
+                      subtitle: 'Ajuda operacional e suporte',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openPrestadorPerfil(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const PrestadorPerfilScreen()),
+    );
+  }
+}
+
+String _accountDisplayNameFor(User? user, {required String fallback}) {
+  final displayName = user?.displayName?.trim();
+  if (displayName != null && displayName.isNotEmpty) return displayName;
+
+  final email = user?.email?.trim();
+  if (email != null && email.isNotEmpty) {
+    final localPart = email.split('@').first.trim();
+    if (localPart.isNotEmpty) return localPart;
+  }
+
+  return fallback;
 }

@@ -8,11 +8,13 @@ import 'package:country_state_city/country_state_city.dart' hide State;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
+import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 
 class PrestadorPerfilScreen extends StatefulWidget {
   const PrestadorPerfilScreen({super.key});
@@ -633,7 +635,31 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _header(),
+          AccountProfileSummary(
+            name: _nomeCtrl.text,
+            roleLabel: 'Prestador',
+            photoUrl: _photoUrl,
+            statusLabel: 'Perfil profissional',
+            statusIcon: Icons.workspace_premium_outlined,
+            statusTone: AppStatusTone.success,
+            metrics: [
+              AccountProfileMetric(
+                label: 'Raio',
+                value: '${_radiusKm.round()} km',
+                icon: Icons.radar_outlined,
+                tone: AppStatusTone.info,
+              ),
+              AccountProfileMetric(
+                label: 'Portfolio',
+                value: _portfolioUrls.length.toString(),
+                supportingText: 'imagens',
+                icon: Icons.work_outline_rounded,
+                tone: AppStatusTone.success,
+              ),
+            ],
+            onEditPressed: _pickAndUploadProfilePhoto,
+            editLabel: 'Alterar foto',
+          ),
           const SizedBox(height: 16),
           _field('Nome', _nomeCtrl),
           const SizedBox(height: 12),

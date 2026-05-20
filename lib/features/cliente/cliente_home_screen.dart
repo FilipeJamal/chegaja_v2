@@ -29,6 +29,8 @@ import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
+import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
 
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
@@ -347,7 +349,7 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
           label: l10n.navProfile,
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
-          child: _ContaTab(roleLabel: l10n.roleLabelCustomer),
+          child: _ContaPremiumTab(roleLabel: l10n.roleLabelCustomer),
         ),
       ],
     );
@@ -1383,4 +1385,149 @@ class _ContaTab extends StatelessWidget {
       },
     );
   }
+}
+
+class _ContaPremiumTab extends StatelessWidget {
+  const _ContaPremiumTab({required this.roleLabel});
+
+  final String roleLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final user = FirebaseAuth.instance.currentUser;
+    final name = _accountDisplayNameFor(user, fallback: roleLabel);
+
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
+        child: AppContentShell(
+          width: AppContentWidth.medium,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppProductHeader(
+                title: l10n.accountTitle(roleLabel),
+                subtitle: 'Gere perfil, preferencias e suporte num so lugar.',
+                showBrand: false,
+              ),
+              const SizedBox(height: AppSpacing.x5),
+              AccountProfileSummary(
+                name: name,
+                roleLabel: roleLabel,
+                photoUrl: user?.photoURL,
+                statusLabel: 'Perfil cliente',
+                statusIcon: Icons.verified_user_outlined,
+                statusTone: AppStatusTone.info,
+                onEditPressed: () => _openClientePerfil(context),
+              ),
+              const SizedBox(height: AppSpacing.x5),
+              AppCard(
+                child: Column(
+                  children: [
+                    SettingsListTile(
+                      icon: Icons.person_outline_rounded,
+                      iconColor: AppPalette.accentBlue,
+                      title: l10n.accountNameTitle,
+                      subtitle: l10n.accountProfileSubtitle,
+                      showDivider: true,
+                      onTap: () => _openClientePerfil(context),
+                    ),
+                    FutureBuilder<String?>(
+                      future: _loadRegionLabel(),
+                      builder: (context, snapshot) {
+                        final label = snapshot.data;
+                        return SettingsListTile(
+                          icon: Icons.public_rounded,
+                          iconColor: AppPalette.success,
+                          title: 'Pais / Regiao',
+                          subtitle: label != null && label.trim().isNotEmpty
+                              ? label
+                              : 'Selecionar regiao da conta',
+                          showDivider: true,
+                          onTap: () async {
+                            await RegionSelectionWidget.show(context);
+                          },
+                        );
+                      },
+                    ),
+                    const ThemeModeSelectorTile(
+                      title: 'Tema',
+                      systemLabel: 'Sistema',
+                      lightLabel: 'Claro',
+                      darkLabel: 'Escuro',
+                    ),
+                    SettingsListTile(
+                      icon: Icons.settings_outlined,
+                      title: l10n.accountSettings,
+                      subtitle: 'Preferencias da aplicacao',
+                      showDivider: true,
+                      onTap: () {},
+                    ),
+                    SettingsListTile(
+                      icon: Icons.help_outline_rounded,
+                      iconColor: AppPalette.warning,
+                      title: l10n.accountHelpSupport,
+                      subtitle: 'Perguntas frequentes e suporte',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const SuporteScreen(userType: 'cliente'),
+                          ),
+                        );
+                      },
+                    ),
+                    FutureBuilder<IdTokenResult?>(
+                      future:
+                          FirebaseAuth.instance.currentUser?.getIdTokenResult(),
+                      builder: (context, snapshot) {
+                        final claims =
+                            snapshot.data?.claims ?? const <String, dynamic>{};
+                        final isAdmin = claims['admin'] == true ||
+                            AppConfig.useFirebaseEmulators;
+                        if (!isAdmin) return const SizedBox.shrink();
+                        return SettingsListTile(
+                          icon: Icons.admin_panel_settings_outlined,
+                          iconColor: AppPalette.accentCoral,
+                          title: 'Backoffice Admin',
+                          subtitle: 'Metricas, suporte e moderacao',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const AdminPanelScreen(),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openClientePerfil(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ClientePerfilScreen()),
+    );
+  }
+}
+
+String _accountDisplayNameFor(User? user, {required String fallback}) {
+  final displayName = user?.displayName?.trim();
+  if (displayName != null && displayName.isNotEmpty) return displayName;
+
+  final email = user?.email?.trim();
+  if (email != null && email.isNotEmpty) {
+    final localPart = email.split('@').first.trim();
+    if (localPart.isNotEmpty) return localPart;
+  }
+
+  return fallback;
 }

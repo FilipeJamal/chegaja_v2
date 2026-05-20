@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: avancado com componentes globais UI, navegacao global, mensagens premium e pedidos premium
+M2.10.7: avancado com componentes globais UI, navegacao global, mensagens premium, pedidos premium e conta/perfil premium
 ```
 
 ## Objetivo da M2.10
@@ -587,4 +587,77 @@ Proximo bloco recomendado:
 
 ```text
 M2.10.7 - Bloco 6: Conta/Perfil Cliente/Prestador
+```
+
+## M2.10.7 - Bloco 6 Conta/Perfil Cliente/Prestador
+
+Melhorias feitas:
+
+```text
+Criado AccountProfileSummary como cartao premium de perfil com avatar,
+estado, CTA de editar perfil e metricas opcionais.
+Criado SettingsListTile como item visual reutilizavel para definicoes.
+Aba Conta do Cliente passou a usar AppContentShell, AppProductHeader,
+AccountProfileSummary e SettingsListTile.
+Aba Conta do Prestador passou a usar AppContentShell, AppProductHeader,
+AccountProfileSummary e SettingsListTile.
+Perfil editavel do Cliente passou a usar AccountProfileSummary no topo.
+Perfil editavel do Prestador passou a usar AccountProfileSummary no topo com
+metricas de raio e portfolio.
+```
+
+Comportamento preservado:
+
+```text
+navegacao para Perfil Cliente
+navegacao para Perfil Prestador
+selecao de Pais/Regiao do Cliente
+selector de tema
+suporte do Cliente
+Backoffice Admin em ambiente/admin
+pagamentos/configuracoes do Prestador quando ja existiam
+upload/alteracao de foto nos perfis editaveis
+guardar perfil Cliente/Prestador
+autocomplete de pais/cidade/localizacao
+portfolio do Prestador
+services/repositories sem alteracao
+schema/regras/functions sem alteracao
+```
+
+Ficheiros alterados/criados:
+
+```text
+lib/features/common/widgets/account_profile_summary.dart
+lib/features/common/widgets/settings_list_tile.dart
+lib/features/cliente/cliente_home_screen.dart
+lib/features/prestador/prestador_home_screen.dart
+lib/features/cliente/cliente_perfil_screen.dart
+lib/features/prestador/prestador_perfil_screen.dart
+test/features/common/widgets/account_profile_components_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Cobertura adicionada:
+
+```text
+AccountProfileSummary renderiza nome e papel
+AccountProfileSummary chama editar perfil
+AccountProfileSummary mostra metrica quando fornecida
+SettingsListTile renderiza titulo e subtitulo
+SettingsListTile chama onTap
+SettingsListTile suporta tom destrutivo
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test test\features\common\widgets\account_profile_components_test.dart` | passou, 6/6 |
+| `flutter test test\features\cliente\cliente_home_redesign_test.dart test\features\prestador\prestador_home_redesign_test.dart` | passou, 2/2 |
+| `flutter test` | passou, 127/127 |
+
+Proximo bloco recomendado:
+
+```text
+M2.10.7 - Bloco 7: Responsividade e QA visual final
 ```
