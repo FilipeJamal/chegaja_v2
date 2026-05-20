@@ -6,7 +6,7 @@ Data: 2026-05-20
 
 ```text
 M2.9: fechado
-M2.10: iniciado
+M2.10: fechado
 M2.10.1: spec visual audit e design direction
 M2.10.2: avancado com design system foundation
 M2.10.3: avancado com Home Cliente redesign
@@ -14,6 +14,7 @@ M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
 M2.10.7: concluida com alinhamento visual de produto, responsividade e QA visual final
+M2.10.8: fechado com revisao visual manual e beta visual local
 ```
 
 ## Objetivo da M2.10
@@ -787,4 +788,119 @@ Decisao:
 ```text
 M2.10.7 concluida como alinhamento visual de produto.
 Pronta para revisao visual manual / beta visual antes do fecho da M2.10.
+```
+
+## M2.10.8 - Revisao visual manual e fecho M2.10
+
+Objetivo:
+
+```text
+Executar a ultima revisao visual manual em browser/in-app depois da M2.10.7,
+confirmar que a experiencia ja parece produto visualmente coerente e fechar a
+M2.10 como fase de Visual Product System.
+```
+
+Contexto validado:
+
+```text
+Commit base:
+d5d6606 Concluir M2.10.7 responsividade e QA visual
+
+Build local usado:
+build/web
+
+Servidor local:
+http://127.0.0.1:63819
+
+Emuladores usados:
+Auth, Firestore e Storage locais
+```
+
+Revisao manual no browser/in-app:
+
+```text
+Desktop 1280x720:
+- Home Cliente
+- Pedidos Cliente
+- Mensagens Cliente
+- Conta Cliente
+- Home Prestador
+- Pedidos Prestador
+- Mensagens Prestador
+- Conta Prestador
+
+Mobile 390x844:
+- Home Cliente
+- Pedidos Cliente
+- Mensagens Cliente
+- Home Prestador
+- Pedidos Prestador / Meus trabalhos via bottom navigation
+- Mensagens Prestador via bottom navigation
+- Conta/Perfil Prestador via bottom navigation
+```
+
+Evidencia adicional de detalhe do pedido:
+
+```text
+E2E Web local com emuladores:
+TARGET_URL=http://127.0.0.1:63819 npm.cmd run e2e:ui:orcamento
+
+Fluxo validado:
+- cliente cria pedido de orcamento
+- prestador envia faixa estimada
+- cliente aceita proposta
+- prestador inicia servico
+- prestador envia valor final
+- cliente confirma valor final
+- detalhe do pedido mostra estado concluido, valor confirmado e timeline final
+
+Screenshots locais do E2E:
+%TEMP%\chegaja-e2e-full-ui\2026-05-20T15-02-16-516Z
+```
+
+Resultado da revisao visual:
+
+```text
+Home Cliente, Home Prestador, Mensagens, Pedidos, Conta/Perfil e Detalhe do
+pedido estao visualmente alinhados com a direcao de produto da M2.10.
+Mobile mantem bottom navigation acessivel e sem tapar CTAs.
+Desktop usa composicao de dashboard em vez de parecer mobile esticado.
+Tabs, cards, rails laterais e empty states ficam coerentes com a foundation.
+O banner local do emulador permanece compacto e nao bloqueia a navegacao.
+```
+
+Correcoes feitas nesta subfase:
+
+```text
+Nenhuma correcao de codigo foi necessaria.
+A revisao manual confirmou que a M2.10.7 ja deixou o conjunto pronto para
+fecho visual.
+```
+
+Validacao da M2.10.8:
+
+| Comando | Resultado |
+| --- | --- |
+| `TARGET_URL=http://127.0.0.1:63819 npm.cmd run e2e:ui:orcamento` | passou; `ORCAMENTO MIN-MAX FLOW OK` |
+| `flutter test` | passou, 128/128 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+Limitacoes mantidas:
+
+```text
+Android fisico real continua pendente da M2.6.
+Pagamentos reais, Play Store, package id final e HTTPS App Links continuam fora
+do escopo desta fase.
+Nenhum deploy, smoke real, cleanup real ou health real foi executado.
+```
+
+Decisao final:
+
+```text
+M2.10 fechada como Visual Product System.
+A app saiu do aspeto de prototipo e ficou com base visual de produto para
+Home Cliente, Home Prestador, Mensagens, Pedidos, Conta/Perfil e Detalhe do
+pedido em Web/Windows/mobile responsivo.
+M2.6 permanece pendente de Android fisico.
 ```
