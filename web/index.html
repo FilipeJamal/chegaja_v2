@@ -139,6 +139,53 @@
       }
     })();
   </script>
+  <script>
+    // Local-only: keep the Firebase Auth emulator warning visible without
+    // covering bottom navigation or primary actions during visual QA.
+    (function normalizeFirebaseAuthEmulatorWarning() {
+      var warningText = 'Running in emulator mode. Do not use with production credentials.';
+      var isLocalHost =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+      if (!isLocalHost) return;
+
+      function normalize() {
+        var nodes = Array.prototype.slice.call(document.body.children);
+        nodes.forEach(function (node) {
+          if (!node || !node.textContent) return;
+          if (node.textContent.indexOf(warningText) === -1) return;
+          if (node.id === 'splash' || node.id === 'splash-branding') return;
+
+          node.setAttribute('data-chegaja-emulator-warning', 'true');
+          node.textContent = 'Emulador Firebase ativo';
+          node.style.position = 'fixed';
+          node.style.top = 'calc(env(safe-area-inset-top, 0px) + 8px)';
+          node.style.right = '8px';
+          node.style.left = 'auto';
+          node.style.bottom = 'auto';
+          node.style.transform = 'none';
+          node.style.zIndex = '2147483647';
+          node.style.width = 'min(calc(100% - 16px), 180px)';
+          node.style.padding = '2px 8px';
+          node.style.borderRadius = '999px';
+          node.style.border = '1px solid rgba(239, 68, 68, 0.22)';
+          node.style.background = 'rgba(255, 255, 255, 0.94)';
+          node.style.color = '#991B1B';
+          node.style.font =
+            '10px/15px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          node.style.textAlign = 'center';
+          node.style.pointerEvents = 'none';
+          node.style.boxShadow = '0 6px 18px rgba(17, 20, 24, 0.12)';
+        });
+      }
+
+      normalize();
+      new MutationObserver(normalize).observe(document.body, {
+        childList: true,
+        subtree: false,
+      });
+    })();
+  </script>
   <script src="google_maps_config.js"></script>
   <script>
     (function () {

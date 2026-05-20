@@ -2,7 +2,8 @@
   "scripts": {
     "e2e:ui:dual": "node scripts/e2e/full_ui_dual_role_e2e.js",
     "e2e:ui:orcamento": "node scripts/e2e/full_ui_dual_role_e2e.js --scenario=orcamento",
-    "test:scripts": "node scripts/test/run_android_integration_test.test.js && node scripts/test/cleanup_smoke_data.test.js && node scripts/test/firebase_production_health.test.js",
+    "test:scripts": "node scripts/test/run_android_integration_test.test.js && node scripts/test/cleanup_smoke_data.test.js && node scripts/test/firebase_production_health.test.js && node scripts/test/capture_visual_matrix.test.js",
+    "qa:visual:m2-10-6": "node scripts/qa/capture_visual_matrix.js",
     "test:windows:cross": "flutter test integration_test/windows_cross_role_flow_test.dart -d windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true",
     "test:android:mvp": "node scripts/run_android_integration_test.js integration_test/android_mvp_flow_test.dart",
     "test:android:mobile": "node scripts/run_android_integration_test.js integration_test/android_mobile_real_test.dart",

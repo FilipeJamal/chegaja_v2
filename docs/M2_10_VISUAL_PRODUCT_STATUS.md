@@ -12,7 +12,7 @@ M2.10.2: avancado com design system foundation
 M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
-M2.10.6: planeado com responsividade e QA visual
+M2.10.6: avancado com responsividade e QA visual
 ```
 
 ## Objetivo da M2.10
@@ -216,6 +216,50 @@ fechar M2.6
 
 | Comando | Resultado |
 | --- | --- |
+| `flutter test` | passou, 102/102 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## M2.10.6
+
+Escopo:
+
+```text
+QA visual e responsividade Web/Windows/Android
+matriz mobile/tablet/desktop/wide
+Home Cliente e Home Prestador com screenshots controlados
+fluxo E2E local de orcamento para lista/detalhe em desktop
+banner de emulador sem tapar navegacao nem acoes
+correcao pequena de loading na aba Meus trabalhos do Prestador
+documentacao de problemas aceites para fase futura
+```
+
+Fora do escopo mantido:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+Android fisico real
+pagamentos
+Play Store
+package id final
+HTTPS App Links
+fechar M2.6
+```
+
+## Evidencia M2.10.6
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
+| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:63776 --out-dir=%TEMP%\chegaja-m2106-visual-qa-final --wait-ms=12000` | passou; 8 screenshots finais |
+| `npm.cmd run e2e:ui:orcamento` | passou contra Auth/Firestore/Storage emulators |
 | `flutter test` | passou, 102/102 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |

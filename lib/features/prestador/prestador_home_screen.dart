@@ -1452,16 +1452,51 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
   }
 }
 
-class _PrestadorPedidosTab extends StatelessWidget {
+class _PrestadorPedidosTab extends StatefulWidget {
   const _PrestadorPedidosTab();
+
+  @override
+  State<_PrestadorPedidosTab> createState() => _PrestadorPedidosTabState();
+}
+
+class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
+  late final Future<User> _signedInFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final existingUser = AuthService.currentUser;
+    _signedInFuture = existingUser != null
+        ? Future<User>.value(existingUser)
+        : AuthService.ensureSignedInAnonymously();
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
 
     if (user == null) {
-      unawaited(AuthService.ensureSignedInAnonymously());
-      return const AppLoadingView(label: 'A preparar sessão...');
+      return FutureBuilder<User>(
+        future: _signedInFuture,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const AppErrorView(
+              message:
+                  'Nao conseguimos preparar a sessao do prestador agora. Tenta novamente daqui a pouco.',
+            );
+          }
+
+          final signedUser = snapshot.data ?? AuthService.currentUser;
+          if (signedUser == null) {
+            return const AppLoadingView(label: 'A preparar sessao...');
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() {});
+          });
+          return const AppLoadingView(label: 'A preparar trabalhos...');
+        },
+      );
     }
 
     final df = DateFormat('dd/MM HH:mm');
