@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: avancado com componentes globais UI, navegacao global, mensagens premium, pedidos premium e conta/perfil premium
+M2.10.7: concluida com alinhamento visual de produto, responsividade e QA visual final
 ```
 
 ## Objetivo da M2.10
@@ -660,4 +660,131 @@ Proximo bloco recomendado:
 
 ```text
 M2.10.7 - Bloco 7: Responsividade e QA visual final
+```
+
+## M2.10.7 - Bloco 7 Responsividade e QA visual final
+
+Objetivo:
+
+```text
+Fechar a M2.10.7 com revisao de responsividade, QA visual e correcao de
+problemas pequenos/medios encontrados em mobile, tablet, desktop e wide.
+```
+
+Tamanhos analisados:
+
+```text
+mobile estreito: 360x740
+mobile: 390x844
+tablet: 768x1024
+desktop: 1366x768
+wide desktop: 1920x1080
+```
+
+Telas capturadas:
+
+```text
+Home Cliente
+Pedidos Cliente
+Mensagens Cliente
+Conta Cliente
+Home Prestador
+Pedidos Prestador
+Mensagens Prestador
+Conta Prestador
+```
+
+Evidencia visual local:
+
+```text
+Build Web estatica:
+build/web
+
+Servidor local:
+http://127.0.0.1:63818
+
+Screenshots finais:
+%TEMP%\chegaja-m2107-visual-qa-final
+
+Relatorio:
+%TEMP%\chegaja-m2107-visual-qa-final\report.json
+```
+
+Correcao feita:
+
+```text
+AppSegmentedTabs recebeu modo compacto para viewports estreitos.
+Em mobile, tabs distribuem a largura disponivel, reduzem padding, mantem
+contadores visiveis e removem icones decorativos para evitar clipping.
+Em tablet/desktop, o componente continua com scroll horizontal interno quando
+necessario, mas limitado pela largura do pai.
+```
+
+Resultado visual:
+
+```text
+Tabs de Pedidos e Mensagens deixam de aparecer cortadas em mobile.
+Bottom navigation continua visivel e nao tapa conteudo.
+Sidebar/NavigationRail continua funcional em desktop.
+Mensagens, Pedidos e Conta/Perfil mantem composicao coerente com a UI premium.
+Desktop usa largura util de dashboard e nao volta ao aspeto de mobile esticado.
+```
+
+Verificacoes de overflow:
+
+```text
+Matriz visual com 40 combinacoes capturadas.
+Verificacao adicional tentou scroll horizontal em todas as 40 combinacoes.
+Resultado: REAL_OVERFLOW=0.
+
+Observacao: alguns reports de document.body.scrollWidth em Flutter Web podem
+marcar valores maiores por nos de semantica/overlay. A verificacao objetiva por
+window.scrollX confirmou que nao ha scroll horizontal real apos tentativa de
+scrollTo(999, 0).
+```
+
+Observacoes de ambiente:
+
+```text
+O banner local "Emulador Firebase ativo" continua visivel apenas em localhost,
+em formato compacto, e nao tapa a bottom navigation nem CTAs.
+O build Web standard passou. O Flutter manteve avisos Wasm dry run do pacote
+dart_webrtc; estes avisos nao bloqueiam a build Web atual.
+Durante QA local, uma mensagem transitoria do Firestore Web sobre backend nao
+alcancavel apareceu em algumas capturas de emulador, sem falha funcional nem
+falha de teste.
+```
+
+Ficheiros alterados:
+
+```text
+lib/core/widgets/app_segmented_tabs.dart
+test/core/widgets/app_product_ui_components_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 128/128 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
+| QA visual local com Auth/Firestore/Storage emulators | passou; 40 screenshots finais e `REAL_OVERFLOW=0` |
+
+Limitacoes restantes:
+
+```text
+QA visual foi executada em build Web estatica local contra emuladores.
+Revisao manual no browser/in-app continua recomendada antes de fechar a M2.10
+inteira como fase visual.
+Android fisico real continua pendente da M2.6 e nao foi fechado aqui.
+```
+
+Decisao:
+
+```text
+M2.10.7 concluida como alinhamento visual de produto.
+Pronta para revisao visual manual / beta visual antes do fecho da M2.10.
 ```

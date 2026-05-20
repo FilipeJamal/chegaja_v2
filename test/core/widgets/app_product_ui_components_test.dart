@@ -104,6 +104,32 @@ void main() {
       expect(selected, 1);
     });
 
+    testWidgets('AppSegmentedTabs keeps horizontal overflow internal',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 320,
+            child: AppSegmentedTabs(
+              items: const [
+                AppSegmentedTab(label: 'Pendentes', count: 0),
+                AppSegmentedTab(label: 'Concluidos', count: 0),
+                AppSegmentedTab(label: 'Cancelados', count: 0),
+                AppSegmentedTab(label: 'Em analise', count: 0),
+              ],
+              selectedIndex: 0,
+              onChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      final box = tester.renderObject<RenderBox>(find.byType(AppSegmentedTabs));
+
+      expect(box.size.width, 320);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('AppProductHeader renders title, subtitle and actions',
         (tester) async {
       await tester.pumpWidget(
