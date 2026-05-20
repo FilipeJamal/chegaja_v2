@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_final_state_panel.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
@@ -28,6 +29,7 @@ void main() {
       find.text('Consulta os detalhes sempre que precisares.'),
       findsOneWidget,
     );
+    expect(find.byType(AppStatusPill), findsOneWidget);
   });
 
   testWidgets('PedidoFinalStatePanel mostra detalhe de cancelamento', (

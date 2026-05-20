@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
@@ -43,6 +44,34 @@ void main() {
 
       await tester.tap(find.byType(PedidoListCard));
       expect(tapped, isTrue);
+    });
+
+    testWidgets('usa status pill e bloco visual para proxima acao', (
+      tester,
+    ) async {
+      const data = PedidoListCardData(
+        title: 'Montar candeeiro',
+        category: 'Eletricista',
+        statusLabel: 'Servico em andamento',
+        valueLabel: 'Valor a combinar',
+        actionLabel: 'Enviar valor final',
+        tone: PedidoStatusTone.info,
+        icon: Icons.build_circle_outlined,
+        hasUserAction: true,
+        bucket: PedidoListBucket.ativo,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PedidoListCard(data: data),
+          ),
+        ),
+      );
+
+      expect(find.byType(AppStatusPill), findsWidgets);
+      expect(find.text('Servico em andamento'), findsOneWidget);
+      expect(find.text('Enviar valor final'), findsOneWidget);
     });
 
     testWidgets('mostra empty state humano', (tester) async {

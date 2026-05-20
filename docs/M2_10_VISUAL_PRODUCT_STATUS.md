@@ -1,6 +1,6 @@
 # M2.10 Visual Product System Status
 
-Data: 2026-05-19
+Data: 2026-05-20
 
 ## Estado
 
@@ -11,6 +11,7 @@ M2.10.1: spec visual audit e design direction
 M2.10.2: avancado com design system foundation
 M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
+M2.10.5: avancado com Pedido, listas e detalhe polish
 ```
 
 ## Objetivo da M2.10
@@ -169,5 +170,51 @@ fechar M2.6
 | Comando | Resultado |
 | --- | --- |
 | `flutter test` | passou, 90/90 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## M2.10.5
+
+Escopo:
+
+```text
+PedidoDetailLayout responsivo para detalhe do pedido
+rail lateral com status, proxima acao, valor e acoes
+PedidoValueSummary para valor, estimativa e confirmacao
+PedidoStatusSummary e PedidoNextActionCard alinhados com AppActionPanel
+PedidoTimeline mais compacta e premium
+acoes Cliente/Prestador agrupadas em AppActionPanel
+PedidoListCard alinhado com AppStatusPill
+estados finais concluido/cancelado com status pill
+loading/erro/not found mais humanos no detalhe
+desktop/Web/Windows com duas colunas
+mobile preservado em uma coluna limpa
+keys Cliente/Prestador preservadas
+```
+
+Fora do escopo mantido:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+Android fisico
+pagamentos
+Play Store
+package id final
+HTTPS App Links
+fechar M2.6
+```
+
+## Evidencia M2.10.5
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 102/102 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |

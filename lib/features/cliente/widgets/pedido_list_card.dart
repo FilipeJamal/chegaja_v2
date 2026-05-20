@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
-import 'package:chegaja_v2/core/widgets/app_chip.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
 
@@ -77,17 +77,17 @@ class PedidoListCard extends StatelessWidget {
             spacing: AppSpacing.x2,
             runSpacing: AppSpacing.x2,
             children: [
-              AppChip(
+              AppStatusPill(
                 label: data.statusLabel,
-                variant: AppChipVariant.status,
-                size: AppChipSize.sm,
-                leading: Icon(data.icon),
+                tone: _statusTone(data.tone),
+                size: AppStatusPillSize.sm,
+                icon: data.icon,
               ),
               for (final label in metaLabels)
-                AppChip(
+                AppStatusPill(
                   label: label,
-                  variant: AppChipVariant.choice,
-                  size: AppChipSize.sm,
+                  tone: AppStatusTone.neutral,
+                  size: AppStatusPillSize.sm,
                 ),
             ],
           ),
@@ -100,27 +100,31 @@ class PedidoListCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.x2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                data.hasUserAction
-                    ? Icons.priority_high_rounded
-                    : Icons.info_outline_rounded,
-                size: 16,
-                color: toneColor,
-              ),
-              const SizedBox(width: AppSpacing.x1),
-              Expanded(
-                child: Text(
-                  data.actionLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: toneColor,
-                    fontWeight: FontWeight.w700,
+          AppCard(
+            variant: AppCardVariant.flat,
+            size: AppCardSize.compact,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  data.hasUserAction
+                      ? Icons.priority_high_rounded
+                      : Icons.info_outline_rounded,
+                  size: 16,
+                  color: toneColor,
+                ),
+                const SizedBox(width: AppSpacing.x2),
+                Expanded(
+                  child: Text(
+                    data.actionLabel,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: toneColor,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           if (trailingActions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x3),
@@ -147,6 +151,16 @@ class PedidoListCard extends StatelessWidget {
       PedidoStatusTone.danger => theme.colorScheme.error,
       PedidoStatusTone.neutral => theme.colorScheme.onSurfaceVariant,
       PedidoStatusTone.info => theme.colorScheme.primary,
+    };
+  }
+
+  AppStatusTone _statusTone(PedidoStatusTone tone) {
+    return switch (tone) {
+      PedidoStatusTone.success => AppStatusTone.success,
+      PedidoStatusTone.warning => AppStatusTone.warning,
+      PedidoStatusTone.danger => AppStatusTone.danger,
+      PedidoStatusTone.neutral => AppStatusTone.neutral,
+      PedidoStatusTone.info => AppStatusTone.info,
     };
   }
 }

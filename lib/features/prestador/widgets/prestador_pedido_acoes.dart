@@ -7,6 +7,8 @@ import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/core/utils/date_time_utils.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_detail_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 class PrestadorPedidoAcoes extends StatelessWidget {
@@ -25,24 +27,86 @@ class PrestadorPedidoAcoes extends StatelessWidget {
 
     switch (pedido.estado) {
       case 'aguarda_resposta_prestador':
-        return _AcaoResponderConvite(pedido: pedido);
+        return _wrapAction(
+          title: 'Responder convite',
+          message: 'Aceita ou recusa o convite direto do cliente.',
+          icon: Icons.mark_chat_unread_rounded,
+          tone: AppStatusTone.warning,
+          child: _AcaoResponderConvite(pedido: pedido),
+        );
       case 'aguarda_resposta_cliente':
-        return _AcaoAguardandoRespostaCliente(pedido: pedido);
+        return _wrapAction(
+          title: 'Aguardar cliente',
+          message: 'A estimativa foi enviada e precisa de resposta.',
+          icon: Icons.hourglass_empty_rounded,
+          tone: AppStatusTone.neutral,
+          child: _AcaoAguardandoRespostaCliente(pedido: pedido),
+        );
       case 'aceito':
         // Se for orçamento e ainda não existe "aceita_cliente", mostramos ação para enviar orçamento.
         if (isOrcamento && pedido.statusProposta != 'aceita_cliente') {
-          return _AcaoEnviarOrcamento(pedido: pedido);
+          return _wrapAction(
+            title: 'Enviar estimativa',
+            message:
+                'O cliente precisa de uma faixa antes de decidir. A faixa nao e o valor final.',
+            icon: Icons.request_quote_rounded,
+            tone: AppStatusTone.warning,
+            child: _AcaoEnviarOrcamento(pedido: pedido),
+          );
         }
-        return _AcaoIniciarServico(pedido: pedido);
+        return _wrapAction(
+          title: 'Iniciar servico',
+          message:
+              'Quando estiveres pronto, inicia o servico para atualizar o pedido.',
+          icon: Icons.play_arrow_rounded,
+          tone: AppStatusTone.info,
+          child: _AcaoIniciarServico(pedido: pedido),
+        );
       case 'em_andamento':
-        return _AcaoLancarValorFinal(pedido: pedido);
+        return _wrapAction(
+          title: 'Enviar valor final',
+          message:
+              'Quando terminares o trabalho, envia o valor final para o cliente confirmar.',
+          icon: Icons.price_check_rounded,
+          tone: AppStatusTone.info,
+          child: _AcaoLancarValorFinal(pedido: pedido),
+        );
       case 'aguarda_confirmacao_valor':
-        return _AcaoAguardandoConfirmacao(pedido: pedido);
+        return _wrapAction(
+          title: 'Aguardar confirmacao',
+          message:
+              'O valor final foi enviado. O cliente precisa confirmar para concluir.',
+          icon: Icons.hourglass_top_rounded,
+          tone: AppStatusTone.warning,
+          child: _AcaoAguardandoConfirmacao(pedido: pedido),
+        );
       case 'concluido':
-        return _AcaoConcluido(pedido: pedido);
+        return _wrapAction(
+          title: 'Pedido concluido',
+          message: 'O servico terminou. Consulta o resumo do valor abaixo.',
+          icon: Icons.verified_rounded,
+          tone: AppStatusTone.success,
+          child: _AcaoConcluido(pedido: pedido),
+        );
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _wrapAction({
+    required String title,
+    required String message,
+    required IconData icon,
+    required AppStatusTone tone,
+    required Widget child,
+  }) {
+    return PedidoActionPanelSection(
+      title: title,
+      message: message,
+      icon: icon,
+      tone: tone,
+      child: child,
+    );
   }
 }
 

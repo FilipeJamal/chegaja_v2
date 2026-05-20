@@ -9,6 +9,8 @@ import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/payment_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart'; // import AuthService
 import 'package:chegaja_v2/core/utils/currency_utils.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_detail_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 /// Widget principal de ações do cliente num pedido.
@@ -28,13 +30,27 @@ class ClientePedidoAcoes extends StatelessWidget {
   Widget build(BuildContext context) {
     // 1) Existe proposta de prestador à espera do cliente
     if (pedido.statusProposta == 'pendente_cliente') {
-      return _PropostaPrestadorCard(pedido: pedido);
+      return PedidoActionPanelSection(
+        title: 'Rever estimativa',
+        message:
+            'Analisa a faixa enviada pelo prestador antes de decidir se avanca.',
+        icon: Icons.request_quote_rounded,
+        tone: AppStatusTone.warning,
+        child: _PropostaPrestadorCard(pedido: pedido),
+      );
     }
 
     // 2) Prestador já lançou valor final e está à espera do cliente
     if (pedido.statusConfirmacaoValor == 'pendente_cliente' &&
         pedido.precoPropostoPrestador != null) {
-      return _ValorFinalPendenteCard(pedido: pedido);
+      return PedidoActionPanelSection(
+        title: 'Confirmar valor final',
+        message:
+            'O prestador enviou o valor final. Confirma para concluir o pedido.',
+        icon: Icons.price_check_rounded,
+        tone: AppStatusTone.info,
+        child: _ValorFinalPendenteCard(pedido: pedido),
+      );
     }
 
     // 3) Outros estados → nada a mostrar

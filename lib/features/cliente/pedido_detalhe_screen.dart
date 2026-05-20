@@ -18,7 +18,12 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/politica_reembolso.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
+import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
+import 'package:chegaja_v2/core/widgets/app_card.dart';
+import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
@@ -27,13 +32,12 @@ import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_banners.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_chat_widgets.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_contato_section.dart';
+import 'package:chegaja_v2/features/cliente/widgets/pedido_detail_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_final_state_panel.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_info_row.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_mapa_osm.dart';
-import 'package:chegaja_v2/features/cliente/widgets/pedido_next_action_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
-import 'package:chegaja_v2/features/cliente/widgets/pedido_status_summary.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_timeline.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/widgets/chat_audio_player.dart';
@@ -166,28 +170,40 @@ class PedidoDetalheScreen extends StatelessWidget {
           stream: PedidosRepo.streamPedidoPorId(pedidoId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const AppPageScaffold(
+                title: 'Detalhe do pedido',
+                width: AppContentWidth.medium,
+                child: AppCard(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: AppSpacing.x3),
+                      Expanded(
+                        child: Text('A carregar os detalhes do pedido...'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 40),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Nao conseguimos carregar este pedido agora.',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        child: const Text('Voltar'),
-                      ),
-                    ],
+              return AppPageScaffold(
+                title: l10n.orderDetailsTitle,
+                width: AppContentWidth.medium,
+                child: AppActionPanel(
+                  title: 'Nao conseguimos carregar este pedido',
+                  message: 'Tenta voltar a lista e abrir o pedido novamente.',
+                  icon: Icons.error_outline_rounded,
+                  tone: AppStatusTone.warning,
+                  primaryAction: AppActionPanelAction(
+                    label: 'Voltar',
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
               );
@@ -196,24 +212,19 @@ class PedidoDetalheScreen extends StatelessWidget {
             final pedido = snapshot.data;
 
             if (pedido == null) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.search_off_rounded, size: 40),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.orderNotFound,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        child: const Text('Voltar'),
-                      ),
-                    ],
+              return AppPageScaffold(
+                title: l10n.orderDetailsTitle,
+                width: AppContentWidth.medium,
+                child: AppActionPanel(
+                  title: l10n.orderNotFound,
+                  message:
+                      'Este pedido pode ter sido removido ou nao estar disponivel para esta conta.',
+                  icon: Icons.search_off_rounded,
+                  tone: AppStatusTone.neutral,
+                  primaryAction: AppActionPanelAction(
+                    label: 'Voltar',
+                    icon: Icons.arrow_back_rounded,
+                    onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ),
               );
@@ -295,130 +306,366 @@ class PedidoDetalheScreen extends StatelessWidget {
             final noShowReporterLabel = pedido.noShowReportedBy == 'cliente'
                 ? l10n.roleLabelCustomer
                 : l10n.roleLabelProvider;
+            final sideActions = <Widget>[
+              if (isCliente) ClientePedidoAcoes(pedido: pedido),
+              if (!isCliente &&
+                  AuthService.currentUser?.uid == pedido.prestadorId)
+                PrestadorPedidoAcoes(pedido: pedido),
+            ];
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Cabeçalho
-                  PedidoStatusSummary(data: statusSummary),
-                  const SizedBox(height: 12),
-                  PedidoNextActionCard(data: nextAction),
-                  const SizedBox(height: 16),
+            return AppPageScaffold(
+              title: l10n.orderDetailsTitle,
+              subtitle: isCliente
+                  ? 'Acompanha o pedido como cliente.'
+                  : 'Gere o trabalho como prestador.',
+              width: AppContentWidth.wide,
+              child: PedidoDetailLayout(
+                sidePanel: PedidoDetailSidePanel(
+                  pedido: pedido,
+                  summary: statusSummary,
+                  nextAction: nextAction,
+                  actions: sideActions.isEmpty
+                      ? null
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _spacedPedidoSections(sideActions),
+                        ),
+                ),
+                mainColumn: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Cabeçalho
+                    _PedidoDetailHeader(
+                      pedido: pedido,
+                      categoria: categoria,
+                      subtituloModo: subtituloModo,
+                      estadoLabel: estadoLabel,
+                    ),
+                    const SizedBox(height: 16),
 
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.assignment_outlined),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pedido.titulo,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              categoria,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.black54,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtituloModo,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Chip(
-                        label: Text(
-                          estadoLabel,
-                          style: const TextStyle(fontSize: 11),
-                        ),
+                    PedidoTimeline(estado: pedido.estado),
+                    if (pedido.estado == 'concluido' ||
+                        pedido.estado == 'cancelado') ...[
+                      const SizedBox(height: 12),
+                      PedidoFinalStatePanel(
+                        data: PedidoFlowPresenter.finalStateFor(pedido),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  PedidoTimeline(estado: pedido.estado),
-                  if (pedido.estado == 'concluido' ||
-                      pedido.estado == 'cancelado') ...[
                     const SizedBox(height: 12),
-                    PedidoFinalStatePanel(
-                      data: PedidoFlowPresenter.finalStateFor(pedido),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
 
-                  if (aguardandoRespostaPrestador) ...[
-                    BannerAcaoPrestador(
-                      icon: Icons.mark_chat_unread,
-                      texto:
-                          'Convite enviado ao prestador. Aguardando resposta.',
-                      botao: 'Trocar',
-                      onPressed: () => _trocarPrestadorManual(context, pedido),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (podeEscolherManual) ...[
-                    BannerAcaoPrestador(
-                      icon: Icons.search,
-                      texto: 'Queres escolher um prestador manualmente?',
-                      botao: 'Selecionar',
-                      onPressed: () => _trocarPrestadorManual(context, pedido),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                    if (aguardandoRespostaPrestador) ...[
+                      BannerAcaoPrestador(
+                        icon: Icons.mark_chat_unread,
+                        texto:
+                            'Convite enviado ao prestador. Aguardando resposta.',
+                        botao: 'Trocar',
+                        onPressed: () =>
+                            _trocarPrestadorManual(context, pedido),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (podeEscolherManual) ...[
+                      BannerAcaoPrestador(
+                        icon: Icons.search,
+                        texto: 'Queres escolher um prestador manualmente?',
+                        botao: 'Selecionar',
+                        onPressed: () =>
+                            _trocarPrestadorManual(context, pedido),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
-                  if (estaProcurandoPrestador) ...[
-                    BannerAguardandoPrestador(pedidoId: pedido.id),
-                    const SizedBox(height: 16),
-                  ],
+                    if (estaProcurandoPrestador) ...[
+                      BannerAguardandoPrestador(pedidoId: pedido.id),
+                      const SizedBox(height: 16),
+                    ],
 
-                  const Divider(),
-                  const SizedBox(height: 16),
+                    if (!isCliente &&
+                        AuthService.currentUser?.uid == pedido.prestadorId) ...[
+                      if (pedido.statusConfirmacaoValor ==
+                          'rejeitado_cliente') ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.orderValueRejectedTitle,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                l10n.orderValueRejectedBody,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () =>
+                                      _abrirDialogNovoValor(context, pedido),
+                                  child: Text(l10n.actionProposeNewValue),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (pedido.estado != 'aguarda_resposta_prestador') ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                            ),
+                            onPressed: () =>
+                                _cancelarTrabalhoPorPrestador(context, pedido),
+                            child: Text(l10n.cancelJobTitle),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ],
 
-                  // ACOES DO CLIENTE (aceitar prestador / confirmar valor)
-                  if (isCliente) ...[
-                    ClientePedidoAcoes(pedido: pedido),
-                    const SizedBox(height: 16),
-                  ],
+                    if (podeAvaliar) ...[
+                      AvaliacaoPedidoCard(
+                        pedidoId: pedido.id,
+                        prestadorId: pedido.prestadorId!,
+                        clienteId: clienteId,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
-                  // ACOES DO PRESTADOR (iniciar / concluir / cancelar / renegociacao de valor)
-                  if (!isCliente &&
-                      AuthService.currentUser?.uid == pedido.prestadorId) ...[
-                    PrestadorPedidoAcoes(pedido: pedido),
-                    if (pedido.statusConfirmacaoValor ==
-                        'rejeitado_cliente') ...[
-                      const SizedBox(height: 8),
+                    if (hasNoShow) ...[
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: Colors.orange.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.orange.withValues(alpha: 0.4),
+                            color: Colors.orange.withValues(alpha: 0.35),
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n.orderValueRejectedTitle,
+                              l10n.noShowReportedTitle,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.noShowReportedBy(noShowReporterLabel),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            if (noShowAt != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.noShowReportedAt(df.format(noShowAt)),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                            if (noShowReason != null &&
+                                noShowReason.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                noShowReason,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else if (podeReportarNoShow) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.noShowTitle,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.noShowDescription,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _reportarNoShow(
+                                  context,
+                                  pedido,
+                                  noShowRole,
+                                ),
+                                icon: const Icon(
+                                  Icons.report_gmailerrorred_outlined,
+                                ),
+                                label: Text(l10n.noShowReportAction),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    Text(
+                      l10n.orderInfoTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    PedidoInfoRow(
+                      label: l10n.orderInfoIdLabel,
+                      value: pedido.id,
+                    ),
+                    PedidoInfoRow(
+                      label: l10n.orderInfoCreatedAtLabel,
+                      value: df.format(pedido.createdAt),
+                    ),
+                    PedidoInfoRow(
+                      label: l10n.orderInfoStatusLabel,
+                      value: estadoLabel,
+                    ),
+                    PedidoInfoRow(
+                      label: l10n.orderInfoModeLabel,
+                      value: pedido.modo,
+                    ),
+                    PedidoInfoRow(
+                      label: l10n.orderInfoValueLabel,
+                      value: valorLabel,
+                    ),
+                    const SizedBox(height: 16),
+
+                    ContatoSection(
+                      pedido: pedido,
+                      isCliente: isCliente,
+                      resolvePhone: _resolvePhone,
+                      onCall: _openPhone,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // MAPA DO PEDIDO (preview + tap -> fullscreen)
+                    Text(
+                      l10n.orderLocationTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Morada textual (se existir)
+                    if (pedido.enderecoTexto?.trim().isNotEmpty ?? false) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.place,
+                            size: 18,
+                            color: Colors.black54,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              pedido.enderecoTexto!,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    PedidoMapaOsmCard(
+                      pedido: pedido,
+                      isCliente: isCliente,
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (temDescricao) ...[
+                      Text(
+                        l10n.orderDescriptionTitle,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          desc,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    if (temMensagemProposta) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.providerMessageTitle,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -426,324 +673,59 @@ class PedidoDetalheScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              l10n.orderValueRejectedBody,
+                              mensagemProposta,
                               style: const TextStyle(
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    _abrirDialogNovoValor(context, pedido),
-                                child: Text(l10n.actionProposeNewValue),
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                    if (pedido.estado != 'aguarda_resposta_prestador') ...[
-                      const SizedBox(height: 8),
+
+                    // CHAT (cartão que abre/fecha o chat)
+                    ChatExpandable(
+                      pedidoId: pedido.id,
+                      isCliente: isCliente,
+                      otherUserId:
+                          isCliente ? pedido.prestadorId : pedido.clienteId,
+                      pedidoTitulo: pedido.titulo,
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (podeEditar || podeCancelar) ...[
+                      const Divider(),
+                      const SizedBox(height: 12),
+                    ],
+                    if (podeEditar) ...[
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _editarPedido(context, pedido),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: Text(l10n.actionEditOrder),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (podeCancelar) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.redAccent,
                           ),
-                          onPressed: () =>
-                              _cancelarTrabalhoPorPrestador(context, pedido),
-                          child: Text(l10n.cancelJobTitle),
+                          onPressed: () => _cancelarPedido(context, pedido),
+                          icon: const Icon(
+                            Icons.cancel_outlined,
+                            size: 18,
+                          ),
+                          label: Text(l10n.actionCancelOrder),
                         ),
                       ),
-                      const SizedBox(height: 16),
                     ],
                   ],
-
-                  if (podeAvaliar) ...[
-                    AvaliacaoPedidoCard(
-                      pedidoId: pedido.id,
-                      prestadorId: pedido.prestadorId!,
-                      clienteId: clienteId,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  if (hasNoShow) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.noShowReportedTitle,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            l10n.noShowReportedBy(noShowReporterLabel),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          if (noShowAt != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              l10n.noShowReportedAt(df.format(noShowAt)),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                          if (noShowReason != null &&
-                              noShowReason.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              noShowReason,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ] else if (podeReportarNoShow) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.red.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.noShowTitle,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            l10n.noShowDescription,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _reportarNoShow(
-                                context,
-                                pedido,
-                                noShowRole,
-                              ),
-                              icon: const Icon(
-                                Icons.report_gmailerrorred_outlined,
-                              ),
-                              label: Text(l10n.noShowReportAction),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  Text(
-                    l10n.orderInfoTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  PedidoInfoRow(
-                    label: l10n.orderInfoIdLabel,
-                    value: pedido.id,
-                  ),
-                  PedidoInfoRow(
-                    label: l10n.orderInfoCreatedAtLabel,
-                    value: df.format(pedido.createdAt),
-                  ),
-                  PedidoInfoRow(
-                    label: l10n.orderInfoStatusLabel,
-                    value: estadoLabel,
-                  ),
-                  PedidoInfoRow(
-                    label: l10n.orderInfoModeLabel,
-                    value: pedido.modo,
-                  ),
-                  PedidoInfoRow(
-                    label: l10n.orderInfoValueLabel,
-                    value: valorLabel,
-                  ),
-                  const SizedBox(height: 16),
-
-                  ContatoSection(
-                    pedido: pedido,
-                    isCliente: isCliente,
-                    resolvePhone: _resolvePhone,
-                    onCall: _openPhone,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // MAPA DO PEDIDO (preview + tap -> fullscreen)
-                  Text(
-                    l10n.orderLocationTitle,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Morada textual (se existir)
-                  if (pedido.enderecoTexto?.trim().isNotEmpty ?? false) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.place,
-                          size: 18,
-                          color: Colors.black54,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            pedido.enderecoTexto!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  PedidoMapaOsmCard(
-                    pedido: pedido,
-                    isCliente: isCliente,
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (temDescricao) ...[
-                    Text(
-                      l10n.orderDescriptionTitle,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        desc,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  if (temMensagemProposta) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.amber.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.providerMessageTitle,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            mensagemProposta,
-                            style: const TextStyle(
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  // CHAT (cartão que abre/fecha o chat)
-                  ChatExpandable(
-                    pedidoId: pedido.id,
-                    isCliente: isCliente,
-                    otherUserId:
-                        isCliente ? pedido.prestadorId : pedido.clienteId,
-                    pedidoTitulo: pedido.titulo,
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (podeEditar || podeCancelar) ...[
-                    const Divider(),
-                    const SizedBox(height: 12),
-                  ],
-                  if (podeEditar) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _editarPedido(context, pedido),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: Text(l10n.actionEditOrder),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (podeCancelar) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                        ),
-                        onPressed: () => _cancelarPedido(context, pedido),
-                        icon: const Icon(
-                          Icons.cancel_outlined,
-                          size: 18,
-                        ),
-                        label: Text(l10n.actionCancelOrder),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             );
           },
@@ -1255,6 +1237,88 @@ class PedidoDetalheScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+List<Widget> _spacedPedidoSections(List<Widget> children) {
+  final result = <Widget>[];
+  for (final child in children) {
+    if (result.isNotEmpty) {
+      result.add(const SizedBox(height: AppSpacing.x3));
+    }
+    result.add(child);
+  }
+  return result;
+}
+
+class _PedidoDetailHeader extends StatelessWidget {
+  const _PedidoDetailHeader({
+    required this.pedido,
+    required this.categoria,
+    required this.subtituloModo,
+    required this.estadoLabel,
+  });
+
+  final Pedido pedido;
+  final String categoria;
+  final String subtituloModo;
+  final String estadoLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      size: AppCardSize.large,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Icon(
+              Icons.assignment_outlined,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pedido.titulo,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  categoria,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  subtituloModo,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x2),
+          AppStatusPill(label: estadoLabel, tone: AppStatusTone.info),
+        ],
+      ),
     );
   }
 }

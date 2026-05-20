@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
+import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 
 class PedidoFinalStatePanel extends StatelessWidget {
@@ -34,11 +35,12 @@ class PedidoFinalStatePanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  data.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                AppStatusPill(
+                  label: data.title,
+                  tone: data.title.toLowerCase().contains('cancel')
+                      ? AppStatusTone.danger
+                      : AppStatusTone.success,
+                  icon: data.icon,
                 ),
                 const SizedBox(height: AppSpacing.x1),
                 Text(
