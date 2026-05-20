@@ -13,6 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
+M2.10.7: spec product UI alignment
 ```
 
 ## Objetivo da M2.10
@@ -263,3 +264,41 @@ fechar M2.6
 | `flutter test` | passou, 102/102 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## M2.10.7
+
+Objetivo:
+
+```text
+Alinhar Mensagens, Pedidos, Conta/Perfil e navegacao global ao modelo visual
+premium aprovado pelo utilizador: mobile app real, fundo claro, cards fortes,
+avatar/header, chips de estado, bottom navigation elegante e desktop em formato
+dashboard.
+```
+
+Referencias:
+
+```text
+mobile: telas de Mensagens, Pedidos e Conta com logo, avatar, sino,
+search/filter, cards brancos, chips e CTAs azuis.
+desktop: dashboard com sidebar, listas densas, tabelas/cards e areas de detalhe.
+```
+
+Fora do escopo mantido:
+
+```text
+backend
+Firestore Rules
+Storage Rules
+Cloud Functions
+deploy
+smoke real
+cleanup real
+health real
+Android fisico real
+pagamentos
+Play Store
+package id final
+HTTPS App Links
+fechar M2.6
+```
