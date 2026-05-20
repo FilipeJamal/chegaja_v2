@@ -4,7 +4,15 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/date_time_utils.dart';
+import 'package:chegaja_v2/core/widgets/app_card.dart';
+import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
+import 'package:chegaja_v2/core/widgets/app_filter_button.dart';
+import 'package:chegaja_v2/core/widgets/app_premium_search_bar.dart';
+import 'package:chegaja_v2/core/widgets/app_product_header.dart';
+import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
+import 'package:chegaja_v2/features/common/mensagens/widgets/conversation_list_card.dart';
 import 'chat_thread_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
@@ -93,426 +101,304 @@ class _MensagensTabState extends State<MensagensTab> {
             .where(field, isEqualTo: uid)
             .orderBy('lastMessageAt', descending: true);
 
-        return Scaffold(
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(l10n.messagesNewConversationTitle),
-                  content: Text(l10n.messagesNewConversationBody),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.actionClose),
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: const Icon(Icons.add_comment_rounded),
-          ),
-          body: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      l10n.messagesTitle,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
+        return ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return AppContentShell(
+                  width: AppContentWidth.dashboard,
+                  child: SizedBox(
+                    height: constraints.maxHeight,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.camera_alt_outlined),
+                        AppProductHeader(
+                          title: l10n.messagesTitle,
+                          subtitle: _subtitleForRole(),
+                          actions: [
+                            IconButton(
+                              tooltip: l10n.messagesNewConversationTitle,
+                              onPressed: () => _showNewConversationDialog(l10n),
+                              icon: const Icon(Icons.add_comment_rounded),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.more_vert),
+                        const SizedBox(height: AppSpacing.x5),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppPremiumSearchBar(
+                                controller: _searchCtrl,
+                                hintText: l10n.messagesSearchHint,
+                                onChanged: (_) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.x3),
+                            AppFilterButton(
+                              active: _filterMode != 'all',
+                              tooltip: 'Filtrar conversas',
+                              onPressed: () => _showFilterSheet(l10n),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.x4),
+                        AppSegmentedTabs(
+                          items: [
+                            AppSegmentedTab(label: l10n.messagesFilterAll),
+                            AppSegmentedTab(label: l10n.messagesFilterUnread),
+                            AppSegmentedTab(
+                              label: l10n.messagesFilterFavorites,
+                            ),
+                            AppSegmentedTab(label: l10n.messagesFilterGroups),
+                          ],
+                          selectedIndex: _filterIndex,
+                          onChanged: _setFilterIndex,
+                        ),
+                        const SizedBox(height: AppSpacing.x4),
+                        Expanded(
+                          child: StreamBuilder<
+                              QuerySnapshot<Map<String, dynamic>>>(
+                            stream: query.snapshots(),
+                            builder: (context, snap) {
+                              if (snap.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const _MessagesStateCard(
+                                  icon: Icons.mark_chat_unread_outlined,
+                                  title: 'A carregar conversas',
+                                  message:
+                                      'Estamos a preparar as mensagens mais recentes.',
+                                  loading: true,
+                                );
+                              }
+
+                              if (snap.hasError) {
+                                return _MessagesStateCard(
+                                  icon: Icons.error_outline_rounded,
+                                  title: 'Nao foi possivel carregar mensagens',
+                                  message: l10n.messagesLoadError(
+                                    snap.error.toString(),
+                                  ),
+                                );
+                              }
+
+                              final docs = snap.data?.docs ?? [];
+                              if (docs.isEmpty) {
+                                return _MessagesStateCard(
+                                  icon: Icons.chat_bubble_outline_rounded,
+                                  title: 'Sem conversas ainda',
+                                  message: l10n.messagesEmpty,
+                                );
+                              }
+
+                              final q = _searchCtrl.text.trim().toLowerCase();
+
+                              final tiles = docs.map((d) {
+                                final data = d.data();
+
+                                final pedidoId = d.id;
+                                final pedidoTitulo =
+                                    (data['pedidoTitulo'] as String?) ?? '';
+
+                                final clienteId =
+                                    (data['clienteId'] as String?) ?? '';
+                                final prestadorId =
+                                    (data['prestadorId'] as String?) ?? '';
+
+                                final otherId = (widget.viewerRole == 'cliente')
+                                    ? prestadorId
+                                    : clienteId;
+
+                                final otherName = (widget.viewerRole ==
+                                        'cliente')
+                                    ? ((data['prestadorNome'] as String?) ??
+                                        (data['prestadorName'] as String?) ??
+                                        l10n.roleLabelProvider)
+                                    : ((data['clienteNome'] as String?) ??
+                                        (data['clienteName'] as String?) ??
+                                        l10n.roleLabelCustomer);
+
+                                final otherPhoto = (widget.viewerRole ==
+                                        'cliente')
+                                    ? ((data['prestadorPhotoUrl'] as String?) ??
+                                        '')
+                                    : ((data['clientePhotoUrl'] as String?) ??
+                                        '');
+
+                                final lastMessage =
+                                    (data['lastMessage'] as String?) ?? '';
+                                final ts = data['lastMessageAt'];
+                                DateTime? lastAt;
+                                if (ts is Timestamp) lastAt = ts.toDate();
+
+                                final hasUnread =
+                                    (widget.viewerRole == 'cliente')
+                                        ? (data['hasUnreadCliente'] == true)
+                                        : (data['hasUnreadPrestador'] == true);
+
+                                final unreadCount =
+                                    (widget.viewerRole == 'cliente')
+                                        ? ((data['unreadByCliente'] as num?)
+                                                ?.toInt() ??
+                                            0)
+                                        : ((data['unreadByPrestador'] as num?)
+                                                ?.toInt() ??
+                                            0);
+
+                                final effectiveHasUnread =
+                                    hasUnread || unreadCount > 0;
+
+                                final favs = List<String>.from(
+                                    data['favoritedBy'] ?? []);
+                                final isFav = favs.contains(uid);
+
+                                return _ChatTileData(
+                                  pedidoId: pedidoId,
+                                  pedidoTitulo: pedidoTitulo,
+                                  otherUserId: otherId,
+                                  otherUserName: otherName,
+                                  otherUserPhotoUrl: otherPhoto,
+                                  lastMessage: lastMessage,
+                                  lastAt: lastAt,
+                                  hasUnread: effectiveHasUnread,
+                                  unreadCount: unreadCount,
+                                  isFavorite: isFav,
+                                );
+                              }).where((t) {
+                                if (q.isNotEmpty) {
+                                  final matches = t.otherUserName
+                                          .toLowerCase()
+                                          .contains(q) ||
+                                      t.pedidoTitulo
+                                          .toLowerCase()
+                                          .contains(q) ||
+                                      t.lastMessage.toLowerCase().contains(q);
+                                  if (!matches) return false;
+                                }
+
+                                if (_filterMode == 'unread') {
+                                  return t.hasUnread;
+                                } else if (_filterMode == 'favorites') {
+                                  return t.isFavorite;
+                                } else if (_filterMode == 'groups') {
+                                  return false;
+                                }
+                                return true;
+                              }).toList();
+
+                              final filterLabel = {
+                                    'all': l10n.messagesFilterAll,
+                                    'unread': l10n.messagesFilterUnread,
+                                    'favorites': l10n.messagesFilterFavorites,
+                                    'groups': l10n.messagesFilterGroups,
+                                  }[_filterMode] ??
+                                  l10n.messagesFilterAll;
+
+                              if (tiles.isEmpty && q.isNotEmpty) {
+                                return _MessagesStateCard(
+                                  icon: Icons.search_off_rounded,
+                                  title: 'Sem resultados',
+                                  message: l10n.messagesSearchNoResults,
+                                );
+                              }
+
+                              if (tiles.isEmpty && _filterMode != 'all') {
+                                return _MessagesStateCard(
+                                  icon: Icons.filter_alt_off_outlined,
+                                  title: 'Filtro sem conversas',
+                                  message:
+                                      l10n.messagesFilterEmpty(filterLabel),
+                                );
+                              }
+
+                              return ListView.separated(
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.x1,
+                                  bottom: AppSpacing.x7,
+                                ),
+                                itemCount: tiles.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: AppSpacing.x3),
+                                itemBuilder: (context, i) {
+                                  final t = tiles[i];
+                                  final timeStr = _formatTimeLabel(
+                                    t.lastAt,
+                                    locale: l10n.localeName,
+                                  );
+
+                                  return ConversationListCard(
+                                    name: t.otherUserName,
+                                    message: t.lastMessage.isNotEmpty
+                                        ? t.lastMessage
+                                        : l10n.chatNoMessagesSubtitle,
+                                    timeLabel: timeStr,
+                                    avatarUrl: t.otherUserPhotoUrl,
+                                    serviceLabel: t.pedidoTitulo,
+                                    unreadCount: t.unreadCount,
+                                    isFavorite: t.isFavorite,
+                                    onTap: () async {
+                                      await ChatService.instance
+                                          .ensureChatMetaForPedido(t.pedidoId);
+                                      if (!context.mounted) return;
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ChatThreadScreen(
+                                            pedidoId: t.pedidoId,
+                                            viewerRole: widget.viewerRole,
+                                            otherUserId: t.otherUserId,
+                                            otherUserName: t.otherUserName,
+                                            otherUserPhotoUrl:
+                                                t.otherUserPhotoUrl,
+                                            pedidoTitulo: t.pedidoTitulo,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    onLongPress: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        builder: (ctx) => SafeArea(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              ListTile(
+                                                leading: Icon(
+                                                  t.isFavorite
+                                                      ? Icons.push_pin_outlined
+                                                      : Icons.push_pin,
+                                                ),
+                                                title: Text(
+                                                  t.isFavorite
+                                                      ? l10n
+                                                          .messagesUnpinConversation
+                                                      : l10n
+                                                          .messagesPinConversation,
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(ctx);
+                                                  ChatService.instance
+                                                      .toggleChatFavorite(
+                                                    pedidoId: t.pedidoId,
+                                                    uid: uid,
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _searchCtrl,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    hintText: l10n.messagesSearchHint,
-                    hintStyle: TextStyle(color: Colors.grey.shade600),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
                   ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip(l10n.messagesFilterAll, 'all'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(l10n.messagesFilterUnread, 'unread'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        l10n.messagesFilterFavorites,
-                        'favorites',
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(l10n.messagesFilterGroups, 'groups'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: query.snapshots(),
-                    builder: (context, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snap.hasError) {
-                        return Center(
-                          child: Text(
-                            l10n.messagesLoadError(snap.error.toString()),
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
-
-                      final docs = snap.data?.docs ?? [];
-                      if (docs.isEmpty) {
-                        return Center(
-                          child: Text(
-                            l10n.messagesEmpty,
-                            textAlign: TextAlign.center,
-                          ),
-                        );
-                      }
-
-                      final q = _searchCtrl.text.trim().toLowerCase();
-
-                      final tiles = docs.map((d) {
-                        final data = d.data();
-
-                        final pedidoId = d.id;
-                        final pedidoTitulo =
-                            (data['pedidoTitulo'] as String?) ?? '';
-
-                        final clienteId = (data['clienteId'] as String?) ?? '';
-                        final prestadorId =
-                            (data['prestadorId'] as String?) ?? '';
-
-                        final otherId = (widget.viewerRole == 'cliente')
-                            ? prestadorId
-                            : clienteId;
-
-                        final otherName = (widget.viewerRole == 'cliente')
-                            ? ((data['prestadorNome'] as String?) ??
-                                (data['prestadorName'] as String?) ??
-                                l10n.roleLabelProvider)
-                            : ((data['clienteNome'] as String?) ??
-                                (data['clienteName'] as String?) ??
-                                l10n.roleLabelCustomer);
-
-                        final otherPhoto = (widget.viewerRole == 'cliente')
-                            ? ((data['prestadorPhotoUrl'] as String?) ?? '')
-                            : ((data['clientePhotoUrl'] as String?) ?? '');
-
-                        final lastMessage =
-                            (data['lastMessage'] as String?) ?? '';
-                        final ts = data['lastMessageAt'];
-                        DateTime? lastAt;
-                        if (ts is Timestamp) lastAt = ts.toDate();
-
-                        final hasUnread = (widget.viewerRole == 'cliente')
-                            ? (data['hasUnreadCliente'] == true)
-                            : (data['hasUnreadPrestador'] == true);
-
-                        final unreadCount = (widget.viewerRole == 'cliente')
-                            ? ((data['unreadByCliente'] as num?)?.toInt() ?? 0)
-                            : ((data['unreadByPrestador'] as num?)?.toInt() ??
-                                0);
-
-                        final effectiveHasUnread = hasUnread || unreadCount > 0;
-
-                        final favs =
-                            List<String>.from(data['favoritedBy'] ?? []);
-                        final isFav = favs.contains(uid);
-
-                        return _ChatTileData(
-                          pedidoId: pedidoId,
-                          pedidoTitulo: pedidoTitulo,
-                          otherUserId: otherId,
-                          otherUserName: otherName,
-                          otherUserPhotoUrl: otherPhoto,
-                          lastMessage: lastMessage,
-                          lastAt: lastAt,
-                          hasUnread: effectiveHasUnread,
-                          unreadCount: unreadCount,
-                          isFavorite: isFav,
-                        );
-                      }).where((t) {
-                        // Search filter
-                        if (q.isNotEmpty) {
-                          final matches =
-                              t.otherUserName.toLowerCase().contains(q) ||
-                                  t.pedidoTitulo.toLowerCase().contains(q) ||
-                                  t.lastMessage.toLowerCase().contains(q);
-                          if (!matches) return false;
-                        }
-
-                        // Mode filter
-                        if (_filterMode == 'unread') {
-                          return t.hasUnread;
-                        } else if (_filterMode == 'favorites') {
-                          return t.isFavorite;
-                        } else if (_filterMode == 'groups') {
-                          // Placeholder for groups
-                          return false;
-                        }
-                        return true;
-                      }).toList();
-
-                      final filterLabel = {
-                            'all': l10n.messagesFilterAll,
-                            'unread': l10n.messagesFilterUnread,
-                            'favorites': l10n.messagesFilterFavorites,
-                            'groups': l10n.messagesFilterGroups,
-                          }[_filterMode] ??
-                          l10n.messagesFilterAll;
-
-                      if (tiles.isEmpty && q.isNotEmpty) {
-                        return Center(
-                            child: Text(l10n.messagesSearchNoResults));
-                      }
-
-                      if (tiles.isEmpty && _filterMode != 'all') {
-                        return Center(
-                          child: Text(l10n.messagesFilterEmpty(filterLabel)),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(top: 4, bottom: 80),
-                        itemCount: tiles.length,
-                        itemBuilder: (context, i) {
-                          final t = tiles[i];
-
-                          // Date formatting logic
-                          String timeStr = '';
-                          if (t.lastAt != null) {
-                            final now = DateTime.now();
-                            final diff = now.difference(t.lastAt!);
-                            if (diff.inDays == 0 && now.day == t.lastAt!.day) {
-                              timeStr = DateTimeUtils.formatTime(t.lastAt!,
-                                  locale: l10n.localeName);
-                            } else if (diff.inDays < 7) {
-                              timeStr = DateTimeUtils.formatDate(t.lastAt!,
-                                  locale: l10n.localeName);
-                            } else {
-                              timeStr = DateTimeUtils.formatDate(t.lastAt!,
-                                  locale: l10n.localeName);
-                            }
-                          }
-
-                          return InkWell(
-                            onTap: () async {
-                              await ChatService.instance
-                                  .ensureChatMetaForPedido(t.pedidoId);
-                              if (!context.mounted) return;
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ChatThreadScreen(
-                                    pedidoId: t.pedidoId,
-                                    viewerRole: widget.viewerRole,
-                                    otherUserId: t.otherUserId,
-                                    otherUserName: t.otherUserName,
-                                    otherUserPhotoUrl: t.otherUserPhotoUrl,
-                                    pedidoTitulo: t.pedidoTitulo,
-                                  ),
-                                ),
-                              );
-                            },
-                            onLongPress: () {
-                              showModalBottomSheet(
-                                context: context,
-                                builder: (ctx) => SafeArea(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ListTile(
-                                        leading: Icon(
-                                          t.isFavorite
-                                              ? Icons.push_pin_outlined
-                                              : Icons.push_pin,
-                                        ),
-                                        title: Text(
-                                          t.isFavorite
-                                              ? l10n.messagesUnpinConversation
-                                              : l10n.messagesPinConversation,
-                                        ),
-                                        onTap: () {
-                                          Navigator.pop(ctx);
-                                          ChatService.instance
-                                              .toggleChatFavorite(
-                                            pedidoId: t.pedidoId,
-                                            uid: uid,
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 4,
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 26,
-                                    backgroundColor: Colors.grey.shade300,
-                                    backgroundImage:
-                                        (t.otherUserPhotoUrl.isNotEmpty)
-                                            ? NetworkImage(t.otherUserPhotoUrl)
-                                            : null,
-                                    child: (t.otherUserPhotoUrl.isEmpty)
-                                        ? Text(
-                                            t.otherUserName.isNotEmpty
-                                                ? t.otherUserName[0]
-                                                    .toUpperCase()
-                                                : '?',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Flexible(
-                                              child: Text(
-                                                t.otherUserName,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                if (t.isFavorite)
-                                                  const Padding(
-                                                    padding: EdgeInsets.only(
-                                                        right: 4),
-                                                    child: Icon(
-                                                      Icons.push_pin,
-                                                      size: 14,
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                Text(
-                                                  timeStr,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: t.hasUnread
-                                                        ? Colors.green.shade600
-                                                        : Colors.grey.shade600,
-                                                    fontWeight: t.hasUnread
-                                                        ? FontWeight.bold
-                                                        : FontWeight.normal,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                t.lastMessage.isNotEmpty
-                                                    ? t.lastMessage
-                                                    : l10n
-                                                        .chatNoMessagesSubtitle,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey.shade600,
-                                                  fontWeight: t.hasUnread
-                                                      ? FontWeight.w500
-                                                      : FontWeight.normal,
-                                                ),
-                                              ),
-                                            ),
-                                            if (t.unreadCount > 0)
-                                              Container(
-                                                margin: const EdgeInsets.only(
-                                                    left: 8),
-                                                padding:
-                                                    const EdgeInsets.all(6),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.green,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Text(
-                                                  '${t.unreadCount}',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         );
@@ -520,24 +406,165 @@ class _MensagensTabState extends State<MensagensTab> {
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _filterMode == value;
-    return ActionChip(
-      label: Text(label),
-      onPressed: () => setState(() => _filterMode = value),
-      backgroundColor:
-          isSelected ? Colors.green.shade100 : Colors.grey.shade200,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.green.shade900 : Colors.black,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+  int get _filterIndex {
+    return switch (_filterMode) {
+      'unread' => 1,
+      'favorites' => 2,
+      'groups' => 3,
+      _ => 0,
+    };
+  }
+
+  void _setFilterIndex(int index) {
+    final next = switch (index) {
+      1 => 'unread',
+      2 => 'favorites',
+      3 => 'groups',
+      _ => 'all',
+    };
+    setState(() => _filterMode = next);
+  }
+
+  String _subtitleForRole() {
+    if (widget.viewerRole == 'prestador') {
+      return 'Converse com clientes e acompanhe oportunidades.';
+    }
+    return 'Converse com prestadores e acompanhe os seus servicos.';
+  }
+
+  String _formatTimeLabel(DateTime? lastAt, {required String locale}) {
+    if (lastAt == null) return '';
+
+    final now = DateTime.now();
+    final diff = now.difference(lastAt);
+    if (diff.inDays == 0 && now.day == lastAt.day) {
+      return DateTimeUtils.formatTime(lastAt, locale: locale);
+    }
+    return DateTimeUtils.formatDate(lastAt, locale: locale);
+  }
+
+  void _showNewConversationDialog(AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.messagesNewConversationTitle),
+        content: Text(l10n.messagesNewConversationBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.actionClose),
+          ),
+        ],
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? Colors.green.shade200 : Colors.transparent,
+    );
+  }
+
+  void _showFilterSheet(AppLocalizations l10n) {
+    final options = [
+      _FilterOption(l10n.messagesFilterAll, 'all'),
+      _FilterOption(l10n.messagesFilterUnread, 'unread'),
+      _FilterOption(l10n.messagesFilterFavorites, 'favorites'),
+      _FilterOption(l10n.messagesFilterGroups, 'groups'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.x4,
+            0,
+            AppSpacing.x4,
+            AppSpacing.x4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in options)
+                ListTile(
+                  leading: Icon(
+                    option.value == _filterMode
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                  ),
+                  title: Text(option.label),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _filterMode = option.value);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+    );
+  }
+}
+
+class _FilterOption {
+  const _FilterOption(this.label, this.value);
+
+  final String label;
+  final String value;
+}
+
+class _MessagesStateCard extends StatelessWidget {
+  const _MessagesStateCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.loading = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: AppCard(
+        variant: AppCardVariant.outlined,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: loading
+                  ? const Padding(
+                      padding: EdgeInsets.all(AppSpacing.x3),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(icon, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(height: AppSpacing.x3),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x2),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

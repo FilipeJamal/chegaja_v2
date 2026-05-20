@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: avancado com componentes globais UI e navegacao global
+M2.10.7: avancado com componentes globais UI, navegacao global e mensagens premium
 ```
 
 ## Objetivo da M2.10
@@ -435,4 +435,66 @@ Proximo bloco recomendado:
 
 ```text
 M2.10.7 - Bloco 4: Mensagens Cliente/Prestador
+```
+
+## M2.10.7 - Bloco 4 Mensagens Cliente/Prestador
+
+Melhorias feitas:
+
+```text
+MensagensTab passou a usar AppContentShell e AppProductHeader.
+Pesquisa passou a usar AppPremiumSearchBar.
+Filtros passaram a usar AppFilterButton e AppSegmentedTabs.
+Lista de conversas passou a usar ConversationListCard com avatar, badge,
+servico, favorito e hierarquia visual de inbox.
+Estados de loading, vazio, erro, filtro sem resultado e pesquisa sem resultado
+ficaram em card visual consistente.
+ChatThreadScreen recebeu AppAvatar no header, fundo claro, bolhas mais limpas,
+separador de dia com token visual e input com borda/sombra suave.
+```
+
+Comportamento preservado:
+
+```text
+query/stream de chats
+pesquisa existente
+filtros todas/nao lidas/favoritas/grupos
+abrir conversa por tap
+favoritar/desfavoritar por long press
+contador de nao lidas
+ChatThreadScreen com envio de texto, anexos, media, audio e chamadas
+ChatService sem alteracao
+modelo de dados sem alteracao
+```
+
+Ficheiros alterados/criados:
+
+```text
+lib/features/common/mensagens/mensagens_tab.dart
+lib/features/common/mensagens/chat_thread_screen.dart
+lib/features/common/mensagens/widgets/conversation_list_card.dart
+test/features/common/mensagens/conversation_list_card_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Cobertura adicionada:
+
+```text
+ConversationListCard renderiza nome e ultima mensagem
+ConversationListCard renderiza badge de nao lidas
+ConversationListCard chama onTap e onLongPress
+ConversationListCard mostra favorito quando ativo
+ConversationListCard funciona sem imagem remota
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 116/116 |
+
+Proximo bloco recomendado:
+
+```text
+M2.10.7 - Bloco 5: Pedidos Cliente/Prestador
 ```

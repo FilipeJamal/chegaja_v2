@@ -16,7 +16,9 @@ import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/call_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/storage_path_policy.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/url_bytes_loader.dart';
+import 'package:chegaja_v2/core/widgets/app_avatar.dart';
 import 'package:chegaja_v2/features/common/mensagens/call_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_favorites_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_media_screen.dart';
@@ -1394,18 +1396,28 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   }
 
   Widget _buildDayHeader(String label) {
+    final theme = Theme.of(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x3),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x3,
+            vertical: AppSpacing.x2,
+          ),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: theme.colorScheme.outline),
+            boxShadow: AppShadows.level1,
           ),
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),
@@ -1511,13 +1523,18 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   }
 
   Widget _buildBubble({required ChatMessage msg, required bool isMine}) {
+    final theme = Theme.of(context);
     final createdAt = msg.createdAt;
     final time = _formatTime(createdAt);
     final uid = _auth.currentUser?.uid ?? '';
     final isStarred = uid.isNotEmpty && msg.isStarredBy(uid);
 
-    final bubbleColor =
-        isMine ? const Color(0xFFE7FFDB) : Colors.white; // WhatsApp-ish green
+    final bubbleColor = isMine
+        ? theme.colorScheme.primary.withValues(alpha: 0.12)
+        : theme.colorScheme.surface;
+    final bubbleBorder = isMine
+        ? theme.colorScheme.primary.withValues(alpha: 0.18)
+        : theme.colorScheme.outline;
 
     // Status Icon Logic
     IconData? statusIcon;
@@ -1614,25 +1631,24 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         onLongPress: () => _showMessageActions(msg),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x3,
+            vertical: AppSpacing.x2,
+          ),
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.75,
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
           ),
           decoration: BoxDecoration(
             color: bubbleColor,
             borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(12),
-              topRight: const Radius.circular(12),
-              bottomLeft: isMine ? const Radius.circular(12) : Radius.zero,
-              bottomRight: isMine ? Radius.zero : const Radius.circular(12),
+              topLeft: const Radius.circular(AppRadius.lg),
+              topRight: const Radius.circular(AppRadius.lg),
+              bottomLeft: Radius.circular(isMine ? AppRadius.lg : AppRadius.xs),
+              bottomRight:
+                  Radius.circular(isMine ? AppRadius.xs : AppRadius.lg),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
+            border: Border.all(color: bubbleBorder),
+            boxShadow: AppShadows.level1,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1661,7 +1677,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                   ],
                   Text(
                     time,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (statusIcon != null) ...[
                     const SizedBox(width: 4),
@@ -1677,6 +1696,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   }
 
   Widget _buildInput() {
+    final theme = Theme.of(context);
     final inputDisabled = _sending || _uploading || _recording;
 
     // Check if we show Mic or Send button
@@ -1685,24 +1705,31 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        color: Colors.transparent, // Background handled by parent or default
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x3,
+          AppSpacing.x2,
+          AppSpacing.x3,
+          AppSpacing.x2,
+        ),
+        color: theme.scaffoldBackgroundColor,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  border: Border.all(color: theme.colorScheme.outline),
+                  boxShadow: AppShadows.level1,
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.emoji_emotions_outlined,
-                        color: Colors.grey,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       onPressed: inputDisabled ? null : _openMediaPicker,
                     ),
@@ -1725,12 +1752,18 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.attach_file, color: Colors.grey),
+                      icon: Icon(
+                        Icons.attach_file,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                       onPressed: inputDisabled ? null : _openAttachMenu,
                     ),
                     if (_messageCtrl.text.isEmpty)
                       IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                        icon: Icon(
+                          Icons.camera_alt,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                         onPressed: inputDisabled
                             ? null
                             : () =>
@@ -1740,7 +1773,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.x2),
             GestureDetector(
               onLongPress: (_recording || showSend) ? null : _startRecording,
               onLongPressUp: _recording
@@ -1763,7 +1796,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                     }
                   }
                 },
-                backgroundColor: const Color(0xFF00A884), // WhatsApp teal
+                backgroundColor: theme.colorScheme.primary,
                 mini: false,
                 elevation: 2,
                 child: Icon(
@@ -1811,22 +1844,19 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
         return Scaffold(
           appBar: AppBar(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
             titleSpacing: 0,
             title: Row(
               children: [
                 GestureDetector(
                   onTap: _openProfile,
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundImage:
-                        otherPhoto != null ? NetworkImage(otherPhoto) : null,
-                    child: otherPhoto == null
-                        ? Text(
-                            otherName.isNotEmpty
-                                ? otherName.substring(0, 1).toUpperCase()
-                                : 'C',
-                          )
-                        : null,
+                  child: AppAvatar(
+                    imageUrl: otherPhoto,
+                    label: otherName,
+                    isOnline: otherData?['isOnline'] == true,
+                    size: AppAvatarSize.sm,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1838,19 +1868,21 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                         otherName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
                       ),
                       Text(
                         sub,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
                     ],
                   ),
@@ -1938,7 +1970,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
             ],
           ),
           body: Container(
-            color: const Color(0xFFEFE7DE), // WhatsApp default wallpaper color
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: Column(
               children: [
                 Expanded(
