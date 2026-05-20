@@ -12,7 +12,7 @@ M2.10.2: avancado com design system foundation
 M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
-M2.10.6: iniciado com responsividade e QA visual
+M2.10.6: planeado com responsividade e QA visual
 ```
 
 ## Objetivo da M2.10
