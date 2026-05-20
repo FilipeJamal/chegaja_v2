@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_tokens.dart';
+import 'app_unread_badge.dart';
 
 class AppShellDestination {
   const AppShellDestination({
@@ -37,7 +38,6 @@ class AppShellScaffold extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= AppBreakpoints.desktopMin;
-        final compactLabels = constraints.maxWidth < 420;
         final content = IndexedStack(
           index: currentIndex,
           children: [
@@ -56,14 +56,33 @@ class AppShellScaffold extends StatelessWidget {
             body: SafeArea(
               child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.x3),
+                  Container(
+                    key: const Key('app_shell_desktop_sidebar'),
+                    width: 112,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        right: BorderSide(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                      boxShadow: AppShadows.level1,
+                    ),
                     child: NavigationRail(
                       selectedIndex: currentIndex,
                       onDestinationSelected: onDestinationSelected,
-                      labelType: NavigationRailLabelType.selected,
+                      labelType: NavigationRailLabelType.all,
                       groupAlignment: -1,
-                      minWidth: 84,
+                      minWidth: 112,
+                      leading: const Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.x2,
+                          AppSpacing.x4,
+                          AppSpacing.x2,
+                          AppSpacing.x5,
+                        ),
+                        child: _ShellBrand(),
+                      ),
                       destinations: [
                         for (var index = 0;
                             index < destinations.length;
@@ -85,7 +104,6 @@ class AppShellScaffold extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const VerticalDivider(width: 1),
                   Expanded(child: content),
                 ],
               ),
@@ -98,20 +116,30 @@ class AppShellScaffold extends StatelessWidget {
             bottom: false,
             child: content,
           ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: currentIndex,
-            onDestinationSelected: onDestinationSelected,
-            labelBehavior: compactLabels
-                ? NavigationDestinationLabelBehavior.onlyShowSelected
-                : NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: [
-              for (var index = 0; index < destinations.length; index += 1)
-                NavigationDestination(
-                  icon: _buildIcon(destinations[index], selected: false),
-                  selectedIcon: _buildIcon(destinations[index], selected: true),
-                  label: destinations[index].label,
-                ),
-            ],
+          bottomNavigationBar: Container(
+            key: const Key('app_shell_mobile_navigation'),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: AppShadows.level3,
+            ),
+            child: SafeArea(
+              top: false,
+              child: NavigationBar(
+                height: 76,
+                selectedIndex: currentIndex,
+                onDestinationSelected: onDestinationSelected,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: [
+                  for (var index = 0; index < destinations.length; index += 1)
+                    NavigationDestination(
+                      icon: _buildIcon(destinations[index], selected: false),
+                      selectedIcon:
+                          _buildIcon(destinations[index], selected: true),
+                      label: destinations[index].label,
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -122,14 +150,55 @@ class AppShellScaffold extends StatelessWidget {
     AppShellDestination destination, {
     required bool selected,
   }) {
-    final icon = Icon(selected
-        ? destination.selectedIcon ?? destination.icon
-        : destination.icon);
+    final icon = Icon(
+      selected
+          ? destination.selectedIcon ?? destination.icon
+          : destination.icon,
+    );
     if (!destination.showBadge) return icon;
-    return Badge(
-      backgroundColor: Colors.redAccent,
-      smallSize: 10,
-      child: icon,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        const Positioned(
+          right: -3,
+          top: -3,
+          child: AppUnreadBadge.dot(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShellBrand extends StatelessWidget {
+  const _ShellBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      key: const Key('app_shell_desktop_brand'),
+      width: 88,
+      child: RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w900,
+          ),
+          children: const [
+            TextSpan(
+              text: 'Chega',
+              style: TextStyle(color: AppPalette.accentBlue),
+            ),
+            TextSpan(
+              text: 'Ja',
+              style: TextStyle(color: AppPalette.success),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

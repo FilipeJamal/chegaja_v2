@@ -1,4 +1,5 @@
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
+import 'package:chegaja_v2/core/widgets/app_unread_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -34,14 +35,17 @@ void main() {
       ),
     );
 
+    expect(
+        find.byKey(const Key('app_shell_mobile_navigation')), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
 
     final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(
       navBar.labelBehavior,
-      NavigationDestinationLabelBehavior.onlyShowSelected,
+      NavigationDestinationLabelBehavior.alwaysShow,
     );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('uses a NavigationRail on desktop widths', (tester) async {
@@ -75,8 +79,11 @@ void main() {
       ),
     );
 
+    expect(find.byKey(const Key('app_shell_desktop_sidebar')), findsOneWidget);
+    expect(find.byKey(const Key('app_shell_desktop_brand')), findsOneWidget);
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('preserves tab state when switching destinations',
@@ -101,6 +108,41 @@ void main() {
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     expect(find.text('Count: 1'), findsOneWidget);
+  });
+
+  testWidgets('shows unread badge when destination has badge', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShellScaffold(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: const [
+            AppShellDestination(
+              label: 'Home',
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home,
+              child: SizedBox(),
+            ),
+            AppShellDestination(
+              label: 'Messages',
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              showBadge: true,
+              child: SizedBox(),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.byType(AppUnreadBadge), findsOneWidget);
   });
 }
 

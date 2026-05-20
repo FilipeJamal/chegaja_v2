@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: avancado com componentes globais UI
+M2.10.7: avancado com componentes globais UI e navegacao global
 ```
 
 ## Objetivo da M2.10
@@ -391,4 +391,48 @@ Proximo bloco recomendado:
 
 ```text
 M2.10.7 - Bloco 3: navegacao global
+```
+
+## M2.10.7 - Bloco 3 Navegacao Global
+
+Melhorias feitas:
+
+```text
+AppShellScaffold manteve IndexedStack, selectedIndex e onDestinationSelected.
+Mobile bottom navigation passou a ter container dedicado, sombra e safe area.
+Mobile manteve labels sempre visiveis para reduzir ambiguidade.
+Badge de destino passou a usar AppUnreadBadge em vez de Badge generico.
+Desktop passou a ter sidebar/rail com fundo surface, borda e sombra leve.
+Desktop passou a mostrar marca ChegaJa no topo do rail.
+NavigationRail passou a mostrar labels para leitura mais clara em Web/Windows.
+```
+
+Ficheiros alterados:
+
+```text
+lib/core/widgets/app_shell_scaffold.dart
+test/core/widgets/app_shell_scaffold_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Cobertura ajustada:
+
+```text
+mobile renderiza bottom navigation com chave dedicada
+desktop renderiza sidebar/NavigationRail com marca ChegaJa
+troca de aba preserva estado do child
+badge aparece quando showBadge=true
+testes verificam ausencia de overflow basico via takeException
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 111/111 |
+
+Proximo bloco recomendado:
+
+```text
+M2.10.7 - Bloco 4: Mensagens Cliente/Prestador
 ```
