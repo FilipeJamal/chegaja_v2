@@ -904,3 +904,47 @@ Home Cliente, Home Prestador, Mensagens, Pedidos, Conta/Perfil e Detalhe do
 pedido em Web/Windows/mobile responsivo.
 M2.6 permanece pendente de Android fisico.
 ```
+
+## Ajuste pos-fecho - Navegacao desktop premium
+
+Motivo:
+
+```text
+A revisao manual identificou que a navegacao desktop ainda parecia uma
+NavigationRail estreita de prototipo: logo pequeno, labels centradas, muito
+espaco vazio vertical e estado ativo pouco integrado.
+```
+
+Correcao:
+
+```text
+O desktop/Web/Windows deixou de usar a rail estreita de 112px como navegacao
+principal e passou a usar uma sidebar de dashboard com 248px:
+- logo ChegaJa maior
+- subtitulo operacional "Servicos perto de ti"
+- itens horizontais com icone + texto
+- item ativo em pill retangular suave
+- rodape de estado com "Sessao ativa"
+
+Mobile manteve a bottom navigation existente.
+```
+
+Ficheiros alterados:
+
+```text
+lib/core/widgets/app_shell_scaffold.dart
+test/core/widgets/app_shell_scaffold_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test test\core\widgets\app_shell_scaffold_test.dart` | passou, 6/6 |
+| `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
+| revisao browser desktop 1366x768 | sidebar premium renderizada, sem overflow horizontal |
+| revisao browser mobile 390x844 | bottom navigation preservada |
+| `flutter test` | passou, 130/130 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |

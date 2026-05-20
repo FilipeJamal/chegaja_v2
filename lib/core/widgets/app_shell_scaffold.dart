@@ -56,53 +56,12 @@ class AppShellScaffold extends StatelessWidget {
             body: SafeArea(
               child: Row(
                 children: [
-                  Container(
+                  _DesktopSidebar(
                     key: const Key('app_shell_desktop_sidebar'),
-                    width: 112,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border(
-                        right: BorderSide(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                      ),
-                      boxShadow: AppShadows.level1,
-                    ),
-                    child: NavigationRail(
-                      selectedIndex: currentIndex,
-                      onDestinationSelected: onDestinationSelected,
-                      labelType: NavigationRailLabelType.all,
-                      groupAlignment: -1,
-                      minWidth: 112,
-                      leading: const Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.x2,
-                          AppSpacing.x4,
-                          AppSpacing.x2,
-                          AppSpacing.x5,
-                        ),
-                        child: _ShellBrand(),
-                      ),
-                      destinations: [
-                        for (var index = 0;
-                            index < destinations.length;
-                            index += 1)
-                          NavigationRailDestination(
-                            icon: _buildIcon(
-                              destinations[index],
-                              selected: false,
-                            ),
-                            selectedIcon: _buildIcon(
-                              destinations[index],
-                              selected: true,
-                            ),
-                            label: Text(
-                              destinations[index].label,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                      ],
-                    ),
+                    currentIndex: currentIndex,
+                    onDestinationSelected: onDestinationSelected,
+                    destinations: destinations,
+                    iconBuilder: _buildIcon,
                   ),
                   Expanded(child: content),
                 ],
@@ -170,6 +129,219 @@ class AppShellScaffold extends StatelessWidget {
   }
 }
 
+class _DesktopSidebar extends StatelessWidget {
+  const _DesktopSidebar({
+    super.key,
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+    required this.iconBuilder,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<AppShellDestination> destinations;
+  final Widget Function(AppShellDestination destination,
+      {required bool selected}) iconBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      width: 248,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+          right: BorderSide(color: scheme.outline.withValues(alpha: 0.45)),
+        ),
+        boxShadow: AppShadows.level1,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x5,
+          AppSpacing.x5,
+          AppSpacing.x5,
+          AppSpacing.x4,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _ShellBrand(),
+            const SizedBox(height: AppSpacing.x2),
+            Text(
+              'Servicos perto de ti',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x7),
+            for (var index = 0; index < destinations.length; index += 1) ...[
+              _DesktopSidebarItem(
+                destination: destinations[index],
+                selected: index == currentIndex,
+                iconBuilder: iconBuilder,
+                onTap: () => onDestinationSelected(index),
+              ),
+              if (index < destinations.length - 1)
+                const SizedBox(height: AppSpacing.x2),
+            ],
+            const Spacer(),
+            const _DesktopSidebarSessionStatus(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopSidebarItem extends StatelessWidget {
+  const _DesktopSidebarItem({
+    required this.destination,
+    required this.selected,
+    required this.iconBuilder,
+    required this.onTap,
+  });
+
+  final AppShellDestination destination;
+  final bool selected;
+  final Widget Function(AppShellDestination destination,
+      {required bool selected}) iconBuilder;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selectedBackground = AppPalette.primary.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14,
+    );
+    final foreground = selected ? AppPalette.primary : scheme.onSurfaceVariant;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            constraints: const BoxConstraints(
+              minHeight: AppSizes.minTapTarget,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x4,
+              vertical: AppSpacing.x3,
+            ),
+            decoration: BoxDecoration(
+              color: selected ? selectedBackground : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: selected
+                    ? AppPalette.primary.withValues(alpha: 0.38)
+                    : Colors.transparent,
+              ),
+            ),
+            child: IconTheme(
+              data: IconThemeData(color: foreground, size: 22),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 28,
+                    child: Center(
+                      child: iconBuilder(destination, selected: selected),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x3),
+                  Expanded(
+                    child: Text(
+                      destination.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: selected ? scheme.onSurface : foreground,
+                        fontWeight:
+                            selected ? FontWeight.w800 : FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DesktopSidebarSessionStatus extends StatelessWidget {
+  const _DesktopSidebarSessionStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppPalette.success.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: const Icon(
+              Icons.verified_user_outlined,
+              color: AppPalette.success,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Estado',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x1),
+                Text(
+                  'Sessao ativa',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShellBrand extends StatelessWidget {
   const _ShellBrand();
 
@@ -179,11 +351,10 @@ class _ShellBrand extends StatelessWidget {
 
     return SizedBox(
       key: const Key('app_shell_desktop_brand'),
-      width: 88,
       child: RichText(
-        textAlign: TextAlign.center,
+        textAlign: TextAlign.start,
         text: TextSpan(
-          style: theme.textTheme.labelLarge?.copyWith(
+          style: theme.textTheme.titleLarge?.copyWith(
             fontStyle: FontStyle.italic,
             fontWeight: FontWeight.w900,
           ),

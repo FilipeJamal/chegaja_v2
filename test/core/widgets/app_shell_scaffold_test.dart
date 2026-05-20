@@ -48,7 +48,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('uses a NavigationRail on desktop widths', (tester) async {
+  testWidgets('uses a premium sidebar on desktop widths', (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -81,8 +81,52 @@ void main() {
 
     expect(find.byKey(const Key('app_shell_desktop_sidebar')), findsOneWidget);
     expect(find.byKey(const Key('app_shell_desktop_brand')), findsOneWidget);
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('Servicos perto de ti'), findsOneWidget);
+    expect(find.text('Sessao ativa'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Messages'), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NavigationBar), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop sidebar selection calls callback', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    int? selectedIndex;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShellScaffold(
+          currentIndex: 0,
+          onDestinationSelected: (index) => selectedIndex = index,
+          destinations: const [
+            AppShellDestination(
+              label: 'Home',
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home,
+              child: SizedBox(),
+            ),
+            AppShellDestination(
+              label: 'Messages',
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              child: SizedBox(),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Messages'));
+    await tester.pumpAndSettle();
+
+    expect(selectedIndex, 1);
     expect(tester.takeException(), isNull);
   });
 
@@ -110,7 +154,8 @@ void main() {
     expect(find.text('Count: 1'), findsOneWidget);
   });
 
-  testWidgets('shows unread badge when destination has badge', (tester) async {
+  testWidgets('shows unread badge when mobile destination has badge',
+      (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -143,6 +188,43 @@ void main() {
     );
 
     expect(find.byType(AppUnreadBadge), findsOneWidget);
+  });
+
+  testWidgets('shows unread badge when desktop destination has badge',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AppShellScaffold(
+          currentIndex: 0,
+          onDestinationSelected: (_) {},
+          destinations: const [
+            AppShellDestination(
+              label: 'Home',
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home,
+              child: SizedBox(),
+            ),
+            AppShellDestination(
+              label: 'Messages',
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              showBadge: true,
+              child: SizedBox(),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.byType(AppUnreadBadge), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
