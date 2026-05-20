@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: spec product UI alignment
+M2.10.7: planeado product UI alignment
 ```
 
 ## Objetivo da M2.10
@@ -301,4 +301,44 @@ Play Store
 package id final
 HTTPS App Links
 fechar M2.6
+```
+
+Plano aprovado para execucao:
+
+```text
+docs/superpowers/plans/2026-05-20-m2-10-7-product-ui-alignment.md
+```
+
+Ordem tecnica definida:
+
+```text
+componentes globais primeiro
+navegacao global
+Mensagens Cliente/Prestador
+Pedidos Cliente/Prestador
+Conta/Perfil Cliente/Prestador
+responsividade e QA visual
+```
+
+Ficheiros-chave auditados:
+
+```text
+lib/core/widgets/app_shell_scaffold.dart
+lib/core/widgets/app_content_shell.dart
+lib/features/common/mensagens/mensagens_tab.dart
+lib/features/common/mensagens/chat_thread_screen.dart
+lib/features/cliente/cliente_home_screen.dart
+lib/features/prestador/prestador_home_screen.dart
+lib/features/cliente/widgets/pedido_list_card.dart
+lib/features/prestador/widgets/prestador_home_components.dart
+lib/features/cliente/cliente_perfil_screen.dart
+lib/features/prestador/prestador_perfil_screen.dart
+```
+
+Decisao de implementacao:
+
+```text
+Nao redesenhar telas de forma isolada.
+Criar primeiro os componentes globais reutilizaveis da UI de produto.
+Aplicar depois em Mensagens, Pedidos e Conta/Perfil preservando fluxos e keys.
 ```
