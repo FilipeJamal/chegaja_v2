@@ -13,7 +13,7 @@ M2.10.3: avancado com Home Cliente redesign
 M2.10.4: avancado com Home Prestador redesign
 M2.10.5: avancado com Pedido, listas e detalhe polish
 M2.10.6: avancado com responsividade e QA visual
-M2.10.7: avancado com componentes globais UI, navegacao global e mensagens premium
+M2.10.7: avancado com componentes globais UI, navegacao global, mensagens premium e pedidos premium
 ```
 
 ## Objetivo da M2.10
@@ -497,4 +497,94 @@ Proximo bloco recomendado:
 
 ```text
 M2.10.7 - Bloco 5: Pedidos Cliente/Prestador
+```
+
+## M2.10.7 - Bloco 5 Pedidos Cliente/Prestador
+
+Melhorias feitas:
+
+```text
+Criado OrderOperationalCard como card operacional comum para pedidos.
+PedidoListCard passou a compor OrderOperationalCard mantendo a API publica.
+Aba Pedidos do Cliente passou a usar AppContentShell, AppProductHeader e
+AppSegmentedTabs com contadores por estado.
+Aba Pedidos do Prestador passou a usar AppContentShell, AppProductHeader e
+AppSegmentedTabs com contadores por estado.
+Listas Cliente/Prestador mantiveram mobile em uma coluna e desktop com largura
+de dashboard.
+Pedidos disponiveis do Prestador continuam a preservar as keys dinamicas de
+Aceitar/Ignorar e os callbacks existentes.
+```
+
+Comportamento preservado:
+
+```text
+streams de pedidos Cliente/Prestador
+abrir detalhe do pedido
+PedidoChatPreview quando ja existia
+acoes Cliente no detalhe: proposta, duvida e confirmacao de valor
+acoes Prestador no detalhe: orcamento, iniciar servico e valor final
+aceitar pedido disponivel
+ignorar pedido disponivel
+cancelar trabalho quando ja existia
+services/repositories sem alteracao
+schema/regras/functions sem alteracao
+```
+
+Keys preservadas:
+
+```text
+cliente_rejeitar_proposta_button
+cliente_aceitar_proposta_button
+cliente_duvida_valor_button
+confirmar_valor_button
+cliente_home_active_orders_panel
+prestador_pedido_card_<pedidoId>
+prestador_aceitar_pedido_<pedidoId>
+prestador_ignorar_pedido_<pedidoId>
+prestador_enviar_orcamento_button
+prestador_iniciar_servico_button
+valor_final_field
+prestador_enviar_valor_final_button
+prestador_lancar_valor_final_button
+prestador_orcamento_dialog_later_button
+prestador_orcamento_dialog_now_button
+orcamento_min_field
+orcamento_max_field
+orcamento_msg_field
+orcamento_enviar_button
+prestador_home_available_orders_section
+```
+
+Ficheiros alterados/criados:
+
+```text
+lib/features/common/widgets/order_operational_card.dart
+lib/features/cliente/widgets/pedido_list_card.dart
+lib/features/cliente/cliente_home_screen.dart
+lib/features/prestador/prestador_home_screen.dart
+test/features/common/widgets/order_operational_card_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Cobertura adicionada:
+
+```text
+OrderOperationalCard renderiza titulo, servico e status
+OrderOperationalCard renderiza CTA principal e chama callback
+OrderOperationalCard renderiza acao secundaria
+OrderOperationalCard funciona sem avatar ou imagem
+OrderOperationalCard suporta valor, local e horario
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test` | passou, 121/121 |
+
+Proximo bloco recomendado:
+
+```text
+M2.10.7 - Bloco 6: Conta/Perfil Cliente/Prestador
 ```

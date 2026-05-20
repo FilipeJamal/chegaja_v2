@@ -18,7 +18,9 @@ import 'package:chegaja_v2/core/services/location_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
+import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
+import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 
@@ -1461,6 +1463,7 @@ class _PrestadorPedidosTab extends StatefulWidget {
 
 class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
   late final Future<User> _signedInFuture;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -1501,94 +1504,135 @@ class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
 
     final df = DateFormat('dd/MM HH:mm');
 
-    return DefaultTabController(
-      length: 3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Meus trabalhos',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            const TabBar(
-              labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              tabs: [
-                Tab(text: 'Em aberto'),
-                Tab(text: 'Concluídos'),
-                Tab(text: 'Cancelados'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: StreamBuilder<List<Pedido>>(
-                stream: PedidosRepo.streamPedidosDoPrestador(user.uid),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const AppLoadingView(
-                      label: 'A carregar trabalhos...',
-                    );
-                  }
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return AppContentShell(
+              width: AppContentWidth.dashboard,
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AppProductHeader(
+                      title: 'Pedidos',
+                      subtitle:
+                          'Gere trabalhos em aberto, concluidos e cancelados.',
+                      showBrand: false,
+                    ),
+                    const SizedBox(height: AppSpacing.x5),
+                    Expanded(
+                      child: StreamBuilder<List<Pedido>>(
+                        stream: PedidosRepo.streamPedidosDoPrestador(user.uid),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const AppLoadingView(
+                              label: 'A carregar trabalhos...',
+                            );
+                          }
 
-                  if (snapshot.hasError) {
-                    if (kDebugMode) {
-                      // ignore: avoid_print
-                      print(
-                        '[PrestadorPedidosTab] trabalhos stream error: ${snapshot.error}',
-                      );
-                    }
-                    return const AppErrorView(
-                      message:
-                          'Nao conseguimos carregar os trabalhos agora. Tenta novamente daqui a pouco.',
-                    );
-                  }
+                          if (snapshot.hasError) {
+                            if (kDebugMode) {
+                              // ignore: avoid_print
+                              print(
+                                '[PrestadorPedidosTab] trabalhos stream error: ${snapshot.error}',
+                              );
+                            }
+                            return const AppErrorView(
+                              message:
+                                  'Nao conseguimos carregar os trabalhos agora. Tenta novamente daqui a pouco.',
+                            );
+                          }
 
-                  final pedidos = snapshot.data ?? [];
+                          final pedidos = snapshot.data ?? [];
 
-                  final emAberto = pedidos
-                      .where((p) => !_isConcluido(p) && !_isCancelado(p))
-                      .toList();
-                  final concluidos = pedidos.where(_isConcluido).toList();
-                  final cancelados = pedidos.where(_isCancelado).toList();
+                          final emAberto = pedidos
+                              .where(
+                                  (p) => !_isConcluido(p) && !_isCancelado(p))
+                              .toList();
+                          final concluidos =
+                              pedidos.where(_isConcluido).toList();
+                          final cancelados =
+                              pedidos.where(_isCancelado).toList();
 
-                  emAberto.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                  concluidos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                  cancelados.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                          emAberto.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
+                          concluidos.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
+                          cancelados.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
 
-                  return TabBarView(
-                    children: [
-                      _PrestadorListaPedidos(
-                        pedidos: emAberto,
-                        emptyTitle: 'Sem trabalhos em aberto',
-                        emptyMessage:
-                            'Vai a Inicio para aceitar pedidos compativeis quando estiveres online.',
-                        df: df,
-                        podeCancelar: true,
+                          final selectedPedidos = switch (_selectedIndex) {
+                            1 => concluidos,
+                            2 => cancelados,
+                            _ => emAberto,
+                          };
+                          final selectedEmptyTitle = switch (_selectedIndex) {
+                            1 => 'Sem trabalhos concluidos',
+                            2 => 'Sem trabalhos cancelados',
+                            _ => 'Sem trabalhos em aberto',
+                          };
+                          final selectedEmptyMessage = switch (_selectedIndex) {
+                            1 =>
+                              'Os trabalhos concluidos ficam aqui para consulta.',
+                            2 =>
+                              'Trabalhos cancelados aparecem aqui quando existirem.',
+                            _ =>
+                              'Vai a Inicio para aceitar pedidos compativeis quando estiveres online.',
+                          };
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppSegmentedTabs(
+                                items: [
+                                  AppSegmentedTab(
+                                    label: 'Em aberto',
+                                    count: emAberto.length,
+                                    icon: Icons.work_outline_rounded,
+                                  ),
+                                  AppSegmentedTab(
+                                    label: 'Concluidos',
+                                    count: concluidos.length,
+                                    icon: Icons.check_circle_outline_rounded,
+                                  ),
+                                  AppSegmentedTab(
+                                    label: 'Cancelados',
+                                    count: cancelados.length,
+                                    icon: Icons.cancel_outlined,
+                                  ),
+                                ],
+                                selectedIndex: _selectedIndex,
+                                onChanged: (index) {
+                                  setState(() => _selectedIndex = index);
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.x4),
+                              Expanded(
+                                child: _PrestadorListaPedidos(
+                                  pedidos: selectedPedidos,
+                                  emptyTitle: selectedEmptyTitle,
+                                  emptyMessage: selectedEmptyMessage,
+                                  df: df,
+                                  podeCancelar: _selectedIndex == 0,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
-                      _PrestadorListaPedidos(
-                        pedidos: concluidos,
-                        emptyTitle: 'Sem trabalhos concluidos',
-                        emptyMessage:
-                            'Os trabalhos concluidos ficam aqui para consulta.',
-                        df: df,
-                        podeCancelar: false,
-                      ),
-                      _PrestadorListaPedidos(
-                        pedidos: cancelados,
-                        emptyTitle: 'Sem trabalhos cancelados',
-                        emptyMessage:
-                            'Trabalhos cancelados aparecem aqui quando existirem.',
-                        df: df,
-                        podeCancelar: false,
-                      ),
-                    ],
-                  );
-                },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -1621,8 +1665,9 @@ class _PrestadorListaPedidos extends StatelessWidget {
     }
 
     return ListView.separated(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x7),
       itemCount: pedidos.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x3),
       itemBuilder: (context, index) {
         final pedido = pedidos[index];
         return _PrestadorPedidoCard(

@@ -21,11 +21,12 @@ import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
 import 'package:chegaja_v2/core/widgets/app_list_tile.dart';
+import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_section_header.dart';
+import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
-import 'package:chegaja_v2/core/widgets/app_tab_bar.dart';
 import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
 
@@ -993,116 +994,172 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
 
 /// ---------- ABA "PEDIDOS" ----------
 
-class _ClientePedidosTab extends StatelessWidget {
+class _ClientePedidosTab extends StatefulWidget {
   final Stream<List<Pedido>>? pedidosStream;
 
   const _ClientePedidosTab({this.pedidosStream});
 
   @override
+  State<_ClientePedidosTab> createState() => _ClientePedidosTabState();
+}
+
+class _ClientePedidosTabState extends State<_ClientePedidosTab> {
+  int _selectedIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final user = AuthService.currentUser;
     if (user == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return DefaultTabController(
-      length: 3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.myOrdersTitle,
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppSpacing.x3),
-            AppTabBar(
-              tabs: [
-                Tab(text: l10n.ordersTabPending),
-                Tab(text: l10n.ordersTabCompleted),
-                Tab(text: l10n.ordersTabCancelled),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x2),
-            Expanded(
-              child: StreamBuilder<List<Pedido>>(
-                initialData: const <Pedido>[],
-                stream: (pedidosStream ??
-                        PedidosRepo.streamPedidosDoCliente(user.uid))
-                    .timeout(
-                  const Duration(seconds: 12),
-                  onTimeout: (sink) {
-                    if (kDebugMode) {
-                      // ignore: avoid_print
-                      print('[ClientePedidosTab] stream timeout -> empty list');
-                    }
-                    sink.add(const <Pedido>[]);
-                  },
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return AppContentShell(
+              width: AppContentWidth.dashboard,
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppProductHeader(
+                      title: l10n.myOrdersTitle,
+                      subtitle:
+                          'Acompanha pedidos ativos, concluidos e cancelados.',
+                      showBrand: false,
+                    ),
+                    const SizedBox(height: AppSpacing.x5),
+                    Expanded(
+                      child: StreamBuilder<List<Pedido>>(
+                        initialData: const <Pedido>[],
+                        stream: (widget.pedidosStream ??
+                                PedidosRepo.streamPedidosDoCliente(user.uid))
+                            .timeout(
+                          const Duration(seconds: 12),
+                          onTimeout: (sink) {
+                            if (kDebugMode) {
+                              // ignore: avoid_print
+                              print(
+                                '[ClientePedidosTab] stream timeout -> empty list',
+                              );
+                            }
+                            sink.add(const <Pedido>[]);
+                          },
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            return const AppLoadingView(
+                              label: 'A carregar pedidos...',
+                            );
+                          }
+                          if (snapshot.hasError) {
+                            if (kDebugMode) {
+                              // ignore: avoid_print
+                              print(
+                                '[ClientePedidosTab] stream error: ${snapshot.error}',
+                              );
+                            }
+                            return const AppErrorView(
+                              message:
+                                  'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
+                            );
+                          }
+
+                          final pedidos = snapshot.data ?? [];
+
+                          final pendentes = pedidos
+                              .where(
+                                (p) =>
+                                    p.estado != 'concluido' &&
+                                    p.estado != 'cancelado',
+                              )
+                              .toList();
+                          final concluidos = pedidos
+                              .where((p) => p.estado == 'concluido')
+                              .toList();
+                          final cancelados = pedidos
+                              .where((p) => p.estado == 'cancelado')
+                              .toList();
+
+                          pendentes.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
+                          concluidos.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
+                          cancelados.sort(
+                            (a, b) => b.createdAt.compareTo(a.createdAt),
+                          );
+
+                          final selectedPedidos = switch (_selectedIndex) {
+                            1 => concluidos,
+                            2 => cancelados,
+                            _ => pendentes,
+                          };
+                          final selectedEmptyTitle = switch (_selectedIndex) {
+                            1 => 'Sem pedidos concluidos',
+                            2 => 'Sem pedidos cancelados',
+                            _ => 'Sem pedidos ativos',
+                          };
+                          final selectedEmptyMessage = switch (_selectedIndex) {
+                            1 =>
+                              'Os pedidos concluidos ficam guardados aqui para consulta.',
+                            2 =>
+                              'Pedidos cancelados aparecem aqui quando existirem.',
+                            _ =>
+                              'Quando criares um pedido, ele aparece aqui ate ser concluido ou cancelado.',
+                          };
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppSegmentedTabs(
+                                items: [
+                                  AppSegmentedTab(
+                                    label: l10n.ordersTabPending,
+                                    count: pendentes.length,
+                                    icon: Icons.bolt_rounded,
+                                  ),
+                                  AppSegmentedTab(
+                                    label: l10n.ordersTabCompleted,
+                                    count: concluidos.length,
+                                    icon: Icons.check_circle_outline_rounded,
+                                  ),
+                                  AppSegmentedTab(
+                                    label: l10n.ordersTabCancelled,
+                                    count: cancelados.length,
+                                    icon: Icons.cancel_outlined,
+                                  ),
+                                ],
+                                selectedIndex: _selectedIndex,
+                                onChanged: (index) {
+                                  setState(() => _selectedIndex = index);
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.x4),
+                              Expanded(
+                                child: _ListaPedidosCliente(
+                                  pedidos: selectedPedidos,
+                                  emptyTitle: selectedEmptyTitle,
+                                  emptyMessage: selectedEmptyMessage,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const AppLoadingView(label: 'A carregar pedidos...');
-                  }
-                  if (snapshot.hasError) {
-                    if (kDebugMode) {
-                      // ignore: avoid_print
-                      print(
-                        '[ClientePedidosTab] stream error: ${snapshot.error}',
-                      );
-                    }
-                    return const AppErrorView(
-                      message:
-                          'Nao conseguimos carregar os pedidos agora. Tenta novamente daqui a pouco.',
-                    );
-                  }
-
-                  final pedidos = snapshot.data ?? [];
-
-                  final pendentes = pedidos
-                      .where(
-                        (p) =>
-                            p.estado != 'concluido' && p.estado != 'cancelado',
-                      )
-                      .toList();
-                  final concluidos =
-                      pedidos.where((p) => p.estado == 'concluido').toList();
-                  final cancelados =
-                      pedidos.where((p) => p.estado == 'cancelado').toList();
-
-                  pendentes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                  concluidos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                  cancelados.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-                  return TabBarView(
-                    children: [
-                      _ListaPedidosCliente(
-                        pedidos: pendentes,
-                        emptyTitle: 'Sem pedidos ativos',
-                        emptyMessage:
-                            'Quando criares um pedido, ele aparece aqui ate ser concluido ou cancelado.',
-                      ),
-                      _ListaPedidosCliente(
-                        pedidos: concluidos,
-                        emptyTitle: 'Sem pedidos concluidos',
-                        emptyMessage:
-                            'Os pedidos concluidos ficam guardados aqui para consulta.',
-                      ),
-                      _ListaPedidosCliente(
-                        pedidos: cancelados,
-                        emptyTitle: 'Sem pedidos cancelados',
-                        emptyMessage:
-                            'Pedidos cancelados aparecem aqui quando existirem.',
-                      ),
-                    ],
-                  );
-                },
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -1131,8 +1188,9 @@ class _ListaPedidosCliente extends StatelessWidget {
     }
 
     return ListView.separated(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x7),
       itemCount: pedidos.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x3),
       itemBuilder: (context, index) {
         final pedido = pedidos[index];
         return _PedidoClienteCard(pedido: pedido);
