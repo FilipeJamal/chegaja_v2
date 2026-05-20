@@ -118,6 +118,13 @@ class AppButton extends StatelessWidget {
           }),
         );
       case AppButtonVariant.secondary:
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final enabledColor =
+            isDark ? AppPalette.accentBlue : AppPalette.secondary;
+        final hoverColor =
+            isDark ? const Color(0xFF60A5FA) : AppPalette.secondaryHover;
+        final pressedColor =
+            isDark ? const Color(0xFF3B82F6) : AppPalette.secondaryPressed;
         return ButtonStyle(
           minimumSize: WidgetStatePropertyAll(Size(0, buttonHeight)),
           textStyle: WidgetStatePropertyAll(textStyle),
@@ -131,24 +138,24 @@ class AppButton extends StatelessWidget {
               return const BorderSide(color: AppPalette.secondaryDisabled);
             }
             if (states.contains(WidgetState.pressed)) {
-              return const BorderSide(color: AppPalette.secondaryPressed);
+              return BorderSide(color: pressedColor);
             }
             if (states.contains(WidgetState.hovered)) {
-              return const BorderSide(color: AppPalette.secondaryHover);
+              return BorderSide(color: hoverColor);
             }
-            return const BorderSide(color: AppPalette.secondary);
+            return BorderSide(color: enabledColor);
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return AppPalette.secondaryDisabled;
             }
             if (states.contains(WidgetState.pressed)) {
-              return AppPalette.secondaryPressed;
+              return pressedColor;
             }
             if (states.contains(WidgetState.hovered)) {
-              return AppPalette.secondaryHover;
+              return hoverColor;
             }
-            return AppPalette.secondary;
+            return enabledColor;
           }),
         );
       case AppButtonVariant.ghost:
@@ -173,4 +180,3 @@ class AppButton extends StatelessWidget {
     }
   }
 }
-

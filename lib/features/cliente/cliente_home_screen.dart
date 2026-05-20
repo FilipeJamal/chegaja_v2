@@ -18,9 +18,11 @@ import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
+import 'package:chegaja_v2/core/widgets/app_button.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
 import 'package:chegaja_v2/core/widgets/app_list_tile.dart';
+import 'package:chegaja_v2/core/widgets/app_metric_tile.dart';
 import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_section_header.dart';
 import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
@@ -330,6 +332,8 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
           child: _ClienteInicioTab(
             pedidosStream: _pedidosClienteStream,
             servicosStream: _servicosStream,
+            onOpenOrders: () => setState(() => _currentIndex = 1),
+            onOpenMessages: () => setState(() => _currentIndex = 2),
           ),
         ),
         AppShellDestination(
@@ -361,10 +365,14 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
 class _ClienteInicioTab extends StatelessWidget {
   final Stream<List<Pedido>>? pedidosStream;
   final Stream<List<Servico>>? servicosStream;
+  final VoidCallback onOpenOrders;
+  final VoidCallback onOpenMessages;
 
   const _ClienteInicioTab({
     this.pedidosStream,
     this.servicosStream,
+    required this.onOpenOrders,
+    required this.onOpenMessages,
   });
 
   @override
@@ -376,6 +384,8 @@ class _ClienteInicioTab extends StatelessWidget {
         pedidosStream: pedidosStream,
         servicosStream: servicosStream,
         user: user,
+        onOpenOrders: onOpenOrders,
+        onOpenMessages: onOpenMessages,
         onSearch: () {
           showSearch(
             context: context,
@@ -392,12 +402,16 @@ class _ClienteHomeDashboard extends StatelessWidget {
     required this.pedidosStream,
     required this.servicosStream,
     required this.user,
+    required this.onOpenOrders,
+    required this.onOpenMessages,
     required this.onSearch,
   });
 
   final Stream<List<Pedido>>? pedidosStream;
   final Stream<List<Servico>>? servicosStream;
   final User? user;
+  final VoidCallback onOpenOrders;
+  final VoidCallback onOpenMessages;
   final VoidCallback onSearch;
 
   @override
@@ -432,6 +446,8 @@ class _ClienteHomeDashboard extends StatelessWidget {
         final sideColumn = _ClienteHomeSideColumn(
           user: user,
           pedidosStream: pedidosStream,
+          onOpenOrders: onOpenOrders,
+          onOpenMessages: onOpenMessages,
         );
 
         if (!isDesktop) {
@@ -489,9 +505,7 @@ class _ClienteServicesStreamSection extends StatelessWidget {
       stream: servicosStream ?? ServicosRepo.streamServicosAtivos(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppLoadingView(
-            label: 'A carregar servicos disponiveis...',
-          );
+          return const ClienteServicesLoadingPreview();
         }
 
         if (snapshot.hasError) {
@@ -626,10 +640,14 @@ class _ClienteHomeSideColumn extends StatelessWidget {
   const _ClienteHomeSideColumn({
     required this.user,
     required this.pedidosStream,
+    required this.onOpenOrders,
+    required this.onOpenMessages,
   });
 
   final User? user;
   final Stream<List<Pedido>>? pedidosStream;
+  final VoidCallback onOpenOrders;
+  final VoidCallback onOpenMessages;
 
   @override
   Widget build(BuildContext context) {
@@ -648,9 +666,21 @@ class _ClienteHomeSideColumn extends StatelessWidget {
         _ClienteActiveOrdersPanel(
           clienteId: user!.uid,
           pedidosStream: pedidosStream,
+          onOpenOrders: onOpenOrders,
+        ),
+        const SizedBox(height: AppSpacing.x4),
+        _ClienteHomeSummaryPanel(
+          clienteId: user!.uid,
+          pedidosStream: pedidosStream,
+        ),
+        const SizedBox(height: AppSpacing.x4),
+        _ClienteHomeGuidancePanel(
+          onChooseService: () => _scrollToServices(context),
         ),
         const SizedBox(height: AppSpacing.x4),
         _ClienteMensagensBanner(clienteId: user!.uid),
+        const SizedBox(height: AppSpacing.x4),
+        _ClienteHomeSupportPanel(onOpenMessages: onOpenMessages),
       ],
     );
   }
@@ -706,10 +736,12 @@ class _ClienteActiveOrdersPanel extends StatelessWidget {
   const _ClienteActiveOrdersPanel({
     required this.clienteId,
     required this.pedidosStream,
+    required this.onOpenOrders,
   });
 
   final String clienteId;
   final Stream<List<Pedido>>? pedidosStream;
+  final VoidCallback onOpenOrders;
 
   @override
   Widget build(BuildContext context) {
@@ -731,13 +763,19 @@ class _ClienteActiveOrdersPanel extends StatelessWidget {
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (ativos.isEmpty) {
-          return const AppActionPanel(
-            key: Key('cliente_home_active_orders_panel'),
+          return AppActionPanel(
+            key: const Key('cliente_home_active_orders_panel'),
             title: 'Sem pedidos ativos',
             message:
                 'Quando criares um pedido, acompanhas aqui o proximo passo.',
             icon: Icons.receipt_long_outlined,
             tone: AppStatusTone.neutral,
+            primaryAction: AppActionPanelAction(
+              label: 'Ver pedidos',
+              icon: Icons.list_alt_rounded,
+              variant: AppButtonVariant.secondary,
+              onPressed: onOpenOrders,
+            ),
           );
         }
 
@@ -783,6 +821,122 @@ class _ClienteActiveOrdersPanel extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ClienteHomeSummaryPanel extends StatelessWidget {
+  const _ClienteHomeSummaryPanel({
+    required this.clienteId,
+    required this.pedidosStream,
+  });
+
+  final String clienteId;
+  final Stream<List<Pedido>>? pedidosStream;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Pedido>>(
+      stream: pedidosStream ?? PedidosRepo.streamPedidosDoCliente(clienteId),
+      builder: (context, snapshot) {
+        final pedidos = snapshot.data ?? const <Pedido>[];
+        final ativos = pedidos.where((p) => !_pedidoEstaFinalizado(p)).length;
+        final concluidos = pedidos
+            .where((p) => p.estado.toLowerCase().trim() == 'concluido')
+            .length;
+        final aDecidir = pedidos.where(_temAcaoPendente).length;
+
+        return Column(
+          key: const Key('cliente_home_summary_panel'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AppSectionHeader(
+              title: 'Resumo rapido',
+              subtitle: 'O essencial para nao perderes contexto.',
+              dense: true,
+            ),
+            AppMetricTile(
+              label: 'Pedidos ativos',
+              value: '$ativos',
+              supportingText: ativos == 1
+                  ? 'Um servico em acompanhamento'
+                  : 'Servicos em acompanhamento',
+              icon: Icons.bolt_rounded,
+              tone: ativos > 0 ? AppStatusTone.info : AppStatusTone.neutral,
+            ),
+            const SizedBox(height: AppSpacing.x3),
+            AppMetricTile(
+              label: 'Acoes para decidir',
+              value: '$aDecidir',
+              supportingText: aDecidir > 0
+                  ? 'Tens uma resposta pendente'
+                  : 'Nada urgente agora',
+              icon: Icons.pending_actions_rounded,
+              tone:
+                  aDecidir > 0 ? AppStatusTone.warning : AppStatusTone.success,
+            ),
+            const SizedBox(height: AppSpacing.x3),
+            AppMetricTile(
+              label: 'Concluidos',
+              value: '$concluidos',
+              supportingText: 'Historico guardado nos pedidos',
+              icon: Icons.verified_rounded,
+              tone: AppStatusTone.success,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ClienteHomeGuidancePanel extends StatelessWidget {
+  const _ClienteHomeGuidancePanel({
+    required this.onChooseService,
+  });
+
+  final VoidCallback onChooseService;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppActionPanel(
+      key: const Key('cliente_home_guidance_panel'),
+      title: 'Como comecar bem',
+      message:
+          'Escolhe uma categoria, descreve o que precisas e acompanha proposta, chat e estado no mesmo lugar.',
+      icon: Icons.route_outlined,
+      tone: AppStatusTone.info,
+      primaryAction: AppActionPanelAction(
+        label: 'Escolher servico',
+        icon: Icons.add_rounded,
+        onPressed: onChooseService,
+      ),
+    );
+  }
+}
+
+class _ClienteHomeSupportPanel extends StatelessWidget {
+  const _ClienteHomeSupportPanel({
+    required this.onOpenMessages,
+  });
+
+  final VoidCallback onOpenMessages;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppActionPanel(
+      key: const Key('cliente_home_support_panel'),
+      title: 'Precisas de ajuda?',
+      message:
+          'Abre Mensagens para acompanhar conversas ou falar no contexto do servico.',
+      icon: Icons.headset_mic_outlined,
+      tone: AppStatusTone.info,
+      primaryAction: AppActionPanelAction(
+        label: 'Abrir mensagens',
+        icon: Icons.chat_bubble_outline_rounded,
+        variant: AppButtonVariant.secondary,
+        onPressed: onOpenMessages,
+      ),
     );
   }
 }

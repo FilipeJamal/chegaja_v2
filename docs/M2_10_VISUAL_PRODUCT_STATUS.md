@@ -948,3 +948,52 @@ Validacao:
 | `flutter test` | passou, 130/130 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## Ajuste pos-fecho - Direcao Image2 na Home Cliente
+
+Motivo:
+
+```text
+A referencia visual aprovada para a app mostrou uma Home com composicao mais
+rica: sidebar de dashboard, area principal com servicos bem categorizados,
+cards com icones/colorizacao propria e uma coluna lateral com informacao util.
+A Home Cliente ja tinha melhorado, mas ainda havia espaco lateral pouco
+aproveitado e o estado de carregamento dos servicos parecia tecnico.
+```
+
+Correcao:
+
+```text
+A Home Cliente passou a usar melhor o espaco desktop:
+- coluna lateral com resumo rapido, pedido ativo, guia de inicio e atalho para mensagens
+- estado sem pedidos ativos com CTA para abrir a aba Pedidos
+- loading de servicos com preview visual de categorias em vez de spinner isolado
+- tiles de servico com icones e acentos por categoria
+- botoes secundarios ganharam contraste correto no tema escuro
+- suporte a categorias como canalizacao, limpeza, eletricista, pintura, mudancas,
+  montagem, bolos personalizados, caricaturista e carpinteiro
+
+Mobile permanece em uma coluna e sem alteracao de backend ou fluxo.
+```
+
+Ficheiros alterados:
+
+```text
+lib/features/cliente/cliente_home_screen.dart
+lib/features/cliente/widgets/cliente_home_components.dart
+lib/core/widgets/app_button.dart
+test/features/cliente/widgets/cliente_home_components_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test test\features\cliente\widgets\cliente_home_components_test.dart test\features\cliente\cliente_home_redesign_test.dart` | passou |
+| `flutter test` | passou, 132/132 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+| `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
+| revisao browser desktop 1366x768 | Home Cliente com sidebar, conteudo central e rail lateral util; sem overflow visivel |
+| revisao browser mobile 390x844 | Home Cliente preservada em uma coluna; bottom navigation acessivel |

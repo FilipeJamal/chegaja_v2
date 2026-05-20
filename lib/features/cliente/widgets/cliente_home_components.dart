@@ -167,7 +167,9 @@ class ClienteServiceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final icon = clienteServiceIconFor(servico.iconKey);
+    final visualSeed = '${servico.iconKey ?? ''} ${servico.name}';
+    final icon = clienteServiceIconFor(visualSeed);
+    final accent = clienteServiceAccentFor(visualSeed);
     final key = Key(
       'cliente_home_service_tile_${clienteHomeSafeKey(servico.id)}',
     );
@@ -183,10 +185,10 @@ class ClienteServiceTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+              color: accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(icon, color: theme.colorScheme.primary),
+            child: Icon(icon, color: accent),
           ),
           const SizedBox(width: AppSpacing.x3),
           Expanded(
@@ -215,6 +217,152 @@ class ClienteServiceTile extends StatelessWidget {
           Icon(
             Icons.arrow_forward_rounded,
             color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ClienteServicesLoadingPreview extends StatelessWidget {
+  const ClienteServicesLoadingPreview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClienteServicesSection(
+      title: 'Servicos disponiveis',
+      subtitle: 'Estamos a carregar o catalogo. Estas categorias ficam aqui.',
+      search: const _ServiceLoadingSearch(),
+      children: const [
+        _ServicePreviewTile(
+          label: 'Canalizacao',
+          icon: Icons.plumbing_rounded,
+          tone: AppStatusTone.info,
+        ),
+        _ServicePreviewTile(
+          label: 'Limpeza',
+          icon: Icons.cleaning_services_rounded,
+          tone: AppStatusTone.success,
+        ),
+        _ServicePreviewTile(
+          label: 'Eletricista',
+          icon: Icons.electrical_services_rounded,
+          tone: AppStatusTone.warning,
+        ),
+        _ServicePreviewTile(
+          label: 'Pintura',
+          icon: Icons.format_paint_rounded,
+          tone: AppStatusTone.info,
+        ),
+        _ServicePreviewTile(
+          label: 'Mudancas',
+          icon: Icons.local_shipping_rounded,
+          tone: AppStatusTone.warning,
+        ),
+        _ServicePreviewTile(
+          label: 'Montagem',
+          icon: Icons.handyman_rounded,
+          tone: AppStatusTone.info,
+        ),
+      ],
+    );
+  }
+}
+
+class _ServiceLoadingSearch extends StatelessWidget {
+  const _ServiceLoadingSearch();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      size: AppCardSize.compact,
+      variant: AppCardVariant.outlined,
+      child: Row(
+        children: [
+          Icon(
+            Icons.search_rounded,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Text(
+              'Procurar servico...',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServicePreviewTile extends StatelessWidget {
+  const _ServicePreviewTile({
+    required this.label,
+    required this.icon,
+    required this.tone,
+  });
+
+  final String label;
+  final IconData icon;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = switch (tone) {
+      AppStatusTone.info => AppPalette.accentBlue,
+      AppStatusTone.success => AppPalette.success,
+      AppStatusTone.warning => AppPalette.warning,
+      AppStatusTone.danger => AppPalette.error,
+      AppStatusTone.neutral => theme.colorScheme.onSurfaceVariant,
+    };
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Icon(icon, color: accent),
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x2),
+                const AppStatusPill(
+                  label: 'A carregar',
+                  tone: AppStatusTone.neutral,
+                  size: AppStatusPillSize.sm,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -316,6 +464,17 @@ IconData clienteServiceIconFor(String? iconKey) {
   if (normalized.contains('canal') || normalized.contains('plumb')) {
     return Icons.plumbing_rounded;
   }
+  if (normalized.contains('bolo') ||
+      normalized.contains('cake') ||
+      normalized.contains('confeit')) {
+    return Icons.cake_rounded;
+  }
+  if (normalized.contains('caric') || normalized.contains('design')) {
+    return Icons.brush_rounded;
+  }
+  if (normalized.contains('carp') || normalized.contains('madeira')) {
+    return Icons.carpenter_rounded;
+  }
   if (normalized.contains('eletric') || normalized.contains('electric')) {
     return Icons.electrical_services_rounded;
   }
@@ -324,6 +483,35 @@ IconData clienteServiceIconFor(String? iconKey) {
   }
   if (normalized.contains('pint')) return Icons.format_paint_rounded;
   if (normalized.contains('jard')) return Icons.yard_rounded;
+  if (normalized.contains('mud')) return Icons.local_shipping_rounded;
   if (normalized.contains('mont')) return Icons.handyman_rounded;
   return Icons.home_repair_service_rounded;
+}
+
+Color clienteServiceAccentFor(String? iconKey) {
+  final normalized = (iconKey ?? '').toLowerCase().trim();
+  if (normalized.contains('canal') || normalized.contains('plumb')) {
+    return AppPalette.accentBlue;
+  }
+  if (normalized.contains('limp') || normalized.contains('clean')) {
+    return AppPalette.success;
+  }
+  if (normalized.contains('eletric') || normalized.contains('electric')) {
+    return AppPalette.warning;
+  }
+  if (normalized.contains('pint') ||
+      normalized.contains('caric') ||
+      normalized.contains('design')) {
+    return const Color(0xFF7C3AED);
+  }
+  if (normalized.contains('mud') || normalized.contains('mont')) {
+    return const Color(0xFFF97316);
+  }
+  if (normalized.contains('bolo') || normalized.contains('cake')) {
+    return const Color(0xFFEC4899);
+  }
+  if (normalized.contains('carp') || normalized.contains('madeira')) {
+    return const Color(0xFF92400E);
+  }
+  return AppPalette.primary;
 }

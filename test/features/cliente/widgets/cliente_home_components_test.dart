@@ -92,6 +92,49 @@ void main() {
       );
       expect(tapped, isTrue);
     });
+
+    test('usa icones e acentos distintos por categoria', () {
+      expect(clienteServiceIconFor('bolo personalizado'), Icons.cake_rounded);
+      expect(clienteServiceIconFor('carpinteiro'), Icons.carpenter_rounded);
+      expect(
+        clienteServiceIconFor('canalizacao'),
+        Icons.plumbing_rounded,
+      );
+
+      expect(
+        clienteServiceAccentFor('limpeza'),
+        isNot(clienteServiceAccentFor('eletricista')),
+      );
+      expect(
+        clienteServiceAccentFor('bolo personalizado'),
+        isNot(clienteServiceAccentFor('canalizacao')),
+      );
+    });
+  });
+
+  group('ClienteServicesLoadingPreview', () {
+    testWidgets('mantem categorias uteis enquanto catalogo carrega',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ClienteServicesLoadingPreview(),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const Key('cliente_home_services_section')),
+        findsOneWidget,
+      );
+      expect(find.text('Servicos disponiveis'), findsOneWidget);
+      expect(find.text('Canalizacao'), findsOneWidget);
+      expect(find.text('Limpeza'), findsOneWidget);
+      expect(find.text('Eletricista'), findsOneWidget);
+      expect(find.text('A carregar'), findsWidgets);
+    });
   });
 
   group('ClienteHomeOperationsPanel', () {
