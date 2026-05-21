@@ -1089,10 +1089,9 @@ async function waitForProviderSelector(page, timeoutMs = 30000) {
 async function isOnOrderForm(page) {
   const inputVisible = await page.locator('input:not([readonly]):visible').first().isVisible().catch(() => false);
   const textAreaVisible = await page.locator('textarea:not([readonly]):visible').first().isVisible().catch(() => false);
-  if (inputVisible && textAreaVisible) return true;
 
   const submitVisible = await page
-    .getByText(/Pedir servi.o|Request service|Guardar altera..es|Save changes/i)
+    .getByText(/Pedir servi.o|Request service/i)
     .first()
     .isVisible()
     .catch(() => false);
@@ -1289,7 +1288,7 @@ async function ensureOrderForm(client) {
     if (inputVisible && textAreaVisible) return true;
 
     await clickVisibleServiceCard(client, serviceNameRegex);
-    await client.mouse.click(210, 278).catch(() => {});
+    await client.mouse.wheel(0, 420).catch(() => {});
     await client.waitForTimeout(450);
 
     const stillList = await client
@@ -1422,6 +1421,7 @@ async function createOrder(
 async function providerOpenDetail(provider) {
   for (let i = 0; i < 14; i++) {
     await tryClick(provider, /Tens um trabalho para gerir|Tap here to open the next job|trabalho para gerir/i, 900);
+    await tryClick(provider, /Abrir|Ver detalhes|Open/i, 900);
     await provider.mouse.click(240, 390).catch(() => {});
     await sleep(650);
 
@@ -1517,7 +1517,7 @@ async function clientOpenDetail(client) {
   return false;
 }
 
-async function providerAcceptAndQuote(provider, pedidoId, providerUid) {
+async function providerAcceptAndQuote(provider, pedidoId, providerUid, expectedTitle = null) {
   const start = Date.now();
   let lastData = null;
   while (Date.now() - start < 170000) {
@@ -1556,7 +1556,9 @@ async function providerAcceptAndQuote(provider, pedidoId, providerUid) {
       continue;
     }
 
-    const opened = await providerOpenDetail(provider);
+    const opened = expectedTitle
+      ? await openOrderDetailByTitle(provider, expectedTitle, { provider: true })
+      : await providerOpenDetail(provider);
     if (!opened) {
       await sleep(700);
       continue;
@@ -1572,8 +1574,11 @@ async function providerAcceptAndQuote(provider, pedidoId, providerUid) {
       /Enviar estimativa(?: ao cliente)?|Enviar or.amento.*faixa|min\/max|request_quote|orcamento|quote|propor servi.o/i,
       1700,
     );
-    if (!quoteClicked) {
-      await provider.mouse.click(640, 246).catch(() => {});
+    if (!quoteClicked || !(await isQuoteDialogOpen(provider))) {
+      await clickVisibleTextCenter(
+        provider,
+        /Enviar estimativa ao cliente|Enviar estimativa|Enviar or.amento.*faixa|min\/max|request_quote|orcamento|quote|propor servi.o/i,
+      );
     }
 
     await sleep(700);
@@ -1979,7 +1984,7 @@ async function runHappyPathScenario(client, provider, providerUid) {
   await ensureProviderSetupDone(provider);
   await ensureProviderOnline(provider);
 
-  await providerAcceptAndQuote(provider, pedidoId, providerUid);
+  await providerAcceptAndQuote(provider, pedidoId, providerUid, title);
   await shot(provider, '03_happy_provider_quote_sent');
 
   await clientAcceptProvider(client, pedidoId);
@@ -2039,7 +2044,7 @@ async function runOrcamentoScenario(client, provider, providerUid) {
   await ensureProviderSetupDone(provider);
   await ensureProviderOnline(provider);
 
-  await providerAcceptAndQuote(provider, pedidoId, providerUid);
+  await providerAcceptAndQuote(provider, pedidoId, providerUid, title);
   await shot(provider, '11_orcamento_provider_quote_sent');
   const quoted = await waitPedidoWhere(
     pedidoId,

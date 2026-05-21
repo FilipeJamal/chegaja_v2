@@ -99,3 +99,56 @@ bloqueios ambientais
 bugs encontrados
 decisao final: aprovado / reprovado / aprovado com pendencias
 ```
+
+## Execucao 2026-05-21 - M2.11.1
+
+Commit base:
+
+```text
+42841ff Avancar M2.11 pacote beta interna
+```
+
+Resultado do checklist:
+
+```text
+Pre-check: passou, com alteracoes antigas fora do escopo mantidas fora do commit
+flutter test: passou, 149/149
+npm.cmd run test:scripts: passou
+Firestore/Storage/Functions emulator: passou, 37/37
+flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+Web local em 127.0.0.1:5173: respondeu HTTP 200
+flutter build windows --debug: passou
+Windows cross-role integration: passou, 5/5 fluxos
+e2e:ui:dual Web: bloqueado no runner E2E
+e2e:ui:orcamento Web: bloqueado no runner E2E
+```
+
+Checklist Web:
+
+```text
+Web abre: passou
+Auth/Firestore emulador: passou parcialmente; houve timeouts de bootstrap em runs longos do runner
+Build Web estatico: passou
+Troca Cliente/Prestador pela UI: coberta por flutter test
+Fluxo Cliente/Prestador por E2E Web: bloqueado no runner
+Mensagens Web: nao aprovado por E2E nesta execucao
+Pedidos Web: criado/aceite no runner, mas fluxo nao concluiu
+```
+
+Checklist Windows:
+
+```text
+Windows debug/build abre no teste: passou
+Fluxo Cliente pedido normal: passou
+Fluxo Prestador pedido normal: passou
+Fluxo Cliente orcamento: passou
+Fluxo Prestador orcamento: passou
+Chat cliente/prestador: passou apos correcao do seed do teste
+```
+
+Decisao:
+
+```text
+aprovado parcialmente com pendencia alta no E2E Web.
+nao aprovado como beta interna completa ate refatorar e passar os runners Web.
+```

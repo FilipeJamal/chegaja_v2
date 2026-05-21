@@ -797,9 +797,19 @@ void main() {
         title: 'M16 Chat ${DateTime.now().microsecondsSinceEpoch}',
         tipoPreco: 'a_combinar',
       );
-      await _defaultDb.collection('pedidos').doc(pedidoId).set(
-        {'prestadorId': provider.uid},
-        SetOptions(merge: true),
+
+      final providerService =
+          PedidoService(firestore: _providerDb, trackAnalytics: false);
+      final pedido = await _pedido(_providerDb, pedidoId);
+      await providerService.aceitarPedidoAberto(
+        pedido: pedido,
+        prestadorId: provider.uid,
+      );
+      await _waitPedido(
+        _defaultDb,
+        pedidoId,
+        (p) => p.estado == 'aceito' && p.prestadorId == provider.uid,
+        'pedido aceite para chat Windows',
       );
 
       await ChatService(firestore: _defaultDb, auth: _defaultAuth).sendMessage(

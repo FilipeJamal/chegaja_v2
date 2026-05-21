@@ -5,9 +5,10 @@ Data: 2026-05-21
 ## Estado
 
 ```text
-M2.11: planeada para beta interna controlada
+M2.11: em execucao de beta interna controlada
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
+M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -135,6 +136,118 @@ flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
 flutter build windows --debug
 npm.cmd run e2e:ui:dual
 npm.cmd run e2e:ui:orcamento
+```
+
+## M2.11.3 - Execucao beta interna Web/Windows
+
+Objetivo:
+
+```text
+Executar a beta interna controlada em Web/Windows, validar builds e roteiro
+tecnico Cliente/Prestador, documentar bugs e decidir se a beta pode ser
+aprovada.
+```
+
+Commit base testado:
+
+```text
+42841ff Avancar M2.11 pacote beta interna
+```
+
+Comandos executados:
+
+```cmd
+flutter test
+npm.cmd run test:scripts
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"
+flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter run -d web-server --web-hostname=127.0.0.1 --web-port=5173 --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:dual"
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:orcamento"
+flutter build windows --debug
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run test:windows:cross"
+```
+
+Resultados:
+
+```text
+flutter test: 149/149 passou
+npm.cmd run test:scripts: passou
+Firestore/Storage/Functions emulator: 37/37 passou
+flutter build web com RUN_FIREBASE_EMULATOR_TESTS=true: passou
+servidor Web local em 127.0.0.1:5173: respondeu HTTP 200
+flutter build windows --debug: passou
+test:windows:cross: passou, 5/5 fluxos Windows
+e2e:ui:dual Web: bloqueado no runner E2E apos pedido criado/aceite
+e2e:ui:orcamento Web: bloqueado no runner E2E apos pedido criado/aceite
+```
+
+Correcoes aplicadas durante a execucao:
+
+```text
+scripts/e2e/full_ui_dual_role_e2e.js deixou de tratar formulario de perfil como
+formulario de pedido.
+
+scripts/e2e/full_ui_dual_role_e2e.js deixou de depender de um clique por
+coordenada fixa para abrir o formulario de pedido.
+
+scripts/e2e/full_ui_dual_role_e2e.js passou a tentar abrir detalhe por titulo e
+por CTA visivel antes de acionar envio de estimativa.
+
+scripts/test/full_ui_dual_role_e2e.test.js foi criado para proteger a deteccao
+do formulario de pedido contra regressao.
+
+integration_test/windows_cross_role_flow_test.dart deixou de escrever
+prestadorId diretamente com auth de cliente no teste de chat e passou a aceitar
+o pedido pelo PedidoService, respeitando as Rules.
+```
+
+Bugs registados:
+
+```text
+ID: M2.11-BUG-001
+Titulo: E2E Web dual/orcamento perde contexto no fluxo do prestador
+Papel: ambos
+Plataforma: Web
+Fluxo: pedido por orcamento / prestador envia estimativa
+Frequencia: sempre nos runs desta execucao
+Severidade: alto para QA automatizado
+Estado: aberto
+Resultado obtido: o runner cria e aceita o pedido, mas perde a tela de detalhe e
+termina na conversa antes de enviar a estimativa.
+Impacto: bloqueia aprovacao automatizada da beta Web. Precisa refatorar o
+runner E2E para navegar por keys/semantica estavel em vez de heuristicas visuais
+e coordenadas.
+
+ID: M2.11-BUG-002
+Titulo: Teste Windows de chat tentava simular participante com escrita negada
+Papel: ambos
+Plataforma: Windows
+Fluxo: chat entre cliente e prestador
+Frequencia: sempre antes da correcao
+Severidade: medio
+Estado: corrigido
+Resultado obtido: permission-denied ao tentar gravar prestadorId diretamente com
+auth de cliente.
+Correcao: o teste passou a usar PedidoService.aceitarPedidoAberto pelo auth do
+prestador antes de enviar mensagens.
+```
+
+Decisao da beta interna:
+
+```text
+Aprovada parcialmente para base tecnica e Windows.
+Reprovada/bloqueada para aprovacao completa da beta Web automatizada.
+
+Motivo:
+- testes unitarios/widgets/scripts/Functions passaram;
+- build Web e build Windows passaram;
+- Windows validou pedido normal, orcamento e chat;
+- mas os E2E Web dual/orcamento ainda nao concluem o fluxo Cliente/Prestador.
+
+Proxima acao recomendada:
+M2.11.4 - Refatorar runner E2E Web da beta para usar seletores/keys estaveis,
+rodar novamente dual/orcamento e so entao decidir aprovacao final da beta Web.
 ```
 
 ## Proximo passo recomendado
