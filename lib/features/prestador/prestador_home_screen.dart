@@ -35,6 +35,7 @@ import 'package:chegaja_v2/features/common/pedido_chat_preview.dart';
 import 'package:chegaja_v2/features/common/mensagens/mensagens_tab.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/common/widgets/role_mode_switch_tile.dart';
 import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
 
 import 'package:chegaja_v2/features/prestador/prestador_perfil_screen.dart';
@@ -2076,6 +2077,10 @@ class _ContaPremiumTab extends StatelessWidget {
                       subtitle: l10n.providerAccountProfileSubtitle,
                       showDivider: true,
                       onTap: () => _openPrestadorPerfil(context),
+                    ),
+                    const RoleModeSwitchTile(
+                      currentRole: 'prestador',
+                      showDivider: true,
                     ),
                     SettingsListTile(
                       icon: Icons.payments_outlined,

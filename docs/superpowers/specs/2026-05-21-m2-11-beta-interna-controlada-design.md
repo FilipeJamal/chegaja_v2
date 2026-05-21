@@ -126,10 +126,15 @@ Definir como o tester deve usar Cliente e Prestador:
 ```text
 Cliente teste
 Prestador teste
-troca de role quando aplicavel
+troca de role pela UI, sem editar URL
 separacao entre dados de teste e dados reais
 identificacao clara de dados criados pela beta
 ```
+
+Requisito obrigatorio da beta: o tester deve conseguir alternar entre Cliente e
+Prestador dentro da app. A URL `?role=cliente` / `?role=prestador` pode
+continuar como override de desenvolvimento e automacao, mas nao pode ser a unica
+forma de testar os dois modos.
 
 Se forem necessarias credenciais reais, elas nao devem ser commitadas. A spec
 deve orientar a usar instrucoes locais ou variaveis seguras, nunca segredos no
@@ -164,6 +169,7 @@ O tester Cliente deve validar:
 
 ```text
 abrir app como Cliente
+trocar para modo Prestador pela Conta/Perfil quando necessario
 entender Home e categorias
 pesquisar/selecionar servico
 criar pedido
@@ -185,6 +191,7 @@ O tester Prestador deve validar:
 
 ```text
 abrir app como Prestador
+trocar para modo Cliente pela Conta/Perfil quando necessario
 entender estado online/offline
 ver categorias/servicos configurados
 ver pedidos disponiveis

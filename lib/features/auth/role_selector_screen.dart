@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/services/role_mode_service.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_button.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
-
-import '../cliente/cliente_home_screen.dart';
-import '../prestador/prestador_home_screen.dart';
 
 class RoleSelectorScreen extends StatelessWidget {
   const RoleSelectorScreen({super.key});
@@ -62,14 +60,7 @@ class RoleSelectorScreen extends StatelessWidget {
                         icon: Icons.search_rounded,
                         buttonLabel: l10n.roleCustomerTitle,
                         onTap: () async {
-                          await AuthService.ensureSignedInAnonymously();
-                          await AuthService.setActiveRole('cliente');
-                          if (!context.mounted) return;
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ClienteHomeScreen(),
-                            ),
-                          );
+                          await _selectRole('cliente');
                         },
                       ),
                       const SizedBox(height: AppSpacing.x4),
@@ -79,14 +70,7 @@ class RoleSelectorScreen extends StatelessWidget {
                         icon: Icons.work_outline_rounded,
                         buttonLabel: l10n.roleProviderTitle,
                         onTap: () async {
-                          await AuthService.ensureSignedInAnonymously();
-                          await AuthService.setActiveRole('prestador');
-                          if (!context.mounted) return;
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PrestadorHomeScreen(),
-                            ),
-                          );
+                          await _selectRole('prestador');
                         },
                       ),
                       const SizedBox(height: AppSpacing.x3),
@@ -99,6 +83,12 @@ class RoleSelectorScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _selectRole(String role) async {
+    await AuthService.ensureSignedInAnonymously();
+    await AuthService.setActiveRole(role);
+    await RoleModeService.instance.setMode(role);
   }
 }
 

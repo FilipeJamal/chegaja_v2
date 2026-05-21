@@ -32,6 +32,7 @@ import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/common/widgets/role_mode_switch_tile.dart';
 import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
 
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
@@ -1586,6 +1587,10 @@ class _ContaPremiumTab extends StatelessWidget {
                       subtitle: l10n.accountProfileSubtitle,
                       showDivider: true,
                       onTap: () => _openClientePerfil(context),
+                    ),
+                    const RoleModeSwitchTile(
+                      currentRole: 'cliente',
+                      showDivider: true,
                     ),
                     FutureBuilder<String?>(
                       future: _loadRegionLabel(),
