@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
+import 'package:chegaja_v2/core/widgets/service_visuals.dart';
 import 'package:chegaja_v2/features/common/widgets/order_operational_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
@@ -29,6 +30,7 @@ class PedidoListCard extends StatelessWidget {
         ? const <String>[]
         : metaLabels.skip(1).toList(growable: false);
     final statusTone = _statusTone(data.tone);
+    final visual = serviceVisualFor(data.category);
     final mergedFooter = _PedidoListCardFooter(
       metaLabels: extraMetaLabels,
       trailingActions: trailingActions,
@@ -40,6 +42,8 @@ class PedidoListCard extends StatelessWidget {
       title: data.title,
       subtitle: data.category,
       leadingIcon: data.icon,
+      leadingAssetPath: visual.assetPath,
+      leadingAccent: visual.accent,
       statusLabel: data.statusLabel,
       statusTone: statusTone,
       statusIcon: data.icon,

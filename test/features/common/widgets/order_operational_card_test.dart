@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
@@ -109,6 +110,23 @@ void main() {
       expect(find.text('Rua da Liberdade, Coimbra'), findsOneWidget);
       expect(find.text('ETA ate 30 min'), findsOneWidget);
       expect(find.text('EUR 35 - 60'), findsOneWidget);
+    });
+
+    testWidgets('renderiza asset SVG quando fornecido', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const OrderOperationalCard(
+            title: 'Retrato a lapis',
+            subtitle: 'Retratista',
+            statusLabel: 'Por orcamento',
+            leadingAssetPath: 'assets/icons/services/service_portrait.svg',
+            leadingAccent: Color(0xFF475569),
+          ),
+        ),
+      );
+
+      expect(find.text('Retrato a lapis'), findsOneWidget);
+      expect(find.byType(SvgPicture), findsOneWidget);
     });
   });
 }

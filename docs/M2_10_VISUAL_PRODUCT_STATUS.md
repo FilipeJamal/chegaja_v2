@@ -1003,3 +1003,57 @@ Validacao:
 | `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
 | revisao browser desktop 1366x768 | Home Cliente com sidebar, conteudo central e rail lateral util; sem overflow visivel |
 | revisao browser mobile 390x844 | Home Cliente preservada em uma coluna; bottom navigation acessivel |
+
+## Ajuste pos-fecho - Catalogo visual de servicos
+
+Motivo:
+
+```text
+A revisao visual mostrou que alguns servicos continuavam com simbolos genericos.
+Exemplos visiveis: Pedreiro, Ilustrador e Retratista a lapis caiam em fallback,
+o que enfraquecia a percepcao de produto acabado.
+```
+
+Correcao:
+
+```text
+Foi criada uma camada central de visualizacao de servicos:
+- service_visuals.dart normaliza acentos e nomes de servico
+- cada area principal do catalogo passa a ter asset SVG especifico
+- Home Cliente usa a camada central em vez de regras locais soltas
+- PedidoListCard/OrderOperationalCard tambem aceitam assets SVG de servico
+- cards de pedidos ficam preparados para mostrar icones coerentes por categoria
+
+Areas cobertas:
+canalizacao, eletricista, pintura, pedreiro, serralheiro, carpinteiro,
+montagem, barbeiro, cabeleireiro, babysitter, cuidador de idosos, dog walker,
+pet sitter, confeitaria/bolos, retratista a lapis, caricaturista, ilustrador,
+escultor 3D, reparos gerais, mecanica auto, reparacao tecnica,
+web/desenvolvimento, design grafico, explicacoes, massagem, saude, catering,
+assistente pessoal, artes marciais, fitness, musica, linguas e jardinagem.
+```
+
+Ficheiros alterados:
+
+```text
+lib/core/widgets/service_visuals.dart
+lib/features/cliente/widgets/cliente_home_components.dart
+lib/features/cliente/widgets/pedido_list_card.dart
+lib/features/common/widgets/order_operational_card.dart
+assets/icons/services/*.svg
+test/core/widgets/service_visuals_test.dart
+test/features/cliente/widgets/cliente_home_components_test.dart
+test/features/common/widgets/order_operational_card_test.dart
+docs/M2_10_VISUAL_PRODUCT_STATUS.md
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `flutter test test\core\widgets\service_visuals_test.dart test\features\cliente\widgets\cliente_home_components_test.dart test\features\common\widgets\order_operational_card_test.dart test\features\cliente\widgets\pedido_list_card_test.dart` | passou |
+| `flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true` | passou; avisos Wasm dry run de `dart_webrtc` sem bloquear build Web standard |
+| revisao browser desktop 1366x768 | hero com casa/localizacao renderizado; app carregou em build Web local |
+| `flutter test` | passou, 136/136 |
+| `npm.cmd run test:scripts` | passou |
+| `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |

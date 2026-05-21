@@ -117,6 +117,18 @@ void main() {
         clienteServiceAssetFor('carpinteiro'),
         'assets/icons/services/service_carpentry.svg',
       );
+      expect(
+        clienteServiceAssetFor('retratista a lápis'),
+        'assets/icons/services/service_portrait.svg',
+      );
+      expect(
+        clienteServiceAssetFor('pedreiro'),
+        'assets/icons/services/service_masonry.svg',
+      );
+      expect(
+        clienteServiceAssetFor('ilustrador'),
+        'assets/icons/services/service_illustration.svg',
+      );
     });
   });
 

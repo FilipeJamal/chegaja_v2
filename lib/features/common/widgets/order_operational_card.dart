@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_avatar.dart';
@@ -33,6 +34,8 @@ class OrderOperationalCard extends StatelessWidget {
     this.avatarUrl,
     this.avatarLabel,
     this.leadingIcon,
+    this.leadingAssetPath,
+    this.leadingAccent,
     this.locationLabel,
     this.timeLabel,
     this.valueLabel,
@@ -57,6 +60,8 @@ class OrderOperationalCard extends StatelessWidget {
   final String? avatarUrl;
   final String? avatarLabel;
   final IconData? leadingIcon;
+  final String? leadingAssetPath;
+  final Color? leadingAccent;
   final String? locationLabel;
   final String? timeLabel;
   final String? valueLabel;
@@ -91,6 +96,8 @@ class OrderOperationalCard extends StatelessWidget {
                   avatarUrl: avatarUrl,
                   avatarLabel: avatarLabel ?? title,
                   leadingIcon: leadingIcon,
+                  leadingAssetPath: leadingAssetPath,
+                  leadingAccent: leadingAccent,
                   statusLabel: statusLabel,
                   statusTone: statusTone,
                   statusIcon: statusIcon,
@@ -135,6 +142,8 @@ class OrderOperationalCard extends StatelessWidget {
                       avatarUrl: avatarUrl,
                       avatarLabel: avatarLabel ?? title,
                       leadingIcon: leadingIcon,
+                      leadingAssetPath: leadingAssetPath,
+                      leadingAccent: leadingAccent,
                       statusLabel: statusLabel,
                       statusTone: statusTone,
                       statusIcon: statusIcon,
@@ -192,6 +201,8 @@ class _Header extends StatelessWidget {
     required this.avatarLabel,
     this.avatarUrl,
     this.leadingIcon,
+    this.leadingAssetPath,
+    this.leadingAccent,
     this.statusIcon,
     this.modeLabel,
     this.modeTone = AppStatusTone.neutral,
@@ -206,6 +217,8 @@ class _Header extends StatelessWidget {
   final String avatarLabel;
   final String? avatarUrl;
   final IconData? leadingIcon;
+  final String? leadingAssetPath;
+  final Color? leadingAccent;
   final IconData? statusIcon;
   final String? modeLabel;
   final AppStatusTone modeTone;
@@ -223,6 +236,8 @@ class _Header extends StatelessWidget {
           avatarUrl: avatarUrl,
           avatarLabel: avatarLabel,
           icon: leadingIcon,
+          assetPath: leadingAssetPath,
+          accent: leadingAccent,
           compact: compact,
         ),
         const SizedBox(width: AppSpacing.x3),
@@ -281,18 +296,24 @@ class _LeadingVisual extends StatelessWidget {
     required this.avatarLabel,
     this.avatarUrl,
     this.icon,
+    this.assetPath,
+    this.accent,
     this.compact = false,
   });
 
   final String avatarLabel;
   final String? avatarUrl;
   final IconData? icon;
+  final String? assetPath;
+  final Color? accent;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = compact ? AppAvatarSize.md : AppAvatarSize.lg;
+    final visualSize = compact ? 48.0 : 56.0;
+    final visualAccent = accent ?? theme.colorScheme.primary;
 
     if (OrderOperationalCard._hasText(avatarUrl)) {
       return AppAvatar(
@@ -303,16 +324,23 @@ class _LeadingVisual extends StatelessWidget {
     }
 
     return Container(
-      width: compact ? 48 : 56,
-      height: compact ? 48 : 56,
+      width: visualSize,
+      height: visualSize,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.10),
+        color: visualAccent.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      child: Icon(
-        icon ?? Icons.assignment_outlined,
-        color: theme.colorScheme.primary,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.x2),
+      child: OrderOperationalCard._hasText(assetPath)
+          ? SvgPicture.asset(
+              assetPath!,
+              fit: BoxFit.contain,
+              semanticsLabel: avatarLabel,
+            )
+          : Icon(
+              icon ?? Icons.assignment_outlined,
+              color: visualAccent,
+            ),
     );
   }
 }

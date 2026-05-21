@@ -6,6 +6,7 @@ import 'package:chegaja_v2/core/widgets/app_card.dart';
 import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
 import 'package:chegaja_v2/core/widgets/app_section_header.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
+import 'package:chegaja_v2/core/widgets/service_visuals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -524,92 +525,13 @@ AppStatusTone clienteServiceToneFor(String? mode) {
 }
 
 IconData clienteServiceIconFor(String? iconKey) {
-  final normalized = (iconKey ?? '').toLowerCase().trim();
-  if (normalized.contains('canal') || normalized.contains('plumb')) {
-    return Icons.plumbing_rounded;
-  }
-  if (normalized.contains('bolo') ||
-      normalized.contains('cake') ||
-      normalized.contains('confeit')) {
-    return Icons.cake_rounded;
-  }
-  if (normalized.contains('caric') || normalized.contains('design')) {
-    return Icons.brush_rounded;
-  }
-  if (normalized.contains('carp') || normalized.contains('madeira')) {
-    return Icons.carpenter_rounded;
-  }
-  if (normalized.contains('eletric') || normalized.contains('electric')) {
-    return Icons.electrical_services_rounded;
-  }
-  if (normalized.contains('limp') || normalized.contains('clean')) {
-    return Icons.cleaning_services_rounded;
-  }
-  if (normalized.contains('pint')) return Icons.format_paint_rounded;
-  if (normalized.contains('jard')) return Icons.yard_rounded;
-  if (normalized.contains('mud')) return Icons.local_shipping_rounded;
-  if (normalized.contains('mont')) return Icons.handyman_rounded;
-  return Icons.home_repair_service_rounded;
+  return serviceIconFor(iconKey);
 }
 
 Color clienteServiceAccentFor(String? iconKey) {
-  final normalized = (iconKey ?? '').toLowerCase().trim();
-  if (normalized.contains('canal') || normalized.contains('plumb')) {
-    return AppPalette.accentBlue;
-  }
-  if (normalized.contains('limp') || normalized.contains('clean')) {
-    return AppPalette.success;
-  }
-  if (normalized.contains('eletric') || normalized.contains('electric')) {
-    return AppPalette.warning;
-  }
-  if (normalized.contains('carp') || normalized.contains('madeira')) {
-    return const Color(0xFF92400E);
-  }
-  if (normalized.contains('pint') ||
-      normalized.contains('caric') ||
-      normalized.contains('design')) {
-    return const Color(0xFF7C3AED);
-  }
-  if (normalized.contains('mud') || normalized.contains('mont')) {
-    return const Color(0xFFF97316);
-  }
-  if (normalized.contains('bolo') || normalized.contains('cake')) {
-    return const Color(0xFFEC4899);
-  }
-  return AppPalette.primary;
+  return serviceAccentFor(iconKey);
 }
 
 String clienteServiceAssetFor(String? iconKey) {
-  final normalized = (iconKey ?? '').toLowerCase().trim();
-  if (normalized.contains('canal') || normalized.contains('plumb')) {
-    return 'assets/icons/services/service_plumbing.svg';
-  }
-  if (normalized.contains('limp') || normalized.contains('clean')) {
-    return 'assets/icons/services/service_cleaning.svg';
-  }
-  if (normalized.contains('eletric') || normalized.contains('electric')) {
-    return 'assets/icons/services/service_electric.svg';
-  }
-  if (normalized.contains('mud')) {
-    return 'assets/icons/services/service_moving.svg';
-  }
-  if (normalized.contains('mont')) {
-    return 'assets/icons/services/service_assembly.svg';
-  }
-  if (normalized.contains('bolo') ||
-      normalized.contains('cake') ||
-      normalized.contains('confeit')) {
-    return 'assets/icons/services/service_cake.svg';
-  }
-  if (normalized.contains('caric') || normalized.contains('design')) {
-    return 'assets/icons/services/service_design.svg';
-  }
-  if (normalized.contains('carp') || normalized.contains('madeira')) {
-    return 'assets/icons/services/service_carpentry.svg';
-  }
-  if (normalized.contains('pint')) {
-    return 'assets/icons/services/service_painting.svg';
-  }
-  return 'assets/icons/services/service_default.svg';
+  return serviceAssetFor(iconKey);
 }
