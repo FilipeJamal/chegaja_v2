@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const helpers = require('../e2e/full_ui_dual_role_e2e_helpers');
 
 function extractFunction(source, name) {
   const marker = `async function ${name}`;
@@ -52,6 +53,72 @@ const scriptSource = fs.readFileSync(scriptPath, 'utf8');
 const isOnOrderForm = vm.runInNewContext(`(${extractFunction(scriptSource, 'isOnOrderForm')})`);
 
 (async () => {
+  assert.strictEqual(
+    helpers.detectScreenKind('Voltar\nCliente C\nPesquisar\nVideochamada\nChamada\nAinda nao ha mensagens.'),
+    'chat',
+    'chat screen should be detected explicitly',
+  );
+
+  assert.strictEqual(
+    helpers.detectScreenKind('Detalhe do pedido\nProxima acao\nEnviar estimativa ao cliente\nLinha do tempo'),
+    'pedido_detail',
+    'pedido detail screen should be detected explicitly',
+  );
+
+  assert.notStrictEqual(
+    helpers.detectScreenKind(
+      'Pedidos\nEm aberto 1\nAbrir\nC Cliente E2E-HAPPY-123456\nEnviar estimativa ao cliente\nCancelar trabalho',
+    ),
+    'pedido_detail',
+    'provider order lists must not be treated as pedido detail just because an action label is visible',
+  );
+
+  assert.strictEqual(
+    helpers.detectScreenKind('Meu perfil\nNome completo\nGuardar alteracoes'),
+    'profile',
+    'profile screen should not be treated as pedido detail',
+  );
+
+  assert.deepStrictEqual(
+    helpers.describePedidoState({
+      estado: 'aceito',
+      status: 'aceito',
+      prestadorId: 'provider-1',
+      statusProposta: 'nenhuma',
+    }),
+    {
+      estado: 'aceito',
+      status: 'aceito',
+      prestadorId: 'provider-1',
+      statusProposta: 'nenhuma',
+      statusConfirmacaoValor: '',
+      tipoPreco: '',
+    },
+    'pedido state summary should be stable',
+  );
+
+  assert.strictEqual(
+    helpers.nextProviderAction({
+      estado: 'aceito',
+      status: 'aceito',
+      tipoPreco: 'por_orcamento',
+      statusProposta: 'nenhuma',
+    }),
+    'send_quote',
+    'provider should send quote after accepting orçamento pedido',
+  );
+
+  assert.strictEqual(
+    helpers.nextProviderAction({
+      estado: 'aceito',
+      status: 'aceito',
+      tipoPreco: 'por_orcamento',
+      statusProposta: 'aceita_cliente',
+    }),
+    'start_service',
+    'provider should start service after client accepts quote',
+  );
+
   assert.strictEqual(
     await isOnOrderForm(
       fakePage({

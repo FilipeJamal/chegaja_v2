@@ -9,7 +9,7 @@ M2.11: em execucao de beta interna controlada
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
-M2.11.4: planeada para refatorar runner E2E Web da beta
+M2.11.4: avancada com runner E2E Web mais robusto; orcamento passou; dual bloqueado por cancelamento nas Rules
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -289,15 +289,101 @@ sem Play Store
 sem fechar M2.6
 ```
 
+## M2.11.4 - Execucao runner E2E Web beta
+
+Objetivo:
+
+```text
+Refatorar o runner E2E Web para deixar de depender de cliques frageis e
+classificar corretamente detalhe do pedido, chat, perfil e lista de pedidos.
+```
+
+Implementacao:
+
+```text
+scripts/e2e/full_ui_dual_role_e2e_helpers.js criado com helpers puros:
+- detectScreenKind
+- assertExpectedScreen
+- describePedidoState
+- nextProviderAction
+
+scripts/e2e/full_ui_dual_role_e2e.js passou a:
+- usar 127.0.0.1:5173 como TARGET_URL padrao;
+- abrir Chromium headless por padrao;
+- logar pedidoId, role, tela esperada e estado Firestore;
+- evitar tratar lista de pedidos como detalhe so por conter "Enviar estimativa";
+- evitar clicar no banner de trabalho do prestador, porque ele abre chat por design;
+- clicar no CTA "Abrir/Ver detalhes" perto do titulo do pedido antes de acionar fluxos de detalhe;
+- abrir o detalhe do Cliente antes de aceitar proposta;
+- garantir Home Cliente antes de criar novos pedidos entre cenarios;
+- sair do formulario "Novo pedido" antes de procurar um pedido por titulo.
+
+scripts/test/full_ui_dual_role_e2e.test.js cobre regressao dos helpers e garante
+que formulario de perfil nao e confundido com formulario de pedido.
+```
+
+Ambiente Web usado:
+
+```text
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+servidor estatico local em http://127.0.0.1:5173
+Firebase emulators auth/firestore/storage em background
+seed de servicos executado com scripts/seed_servicos.js --emulator-host=127.0.0.1
+```
+
+Resultado E2E:
+
+```text
+npm.cmd run e2e:ui:orcamento: passou
+- pedido por orcamento criado
+- prestador enviou faixa 20-35
+- cliente aceitou proposta
+- prestador iniciou servico
+- prestador enviou valor final 30
+- cliente confirmou valor final
+- pedido concluiu com commissionPlatform=4.5 e earningsProvider=25.5
+
+npm.cmd run e2e:ui:dual: avancou alem do bloqueio antigo
+- happy-path passou ate pedido concluido
+- runner deixou de cair no chat antes de enviar estimativa
+- runner abriu detalhe pelo CTA "Abrir"
+- bloqueou no cenario de cancelamento Cliente
+```
+
+Novo bloqueio encontrado:
+
+```text
+ID: M2.11-BUG-003
+Titulo: Cliente nao consegue cancelar pedido criado no E2E Web por permission-denied nas Rules
+Papel: Cliente
+Plataforma: Web
+Fluxo: cancelamento enquanto "A encontrar prestador"
+Frequencia: reproduzido no e2e:ui:dual apos refator do runner
+Severidade: alta para aprovacao completa da beta Web
+Estado: aberto
+Resultado obtido:
+  Firestore Emulator devolveu permission-denied ao tentar atualizar pedidos/{id}
+  com status/estado=cancelado, canceladoPor=cliente e historico cancelado.
+Impacto:
+  O runner ja passou o antigo problema de navegacao/contexto, mas a beta Web
+  dual continua bloqueada por permissao/regras no cancelamento Cliente.
+Fora do escopo desta subfase:
+  alterar Firestore Rules. A M2.11.4 focou runner E2E.
+```
+
+Decisao:
+
+```text
+M2.11.4 avancada parcialmente.
+O runner E2E Web ficou mais robusto e o fluxo de orcamento passou.
+A aprovacao completa da beta Web continua bloqueada pelo BUG-003 de
+cancelamento Cliente nas Rules/emulador.
+```
+
 ## Proximo passo recomendado
 
 ```text
-Executar validacoes tecnicas da beta:
-- flutter test
-- npm.cmd run test:scripts
-- Firebase emulator tests
-- flutter build web
-- flutter build windows --debug
-- e2e:ui:dual, se ambiente local permitir
-- e2e:ui:orcamento, se ambiente local permitir
+M2.11.5 - Corrigir permissao de cancelamento Cliente nas Rules ou ajustar o
+fluxo autoritativo correspondente, com testes de regras antes de repetir
+e2e:ui:dual.
 ```

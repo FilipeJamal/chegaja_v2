@@ -152,3 +152,46 @@ Decisao:
 aprovado parcialmente com pendencia alta no E2E Web.
 nao aprovado como beta interna completa ate refatorar e passar os runners Web.
 ```
+
+## Execucao 2026-05-21 - M2.11.4
+
+Commit base:
+
+```text
+6d9de30 Planear M2.11.4 runner E2E Web beta
+```
+
+Resultado do checklist E2E Web:
+
+```text
+Runner E2E Web refatorado com helpers puros e logs de estado.
+Build Web debug com RUN_FIREBASE_EMULATOR_TESTS=true: passou.
+Servidor estatico local em 127.0.0.1:5173: passou.
+Emuladores auth/firestore/storage em background: passaram.
+Seed de servicos no emulador: passou.
+npm.cmd run e2e:ui:orcamento: passou.
+npm.cmd run e2e:ui:dual: bloqueado no cancelamento Cliente.
+```
+
+Melhorias confirmadas:
+
+```text
+O runner deixou de confundir chat com detalhe do pedido no fluxo do prestador.
+O runner passou a abrir detalhe pelo CTA "Abrir/Ver detalhes" perto do pedido.
+O fluxo de orcamento concluiu ponta a ponta.
+O happy-path do dual concluiu antes de chegar ao cenario de cancelamento.
+```
+
+Bloqueio aberto:
+
+```text
+M2.11-BUG-003
+Cliente nao consegue cancelar pedido criado no E2E Web.
+Firestore Emulator devolve permission-denied ao update do pedido para cancelado
+com canceladoPor=cliente.
+
+Classificacao: alto para beta Web automatizada.
+Estado: aberto.
+Proximo passo: corrigir Rules/fluxo autoritativo em subfase propria e repetir
+npm.cmd run e2e:ui:dual.
+```

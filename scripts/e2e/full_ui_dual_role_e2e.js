@@ -4,6 +4,12 @@ const https = require('https');
 const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
+const {
+  assertExpectedScreen,
+  detectScreenKind,
+  describePedidoState,
+  nextProviderAction,
+} = require('./full_ui_dual_role_e2e_helpers');
 
 let admin;
 try {
@@ -19,7 +25,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
 }
 
 const PROJECT_ID = process.env.PROJECT_ID || 'chegaja-ac88d';
-const TARGET_URL = process.env.TARGET_URL || 'http://localhost:5173';
+const TARGET_URL = process.env.TARGET_URL || 'http://127.0.0.1:5173';
 const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const SHOT_ROOT = process.env.SHOT_DIR || path.join(os.tmpdir(), 'chegaja-e2e-full-ui');
 const SHOT_DIR = path.join(SHOT_ROOT, RUN_ID);
@@ -36,6 +42,7 @@ fs.mkdirSync(SHOT_DIR, { recursive: true });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const now = () => new Date().toISOString().slice(11, 19);
+const log = (message) => console.log(`[${now()}] ${message}`);
 
 function resolveScenario(args, fallback) {
   const allowed = new Set(['full', 'orcamento']);
@@ -715,6 +722,110 @@ async function clickVisibleTextCenter(page, rx) {
   return true;
 }
 
+async function currentBodyText(page) {
+  return page.locator('body').innerText({ timeout: 2500 }).catch(() => '');
+}
+
+async function currentScreenKind(page) {
+  return detectScreenKind(await currentBodyText(page));
+}
+
+async function ensurePedidoDetailScreen(page, { pedidoId, title, role }) {
+  const bodyText = await currentBodyText(page);
+  const screen = detectScreenKind(bodyText);
+  log(`${role} screen=${screen} expected=pedido_detail pedidoId=${pedidoId} title="${title || ''}"`);
+  assertExpectedScreen({ bodyText, expected: 'pedido_detail', pedidoId, title });
+}
+
+async function clickOrderOpenButtonNearTitle(page, title) {
+  const clicked = await page
+    .evaluate(
+      ({ titleSource, titleFlags }) => {
+        let titleRe;
+        try {
+          titleRe = new RegExp(titleSource, titleFlags.includes('i') ? 'i' : '');
+        } catch (_) {
+          return null;
+        }
+
+        const actionRe = /^(abrir|ver detalhes|open|view details)$/i;
+        const textOf = (element) =>
+          ((element.innerText || element.textContent || '') + '').replace(/\s+/g, ' ').trim();
+        const isVisible = (element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return (
+            rect.width >= 20 &&
+            rect.height >= 16 &&
+            rect.bottom >= 0 &&
+            rect.right >= 0 &&
+            rect.top <= window.innerHeight &&
+            rect.left <= window.innerWidth &&
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.pointerEvents !== 'none'
+          );
+        };
+
+        const selectors = ['flt-semantics[role="button"]', '[role="button"]', 'button', 'flt-semantics', 'div', 'span'];
+        const seen = new Set();
+        const titles = [];
+        const actions = [];
+
+        for (const selector of selectors) {
+          for (const element of document.querySelectorAll(selector)) {
+            if (seen.has(element)) continue;
+            seen.add(element);
+            const text = textOf(element);
+            if (!text || !isVisible(element)) continue;
+            const rect = element.getBoundingClientRect();
+            const row = {
+              element,
+              text,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+              w: rect.width,
+              h: rect.height,
+            };
+            if (titleRe.test(text)) titles.push(row);
+            if (actionRe.test(text)) actions.push(row);
+          }
+        }
+
+        if (!actions.length) return null;
+
+        const titleNode = titles.sort((a, b) => a.y - b.y)[0] || null;
+        const candidates = actions
+          .map((action) => {
+            const yPenalty = titleNode ? Math.abs(action.y - titleNode.y) : 0;
+            const xPenalty = titleNode ? Math.abs(action.x - titleNode.x) * 0.15 : 0;
+            const rowPenalty = titleNode && yPenalty > 260 ? 10000 : 0;
+            return { ...action, score: yPenalty + xPenalty + rowPenalty };
+          })
+          .sort((a, b) => a.score - b.score);
+
+        const target = candidates[0];
+        target.element.click();
+        return {
+          text: target.text,
+          x: Math.round(target.x),
+          y: Math.round(target.y),
+          titleFound: Boolean(titleNode),
+        };
+      },
+      { titleSource: escapeRegExp(title), titleFlags: 'i' },
+    )
+    .catch(() => null);
+
+  if (clicked) {
+    log(
+      `openOrderDetailByTitle clicked action "${clicked.text}" near title="${title}" titleFound=${clicked.titleFound} at ${clicked.x},${clicked.y}`,
+    );
+    return true;
+  }
+  return false;
+}
+
 async function clickVisibleServiceCard(page, rx) {
   const domBest = await page.evaluate(
     ({ source, flags }) => {
@@ -1306,13 +1417,42 @@ async function ensureOrderForm(client) {
   return false;
 }
 
+async function ensureClientHome(client) {
+  for (let i = 0; i < 12; i++) {
+    await closeAllOverlays(client);
+    const body = await currentBodyText(client);
+    if (/Do que precisas hoje|Servi.os dispon.veis|Escolher servi.o/i.test(body)) {
+      return true;
+    }
+
+    if (/Detalhe do pedido|Novo pedido/i.test(body)) {
+      const wentBack =
+        (await tryClick(client, /Voltar|Back/i, 1000)) ||
+        (await clickVisibleTextCenter(client, /Voltar|Back/i));
+      if (!wentBack) await client.mouse.click(28, 28).catch(() => {});
+      await sleep(700);
+    }
+
+    const clickedHome =
+      (await waitAndClick(client, /In[ií]cio|Inicio|Home/i, 1400)) ||
+      (await clickVisibleTextCenter(client, /In[ií]cio|Inicio|Home/i));
+    if (!clickedHome) {
+      await client.mouse.click(90, 118).catch(() => {});
+    }
+    await sleep(900);
+  }
+
+  const body = await currentBodyText(client);
+  throw new Error(`Client home not reachable before creating order body=${body.slice(0, 350)}`);
+}
+
 async function createOrder(
   client,
   { titlePrefix = 'E2E', manualProvider = false, providerSearch = PROVIDER_NAME, description = null } = {},
 ) {
   const catalog = await loadServiceCatalog();
   const serviceNameRegex = buildServiceNameRegex(catalog.names);
-  await waitAndClick(client, /In[iI].cio|Home/i, 9000);
+  await ensureClientHome(client);
   await tryConfirmDialogs(client);
   let openedService = false;
   const openDeadline = Date.now() + 30000;
@@ -1420,7 +1560,13 @@ async function createOrder(
 
 async function providerOpenDetail(provider) {
   for (let i = 0; i < 14; i++) {
-    await tryClick(provider, /Tens um trabalho para gerir|Tap here to open the next job|trabalho para gerir/i, 900);
+    if ((await currentScreenKind(provider)) === 'chat') {
+      log('providerOpenDetail reached chat instead of pedido detail; going back');
+      await provider.goBack().catch(() => {});
+      await sleep(700);
+      continue;
+    }
+
     await tryClick(provider, /Abrir|Ver detalhes|Open/i, 900);
     await provider.mouse.click(240, 390).catch(() => {});
     await sleep(650);
@@ -1431,6 +1577,14 @@ async function providerOpenDetail(provider) {
     await tryClick(provider, /Meus trabalhos|My jobs|Meus Trabalhos/i, 1000);
     await provider.mouse.click(480, 684).catch(() => {});
     await sleep(900);
+
+    if ((await currentScreenKind(provider)) === 'chat') {
+      log('providerOpenDetail reached chat after tab navigation; going back');
+      await provider.goBack().catch(() => {});
+      await sleep(700);
+      continue;
+    }
+
     await provider.mouse.click(250, 250).catch(() => {});
     await sleep(700);
 
@@ -1447,19 +1601,26 @@ async function openOrderDetailByTitle(page, title, { provider = false } = {}) {
   for (let i = 0; i < 18; i++) {
     await closeAllOverlays(page);
 
-    const onDetail = await page.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
-    if (onDetail) {
-      const hasTitle = await page.getByText(titleRx).first().isVisible().catch(() => false);
-      if (hasTitle) return true;
-      await page.mouse.click(28, 28).catch(() => {});
-      await sleep(700);
+    const bodyAtLoopStart = await currentBodyText(page);
+    if (/Novo pedido|Pedir servi/i.test(bodyAtLoopStart)) {
+      log(`openOrderDetailByTitle is still on order form for title="${title}"; going back first`);
+      const wentBack =
+        (await tryClick(page, /Voltar|Back/i, 1000)) ||
+        (await clickVisibleTextCenter(page, /Voltar|Back/i));
+      if (!wentBack) await page.mouse.click(28, 28).catch(() => {});
+      await sleep(900);
+      continue;
     }
 
-    await tryClick(page, /Tens um trabalho para gerir|Tap here to open the next job|trabalho para gerir/i, 900);
-    await sleep(500);
+    if (detectScreenKind(bodyAtLoopStart) === 'chat') {
+      log(`openOrderDetailByTitle reached chat for title="${title}"; going back`);
+      await page.goBack().catch(() => {});
+      await sleep(700);
+      continue;
+    }
 
-    const onDetailAfterBanner = await page.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
-    if (onDetailAfterBanner) {
+    const onDetail = await page.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
+    if (onDetail) {
       const hasTitle = await page.getByText(titleRx).first().isVisible().catch(() => false);
       if (hasTitle) return true;
       await page.mouse.click(28, 28).catch(() => {});
@@ -1470,9 +1631,38 @@ async function openOrderDetailByTitle(page, title, { provider = false } = {}) {
     await page.mouse.click(provider ? 480 : 480, 684).catch(() => {});
     await sleep(700);
 
+    if ((await currentScreenKind(page)) === 'chat') {
+      log(`openOrderDetailByTitle reached chat after tab click title="${title}"; going back`);
+      await page.goBack().catch(() => {});
+      await sleep(700);
+      continue;
+    }
+
+    const clickedOpenAction = await clickOrderOpenButtonNearTitle(page, title);
+    if (clickedOpenAction) {
+      await sleep(900);
+      if ((await currentScreenKind(page)) === 'chat') {
+        log(`openOrderDetailByTitle open action reached chat title="${title}"; going back`);
+        await page.goBack().catch(() => {});
+        await sleep(700);
+        continue;
+      }
+      const isDetail = await page.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
+      if (isDetail) {
+        const hasTitle = await page.getByText(titleRx).first().isVisible().catch(() => false);
+        if (hasTitle) return true;
+      }
+    }
+
     const clickedTitle = await waitAndClick(page, titleRx, 2500);
     if (clickedTitle) {
       await sleep(700);
+      if ((await currentScreenKind(page)) === 'chat') {
+        log(`openOrderDetailByTitle title click opened chat title="${title}"; going back`);
+        await page.goBack().catch(() => {});
+        await sleep(700);
+        continue;
+      }
       const isDetail = await page.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
       if (isDetail) {
         const hasTitle = await page.getByText(titleRx).first().isVisible().catch(() => false);
@@ -1531,6 +1721,7 @@ async function providerAcceptAndQuote(provider, pedidoId, providerUid, expectedT
     const state = `${data.estado || data.status || ''}`.trim();
     const statusProp = `${data.statusProposta || ''}`.trim();
     const pedidoProvider = `${data.prestadorId || ''}`.trim();
+    const providerAction = nextProviderAction(data);
     const hasQuotedValues = data.valorMinEstimadoPrestador != null || data.valorMaxEstimadoPrestador != null;
     const hasQuoteHistory = Array.isArray(data.historico)
       ? data.historico.some((h) => `${h?.evento || ''}`.trim() === 'proposta_enviada')
@@ -1560,9 +1751,22 @@ async function providerAcceptAndQuote(provider, pedidoId, providerUid, expectedT
       ? await openOrderDetailByTitle(provider, expectedTitle, { provider: true })
       : await providerOpenDetail(provider);
     if (!opened) {
+      const screen = await currentScreenKind(provider);
+      log(
+        `provider detail not opened pedidoId=${pedidoId} title="${expectedTitle || ''}" screen=${screen} action=${providerAction} state=${JSON.stringify(describePedidoState(data))}`,
+      );
+      if (screen === 'chat') {
+        await provider.goBack().catch(() => {});
+      }
       await sleep(700);
       continue;
     }
+
+    await ensurePedidoDetailScreen(provider, {
+      pedidoId,
+      title: expectedTitle,
+      role: 'provider',
+    });
 
     const uiAlreadyQuoted =
       (await provider.getByText(/Tens um or.amento para decidir|Aguardando resposta do cliente/i).first().isVisible().catch(() => false)) ||
@@ -1637,9 +1841,16 @@ async function clientAcceptProvider(client, pedidoId) {
   while (Date.now() - start < 160000) {
     const data = await getPedido(pedidoId);
     if (data && (data.estado || data.status) === 'aceito' && data.statusProposta === 'aceita_cliente') return;
+    const title = data?.titulo || data?.title || data?.servicoNome || null;
 
-    if (await tryClick(client, /Aceitar este prestador|Accept this provider/i, 1200)) {
+    const isDetail = await client.getByText(/Detalhe do pedido|Order detail/i).first().isVisible().catch(() => false);
+    if (!isDetail && title) {
+      await openOrderDetailByTitle(client, title, { provider: false });
+    }
+
+    if (await tryClick(client, /Aceitar este prestador|Aceitar proposta|Accept this provider|Accept proposal/i, 1200)) {
       await sleep(700);
+      await tryConfirmDialogs(client);
       continue;
     }
 
@@ -1647,12 +1858,17 @@ async function clientAcceptProvider(client, pedidoId) {
     await tryClick(client, /Meus pedidos|My orders/i, 900);
     await client.mouse.click(480, 684).catch(() => {});
     await sleep(900);
-    await client.mouse.click(250, 250).catch(() => {});
-    await sleep(700);
-    await tryClick(client, /Aceitar este prestador|Accept this provider/i, 1200);
+    if (title) {
+      await openOrderDetailByTitle(client, title, { provider: false });
+    } else {
+      await client.mouse.click(250, 250).catch(() => {});
+      await sleep(700);
+    }
+    await tryClick(client, /Aceitar este prestador|Aceitar proposta|Accept this provider|Accept proposal/i, 1200);
     await sleep(600);
   }
-  throw new Error('Client could not accept provider');
+  const latest = await getPedido(pedidoId);
+  throw new Error(`Client could not accept provider state=${JSON.stringify(describePedidoState(latest))}`);
 }
 
 async function providerStart(provider, pedidoId) {
@@ -1790,6 +2006,22 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
     const data = await getPedido(pedidoId);
     lastData = data || lastData;
     if (data && isCanceledByClient(data)) return;
+
+    const bodyBeforeCancel = await currentBodyText(client);
+    const looksLikeOrderForm = /Novo pedido|Pedir servi.o|Request service/i.test(bodyBeforeCancel);
+    if ((await isOnOrderForm(client)) || looksLikeOrderForm) {
+      log(`clientCancelPedido still on order form pedido=${pedidoId}; returning to orders before cancel`);
+      const wentBack =
+        (await tryClick(client, /Voltar|Back/i, 1000)) ||
+        (await clickVisibleTextCenter(client, /Voltar|Back/i));
+      if (!wentBack) await client.mouse.click(28, 28).catch(() => {});
+      await sleep(900);
+      if (expectedTitle) {
+        await openOrderDetailByTitle(client, expectedTitle, { provider: false });
+      }
+      await sleep(500);
+      continue;
+    }
 
     let cancelClicked = await tryClick(client, /Cancelar pedido|Cancelar trabalho|Cancel order|Cancel/i, 1600);
     if (!cancelClicked) {
@@ -2094,7 +2326,7 @@ async function runOrcamentoScenario(client, provider, providerUid) {
 
 async function runCancelScenario(client, providerUid) {
   console.log(`[${now()}] Scenario 2/3 cancelamento cliente`);
-  await gotoRole(client, 'cliente');
+  await waitAndClick(client, /In[iI].cio|Home/i, 5000);
   await seedProviderBase(providerUid, { online: false });
 
   const baseline = await latestPedidoMeta();
@@ -2123,7 +2355,7 @@ async function runManualChatNoShowScenario(
   { serviceId = null, serviceName = null } = {},
 ) {
   console.log(`[${now()}] Scenario 3/3 manual-provider + chat + no-show`);
-  await gotoRole(client, 'cliente');
+  await waitAndClick(client, /In[iI].cio|Home/i, 5000);
   await seedProviderBase(providerUid, { online: true, serviceId, serviceName });
   await ensureProviderSetupDone(provider);
   await ensureProviderOnline(provider);
@@ -2199,7 +2431,10 @@ async function smokeTabs(client, provider) {
 (async () => {
   await ensureTargetUrlReady();
 
-  const browser = await chromium.launch({ headless: false, slowMo: 22 });
+  const browser = await chromium.launch({
+    headless: process.env.E2E_HEADLESS !== 'false',
+    slowMo: Number(process.env.E2E_SLOW_MO_MS || 22),
+  });
   const clientCtx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const providerCtx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   await configureContext(clientCtx);
