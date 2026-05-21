@@ -448,6 +448,37 @@ service cloud.firestore {
         && immutablePedidoIdentity();
     }
 
+    function hasOnlyPedidoClientCancelFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status',
+        'estado',
+        'updatedAt',
+        'canceladoPor',
+        'motivoCancelamento',
+        'tipoReembolso',
+        'historico'
+      ]);
+    }
+
+    function validPedidoClientCancellation() {
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return isPedidoClienteActor()
+        && nextEstado == 'cancelado'
+        && isAllowedClientePedidoTransition(currentEstado, nextEstado)
+        && hasOnlyPedidoClientCancelFields()
+        && fieldValueOrNull(request.resource.data, 'canceladoPor') == 'cliente'
+        && (!request.resource.data.keys().hasAny(['motivoCancelamento']) ||
+          request.resource.data['motivoCancelamento'] is string)
+        && (!request.resource.data.keys().hasAny(['tipoReembolso']) ||
+          request.resource.data['tipoReembolso'] in [
+            'total',
+            'parcial',
+            'nenhum',
+            'analise'
+          ]);
+    }
+
     function validPedidoGenericUpdate() {
       return (isPedidoParticipantByData(resource.data)
         || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
@@ -465,33 +496,37 @@ service cloud.firestore {
         : (!authoritativePedidoFieldsUnchanged()
           ? false
           : (
-          currentEstado == 'criado' && nextEstado == 'aceito'
-            ? validPedidoOpenAccept()
-            : (
-              currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
-                ? validPedidoClientManualInvite()
-                : (
-                  nextEstado == 'aguarda_resposta_cliente'
-                    ? validPedidoProviderQuoteProposal()
-                    : (
-                      currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
-                        ? validPedidoProviderFinalProposal()
-                        : (
-                          currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
-                            ? validPedidoClientAcceptQuote()
-                            : (
-                              currentEstado == 'aceito' && nextEstado == 'em_andamento'
-                                ? validPedidoProviderStartService()
-                                : (
-                                  currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
-                                    ? validPedidoClientFinalConfirmation()
-                                    : validPedidoGenericUpdate()
-                                )
-                            )
-                        )
-                    )
-                )
-            )
+            currentEstado == 'criado' && nextEstado == 'aceito'
+              ? validPedidoOpenAccept()
+              : (
+                currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
+                  ? validPedidoClientManualInvite()
+                  : (
+                    nextEstado == 'aguarda_resposta_cliente'
+                      ? validPedidoProviderQuoteProposal()
+                      : (
+                        currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
+                          ? validPedidoProviderFinalProposal()
+                          : (
+                            currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
+                              ? validPedidoClientAcceptQuote()
+                              : (
+                                currentEstado == 'aceito' && nextEstado == 'em_andamento'
+                                  ? validPedidoProviderStartService()
+                                  : (
+                                    currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
+                                      ? validPedidoClientFinalConfirmation()
+                                      : (
+                                        isPedidoClienteActor() && nextEstado == 'cancelado'
+                                          ? validPedidoClientCancellation()
+                                          : validPedidoGenericUpdate()
+                                      )
+                                  )
+                              )
+                          )
+                      )
+                  )
+              )
           )
         );
     }

@@ -195,3 +195,46 @@ Estado: aberto.
 Proximo passo: corrigir Rules/fluxo autoritativo em subfase propria e repetir
 npm.cmd run e2e:ui:dual.
 ```
+
+## Execucao 2026-05-21 - M2.11.5
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-003: Cliente nao conseguia cancelar pedido proprio no E2E
+Web por permission-denied nas Firestore Rules.
+```
+
+Checklist tecnico executado:
+
+```text
+flutter test: passou, 149/149
+npm.cmd run test:scripts: passou
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 43/43
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+seed de servicos no emulador: passou
+npm.cmd run e2e:ui:orcamento: passou
+npm.cmd run e2e:ui:dual: falhou em novo bloqueio de navegacao/lista no cancelamento
+```
+
+Resultado:
+
+```text
+M2.11-BUG-003: corrigido.
+O cliente dono agora consegue cancelar pedido permitido nas Rules, incluindo
+historico auditavel.
+
+M2.11-BUG-004: aberto.
+Depois da correcao de permissao, o e2e:ui:dual deixou de bloquear por
+permission-denied, mas ainda nao consegue chegar ao botao de cancelamento
+porque a UI Cliente mostra "Pendentes 0" apos criar o pedido de cancelamento,
+mesmo com pedido criado em Firestore.
+```
+
+Decisao:
+
+```text
+Beta interna Web automatizada ainda nao aprovada.
+A correcao de Rules esta validada, mas o dual completo precisa de nova subfase
+para investigar a lista/navegacao do Cliente apos criar pedido.
+```

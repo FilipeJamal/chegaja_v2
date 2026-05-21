@@ -3,6 +3,7 @@ const {
     assertSucceeds,
     initializeTestEnvironment,
 } = require("@firebase/rules-unit-testing");
+const { arrayUnion, serverTimestamp, Timestamp } = require("firebase/firestore");
 const fs = require("fs");
 const path = require("path");
 
@@ -344,6 +345,170 @@ describe("Firestore Security Rules", () => {
                     earningsProvider: 1,
                     earningsTotal: 100,
                     concluidoEm: new Date(),
+                })
+            );
+        });
+
+        it("should allow owner client to cancel their open order with audit history", async () => {
+            await seedPedido("order_client_cancel_created", {
+                historico: [
+                    {
+                        evento: "criado",
+                        timestamp: new Date(),
+                        userId: "client1",
+                        descricao: "Pedido criado",
+                    },
+                ],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("pedidos").doc("order_client_cancel_created").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "client1",
+                        descricao: "",
+                    }),
+                })
+            );
+        });
+
+        it("should deny another client cancelling someone else's order", async () => {
+            await seedPedido("order_other_client_cancel", {
+                historico: [],
+            });
+
+            const otherClient = testEnv.authenticatedContext("client2");
+            await assertFails(
+                otherClient.firestore().collection("pedidos").doc("order_other_client_cancel").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "client2",
+                        descricao: "",
+                    }),
+                })
+            );
+        });
+
+        it("should deny provider cancelling an open order as client", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_provider_cancel_as_client", {
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_provider_cancel_as_client").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "provider1",
+                        descricao: "",
+                    }),
+                })
+            );
+        });
+
+        it("should deny client cancellation of a concluded order", async () => {
+            await seedPedido("order_cancel_concluded", {
+                status: "concluido",
+                estado: "concluido",
+                prestadorId: "provider1",
+                precoFinal: 100,
+                commissionPlatform: 15,
+                earningsProvider: 85,
+                earningsTotal: 100,
+                historico: [],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_cancel_concluded").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "client1",
+                        descricao: "",
+                    }),
+                })
+            );
+        });
+
+        it("should deny client changing economic fields during cancellation", async () => {
+            await seedPedido("order_cancel_economic_attack", {
+                historico: [],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_cancel_economic_attack").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    precoFinal: 1,
+                    commissionPlatform: 0,
+                    earningsProvider: 1,
+                    earningsTotal: 1,
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "client1",
+                        descricao: "",
+                    }),
+                })
+            );
+        });
+
+        it("should deny client changing provider during cancellation", async () => {
+            await seedPedido("order_cancel_provider_attack", {
+                historico: [],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_cancel_provider_attack").update({
+                    status: "cancelado",
+                    estado: "cancelado",
+                    prestadorId: "provider1",
+                    canceladoPor: "cliente",
+                    motivoCancelamento: "",
+                    tipoReembolso: "total",
+                    updatedAt: serverTimestamp(),
+                    historico: arrayUnion({
+                        evento: "cancelado",
+                        timestamp: Timestamp.now(),
+                        userId: "client1",
+                        descricao: "",
+                    }),
                 })
             );
         });

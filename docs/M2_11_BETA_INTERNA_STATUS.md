@@ -10,6 +10,7 @@ M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
 M2.11.4: avancada com runner E2E Web mais robusto; orcamento passou; dual bloqueado por cancelamento nas Rules
+M2.11.5: avancada com permissao de cancelamento Cliente corrigida nas Firestore Rules; dual ainda bloqueado por navegacao/lista no cancelamento
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -378,6 +379,121 @@ M2.11.4 avancada parcialmente.
 O runner E2E Web ficou mais robusto e o fluxo de orcamento passou.
 A aprovacao completa da beta Web continua bloqueada pelo BUG-003 de
 cancelamento Cliente nas Rules/emulador.
+```
+
+## M2.11.5 - Correcao de permissao/fluxo de cancelamento Cliente
+
+Objetivo:
+
+```text
+Corrigir o BUG-003 sem mascarar o problema no runner.
+O cliente dono do pedido deve conseguir cancelar um pedido permitido, com
+canceladoPor=cliente e evento de historico, mas sem poder alterar campos
+economicos, prestadorId ou pedidos finais.
+```
+
+Reproducao em teste:
+
+```text
+Foi adicionado um teste de Firestore Rules que reproduziu o mesmo bloqueio do
+E2E Web:
+- cliente dono tenta cancelar pedido em estado criado;
+- update inclui status/estado=cancelado;
+- canceladoPor=cliente;
+- motivoCancelamento="";
+- tipoReembolso=total;
+- updatedAt serverTimestamp;
+- historico com arrayUnion(evento=cancelado).
+
+Antes da correcao, esse teste falhou com permission-denied e limite de
+1000 expressoes, igual ao E2E Web.
+```
+
+Correcao aplicada:
+
+```text
+firestore.rules ganhou um caminho especifico para cancelamento pelo cliente:
+- validPedidoClientCancellation();
+- hasOnlyPedidoClientCancelFields();
+
+Esse caminho evita passar pelo update generico quando o cliente esta a cancelar
+o proprio pedido. A regra permite apenas os campos necessarios para cancelamento:
+status, estado, updatedAt, canceladoPor, motivoCancelamento, tipoReembolso e
+historico.
+
+Tambem exige:
+- cliente dono do pedido;
+- transicao permitida para cancelado;
+- canceladoPor exatamente "cliente";
+- motivoCancelamento string quando existir;
+- tipoReembolso limitado a total/parcial/nenhum/analise.
+```
+
+Testes de Rules adicionados:
+
+```text
+Positivo:
+- cliente dono consegue cancelar o proprio pedido aberto com historico.
+
+Negativos:
+- outro cliente nao consegue cancelar pedido alheio;
+- prestador nao consegue cancelar pedido aberto como cliente;
+- cliente nao consegue cancelar pedido concluido;
+- cliente nao consegue alterar campos economicos durante cancelamento;
+- cliente nao consegue trocar prestadorId durante cancelamento.
+```
+
+Validações executadas:
+
+```text
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": 43/43 passou
+flutter test: 149/149 passou
+npm.cmd run test:scripts: passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+npm.cmd run e2e:ui:orcamento: passou
+npm.cmd run e2e:ui:dual: ainda bloqueado, mas nao por permission-denied
+```
+
+Resultado do BUG-003:
+
+```text
+M2.11-BUG-003: corrigido no nivel Firestore Rules.
+O teste que reproduzia o permission-denied agora passa.
+No E2E dual, nao apareceu novo permission-denied no cancelamento Cliente.
+```
+
+Novo bloqueio encontrado:
+
+```text
+ID: M2.11-BUG-004
+Titulo: E2E dual nao consegue chegar ao cancelamento porque a lista Cliente
+mostra 0 pedidos ativos apos criar o pedido de cancelamento.
+Papel: Cliente
+Plataforma: Web/emulador
+Fluxo: cancelamento Cliente apos criar pedido automatico
+Frequencia: reproduzido no e2e:ui:dual apos correcao das Rules
+Severidade: alta para aprovacao automatizada da beta Web
+Estado: aberto
+
+Evidencia:
+- Firestore tinha o pedido criado com clienteId correto e estado=criado.
+- A tela "Meus pedidos" mostrava Pendentes 0 e empty state.
+- O runner nao conseguiu abrir o detalhe nem clicar em "Cancelar pedido".
+
+Decisao:
+Nao mascarar no runner nesta subfase. O BUG-003 foi corrigido; o dual continua
+bloqueado por um novo problema de navegacao/lista/estado visual que deve ser
+tratado numa subfase propria.
+```
+
+Decisao da M2.11.5:
+
+```text
+M2.11.5 avancada.
+Permissao/Rules de cancelamento Cliente corrigidas com teste positivo e testes
+negativos.
+Beta interna Web completa ainda nao aprovada porque o e2e:ui:dual continua
+bloqueado pelo novo M2.11-BUG-004.
 ```
 
 ## Proximo passo recomendado
