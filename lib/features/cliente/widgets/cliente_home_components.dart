@@ -7,6 +7,10 @@ import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
 import 'package:chegaja_v2/core/widgets/app_section_header.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+const _clienteHomeHouseIllustration =
+    'assets/illustrations/home_service_house.svg';
 
 class ClienteHomeHero extends StatelessWidget {
   const ClienteHomeHero({
@@ -37,6 +41,8 @@ class ClienteHomeHero extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final useRow = constraints.maxWidth >= 720;
+          final showIllustration = constraints.maxWidth >= 300;
+          final illustrationWidth = constraints.maxWidth >= 560 ? 148.0 : 82.0;
           final copy = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -61,6 +67,19 @@ class ClienteHomeHero extends StatelessWidget {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+            ],
+          );
+          final header = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: copy),
+              if (showIllustration) ...[
+                const SizedBox(width: AppSpacing.x4),
+                SizedBox(
+                  width: illustrationWidth,
+                  child: const _ClienteHomeHeroIllustration(),
+                ),
+              ],
             ],
           );
 
@@ -92,7 +111,7 @@ class ClienteHomeHero extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                copy,
+                header,
                 const SizedBox(height: AppSpacing.x5),
                 actions,
               ],
@@ -102,13 +121,26 @@ class ClienteHomeHero extends StatelessWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(flex: 3, child: copy),
+              Expanded(flex: 3, child: header),
               const SizedBox(width: AppSpacing.x6),
               SizedBox(width: 280, child: actions),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _ClienteHomeHeroIllustration extends StatelessWidget {
+  const _ClienteHomeHeroIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.asset(
+      _clienteHomeHouseIllustration,
+      fit: BoxFit.contain,
+      semanticsLabel: 'Casa com marcador de localizacao',
     );
   }
 }
@@ -140,7 +172,7 @@ class ClienteServicesSection extends StatelessWidget {
         search,
         const SizedBox(height: AppSpacing.x4),
         AppResponsiveGrid(
-          minItemWidth: 250,
+          minItemWidth: 170,
           spacing: AppSpacing.x3,
           runSpacing: AppSpacing.x3,
           children: children,
@@ -168,8 +200,8 @@ class ClienteServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final visualSeed = '${servico.iconKey ?? ''} ${servico.name}';
-    final icon = clienteServiceIconFor(visualSeed);
     final accent = clienteServiceAccentFor(visualSeed);
+    final asset = clienteServiceAssetFor(visualSeed);
     final key = Key(
       'cliente_home_service_tile_${clienteHomeSafeKey(servico.id)}',
     );
@@ -178,47 +210,147 @@ class ClienteServiceTile extends StatelessWidget {
       key: key,
       onTap: onTap,
       variant: AppCardVariant.outlined,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 220;
+          final icon = SvgPicture.asset(
+            asset,
+            fit: BoxFit.contain,
+            semanticsLabel: servico.nameForLang(localeCode),
+          );
+          final title = Text(
+            servico.nameForLang(localeCode),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: AppSpacing.x3),
-          Expanded(
-            child: Column(
+          );
+          final pill = AppStatusPill(
+            label: modeLabel,
+            tone: clienteServiceToneFor(servico.mode),
+            size: AppStatusPillSize.sm,
+          );
+
+          if (compact) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  servico.nameForLang(localeCode),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                Row(
+                  children: [
+                    SizedBox(width: 48, height: 48, child: icon),
+                    const Spacer(),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: accent,
+                    ),
+                  ],
                 ),
+                const SizedBox(height: AppSpacing.x3),
+                title,
                 const SizedBox(height: AppSpacing.x2),
-                AppStatusPill(
-                  label: modeLabel,
-                  tone: clienteServiceToneFor(servico.mode),
-                  size: AppStatusPillSize.sm,
-                ),
+                pill,
               ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 48, height: 48, child: icon),
+              const SizedBox(width: AppSpacing.x3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    title,
+                    const SizedBox(height: AppSpacing.x2),
+                    pill,
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x2),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: accent,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ServicePreviewTile extends StatelessWidget {
+  const _ServicePreviewTile({
+    required this.label,
+    required this.asset,
+  });
+
+  final String label;
+  final String asset;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 220;
+          final icon = SvgPicture.asset(
+            asset,
+            fit: BoxFit.contain,
+            semanticsLabel: label,
+          );
+          final title = Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
             ),
-          ),
-          const SizedBox(width: AppSpacing.x2),
-          Icon(
-            Icons.arrow_forward_rounded,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ],
+          );
+          const pill = AppStatusPill(
+            label: 'A carregar',
+            tone: AppStatusTone.neutral,
+            size: AppStatusPillSize.sm,
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 48, height: 48, child: icon),
+                const SizedBox(height: AppSpacing.x3),
+                title,
+                const SizedBox(height: AppSpacing.x2),
+                pill,
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              SizedBox(width: 48, height: 48, child: icon),
+              const SizedBox(width: AppSpacing.x3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    title,
+                    const SizedBox(height: AppSpacing.x2),
+                    pill,
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -236,33 +368,27 @@ class ClienteServicesLoadingPreview extends StatelessWidget {
       children: const [
         _ServicePreviewTile(
           label: 'Canalizacao',
-          icon: Icons.plumbing_rounded,
-          tone: AppStatusTone.info,
+          asset: 'assets/icons/services/service_plumbing.svg',
         ),
         _ServicePreviewTile(
           label: 'Limpeza',
-          icon: Icons.cleaning_services_rounded,
-          tone: AppStatusTone.success,
+          asset: 'assets/icons/services/service_cleaning.svg',
         ),
         _ServicePreviewTile(
           label: 'Eletricista',
-          icon: Icons.electrical_services_rounded,
-          tone: AppStatusTone.warning,
+          asset: 'assets/icons/services/service_electric.svg',
         ),
         _ServicePreviewTile(
           label: 'Pintura',
-          icon: Icons.format_paint_rounded,
-          tone: AppStatusTone.info,
+          asset: 'assets/icons/services/service_painting.svg',
         ),
         _ServicePreviewTile(
           label: 'Mudancas',
-          icon: Icons.local_shipping_rounded,
-          tone: AppStatusTone.warning,
+          asset: 'assets/icons/services/service_moving.svg',
         ),
         _ServicePreviewTile(
           label: 'Montagem',
-          icon: Icons.handyman_rounded,
-          tone: AppStatusTone.info,
+          asset: 'assets/icons/services/service_assembly.svg',
         ),
       ],
     );
@@ -300,68 +426,6 @@ class _ServiceLoadingSearch extends StatelessWidget {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               color: theme.colorScheme.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServicePreviewTile extends StatelessWidget {
-  const _ServicePreviewTile({
-    required this.label,
-    required this.icon,
-    required this.tone,
-  });
-
-  final String label;
-  final IconData icon;
-  final AppStatusTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = switch (tone) {
-      AppStatusTone.info => AppPalette.accentBlue,
-      AppStatusTone.success => AppPalette.success,
-      AppStatusTone.warning => AppPalette.warning,
-      AppStatusTone.danger => AppPalette.error,
-      AppStatusTone.neutral => theme.colorScheme.onSurfaceVariant,
-    };
-
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: AppSpacing.x3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.x2),
-                const AppStatusPill(
-                  label: 'A carregar',
-                  tone: AppStatusTone.neutral,
-                  size: AppStatusPillSize.sm,
-                ),
-              ],
             ),
           ),
         ],
@@ -499,6 +563,9 @@ Color clienteServiceAccentFor(String? iconKey) {
   if (normalized.contains('eletric') || normalized.contains('electric')) {
     return AppPalette.warning;
   }
+  if (normalized.contains('carp') || normalized.contains('madeira')) {
+    return const Color(0xFF92400E);
+  }
   if (normalized.contains('pint') ||
       normalized.contains('caric') ||
       normalized.contains('design')) {
@@ -510,8 +577,39 @@ Color clienteServiceAccentFor(String? iconKey) {
   if (normalized.contains('bolo') || normalized.contains('cake')) {
     return const Color(0xFFEC4899);
   }
-  if (normalized.contains('carp') || normalized.contains('madeira')) {
-    return const Color(0xFF92400E);
-  }
   return AppPalette.primary;
+}
+
+String clienteServiceAssetFor(String? iconKey) {
+  final normalized = (iconKey ?? '').toLowerCase().trim();
+  if (normalized.contains('canal') || normalized.contains('plumb')) {
+    return 'assets/icons/services/service_plumbing.svg';
+  }
+  if (normalized.contains('limp') || normalized.contains('clean')) {
+    return 'assets/icons/services/service_cleaning.svg';
+  }
+  if (normalized.contains('eletric') || normalized.contains('electric')) {
+    return 'assets/icons/services/service_electric.svg';
+  }
+  if (normalized.contains('mud')) {
+    return 'assets/icons/services/service_moving.svg';
+  }
+  if (normalized.contains('mont')) {
+    return 'assets/icons/services/service_assembly.svg';
+  }
+  if (normalized.contains('bolo') ||
+      normalized.contains('cake') ||
+      normalized.contains('confeit')) {
+    return 'assets/icons/services/service_cake.svg';
+  }
+  if (normalized.contains('caric') || normalized.contains('design')) {
+    return 'assets/icons/services/service_design.svg';
+  }
+  if (normalized.contains('carp') || normalized.contains('madeira')) {
+    return 'assets/icons/services/service_carpentry.svg';
+  }
+  if (normalized.contains('pint')) {
+    return 'assets/icons/services/service_painting.svg';
+  }
+  return 'assets/icons/services/service_default.svg';
 }

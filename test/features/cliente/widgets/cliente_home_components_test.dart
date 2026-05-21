@@ -109,6 +109,14 @@ void main() {
         clienteServiceAccentFor('bolo personalizado'),
         isNot(clienteServiceAccentFor('canalizacao')),
       );
+      expect(
+        clienteServiceAssetFor('bolo personalizado'),
+        'assets/icons/services/service_cake.svg',
+      );
+      expect(
+        clienteServiceAssetFor('carpinteiro'),
+        'assets/icons/services/service_carpentry.svg',
+      );
     });
   });
 

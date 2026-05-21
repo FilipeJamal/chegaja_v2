@@ -964,11 +964,13 @@ aproveitado e o estado de carregamento dos servicos parecia tecnico.
 Correcao:
 
 ```text
-A Home Cliente passou a usar melhor o espaco desktop:
+A Home Cliente passou a usar melhor o espaco desktop e ganhou a primeira base
+de assets vetoriais do produto:
 - coluna lateral com resumo rapido, pedido ativo, guia de inicio e atalho para mensagens
 - estado sem pedidos ativos com CTA para abrir a aba Pedidos
 - loading de servicos com preview visual de categorias em vez de spinner isolado
-- tiles de servico com icones e acentos por categoria
+- hero com ilustracao SVG local de casa e marcador de localizacao
+- tiles de servico mais compactos, com icones SVG coloridos por categoria
 - botoes secundarios ganharam contraste correto no tema escuro
 - suporte a categorias como canalizacao, limpeza, eletricista, pintura, mudancas,
   montagem, bolos personalizados, caricaturista e carpinteiro
@@ -982,6 +984,10 @@ Ficheiros alterados:
 lib/features/cliente/cliente_home_screen.dart
 lib/features/cliente/widgets/cliente_home_components.dart
 lib/core/widgets/app_button.dart
+assets/illustrations/home_service_house.svg
+assets/icons/services/*.svg
+pubspec.yaml
+pubspec.lock
 test/features/cliente/widgets/cliente_home_components_test.dart
 docs/M2_10_VISUAL_PRODUCT_STATUS.md
 ```
