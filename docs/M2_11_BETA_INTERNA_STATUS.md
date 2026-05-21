@@ -9,6 +9,7 @@ M2.11: em execucao de beta interna controlada
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
+M2.11.4: planeada para refatorar runner E2E Web da beta
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -248,6 +249,44 @@ Motivo:
 Proxima acao recomendada:
 M2.11.4 - Refatorar runner E2E Web da beta para usar seletores/keys estaveis,
 rodar novamente dual/orcamento e so entao decidir aprovacao final da beta Web.
+```
+
+## M2.11.4 - Planeamento runner E2E Web beta
+
+Artefactos criados:
+
+```text
+docs/superpowers/specs/2026-05-21-m2-11-4-refatorar-runner-e2e-web-beta-design.md
+docs/superpowers/plans/2026-05-21-m2-11-4-refatorar-runner-e2e-web-beta.md
+```
+
+Direcao tecnica:
+
+```text
+refatorar scripts/e2e/full_ui_dual_role_e2e.js para ser orientado por estado
+separar helpers puros/testaveis para tela, estado e proxima acao
+validar Firestore apos cada acao importante
+evitar confundir chat/perfil/detalhe
+reduzir cliques por coordenada
+adicionar logs com pedidoId, role, tela esperada e estado atual
+rodar novamente e2e:ui:dual e e2e:ui:orcamento
+```
+
+Limites mantidos:
+
+```text
+sem backend novo
+sem Firestore Rules novas
+sem Storage Rules novas
+sem Cloud Functions novas
+sem deploy real
+sem smoke real
+sem cleanup real
+sem health real
+sem Android fisico real
+sem pagamentos reais
+sem Play Store
+sem fechar M2.6
 ```
 
 ## Proximo passo recomendado
