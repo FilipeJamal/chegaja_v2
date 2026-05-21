@@ -115,8 +115,9 @@ Documentos sugeridos:
 
 ```text
 docs/M2_11_BETA_INTERNA_STATUS.md
-docs/BETA_INTERNAL_TEST_SCRIPT.md
-docs/BETA_FEEDBACK_TEMPLATE.md
+docs/BETA_INTERNA_ROTEIRO_TESTE.md
+docs/BETA_INTERNA_TEMPLATE_BUGS.md
+docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md
 ```
 
 ### 2. Contas e roles de teste
@@ -157,11 +158,13 @@ flutter test
 npm.cmd run test:scripts
 npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"
 flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
-flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --debug
+npm.cmd run e2e:ui:dual
+npm.cmd run e2e:ui:orcamento
 ```
 
-Se `flutter build windows` exigir configuracao local indisponivel, isso deve ser
-documentado como bloqueio ambiental, nao escondido.
+Se `flutter build windows --debug` ou os E2E exigirem configuracao local
+indisponivel, isso deve ser documentado como bloqueio ambiental, nao escondido.
 
 ### 4. Roteiro Cliente
 

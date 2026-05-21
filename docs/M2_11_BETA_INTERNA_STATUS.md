@@ -7,6 +7,7 @@ Data: 2026-05-21
 ```text
 M2.11: planeada para beta interna controlada
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
+M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -81,14 +82,28 @@ HTTPS App Links
 fecho da M2.6
 ```
 
-## Proximo passo recomendado
+## M2.11.2 - Pacote de beta interna
+
+Documentos criados:
 
 ```text
-Preparar roteiro executavel da beta interna:
-- BETA_INTERNAL_TEST_SCRIPT
-- BETA_FEEDBACK_TEMPLATE
-- contas/roles de teste
-- checklist de Web/Windows
+docs/BETA_INTERNA_ROTEIRO_TESTE.md
+docs/BETA_INTERNA_TEMPLATE_BUGS.md
+docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md
+```
+
+Cobertura:
+
+```text
+roteiro Cliente/Prestador
+Mensagens/chat
+Conta/Perfil
+troca Cliente/Prestador pela UI
+template de bugs com severidade, frequencia e estado
+criterios de aprovacao/reprovacao
+checklist Web/Windows
+validacoes tecnicas e E2E previstas
+M2.6 explicitamente pendente de Android fisico real
 ```
 
 ## Plano de execucao
@@ -117,5 +132,20 @@ flutter test
 npm.cmd run test:scripts
 npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"
 flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
-flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --debug
+npm.cmd run e2e:ui:dual
+npm.cmd run e2e:ui:orcamento
+```
+
+## Proximo passo recomendado
+
+```text
+Executar validacoes tecnicas da beta:
+- flutter test
+- npm.cmd run test:scripts
+- Firebase emulator tests
+- flutter build web
+- flutter build windows --debug
+- e2e:ui:dual, se ambiente local permitir
+- e2e:ui:orcamento, se ambiente local permitir
 ```

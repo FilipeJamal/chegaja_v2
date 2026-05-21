@@ -14,9 +14,9 @@
 
 **Create**
 
-- `docs/BETA_INTERNAL_TEST_SCRIPT.md` - roteiro passo a passo que o tester vai seguir para Cliente, Prestador, Mensagens, Conta/Perfil, Web e Windows.
-- `docs/BETA_FEEDBACK_TEMPLATE.md` - modelo padrao para bugs, feedback geral, decisao de aprovacao/reprovacao e triagem P0/P1/P2/P3.
-- `docs/BETA_BUILD_AND_TEST_CHECKLIST.md` - checklist tecnico para gerar/validar build Web, build Windows e comandos de pre-check sem tocar em producao.
+- `docs/BETA_INTERNA_ROTEIRO_TESTE.md` - roteiro passo a passo que o tester vai seguir para Cliente, Prestador, Mensagens, Conta/Perfil, Web e Windows.
+- `docs/BETA_INTERNA_TEMPLATE_BUGS.md` - modelo padrao para bugs, feedback geral, decisao de aprovacao/reprovacao e triagem P0/P1/P2/P3.
+- `docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md` - checklist tecnico para gerar/validar build Web, build Windows e comandos de pre-check sem tocar em producao.
 
 **Modify**
 
@@ -68,9 +68,9 @@ Inserir depois da secao `M2.11.1`:
 Artefactos a criar nesta fase:
 
 ```text
-docs/BETA_INTERNAL_TEST_SCRIPT.md
-docs/BETA_FEEDBACK_TEMPLATE.md
-docs/BETA_BUILD_AND_TEST_CHECKLIST.md
+docs/BETA_INTERNA_ROTEIRO_TESTE.md
+docs/BETA_INTERNA_TEMPLATE_BUGS.md
+docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md
 ```
 
 Validacao tecnica esperada antes de entregar a beta:
@@ -80,7 +80,9 @@ flutter test
 npm.cmd run test:scripts
 npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"
 flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
-flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --debug
+npm.cmd run e2e:ui:dual
+npm.cmd run e2e:ui:orcamento
 ```
 
 Sem deploy, sem smoke real, sem cleanup real, sem health real e sem fechar M2.6.
@@ -105,7 +107,7 @@ Mostra apenas atualizacao documental do estado e plano da M2.11.
 ### Task 2: Criar roteiro executavel da beta interna
 
 **Files:**
-- Create: `docs/BETA_INTERNAL_TEST_SCRIPT.md`
+- Create: `docs/BETA_INTERNA_ROTEIRO_TESTE.md`
 
 - [ ] **Step 1: Criar documento com este conteudo**
 
@@ -210,7 +212,7 @@ Bugs restantes ficam classificados e documentados.
 Run:
 
 ```powershell
-Select-String -Path docs/BETA_INTERNAL_TEST_SCRIPT.md -Pattern "TB[D]|TO[D]O|placehol[d]er|Android fisico continua|Mudar para modo"
+Select-String -Path docs/BETA_INTERNA_ROTEIRO_TESTE.md -Pattern "TB[D]|TO[D]O|placehol[d]er|Android fisico continua|Mudar para modo"
 ```
 
 Expected:
@@ -225,7 +227,7 @@ Encontra as referencias explicitas a Android fisico e troca de modo.
 ### Task 3: Criar template de feedback e bugs
 
 **Files:**
-- Create: `docs/BETA_FEEDBACK_TEMPLATE.md`
+- Create: `docs/BETA_INTERNA_TEMPLATE_BUGS.md`
 
 - [ ] **Step 1: Criar documento com este conteudo**
 
@@ -308,7 +310,7 @@ Aprovada com pendencias: P2/P3 documentados e aceites para backlog.
 Run:
 
 ```powershell
-Select-String -Path docs/BETA_FEEDBACK_TEMPLATE.md -Pattern "P0|P1|P2|P3|Troca Cliente/Prestador|TB[D]|TO[D]O|placehol[d]er"
+Select-String -Path docs/BETA_INTERNA_TEMPLATE_BUGS.md -Pattern "P0|P1|P2|P3|Troca Cliente/Prestador|TB[D]|TO[D]O|placehol[d]er"
 ```
 
 Expected:
@@ -323,7 +325,7 @@ Nao encontra marcadores pendentes.
 ### Task 4: Criar checklist tecnico de builds e validacoes
 
 **Files:**
-- Create: `docs/BETA_BUILD_AND_TEST_CHECKLIST.md`
+- Create: `docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md`
 
 - [ ] **Step 1: Criar documento com este conteudo**
 
@@ -380,7 +382,7 @@ Artefactos gerados em build/web.
 ## Build Windows
 
 ```cmd
-flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --debug
 ```
 
 Expected:
@@ -425,7 +427,7 @@ decisao final
 Run:
 
 ```powershell
-Select-String -Path docs/BETA_BUILD_AND_TEST_CHECKLIST.md -Pattern "flutter test|flutter build web|flutter build windows|deploy Firebase real|TB[D]|TO[D]O|placehol[d]er"
+Select-String -Path docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md -Pattern "flutter test|flutter build web|flutter build windows|deploy Firebase real|TB[D]|TO[D]O|placehol[d]er"
 ```
 
 Expected:
@@ -525,7 +527,7 @@ Build Web concluido sem erro.
 Run:
 
 ```powershell
-flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --debug
 ```
 
 Expected:
@@ -534,7 +536,35 @@ Expected:
 Build Windows concluido sem erro ou bloqueio ambiental documentado.
 ```
 
-- [ ] **Step 7: Atualizar status com resultados**
+- [ ] **Step 7: Rodar E2E dual, se ambiente Web local permitir**
+
+Run:
+
+```powershell
+npm.cmd run e2e:ui:dual
+```
+
+Expected:
+
+```text
+E2E dual passa ou bloqueio ambiental documentado.
+```
+
+- [ ] **Step 8: Rodar E2E orcamento, se ambiente Web local permitir**
+
+Run:
+
+```powershell
+npm.cmd run e2e:ui:orcamento
+```
+
+Expected:
+
+```text
+E2E orcamento passa ou bloqueio ambiental documentado.
+```
+
+- [ ] **Step 9: Atualizar status com resultados**
 
 Adicionar a `docs/M2_11_BETA_INTERNA_STATUS.md`:
 
@@ -547,6 +577,8 @@ npm.cmd run test:scripts: resultado registado
 Firebase emulator tests: resultado registado
 flutter build web: resultado registado
 flutter build windows: resultado registado ou bloqueio ambiental documentado
+e2e:ui:dual: resultado registado ou bloqueio ambiental documentado
+e2e:ui:orcamento: resultado registado ou bloqueio ambiental documentado
 ```
 ~~~
 
@@ -562,7 +594,7 @@ flutter build windows: resultado registado ou bloqueio ambiental documentado
 Run:
 
 ```powershell
-Select-String -Path docs/BETA_INTERNAL_TEST_SCRIPT.md,docs/BETA_FEEDBACK_TEMPLATE.md,docs/BETA_BUILD_AND_TEST_CHECKLIST.md,docs/M2_11_BETA_INTERNA_STATUS.md -Pattern "TB[D]|TO[D]O|placehol[d]er"
+Select-String -Path docs/BETA_INTERNA_ROTEIRO_TESTE.md,docs/BETA_INTERNA_TEMPLATE_BUGS.md,docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md,docs/M2_11_BETA_INTERNA_STATUS.md -Pattern "TB[D]|TO[D]O|placehol[d]er"
 ```
 
 Expected:
@@ -591,7 +623,7 @@ Nao ha mudancas em backend, rules, functions, services ou repositories.
 Run:
 
 ```powershell
-git add -- docs/M2_11_BETA_INTERNA_STATUS.md docs/BETA_INTERNAL_TEST_SCRIPT.md docs/BETA_FEEDBACK_TEMPLATE.md docs/BETA_BUILD_AND_TEST_CHECKLIST.md
+git add -- docs/M2_11_BETA_INTERNA_STATUS.md docs/BETA_INTERNA_ROTEIRO_TESTE.md docs/BETA_INTERNA_TEMPLATE_BUGS.md docs/BETA_INTERNA_CHECKLIST_WEB_WINDOWS.md
 git commit -m "Planear M2.11 beta interna controlada"
 git push origin main
 ```
