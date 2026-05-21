@@ -1057,3 +1057,58 @@ Validacao:
 | `flutter test` | passou, 136/136 |
 | `npm.cmd run test:scripts` | passou |
 | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | passou, 37/37 |
+
+## Validacao pos-catalogo visual de servicos
+
+Objetivo:
+
+```text
+Rever o catalogo visual depois da expansao de assets para garantir que a app
+nao volta a parecer generica nas areas de servico.
+```
+
+Evidencia local gerada:
+
+```text
+Pasta temporaria:
+%TEMP%\chegaja-service-catalog-qa
+
+Screenshots gerados:
+home_cliente__mobile.png
+home_cliente__tablet.png
+home_cliente__desktop.png
+home_cliente__wide.png
+home_prestador__mobile.png
+home_prestador__tablet.png
+home_prestador__desktop.png
+home_prestador__wide.png
+service_icon_gallery.png
+```
+
+Resultado visual:
+
+```text
+Hero da Home Cliente renderiza com ilustracao de casa e marcador de localizacao.
+Sidebar desktop e bottom navigation mobile continuam visiveis.
+Galeria local dos SVGs confirmou icones especificos para as areas criticas:
+Pedreiro, Retratista a lapis, Ilustrador, Caricaturista, Escultor 3D,
+Serralheiro, Barbeiro, Cabeleireiro, Babysitter, Cuidador de idosos,
+Dog walker, Pet sitter, Mecanico, Reparacao tecnica, Web e apps,
+Design grafico, Explicacoes, Massagem, Saude, Catering, Fitness,
+Musica, Linguas, Jardinagem e Reparos gerais.
+```
+
+Limitacao do ambiente:
+
+```text
+Na captura isolada sem emuladores/dados ativos, Home Cliente e Home Prestador
+ficaram em estado de carregamento. Por isso, a validacao visual de cards reais
+foi complementada por testes de mapeamento e galeria local dos SVGs.
+```
+
+Validacao:
+
+| Comando | Resultado |
+| --- | --- |
+| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:63819 --out-dir=%TEMP%\chegaja-service-catalog-qa --wait-ms=16000` | gerou 8 screenshots; console errors ligados ao ambiente local sem dados/emuladores ativos |
+| galeria local `service_icon_gallery.png` | gerada em `%TEMP%\chegaja-service-catalog-qa`; icones especificos verificados visualmente |
