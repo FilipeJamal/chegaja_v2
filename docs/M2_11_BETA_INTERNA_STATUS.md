@@ -5,7 +5,7 @@ Data: 2026-05-21
 ## Estado
 
 ```text
-M2.11: iniciada
+M2.11: planeada para beta interna controlada
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.6: continua pendente de Android fisico real
 ```
@@ -89,4 +89,33 @@ Preparar roteiro executavel da beta interna:
 - BETA_FEEDBACK_TEMPLATE
 - contas/roles de teste
 - checklist de Web/Windows
+```
+
+## Plano de execucao
+
+Plano criado:
+
+```text
+docs/superpowers/plans/2026-05-21-m2-11-beta-interna-controlada.md
+```
+
+Ordem recomendada:
+
+```text
+1. Consolidar status M2.11.
+2. Criar roteiro executavel da beta interna.
+3. Criar template de feedback e bugs.
+4. Criar checklist tecnico de build e validacao.
+5. Rodar validacoes tecnicas Web/Windows.
+6. Atualizar resultados e decidir aprovacao, bloqueio ou ajustes.
+```
+
+Validacoes finais previstas:
+
+```cmd
+flutter test
+npm.cmd run test:scripts
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"
+flutter build web --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
+flutter build windows --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true
 ```
