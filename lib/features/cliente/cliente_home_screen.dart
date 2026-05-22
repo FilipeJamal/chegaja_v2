@@ -55,6 +55,9 @@ final GlobalKey _clienteServicesAnchorKey = GlobalKey(
   debugLabel: 'cliente_home_services_anchor',
 );
 
+const bool _disableClienteHomeMessageStreamsForEmulatorTests =
+    bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+
 /// ---------- HELPERS GERAIS PARA A ABA "PEDIDOS" ----------
 
 Future<String?> _loadRegionLabel() async {
@@ -251,6 +254,17 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
+    if (_disableClienteHomeMessageStreamsForEmulatorTests) {
+      for (final id in _chatSubs.keys.toList()) {
+        _cancelChatSub(id);
+      }
+      _unreadPorPedido.clear();
+      if (mounted && _hasUnreadMessages) {
+        setState(() => _hasUnreadMessages = false);
+      }
+      return;
+    }
+
     final ativos = pedidos
         .where((p) => p.estado != 'concluido' && p.estado != 'cancelado')
         .toList();
@@ -259,8 +273,7 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
     final idsParaRemover =
         _chatSubs.keys.where((id) => !idsAtivos.contains(id)).toList();
     for (final id in idsParaRemover) {
-      _chatSubs[id]?.cancel();
-      _chatSubs.remove(id);
+      _cancelChatSub(id);
       _unreadPorPedido.remove(id);
     }
 
@@ -279,6 +292,7 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
         _chatSubs[p.id] = q.snapshots().listen(
           (snap) => _onMessagesUpdate(p.id, snap.docs),
           onError: (Object error, StackTrace stackTrace) {
+            _cancelChatSub(p.id);
             if (kDebugMode) {
               // ignore: avoid_print
               print('[ClienteHome] chatSub(${p.id}) error: $error');
@@ -286,6 +300,13 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
           },
         );
       }
+    }
+  }
+
+  void _cancelChatSub(String pedidoId) {
+    final sub = _chatSubs.remove(pedidoId);
+    if (sub != null) {
+      unawaited(sub.cancel());
     }
   }
 
@@ -988,6 +1009,22 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
+    if (_disableClienteHomeMessageStreamsForEmulatorTests) {
+      for (final id in _chatSubs.keys.toList()) {
+        _cancelChatSub(id);
+      }
+      _unreadPorPedido.clear();
+      _lastUnreadAtPorPedido.clear();
+      _pedidoPorId.clear();
+      if (mounted && _hasUnread) {
+        setState(() {
+          _hasUnread = false;
+          _pedidoMaisRecente = null;
+        });
+      }
+      return;
+    }
+
     final ativos = pedidos
         .where((p) => p.estado != 'concluido' && p.estado != 'cancelado')
         .toList();
@@ -997,8 +1034,7 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
     final idsParaRemover =
         _chatSubs.keys.where((id) => !idsAtivos.contains(id)).toList();
     for (final id in idsParaRemover) {
-      _chatSubs[id]?.cancel();
-      _chatSubs.remove(id);
+      _cancelChatSub(id);
       _unreadPorPedido.remove(id);
       _lastUnreadAtPorPedido.remove(id);
       _pedidoPorId.remove(id);
@@ -1023,6 +1059,7 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
             _unreadPorPedido[p.id] = false;
             _lastUnreadAtPorPedido[p.id] = null;
             _recalculateGlobal();
+            _cancelChatSub(p.id);
             if (kDebugMode) {
               // ignore: avoid_print
               print('[ClienteHomeBanner] chatSub(${p.id}) error: $error');
@@ -1030,6 +1067,13 @@ class _ClienteMensagensBannerState extends State<_ClienteMensagensBanner> {
           },
         );
       }
+    }
+  }
+
+  void _cancelChatSub(String pedidoId) {
+    final sub = _chatSubs.remove(pedidoId);
+    if (sub != null) {
+      unawaited(sub.cancel());
     }
   }
 

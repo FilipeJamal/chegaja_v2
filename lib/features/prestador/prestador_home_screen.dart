@@ -50,6 +50,8 @@ final Map<String, Set<String>> _ignoradosPorPrestador = <String, Set<String>>{};
 const double kCommissionPercent = 0.15;
 const bool _disablePrestadorTrackingForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+const bool _disablePrestadorHomeMessageStreamsForEmulatorTests =
+    bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
 
 String _labelTipoPreco(String tipo) {
   switch (tipo) {
@@ -77,6 +79,14 @@ String _labelTipoPagamento(String tipo) {
 
 bool _isConcluido(Pedido p) => p.estado == 'concluido';
 bool _isCancelado(Pedido p) => p.estado == 'cancelado';
+
+@visibleForTesting
+bool prestadorPedidoPermiteStreamChat(Pedido pedido, String prestadorId) {
+  final id = prestadorId.trim();
+  if (id.isEmpty) return false;
+  if (_isConcluido(pedido) || _isCancelado(pedido)) return false;
+  return pedido.prestadorId == id;
+}
 
 bool _temAcaoPendentePrestador(Pedido p) {
   if (p.estado == 'aguarda_resposta_prestador') return true;
@@ -218,8 +228,20 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
+    if (_disablePrestadorHomeMessageStreamsForEmulatorTests) {
+      for (final id in _chatSubs.keys.toList()) {
+        _cancelChatSub(id);
+      }
+      _unreadPorPedido.clear();
+      if (mounted && _hasUnreadMessages) {
+        setState(() => _hasUnreadMessages = false);
+      }
+      return;
+    }
+
+    final prestadorId = AuthService.currentUser?.uid ?? '';
     final ativos = pedidos
-        .where((p) => p.estado != 'concluido' && p.estado != 'cancelado')
+        .where((p) => prestadorPedidoPermiteStreamChat(p, prestadorId))
         .toList();
 
     final idsAtivos = ativos.map((p) => p.id).toSet();
@@ -227,8 +249,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
     final idsParaRemover =
         _chatSubs.keys.where((id) => !idsAtivos.contains(id)).toList();
     for (final id in idsParaRemover) {
-      _chatSubs[id]?.cancel();
-      _chatSubs.remove(id);
+      _cancelChatSub(id);
       _unreadPorPedido.remove(id);
     }
 
@@ -249,6 +270,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
           onError: (Object error, StackTrace stackTrace) {
             _unreadPorPedido[p.id] = false;
             _recalculateHasUnread();
+            _cancelChatSub(p.id);
             if (kDebugMode) {
               // ignore: avoid_print
               print('[PrestadorHome] chatSub(${p.id}) error: $error');
@@ -256,6 +278,13 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
           },
         );
       }
+    }
+  }
+
+  void _cancelChatSub(String pedidoId) {
+    final sub = _chatSubs.remove(pedidoId);
+    if (sub != null) {
+      unawaited(sub.cancel());
     }
   }
 
@@ -1257,8 +1286,24 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
+    if (_disablePrestadorHomeMessageStreamsForEmulatorTests) {
+      for (final id in _chatSubs.keys.toList()) {
+        _cancelChatSub(id);
+      }
+      _unreadPorPedido.clear();
+      _lastUnreadAtPorPedido.clear();
+      _pedidoPorId.clear();
+      if (mounted && _hasUnread) {
+        setState(() {
+          _hasUnread = false;
+          _pedidoMaisRecente = null;
+        });
+      }
+      return;
+    }
+
     final ativos = pedidos
-        .where((p) => p.estado != 'concluido' && p.estado != 'cancelado')
+        .where((p) => prestadorPedidoPermiteStreamChat(p, widget.prestadorId))
         .toList();
 
     final idsAtivos = ativos.map((p) => p.id).toSet();
@@ -1266,8 +1311,7 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
     final idsParaRemover =
         _chatSubs.keys.where((id) => !idsAtivos.contains(id)).toList();
     for (final id in idsParaRemover) {
-      _chatSubs[id]?.cancel();
-      _chatSubs.remove(id);
+      _cancelChatSub(id);
       _unreadPorPedido.remove(id);
       _lastUnreadAtPorPedido.remove(id);
       _pedidoPorId.remove(id);
@@ -1292,6 +1336,7 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
             _unreadPorPedido[p.id] = false;
             _lastUnreadAtPorPedido[p.id] = null;
             _recalculateGlobal();
+            _cancelChatSub(p.id);
             if (kDebugMode) {
               // ignore: avoid_print
               print('[PrestadorHomeBanner] chatSub(${p.id}) error: $error');
@@ -1299,6 +1344,13 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
           },
         );
       }
+    }
+  }
+
+  void _cancelChatSub(String pedidoId) {
+    final sub = _chatSubs.remove(pedidoId);
+    if (sub != null) {
+      unawaited(sub.cancel());
     }
   }
 

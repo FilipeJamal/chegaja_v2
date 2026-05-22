@@ -1,4 +1,5 @@
 import 'package:chegaja_v2/core/models/pedido.dart';
+import 'package:chegaja_v2/features/prestador/prestador_home_screen.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_home_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,12 +11,13 @@ Pedido buildPedido({
   String tipoPreco = 'por_orcamento',
   String tipoPagamento = 'dinheiro',
   String modo = 'IMEDIATO',
+  String? prestadorId,
   DateTime? agendadoPara,
 }) {
   return Pedido(
     id: id,
     clienteId: 'cliente_1',
-    prestadorId: null,
+    prestadorId: prestadorId,
     servicoId: 'srv_eletricista',
     servicoNome: 'Eletricista',
     titulo: 'Trocar tomada',
@@ -38,6 +40,37 @@ Widget wrap(Widget child) {
 }
 
 void main() {
+  group('prestadorPedidoPermiteStreamChat', () {
+    test('permite apenas pedidos ativos do prestador atual', () {
+      final pedidos = [
+        buildPedido(id: 'ativo', estado: 'aceito', prestadorId: 'prestador_1'),
+        buildPedido(id: 'aberto', estado: 'criado'),
+        buildPedido(
+          id: 'outro_prestador',
+          estado: 'aceito',
+          prestadorId: 'prestador_2',
+        ),
+        buildPedido(
+          id: 'cancelado',
+          estado: 'cancelado',
+          prestadorId: 'prestador_1',
+        ),
+        buildPedido(
+          id: 'concluido',
+          estado: 'concluido',
+          prestadorId: 'prestador_1',
+        ),
+      ];
+
+      final elegiveis = pedidos
+          .where((p) => prestadorPedidoPermiteStreamChat(p, 'prestador_1'))
+          .map((p) => p.id)
+          .toList();
+
+      expect(elegiveis, ['ativo']);
+    });
+  });
+
   group('PrestadorAvailabilityPanel', () {
     testWidgets('mostra estado online e alterna disponibilidade',
         (tester) async {

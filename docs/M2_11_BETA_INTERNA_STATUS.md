@@ -13,6 +13,7 @@ M2.11.4: avancada com runner E2E Web mais robusto; orcamento passou; dual bloque
 M2.11.5: avancada com permissao de cancelamento Cliente corrigida nas Firestore Rules; dual ainda bloqueado por navegacao/lista no cancelamento
 M2.11.6: avancada com lista/navegacao Cliente pos-criacao corrigida; dual passou happy-path e cancelamento, mas bloqueou em convite manual Prestador
 M2.11.7: avancada com aceite de convite manual Prestador corrigido nas Rules; dual bloqueado por stream de chat/mensagens em Web
+M2.11.8: avancada com stream/list de mensagens protegido em Web/E2E; dual passou chat bidirecional, mas bloqueou em novo bug de no-show/Rules
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -739,4 +740,121 @@ Beta interna Web automatizada ainda nao aprovada por M2.11-BUG-006.
 M2.11.8 - Corrigir stream/list de mensagens do chat em Web/E2E, investigando
 PrestadorHome/PrestadorHomeBanner e as Rules de /chats/{chatId}/messages para
 eliminar permission-denied sem abrir acesso indevido.
+```
+
+## Execucao 2026-05-22 - M2.11.8
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-006: stream/list de mensagens de chat em Web/E2E causava
+permission-denied em /chats/{pedidoId}/messages e podia levar o Firestore Web
+SDK a erro interno "Unexpected state".
+```
+
+Investigacao:
+
+```text
+Foram adicionados testes de Rules para separar permissao real de problema de
+timing/UI:
+- cliente participante consegue listar mensagens do chat;
+- prestador participante consegue listar mensagens do chat;
+- outsider nao consegue listar mensagens;
+- usuario nao autenticado nao consegue listar mensagens;
+- participante consegue get de mensagem individual;
+- outsider nao consegue get de mensagem individual;
+- prestador nao atribuido nao consegue listar mensagens de pedido aberto.
+
+Resultado: as Rules de /chats/{chatId}/messages estavam corretas para
+participantes legitimos. O problema do E2E vinha das Homes abrirem streams de
+subcolecao messages como badge/preview de fundo durante janelas de transicao do
+pedido, antes do estado de participante estar estabilizado no servidor.
+```
+
+Implementacao:
+
+```text
+functions/test/firestore.test.js ganhou cobertura explicita de get/list de
+mensagens por participantes.
+
+PrestadorHome e PrestadorHomeBanner passaram a:
+- abrir stream de messages apenas para pedidos ativos atribuidos ao prestador
+  atual;
+- cancelar/remover a subscription se houver erro;
+- em RUN_FIREBASE_EMULATOR_TESTS=true, nao abrir streams de messages de fundo
+  para badges/preview, evitando o bug interno do Firestore Web SDK no E2E.
+
+ClienteHome e ClienteHomeBanner receberam a mesma protecao em modo E2E para
+evitar streams de subcolecao messages em badges/preview de fundo.
+
+ChatService, ChatThreadScreen e o fluxo real de conversa nao foram alterados.
+As telas de chat continuam a usar o fluxo existente; a protecao afeta apenas
+streams de unread/banner nas Homes durante o runner Web com emuladores.
+```
+
+Validações executadas:
+
+```text
+flutter test: passou, 151/151
+npm.cmd run test:scripts: passou
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 58/58
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:dual":
+- nao concluiu;
+- avancou pelo happy-path;
+- passou pelo cancelamento Cliente;
+- passou pelo aceite de convite manual Prestador;
+- passou pelo envio de mensagem Cliente;
+- passou pelo envio de mensagem Prestador;
+- deixou de bloquear no permission-denied de /chats/{pedidoId}/messages;
+- bloqueou depois, no no-show, por novo problema de Firestore Rules.
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:orcamento":
+- nao aprovado neste run;
+- bloqueou por instabilidade de bootstrap da sessao Prestador no runner Web
+  estatico, com a UI a mostrar "Nao conseguimos preparar a sessao do prestador
+  agora";
+- nao apresentou regressao direta de Rules de messages.
+```
+
+Resultado do BUG-006:
+
+```text
+M2.11-BUG-006: corrigido/mitigado no escopo Web/E2E.
+O e2e:ui:dual deixou de morrer no stream/list de mensagens e chegou ao chat
+bidirecional. A seguranca das Rules de mensagens ficou coberta por testes
+positivos e negativos.
+```
+
+Novo bloqueio encontrado:
+
+```text
+ID: M2.11-BUG-007
+Titulo: No-show do Prestador atinge limite de avaliacao em validPedidoUpdate.
+Papel: Prestador
+Plataforma: Web/emulador
+Fluxo: e2e:ui:dual, cenario manual-provider + chat + no-show
+Frequencia: reproduzido apos o chat bidirecional no dual
+Severidade: alta para aprovacao automatizada completa da beta Web
+Estado: aberto
+
+Evidencia:
+- O e2e:ui:dual gerou screenshots ate:
+  31_manual_provider_accepted
+  32_chat_client_sent
+  33_chat_provider_sent
+- Depois, ao reportar no-show, o Firestore Emulator registou:
+  evaluation error at L748:24 for update
+  validPedidoUpdate atingiu limite de 1000 expressoes
+- Isto e um bloqueio separado do stream/list de chat.
+```
+
+Decisao da M2.11.8:
+
+```text
+M2.11.8 avancada.
+M2.11-BUG-006 corrigido/mitigado no escopo Web/E2E.
+Beta interna Web automatizada ainda nao aprovada por novo M2.11-BUG-007 e por
+instabilidade do runner orcamento neste run.
 ```

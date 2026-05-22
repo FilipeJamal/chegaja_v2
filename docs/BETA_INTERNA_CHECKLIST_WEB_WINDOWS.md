@@ -338,3 +338,68 @@ A correcao de Rules do aceite manual esta validada, e o fluxo de orcamento
 continua aprovado, mas o dual completo precisa de nova subfase para corrigir o
 M2.11-BUG-006 sem mascarar o runner.
 ```
+
+## Execucao 2026-05-22 - M2.11.8
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-006, relacionado a permission-denied/instabilidade em
+stream/list de /chats/{pedidoId}/messages durante E2E Web.
+```
+
+Checklist tecnico executado:
+
+```text
+flutter test: passou, 151/151
+npm.cmd run test:scripts: passou
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 58/58
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+```
+
+Checklist Web/E2E:
+
+```text
+Rules de mensagens:
+- cliente participante lista mensagens: passou
+- prestador participante lista mensagens: passou
+- outsider lista mensagens: negado
+- usuario nao autenticado lista mensagens: negado
+- participante faz get de mensagem individual: passou
+- outsider faz get de mensagem individual: negado
+
+e2e:ui:dual:
+- nao aprovado como fluxo completo;
+- passou happy-path;
+- passou cancelamento Cliente;
+- passou convite manual Prestador;
+- passou chat Cliente -> Prestador;
+- passou chat Prestador -> Cliente;
+- nao bloqueou mais no permission-denied de messages;
+- bloqueou depois no fluxo de no-show por novo M2.11-BUG-007.
+
+e2e:ui:orcamento:
+- nao aprovado neste run;
+- bloqueou por bootstrap da sessao Prestador no runner estatico Web;
+- precisa de nova repeticao depois da proxima correcao/estabilizacao.
+```
+
+Bugs:
+
+```text
+M2.11-BUG-006: corrigido/mitigado.
+M2.11-BUG-007: aberto.
+
+M2.11-BUG-007:
+No-show do Prestador atinge limite de avaliacao das Firestore Rules em
+validPedidoUpdate, linha 748, depois de o dual ja ter passado pelo chat
+bidirecional.
+```
+
+Decisao:
+
+```text
+Beta interna Web automatizada ainda nao aprovada.
+O bloqueio de stream/list de mensagens foi removido, mas o dual completo ficou
+bloqueado por novo problema real de no-show/Rules.
+```

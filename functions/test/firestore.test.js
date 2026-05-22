@@ -830,10 +830,36 @@ describe("Firestore Security Rules", () => {
     describe("Chats Collection", () => {
         beforeEach(async () => {
             await testEnv.withSecurityRulesDisabled(async (context) => {
-                await context.firestore().collection("pedidos").doc("order_chat_1").set({
+                const adminDb = context.firestore();
+                await adminDb.collection("pedidos").doc("order_chat_1").set({
                     clienteId: "client1",
                     prestadorId: "provider1",
                     status: "aceito",
+                    estado: "aceito",
+                });
+                await adminDb.collection("chats").doc("order_chat_1").set({
+                    pedidoId: "order_chat_1",
+                    clienteId: "client1",
+                    prestadorId: "provider1",
+                    lastMessageAt: new Date(),
+                });
+                await adminDb
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .doc("msg1")
+                    .set({
+                        pedidoId: "order_chat_1",
+                        text: "Mensagem de teste",
+                        senderId: "client1",
+                        senderRole: "cliente",
+                        createdAt: new Date(),
+                    });
+                await adminDb.collection("pedidos").doc("order_chat_open").set({
+                    clienteId: "client1",
+                    prestadorId: null,
+                    status: "criado",
+                    estado: "criado",
                 });
             });
         });
@@ -853,15 +879,113 @@ describe("Firestore Security Rules", () => {
         });
 
         it("should deny merge-create chat meta without pedidoId", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore().collection("pedidos").doc("order_chat_missing_meta").set({
+                    clienteId: "client1",
+                    prestadorId: "provider1",
+                    status: "aceito",
+                    estado: "aceito",
+                });
+            });
+
             const client = testEnv.authenticatedContext("client1");
             await assertFails(
-                client.firestore().collection("chats").doc("order_chat_1").set(
+                client.firestore().collection("chats").doc("order_chat_missing_meta").set(
                     {
                         updatedAt: new Date(),
                         clienteNome: "Cliente",
                     },
                     {merge: true}
                 )
+            );
+        });
+
+        it("should allow client participant to list chat messages", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .orderBy("createdAt", "desc")
+                    .limit(50)
+                    .get()
+            );
+        });
+
+        it("should allow provider participant to list chat messages", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .orderBy("createdAt", "desc")
+                    .limit(50)
+                    .get()
+            );
+        });
+
+        it("should deny outsider listing chat messages", async () => {
+            const outsider = testEnv.authenticatedContext("outsider1");
+            await assertFails(
+                outsider.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .orderBy("createdAt", "desc")
+                    .limit(50)
+                    .get()
+            );
+        });
+
+        it("should deny unauthenticated listing chat messages", async () => {
+            const unauth = testEnv.unauthenticatedContext();
+            await assertFails(
+                unauth.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .orderBy("createdAt", "desc")
+                    .limit(50)
+                    .get()
+            );
+        });
+
+        it("should allow participants to get individual chat messages", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .doc("msg1")
+                    .get()
+            );
+        });
+
+        it("should deny outsiders getting individual chat messages", async () => {
+            const outsider = testEnv.authenticatedContext("outsider1");
+            await assertFails(
+                outsider.firestore()
+                    .collection("chats")
+                    .doc("order_chat_1")
+                    .collection("messages")
+                    .doc("msg1")
+                    .get()
+            );
+        });
+
+        it("should deny provider listing messages before they are assigned to the order", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore()
+                    .collection("chats")
+                    .doc("order_chat_open")
+                    .collection("messages")
+                    .orderBy("createdAt", "desc")
+                    .limit(50)
+                    .get()
             );
         });
     });
