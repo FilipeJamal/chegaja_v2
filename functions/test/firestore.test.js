@@ -151,6 +151,22 @@ describe("Firestore Security Rules", () => {
             };
         }
 
+        function noShowPatch(reporterRole, overrides = {}) {
+            return {
+                noShowReportedBy: reporterRole,
+                noShowReason: "tester nao apareceu",
+                noShowAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                historico: arrayUnion({
+                    evento: "noshow",
+                    timestamp: Timestamp.now(),
+                    userId: reporterRole === "prestador" ? "provider1" : "client1",
+                    descricao: `${reporterRole} reportou No-Show`,
+                }),
+                ...overrides,
+            };
+        }
+
         it("should allow a client to create a valid order", async () => {
             const client = testEnv.authenticatedContext("client1");
             await assertSucceeds(
@@ -673,6 +689,223 @@ describe("Firestore Security Rules", () => {
                         descricao: "",
                     }),
                 })
+            );
+        });
+
+        it("should allow assigned provider to report no-show without hitting generic update", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_provider", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertSucceeds(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_provider")
+                    .update(noShowPatch("prestador"))
+            );
+        });
+
+        it("should allow owner client to report no-show", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_client", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+
+            await assertSucceeds(
+                client.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_client")
+                    .update(noShowPatch("cliente"))
+            );
+        });
+
+        it("should deny outsider reporting no-show", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_outsider", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const outsider = testEnv.authenticatedContext("outsider");
+
+            await assertFails(
+                outsider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_outsider")
+                    .update(noShowPatch("cliente"))
+            );
+        });
+
+        it("should deny provider reporting no-show for unassigned order", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_unassigned", {
+                clienteId: "client1",
+                status: "criado",
+                estado: "criado",
+                prestadorId: null,
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_unassigned")
+                    .update(noShowPatch("prestador"))
+            );
+        });
+
+        it("should deny no-show changing economic fields", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_money", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                precoFinal: null,
+                commissionPlatform: null,
+                earningsProvider: null,
+                earningsTotal: null,
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_money")
+                    .update(noShowPatch("prestador", {
+                        precoFinal: 999,
+                        commissionPlatform: 999,
+                        earningsProvider: 999,
+                        earningsTotal: 999,
+                    }))
+            );
+        });
+
+        it("should deny no-show changing prestadorId", async () => {
+            await seedProvider("provider1");
+            await seedProvider("provider2");
+            await seedPedido("order_noshow_swap_provider", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_swap_provider")
+                    .update(noShowPatch("prestador", {
+                        prestadorId: "provider2",
+                    }))
+            );
+        });
+
+        it("should deny no-show changing clienteId", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_swap_client", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_swap_client")
+                    .update(noShowPatch("prestador", {
+                        clienteId: "client2",
+                    }))
+            );
+        });
+
+        it("should deny no-show changing order state", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_state_attack", {
+                clienteId: "client1",
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_state_attack")
+                    .update(noShowPatch("prestador", {
+                        status: "em_andamento",
+                        estado: "em_andamento",
+                    }))
+            );
+        });
+
+        it("should deny no-show on completed order", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_completed", {
+                clienteId: "client1",
+                status: "concluido",
+                estado: "concluido",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_completed")
+                    .update(noShowPatch("prestador"))
+            );
+        });
+
+        it("should deny no-show on canceled order", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_noshow_canceled", {
+                clienteId: "client1",
+                status: "cancelado",
+                estado: "cancelado",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertFails(
+                provider.firestore()
+                    .collection("pedidos")
+                    .doc("order_noshow_canceled")
+                    .update(noShowPatch("prestador"))
             );
         });
 

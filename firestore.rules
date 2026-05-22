@@ -502,6 +502,59 @@ service cloud.firestore {
           ]);
     }
 
+    function hasPedidoNoShowFieldChange() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'noShowReportedBy',
+        'noShowReason',
+        'noShowAt'
+      ]);
+    }
+
+    function hasOnlyPedidoNoShowFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'noShowReportedBy',
+        'noShowReason',
+        'noShowAt',
+        'updatedAt',
+        'historico'
+      ]);
+    }
+
+    function validNoShowReporterForActor() {
+      let reporter = fieldValueOrNull(request.resource.data, 'noShowReportedBy');
+      return (
+          reporter == 'cliente' &&
+          isPedidoClienteActor()
+        )
+        || (
+          reporter == 'prestador' &&
+          isPedidoPrestadorActorForUpdate()
+        );
+    }
+
+    function validPedidoNoShowReport() {
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return hasOnlyPedidoNoShowFields()
+        && currentEstado == nextEstado
+        && currentEstado != 'cancelado'
+        && currentEstado != 'concluido'
+        && validNoShowReporterForActor()
+        && fieldValueOrNull(request.resource.data, 'noShowReportedBy') in [
+          'cliente',
+          'prestador'
+        ]
+        && (
+          fieldNullOrMissing(request.resource.data, 'noShowReason') ||
+          fieldValueOrNull(request.resource.data, 'noShowReason') is string
+        )
+        && finalPricingFieldsUnchanged()
+        && finalProposalFieldsUnchanged()
+        && authoritativePedidoFieldsUnchanged()
+        && immutablePedidoIdentity()
+        && fieldUnchanged('prestadorId');
+    }
+
     function validPedidoGenericUpdate() {
       return (isPedidoParticipantByData(resource.data)
         || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
@@ -519,33 +572,41 @@ service cloud.firestore {
         : (!authoritativePedidoFieldsUnchanged()
           ? false
           : (
-            currentEstado == 'criado' && nextEstado == 'aceito'
-              ? validPedidoOpenAccept()
+            hasPedidoNoShowFieldChange()
+              ? (
+                hasOnlyPedidoNoShowFields()
+                  ? validPedidoNoShowReport()
+                  : false
+              )
               : (
-                currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
-                  ? validPedidoClientManualInvite()
+                currentEstado == 'criado' && nextEstado == 'aceito'
+                  ? validPedidoOpenAccept()
                   : (
-                    currentEstado == 'aguarda_resposta_prestador' && nextEstado == 'aceito'
-                      ? validPedidoProviderManualInviteAccept()
+                    currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
+                      ? validPedidoClientManualInvite()
                       : (
-                        nextEstado == 'aguarda_resposta_cliente'
-                          ? validPedidoProviderQuoteProposal()
+                        currentEstado == 'aguarda_resposta_prestador' && nextEstado == 'aceito'
+                          ? validPedidoProviderManualInviteAccept()
                           : (
-                            currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
-                              ? validPedidoProviderFinalProposal()
+                            nextEstado == 'aguarda_resposta_cliente'
+                              ? validPedidoProviderQuoteProposal()
                               : (
-                                currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
-                                  ? validPedidoClientAcceptQuote()
+                                currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
+                                  ? validPedidoProviderFinalProposal()
                                   : (
-                                    currentEstado == 'aceito' && nextEstado == 'em_andamento'
-                                      ? validPedidoProviderStartService()
+                                    currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
+                                      ? validPedidoClientAcceptQuote()
                                       : (
-                                        currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
-                                          ? validPedidoClientFinalConfirmation()
+                                        currentEstado == 'aceito' && nextEstado == 'em_andamento'
+                                          ? validPedidoProviderStartService()
                                           : (
-                                            isPedidoClienteActor() && nextEstado == 'cancelado'
-                                              ? validPedidoClientCancellation()
-                                              : validPedidoGenericUpdate()
+                                            currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
+                                              ? validPedidoClientFinalConfirmation()
+                                              : (
+                                                isPedidoClienteActor() && nextEstado == 'cancelado'
+                                                  ? validPedidoClientCancellation()
+                                                  : validPedidoGenericUpdate()
+                                              )
                                           )
                                       )
                                   )

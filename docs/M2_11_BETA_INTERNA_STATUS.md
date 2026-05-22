@@ -14,6 +14,7 @@ M2.11.5: avancada com permissao de cancelamento Cliente corrigida nas Firestore 
 M2.11.6: avancada com lista/navegacao Cliente pos-criacao corrigida; dual passou happy-path e cancelamento, mas bloqueou em convite manual Prestador
 M2.11.7: avancada com aceite de convite manual Prestador corrigido nas Rules; dual bloqueado por stream de chat/mensagens em Web
 M2.11.8: avancada com stream/list de mensagens protegido em Web/E2E; dual passou chat bidirecional, mas bloqueou em novo bug de no-show/Rules
+M2.11.9: avancada com no-show em Rules corrigido; e2e dual e orcamento passaram ponta a ponta
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -857,4 +858,112 @@ M2.11.8 avancada.
 M2.11-BUG-006 corrigido/mitigado no escopo Web/E2E.
 Beta interna Web automatizada ainda nao aprovada por novo M2.11-BUG-007 e por
 instabilidade do runner orcamento neste run.
+```
+
+## Execucao 2026-05-22 - M2.11.9
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-007: no-show do Prestador atingia limite de avaliacao das
+Firestore Rules em validPedidoUpdate, porque o update pequeno de no-show caia
+no caminho generico pesado.
+```
+
+Investigacao:
+
+```text
+PedidoService.reportNoShow envia um update pequeno:
+- noShowReportedBy
+- noShowReason
+- noShowAt
+- updatedAt
+- historico
+
+Antes da correcao, este update nao tinha ramo especifico nas Rules e caia em
+validPedidoGenericUpdate. O teste RED confirmou a falha:
+- prestador atribuido reportando no-show recebia permission-denied por limite
+  de 1000 expressoes;
+- cliente dono reportando no-show recebia o mesmo erro.
+
+O teste RED tambem mostrou um risco adicional: misturar campos de no-show com
+alteracao de estado podia escapar para o caminho generico. A correcao bloqueou
+esse caso explicitamente.
+```
+
+Implementacao:
+
+```text
+firestore.rules:
+- adicionou hasPedidoNoShowFieldChange();
+- adicionou hasOnlyPedidoNoShowFields();
+- adicionou validNoShowReporterForActor();
+- adicionou validPedidoNoShowReport();
+- validPedidoUpdate agora trata updates com campos noShow* antes dos ramos
+  pesados;
+- updates que misturam noShow* com estado, prestador, cliente ou campos
+  economicos sao negados.
+
+functions/test/firestore.test.js:
+- helper noShowPatch adicionado;
+- teste positivo para prestador atribuido reportar no-show;
+- teste positivo para cliente dono reportar no-show;
+- negativos para outsider, prestador nao atribuido, campos economicos,
+  troca de prestadorId, troca de clienteId, mudanca de estado, pedido concluido
+  e pedido cancelado.
+```
+
+Validacoes executadas:
+
+```text
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 68/68
+flutter test: passou, 151/151
+npm.cmd run test:scripts: passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:dual":
+- passou ponta a ponta;
+- happy-path concluido;
+- cancelamento Cliente concluido;
+- convite manual Prestador concluido;
+- chat bidirecional concluido;
+- no-show Prestador concluido;
+- resumo final: FULL MULTI-SCENARIO FLOW OK.
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:orcamento":
+- passou ponta a ponta;
+- resumo final: ORCAMENTO MIN-MAX FLOW OK.
+```
+
+Resultado:
+
+```text
+M2.11-BUG-007: corrigido.
+O e2e:ui:dual ja nao bloqueia no no-show e a beta Web automatizada passou os
+dois fluxos principais: dual e orcamento.
+```
+
+Observacao de QA:
+
+```text
+Durante o e2e:ui:dual, apos o chat bidirecional e antes da confirmacao do
+no-show, o console do Prestador registou mensagens de overflow/assertion de UI:
+- RenderFlex overflowed by 99503 pixels on the bottom;
+- Assertion failed;
+- Tried to build dirty widget in the wrong build scope.
+
+O fluxo terminou OK e o Firestore confirmou noShowBy=prestador, portanto isto
+nao bloqueou a M2.11.9. Ainda assim, deve ser tratado como ruido de QA visual/
+runtime para revisao posterior, sem mascarar.
+```
+
+Decisao da M2.11.9:
+
+```text
+M2.11.9 avancada.
+M2.11-BUG-007 corrigido.
+Beta Web automatizada agora tem dual e orcamento passando ponta a ponta.
+Ainda falta decidir, em fase seguinte, se a beta interna completa pode ser
+marcada como aprovada com observacoes ou se primeiro se corrige o ruido visual/
+runtime observado no no-show.
 ```

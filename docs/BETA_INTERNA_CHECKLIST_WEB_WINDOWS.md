@@ -403,3 +403,81 @@ Beta interna Web automatizada ainda nao aprovada.
 O bloqueio de stream/list de mensagens foi removido, mas o dual completo ficou
 bloqueado por novo problema real de no-show/Rules.
 ```
+
+## Execucao 2026-05-22 - M2.11.9
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-007, em que o no-show do Prestador atingia limite de
+avaliacao das Firestore Rules em validPedidoUpdate.
+```
+
+Checklist tecnico executado:
+
+```text
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 68/68
+flutter test: passou, 151/151
+npm.cmd run test:scripts: passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+```
+
+Checklist Web/E2E:
+
+```text
+e2e:ui:dual:
+- passou ponta a ponta;
+- happy-path passou;
+- cancelamento Cliente passou;
+- convite manual Prestador passou;
+- chat Cliente -> Prestador passou;
+- chat Prestador -> Cliente passou;
+- no-show Prestador passou;
+- resultado final: FULL MULTI-SCENARIO FLOW OK.
+
+e2e:ui:orcamento:
+- passou ponta a ponta;
+- orcamento min-max passou;
+- valor final/confirmacao passou;
+- resultado final: ORCAMENTO MIN-MAX FLOW OK.
+```
+
+Bugs:
+
+```text
+M2.11-BUG-007: corrigido.
+
+Cobertura adicionada:
+- prestador atribuido pode reportar no-show;
+- cliente dono pode reportar no-show;
+- outsider nao pode reportar;
+- prestador nao atribuido nao pode reportar;
+- no-show nao pode alterar campos economicos;
+- no-show nao pode trocar prestadorId;
+- no-show nao pode trocar clienteId;
+- no-show nao pode alterar estado/status;
+- no-show nao pode ser reportado em pedido concluido;
+- no-show nao pode ser reportado em pedido cancelado.
+```
+
+Observacao:
+
+```text
+O e2e:ui:dual passou, mas o console do Prestador registou ruido visual/runtime
+durante o no-show:
+- RenderFlex overflowed by 99503 pixels on the bottom;
+- Assertion failed;
+- Tried to build dirty widget in the wrong build scope.
+
+Nao bloqueou o fluxo nem a confirmacao Firestore, mas deve ficar registado
+para revisao posterior de QA visual/runtime.
+```
+
+Decisao:
+
+```text
+Beta Web automatizada passou nos fluxos dual e orcamento apos a M2.11.9.
+Ainda falta decisao de coordenacao sobre fechar/aprovar a beta interna completa
+ou abrir uma subfase curta para limpar o ruido visual/runtime observado no
+no-show.
+```
