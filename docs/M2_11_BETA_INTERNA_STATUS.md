@@ -5,7 +5,7 @@ Data: 2026-05-21
 ## Estado
 
 ```text
-M2.11: aprovada como beta interna Web automatizada e Windows tecnico
+M2.11: fechada como beta interna controlada Web/Windows
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
@@ -1089,4 +1089,73 @@ Beta Web automatizada: aprovada.
 Windows tecnico: aprovado com base na execucao anterior da M2.11.1.
 Beta interna M2.11: aprovada para Web/Windows com a limitacao explicita de que
 M2.6 continua pendente de Android fisico real.
+```
+
+## Fecho formal da M2.11 - 2026-05-22
+
+Decisao final:
+
+```text
+M2.11 fechada como beta interna controlada Web/Windows.
+```
+
+Base de fecho:
+
+```text
+b682799d9c1c4483bbf3072779d10990ad239f06
+Corrigir M2.11.10 runtime no-show beta interna
+```
+
+Estado consolidado:
+
+```text
+Beta Web automatizada: aprovada.
+Windows tecnico: aprovado.
+M2.11-BUG-003: corrigido.
+M2.11-BUG-004: corrigido.
+M2.11-BUG-005: corrigido.
+M2.11-BUG-006: corrigido/mitigado.
+M2.11-BUG-007: corrigido.
+Ruido runtime no-show: corrigido/mitigado.
+M2.6: continua pendente de Android fisico real.
+```
+
+Evidencia final documentada:
+
+```text
+flutter test: 152/152 passou.
+npm.cmd run test:scripts: passou.
+Firestore/Storage/Functions emulator: 68/68 passou.
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou.
+e2e:ui:dual: FULL MULTI-SCENARIO FLOW OK.
+e2e:ui:orcamento: ORCAMENTO MIN-MAX FLOW OK.
+Logs finais sem:
+- RenderFlex overflowed;
+- TextEditingController was used after being disposed;
+- dirty widget;
+- Assertion failed;
+- EXCEPTION CAUGHT BY.
+```
+
+Limites preservados:
+
+```text
+M2.11 nao fechou M2.6.
+Android fisico real continua pendente.
+Pagamentos reais continuam fora do escopo.
+Play Store continua fora do escopo.
+Package id final continua fora do escopo.
+HTTPS App Links continuam fora do escopo.
+Nao houve deploy real.
+Nao houve smoke real em producao.
+Nao houve cleanup real.
+Nao houve health real.
+```
+
+Resultado:
+
+```text
+A M2.11 encerra a fase de beta interna controlada com Web automatizada e
+Windows tecnico aprovados. A proxima fase deve partir desta base validada, sem
+fingir que Android fisico/M2.6 foi resolvido.
 ```

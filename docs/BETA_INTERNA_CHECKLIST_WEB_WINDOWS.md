@@ -566,3 +566,56 @@ Avisos locais restantes:
 Esses avisos nao bloquearam os fluxos e nao correspondem ao erro runtime de
 no-show corrigido nesta fase.
 ```
+
+## Fecho 2026-05-22 - M2.11
+
+Commit base de fecho:
+
+```text
+b682799d9c1c4483bbf3072779d10990ad239f06
+Corrigir M2.11.10 runtime no-show beta interna
+```
+
+Decisao:
+
+```text
+M2.11 fechada como beta interna controlada Web/Windows.
+Beta Web automatizada aprovada.
+Windows tecnico aprovado.
+M2.6 continua pendente de Android fisico real.
+```
+
+Evidencia final:
+
+```text
+flutter test: 152/152 passou
+npm.cmd run test:scripts: passou
+Firestore/Storage/Functions emulator: 68/68 passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+e2e:ui:dual: FULL MULTI-SCENARIO FLOW OK
+e2e:ui:orcamento: ORCAMENTO MIN-MAX FLOW OK
+logs finais sem RenderFlex overflowed, TextEditingController disposed, dirty
+widget, Assertion failed ou EXCEPTION CAUGHT BY
+```
+
+Fora do escopo mantido:
+
+```text
+Android fisico real
+fechar M2.6
+pagamentos reais
+Play Store
+package id final
+HTTPS App Links
+deploy real
+smoke real em producao
+cleanup real
+health real
+```
+
+Resultado:
+
+```text
+Checklist Web/Windows fechado para M2.11.
+A beta interna esta aprovada no escopo Web automatizado e Windows tecnico.
+```
