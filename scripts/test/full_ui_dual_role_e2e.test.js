@@ -97,6 +97,17 @@ const isOnOrderForm = vm.runInNewContext(`(${extractFunction(scriptSource, 'isOn
     'pedido state summary should be stable',
   );
 
+  assert.deepStrictEqual(
+    helpers.summarizeClientOrdersBody('Meus pedidos\nPendentes 0\nSem pedidos ativos'),
+    {
+      hasMyOrders: true,
+      hasPendingZero: true,
+      hasEmptyActive: true,
+      screen: 'unknown',
+    },
+    'client order empty-state summary should detect the BUG-004 symptom',
+  );
+
   assert.strictEqual(
     helpers.nextProviderAction({
       estado: 'aceito',

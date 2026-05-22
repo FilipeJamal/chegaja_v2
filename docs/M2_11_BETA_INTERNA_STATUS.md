@@ -11,6 +11,7 @@ M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
 M2.11.4: avancada com runner E2E Web mais robusto; orcamento passou; dual bloqueado por cancelamento nas Rules
 M2.11.5: avancada com permissao de cancelamento Cliente corrigida nas Firestore Rules; dual ainda bloqueado por navegacao/lista no cancelamento
+M2.11.6: avancada com lista/navegacao Cliente pos-criacao corrigida; dual passou happy-path e cancelamento, mas bloqueou em convite manual Prestador
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -496,10 +497,120 @@ Beta interna Web completa ainda nao aprovada porque o e2e:ui:dual continua
 bloqueado pelo novo M2.11-BUG-004.
 ```
 
+## M2.11.6 - Correcao de lista/navegacao Cliente pos-criacao
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-004: apos criar pedido no e2e:ui:dual, o pedido existia
+no Firestore com clienteId correto e estado=criado, mas a UI Cliente mostrava
+"Pendentes 0" e nao permitia abrir o detalhe para cancelar pela UI.
+```
+
+Investigacao:
+
+```text
+O runner foi instrumentado para registrar:
+- pageUid da janela Cliente;
+- clienteId do pedido criado;
+- estado/status do pedido;
+- resumo da tela "Meus pedidos";
+- sintoma Pendentes 0 / empty state.
+
+Durante a reproducao, tambem apareceu uma fragilidade anterior no bootstrap da
+Home Cliente: quando Auth anonimo ja existia, mas o bootstrap completo
+AuthService.ensureSignedInAnonymously() demorava por chamadas Firestore, a tela
+nao reconstruia com o novo FirebaseAuth.currentUser. Isso podia deixar a Home
+presa em "A preparar a tua area de cliente..." ou com stream visual atrasado.
+```
+
+Implementacao:
+
+```text
+- ClienteHomeScreen agora reconstrui a UI quando FirebaseAuth.authStateChanges()
+  emite um user, chamando setState(_syncClienteStreams).
+- Se o bootstrap completo der timeout mas AuthService.currentUser ja existir,
+  a Home Cliente recupera o estado visual, preserva o role cliente localmente
+  e sincroniza os streams.
+- A aba Meus pedidos deixou de usar initialData=[] e timeout que injetava lista
+  vazia; agora mostra loading ate o primeiro snapshot real.
+- O runner passou a esperar a secao de servicos ficar pronta antes de clicar.
+- O runner passou a registrar resumo de tela Cliente quando procura o detalhe
+  por titulo.
+```
+
+Testes adicionados/ajustados:
+
+```text
+- PedidoListPresenter: pedido estado=criado entra no bucket ativo e mostra
+  "Aguardar prestador".
+- Helper E2E: summarizeClientOrdersBody detecta o sintoma "Meus pedidos /
+  Pendentes 0 / Sem pedidos ativos".
+```
+
+Validações executadas na M2.11.6:
+
+```text
+npm.cmd run test:scripts: passou
+flutter test test/features/cliente/widgets/pedido_list_presenter_test.dart: passou
+flutter test: 150/150 passou
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": 43/43 passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:orcamento": passou
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:dual": avancou; happy-path passou, cancelamento Cliente passou, novo bloqueio no convite manual Prestador
+```
+
+Resultado do BUG-004:
+
+```text
+M2.11-BUG-004: corrigido.
+O e2e:ui:dual conseguiu:
+- concluir o happy-path;
+- criar o pedido de cancelamento;
+- localizar o detalhe Cliente;
+- cancelar pela UI;
+- confirmar no Firestore estado=cancelado e canceladoPor=cliente.
+```
+
+Novo bloqueio encontrado:
+
+```text
+ID: M2.11-BUG-005
+Titulo: Prestador nao consegue aceitar convite manual no e2e:ui:dual.
+Papel: Prestador
+Plataforma: Web/emulador
+Fluxo: pedido manual com prestador selecionado, chat e no-show
+Frequencia: reproduzido no e2e:ui:dual apos correcao do BUG-004
+Severidade: alta para aprovacao automatizada completa da beta Web
+Estado: aberto
+
+Evidencia:
+- Happy-path passou.
+- Cancelamento Cliente passou.
+- No cenario manual, o pedido foi criado e ficou em convite para o prestador.
+- Ao aceitar o convite, Firestore Emulator devolveu permission-denied.
+- O log de Rules indica limite de avaliacao atingido:
+  "Unable to evaluate the expression as the maximum of 1000 expressions to
+  evaluate has been reached" em update.
+
+Decisao:
+Nao mascarar no runner. O BUG-004 foi corrigido; o dual completo continua nao
+aprovado por um novo bug real de Rules/fluxo no aceite de convite manual.
+```
+
+Decisao da M2.11.6:
+
+```text
+M2.11.6 avancada.
+Lista/navegacao Cliente pos-criacao corrigida.
+Beta interna Web automatizada ainda nao aprovada porque o e2e:ui:dual agora
+bloqueia no novo M2.11-BUG-005.
+```
+
 ## Proximo passo recomendado
 
 ```text
-M2.11.5 - Corrigir permissao de cancelamento Cliente nas Rules ou ajustar o
-fluxo autoritativo correspondente, com testes de regras antes de repetir
+M2.11.7 - Corrigir permissao/Rules do aceite de convite manual pelo Prestador,
+com teste de Rules reproduzindo o permission-denied antes de repetir
 e2e:ui:dual.
 ```

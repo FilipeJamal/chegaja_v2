@@ -46,6 +46,19 @@ Pedido buildPedido({
 
 void main() {
   group('PedidoListPresenter', () {
+    test('pedido criado entra no bucket ativo do cliente', () {
+      final pedido = buildPedido(estado: 'criado');
+
+      final data = PedidoListPresenter.dataFor(
+        pedido,
+        role: PedidoViewerRole.cliente,
+      );
+
+      expect(data.bucket, PedidoListBucket.ativo);
+      expect(data.actionLabel, 'Aguardar prestador');
+      expect(data.statusLabel, 'A procurar prestador');
+    });
+
     test('cliente com valor final pendente mostra acao curta', () {
       final pedido = buildPedido(
         estado: 'aguarda_confirmacao_valor',

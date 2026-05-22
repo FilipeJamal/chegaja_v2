@@ -173,7 +173,8 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
     super.initState();
     unawaited(_ensureClienteSession());
     _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
-      _syncClienteStreams();
+      if (!mounted) return;
+      setState(_syncClienteStreams);
     });
     _syncClienteStreams();
   }
@@ -194,6 +195,10 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
       if (kDebugMode) {
         // ignore: avoid_print
         print('[ClienteHome] auth bootstrap error: $error');
+      }
+      if (AuthService.currentUser != null && mounted) {
+        unawaited(AuthService.setActiveRole('cliente'));
+        setState(_syncClienteStreams);
       }
     } finally {
       _isEnsuringClienteSession = false;
@@ -1192,21 +1197,8 @@ class _ClientePedidosTabState extends State<_ClientePedidosTab> {
                     const SizedBox(height: AppSpacing.x5),
                     Expanded(
                       child: StreamBuilder<List<Pedido>>(
-                        initialData: const <Pedido>[],
-                        stream: (widget.pedidosStream ??
-                                PedidosRepo.streamPedidosDoCliente(user.uid))
-                            .timeout(
-                          const Duration(seconds: 12),
-                          onTimeout: (sink) {
-                            if (kDebugMode) {
-                              // ignore: avoid_print
-                              print(
-                                '[ClientePedidosTab] stream timeout -> empty list',
-                              );
-                            }
-                            sink.add(const <Pedido>[]);
-                          },
-                        ),
+                        stream: widget.pedidosStream ??
+                            PedidosRepo.streamPedidosDoCliente(user.uid),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                                   ConnectionState.waiting &&

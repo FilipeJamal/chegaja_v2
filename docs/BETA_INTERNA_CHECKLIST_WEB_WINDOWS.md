@@ -238,3 +238,50 @@ Beta interna Web automatizada ainda nao aprovada.
 A correcao de Rules esta validada, mas o dual completo precisa de nova subfase
 para investigar a lista/navegacao do Cliente apos criar pedido.
 ```
+
+## Execucao 2026-05-22 - M2.11.6
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-004: a UI Cliente nao mostrava o pedido recem-criado no
+e2e:ui:dual, apesar de o pedido existir no Firestore com clienteId correto e
+estado=criado.
+```
+
+Checklist tecnico executado:
+
+```text
+npm.cmd run test:scripts: passou
+flutter test test/features/cliente/widgets/pedido_list_presenter_test.dart: passou
+flutter test: passou, 150/150
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 43/43
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+seed de servicos no emulador: passou
+npm.cmd run e2e:ui:orcamento: passou
+npm.cmd run e2e:ui:dual: avancou para alem do cancelamento Cliente e bloqueou no convite manual Prestador
+```
+
+Resultado:
+
+```text
+M2.11-BUG-004: corrigido.
+O e2e:ui:dual agora consegue localizar o pedido de cancelamento na UI Cliente,
+abrir o detalhe, clicar em cancelar e confirmar estado=cancelado /
+canceladoPor=cliente no Firestore.
+
+M2.11-BUG-005: aberto.
+Depois de corrigir a lista/navegacao Cliente, o e2e:ui:dual chegou ao fluxo
+manual-provider + chat + no-show. Nesse ponto, o Prestador nao conseguiu
+aceitar o convite manual porque Firestore Emulator devolveu permission-denied
+por limite de avaliacao de Rules no update.
+```
+
+Decisao:
+
+```text
+Beta interna Web automatizada ainda nao aprovada.
+O bloqueio de lista Cliente foi corrigido, mas o dual completo precisa de nova
+subfase para corrigir a permissao/Rules do aceite de convite manual pelo
+Prestador.
+```

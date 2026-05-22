@@ -9,6 +9,7 @@ const {
   detectScreenKind,
   describePedidoState,
   nextProviderAction,
+  summarizeClientOrdersBody,
 } = require('./full_ui_dual_role_e2e_helpers');
 
 let admin;
@@ -1446,6 +1447,42 @@ async function ensureClientHome(client) {
   throw new Error(`Client home not reachable before creating order body=${body.slice(0, 350)}`);
 }
 
+async function waitForClientServiceCatalog(client, serviceNameRegex, timeoutMs = 90000) {
+  const start = Date.now();
+  let lastBody = '';
+
+  while (Date.now() - start < timeoutMs) {
+    await closeAllOverlays(client);
+    lastBody = await currentBodyText(client);
+
+    if (serviceNameRegex.test(lastBody)) return true;
+
+    if (/Nao conseguimos carregar os servicos|N.o conseguimos carregar os servi.os/i.test(lastBody)) {
+      throw new Error(`Client services failed to load body=${lastBody.slice(0, 350)}`);
+    }
+
+    if (/Sem servi.os|Sem servicos|No services/i.test(lastBody)) {
+      throw new Error(`Client services list is empty body=${lastBody.slice(0, 350)}`);
+    }
+
+    if (/A preparar a tua area de cliente|A carregar servi.os|A carregar servicos|Preparing/i.test(lastBody)) {
+      log(`client services still preparing before create order body=${lastBody.slice(0, 180).replace(/\s+/g, ' ')}`);
+      await sleep(1200);
+      continue;
+    }
+
+    if (/Servi.os dispon.veis|Servicos disponiveis|Available services/i.test(lastBody)) {
+      return true;
+    }
+
+    await waitAndClick(client, /In[iI].cio|Home/i, 900);
+    await client.mouse.wheel(0, 420).catch(() => {});
+    await sleep(900);
+  }
+
+  throw new Error(`Client services not ready before creating order body=${lastBody.slice(0, 350)}`);
+}
+
 async function createOrder(
   client,
   { titlePrefix = 'E2E', manualProvider = false, providerSearch = PROVIDER_NAME, description = null } = {},
@@ -1454,6 +1491,7 @@ async function createOrder(
   const serviceNameRegex = buildServiceNameRegex(catalog.names);
   await ensureClientHome(client);
   await tryConfirmDialogs(client);
+  await waitForClientServiceCatalog(client, serviceNameRegex);
   let openedService = false;
   const openDeadline = Date.now() + 30000;
   while (Date.now() < openDeadline) {
@@ -1630,6 +1668,16 @@ async function openOrderDetailByTitle(page, title, { provider = false } = {}) {
     await waitAndClick(page, tabRx, 1400);
     await page.mouse.click(provider ? 480 : 480, 684).catch(() => {});
     await sleep(700);
+
+    if (!provider && i % 3 === 2) {
+      const bodyAfterTab = await currentBodyText(page);
+      const summary = summarizeClientOrdersBody(bodyAfterTab);
+      if (summary.hasMyOrders && summary.hasPendingZero && summary.hasEmptyActive) {
+        log(
+          `openOrderDetailByTitle client orders empty while looking for "${title}" summary=${JSON.stringify(summary)}`,
+        );
+      }
+    }
 
     if ((await currentScreenKind(page)) === 'chat') {
       log(`openOrderDetailByTitle reached chat after tab click title="${title}"; going back`);
@@ -2007,6 +2055,21 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
     lastData = data || lastData;
     if (data && isCanceledByClient(data)) return;
 
+    if (expectedTitle) {
+      const bodyBeforeOpen = await currentBodyText(client);
+      const hasCancelButton = /Cancelar pedido|Cancelar trabalho|Cancel order|Cancel/i.test(bodyBeforeOpen);
+      const onDetail = detectScreenKind(bodyBeforeOpen) === 'pedido_detail';
+      if (!hasCancelButton && !onDetail) {
+        const clientUid = await readUid(client).catch(() => null);
+        log(
+          `clientCancelPedido locating detail pedido=${pedidoId} title="${expectedTitle}" pageUid=${clientUid || ''} clienteId=${data?.clienteId || ''} estado=${data?.estado || data?.status || ''} ui=${JSON.stringify(summarizeClientOrdersBody(bodyBeforeOpen))}`,
+        );
+        await openOrderDetailByTitle(client, expectedTitle, { provider: false });
+        await sleep(500);
+        continue;
+      }
+    }
+
     const bodyBeforeCancel = await currentBodyText(client);
     const looksLikeOrderForm = /Novo pedido|Pedir servi.o|Request service/i.test(bodyBeforeCancel);
     if ((await isOnOrderForm(client)) || looksLikeOrderForm) {
@@ -2077,8 +2140,10 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
   if (finalData && isCanceledByClient(finalData)) return;
 
   const body = await client.locator('body').innerText().catch(() => '');
+  const clientUid = await readUid(client).catch(() => null);
+  const uiSummary = summarizeClientOrdersBody(body);
   throw new Error(
-    `Client could not cancel pedido=${pedidoId} estado=${lastData?.estado || lastData?.status || ''} statusProp=${lastData?.statusProposta || ''} body=${body.slice(0, 500)}`,
+    `Client could not cancel pedido=${pedidoId} pageUid=${clientUid || ''} clienteId=${lastData?.clienteId || ''} estado=${lastData?.estado || lastData?.status || ''} statusProp=${lastData?.statusProposta || ''} ui=${JSON.stringify(uiSummary)} body=${body.slice(0, 500)}`,
   );
 }
 

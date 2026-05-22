@@ -77,10 +77,25 @@ function nextProviderAction(data) {
   return 'wait';
 }
 
+function summarizeClientOrdersBody(bodyText) {
+  const text = normalizeText(bodyText);
+
+  return {
+    hasMyOrders: text.includes('meus pedidos') || text.includes('my orders'),
+    hasPendingZero: /pendentes\s*0/.test(text) || /pending\s*0/.test(text),
+    hasEmptyActive:
+      text.includes('sem pedidos ativos') ||
+      text.includes('no active orders') ||
+      text.includes('no active requests'),
+    screen: detectScreenKind(bodyText),
+  };
+}
+
 module.exports = {
   normalizeText,
   detectScreenKind,
   assertExpectedScreen,
   describePedidoState,
   nextProviderAction,
+  summarizeClientOrdersBody,
 };
