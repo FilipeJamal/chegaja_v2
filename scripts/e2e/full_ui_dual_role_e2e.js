@@ -463,6 +463,8 @@ async function shot(page, name) {
 }
 
 function attachPageDiagnostics(page, label) {
+  let flutterExceptionLogBudget = 0;
+
   page.on('pageerror', (error) => {
     console.log(`[${now()}] ${label} pageerror: ${error?.message || error}`);
   });
@@ -480,14 +482,22 @@ function attachPageDiagnostics(page, label) {
       return;
     }
 
+    if (/EXCEPTION CAUGHT BY|When the exception was thrown|Another exception was thrown/i.test(text)) {
+      flutterExceptionLogBudget = 30;
+    }
+
     const interesting =
       type === 'error' ||
       type === 'warning' ||
+      flutterExceptionLogBudget > 0 ||
       /firestore|firebase|permission|denied|failed|exception|error/i.test(text);
     if (/^Failed to load resource: net::ERR_FAILED$/i.test(text)) return;
     if (!interesting) return;
 
     console.log(`[${now()}] ${label} console.${type}: ${text}`);
+    if (flutterExceptionLogBudget > 0) {
+      flutterExceptionLogBudget -= 1;
+    }
   });
 
   page.on('requestfailed', (request) => {

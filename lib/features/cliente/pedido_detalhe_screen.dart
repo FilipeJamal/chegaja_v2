@@ -967,6 +967,7 @@ class PedidoDetalheScreen extends StatelessWidget {
     if (role == 'prestador' && user.uid != pedido.prestadorId) return;
     if (pedido.noShowReportedBy != null) return;
 
+    FocusScope.of(context).unfocus();
     final motivoController = TextEditingController();
 
     final confirmar = await showDialog<bool>(
@@ -974,24 +975,26 @@ class PedidoDetalheScreen extends StatelessWidget {
       builder: (ctx) {
         return AlertDialog(
           title: Text(l10n.noShowReportDialogTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.noShowReportDialogDescription,
-                style: const TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: motivoController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: l10n.noShowReasonOptionalLabel,
-                  border: const OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.noShowReportDialogDescription,
+                  style: const TextStyle(fontSize: 13),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                TextField(
+                  controller: motivoController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: l10n.noShowReasonOptionalLabel,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -1008,7 +1011,7 @@ class PedidoDetalheScreen extends StatelessWidget {
     );
 
     final motivo = motivoController.text.trim();
-    motivoController.dispose();
+    _disposeTextControllerAfterDialog(motivoController);
 
     if (confirmar != true) return;
 
@@ -1020,17 +1023,30 @@ class PedidoDetalheScreen extends StatelessWidget {
       );
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.noShowReportSuccess)),
-      );
+      _showSnackBarAfterStableFrame(context, l10n.noShowReportSuccess);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.noShowReportError(e.toString())),
-        ),
+      _showSnackBarAfterStableFrame(
+        context,
+        l10n.noShowReportError(e.toString()),
       );
     }
+  }
+
+  void _showSnackBarAfterStableFrame(BuildContext context, String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.showSnackBar(SnackBar(content: Text(message)));
+    });
+  }
+
+  void _disposeTextControllerAfterDialog(TextEditingController controller) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 350)).then((_) {
+        controller.dispose();
+      });
+    });
   }
 
   Future<void> _cancelarTrabalhoPorPrestador(

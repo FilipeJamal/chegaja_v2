@@ -1539,6 +1539,14 @@ class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
       return FutureBuilder<User>(
         future: _signedInFuture,
         builder: (context, snapshot) {
+          final signedUser = snapshot.data ?? AuthService.currentUser;
+          if (signedUser != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() {});
+            });
+            return const AppLoadingView(label: 'A preparar trabalhos...');
+          }
+
           if (snapshot.hasError) {
             return const AppErrorView(
               message:
@@ -1546,15 +1554,7 @@ class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
             );
           }
 
-          final signedUser = snapshot.data ?? AuthService.currentUser;
-          if (signedUser == null) {
-            return const AppLoadingView(label: 'A preparar sessao...');
-          }
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() {});
-          });
-          return const AppLoadingView(label: 'A preparar trabalhos...');
+          return const AppLoadingView(label: 'A preparar sessao...');
         },
       );
     }

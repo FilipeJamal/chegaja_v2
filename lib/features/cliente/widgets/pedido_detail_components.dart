@@ -28,7 +28,7 @@ class PedidoDetailLayout extends StatelessWidget {
         final useTwoColumns = constraints.maxWidth >= 980;
 
         if (!useTwoColumns) {
-          return Column(
+          final content = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               KeyedSubtree(
@@ -42,6 +42,7 @@ class PedidoDetailLayout extends StatelessWidget {
               ),
             ],
           );
+          return _scrollWhenHeightIsBounded(content, constraints);
         }
 
         return Row(
@@ -49,23 +50,37 @@ class PedidoDetailLayout extends StatelessWidget {
           children: [
             Expanded(
               flex: 7,
-              child: KeyedSubtree(
-                key: const Key('pedido_detail_main_column'),
-                child: mainColumn,
+              child: _scrollWhenHeightIsBounded(
+                KeyedSubtree(
+                  key: const Key('pedido_detail_main_column'),
+                  child: mainColumn,
+                ),
+                constraints,
               ),
             ),
             const SizedBox(width: AppSpacing.x5),
             SizedBox(
               width: 360,
-              child: KeyedSubtree(
-                key: const Key('pedido_detail_side_panel_slot'),
-                child: sidePanel,
+              child: _scrollWhenHeightIsBounded(
+                KeyedSubtree(
+                  key: const Key('pedido_detail_side_panel_slot'),
+                  child: sidePanel,
+                ),
+                constraints,
               ),
             ),
           ],
         );
       },
     );
+  }
+
+  Widget _scrollWhenHeightIsBounded(
+    Widget child,
+    BoxConstraints constraints,
+  ) {
+    if (!constraints.hasBoundedHeight) return child;
+    return SingleChildScrollView(child: child);
   }
 }
 

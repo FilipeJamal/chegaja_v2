@@ -5,7 +5,7 @@ Data: 2026-05-21
 ## Estado
 
 ```text
-M2.11: em execucao de beta interna controlada
+M2.11: aprovada como beta interna Web automatizada e Windows tecnico
 M2.11.1: avancado com troca de modo Cliente/Prestador pela UI
 M2.11.2: avancado com roteiro, template de bugs e checklist Web/Windows
 M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentado
@@ -15,6 +15,7 @@ M2.11.6: avancada com lista/navegacao Cliente pos-criacao corrigida; dual passou
 M2.11.7: avancada com aceite de convite manual Prestador corrigido nas Rules; dual bloqueado por stream de chat/mensagens em Web
 M2.11.8: avancada com stream/list de mensagens protegido em Web/E2E; dual passou chat bidirecional, mas bloqueou em novo bug de no-show/Rules
 M2.11.9: avancada com no-show em Rules corrigido; e2e dual e orcamento passaram ponta a ponta
+M2.11.10: concluida com ruido runtime do no-show corrigido; beta Web automatizada aprovada
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -966,4 +967,126 @@ Beta Web automatizada agora tem dual e orcamento passando ponta a ponta.
 Ainda falta decidir, em fase seguinte, se a beta interna completa pode ser
 marcada como aprovada com observacoes ou se primeiro se corrige o ruido visual/
 runtime observado no no-show.
+```
+
+## Execucao 2026-05-22 - M2.11.10
+
+Objetivo:
+
+```text
+Corrigir o ruido visual/runtime observado no no-show do Prestador durante o
+e2e:ui:dual e fechar a beta interna Web/Windows com evidencia atualizada.
+```
+
+Problema:
+
+```text
+Depois da M2.11.9, o e2e:ui:dual ja passava funcionalmente, mas o console
+registava durante o no-show:
+- RenderFlex overflowed by 99503 pixels on the bottom;
+- Assertion failed;
+- Tried to build dirty widget in the wrong build scope.
+
+Com logs mais completos no runner, a causa real tambem apareceu como:
+- A TextEditingController was used after being disposed.
+```
+
+Investigacao:
+
+```text
+O problema estava concentrado no fluxo de no-show no detalhe do pedido.
+O dialogo de motivo usava um TextEditingController descartado imediatamente
+apos o showDialog retornar, enquanto a rota/dialogo ainda podia estar a fechar
+e reconstruir o campo de texto.
+
+Tambem havia risco visual no PedidoDetailLayout em altura limitada: em desktop,
+um rail lateral muito alto podia criar overflow em vez de fazer scroll interno.
+
+Durante a repeticao do E2E, tambem foi encontrado um caso de instabilidade de
+bootstrap na aba de pedidos do Prestador: quando AuthService.currentUser ficava
+disponivel apos timeout da future inicial, a UI podia permanecer no erro de
+preparacao da sessao.
+```
+
+Implementacao:
+
+```text
+lib/features/cliente/widgets/pedido_detail_components.dart
+- PedidoDetailLayout agora faz scroll interno quando recebe altura limitada,
+  tanto na coluna principal como no rail lateral.
+- Em layout normal com altura nao limitada, preserva o scroll externo da pagina.
+
+test/features/cliente/widgets/pedido_detail_components_test.dart
+- Adicionado teste de regressao para rail lateral alto em desktop sem overflow.
+
+lib/features/cliente/pedido_detalhe_screen.dart
+- Dialogo de no-show passa a limpar foco antes de abrir.
+- Conteudo do dialogo fica dentro de SingleChildScrollView.
+- SnackBar de sucesso passa a ser exibida apos frame estavel.
+- TextEditingController do dialogo e descartado com atraso curto apos o fecho
+  da rota, evitando uso depois de dispose durante a animacao/rebuild.
+
+lib/features/prestador/prestador_home_screen.dart
+- Aba de pedidos do Prestador recupera se AuthService.currentUser aparecer
+  depois do timeout inicial, evitando ficar presa no erro de sessao.
+
+scripts/e2e/full_ui_dual_role_e2e.js
+- Runner passou a capturar mais linhas de contexto apos excecoes Flutter no
+  console, para identificar a causa real de runtime sem mascarar o fluxo.
+```
+
+Validacoes executadas:
+
+```text
+flutter test test/features/cliente/widgets/pedido_detail_components_test.dart:
+passou, 6/6.
+
+flutter test:
+passou, 152/152.
+
+npm.cmd run test:scripts:
+passou.
+
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test":
+passou, 68/68.
+
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true:
+passou.
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:dual":
+passou ponta a ponta.
+Resultado: FULL MULTI-SCENARIO FLOW OK.
+Busca no log por RenderFlex overflowed, TextEditingController disposed, dirty
+widget, Assertion failed e EXCEPTION CAUGHT BY: sem ocorrencias.
+
+npx.cmd firebase emulators:exec --only auth,firestore,storage "npm.cmd run e2e:ui:orcamento":
+passou ponta a ponta.
+Resultado: ORCAMENTO MIN-MAX FLOW OK.
+Busca no log pelos mesmos erros runtime: sem ocorrencias.
+```
+
+Observacoes:
+
+```text
+Os runs Web ainda mostram avisos de arranque do ambiente local/emulador, como
+WebChannel request aborted, timeout inicial de Auth/Firestore e avisos WebGL de
+ReadPixels. Esses avisos nao impediram os fluxos e nao sao o ruido runtime de
+no-show corrigido nesta fase.
+
+Nao foram alterados backend novo, Cloud Functions, Firestore Rules, Storage
+Rules, deploy, smoke real, cleanup real, health real, pagamentos, Play Store,
+Android fisico real ou M2.6.
+```
+
+Decisao da M2.11.10:
+
+```text
+M2.11.10 concluida.
+M2.11-BUG-003, BUG-004, BUG-005, BUG-006, BUG-007 e o ruido runtime do no-show
+estao corrigidos/mitigados no escopo Web/E2E.
+
+Beta Web automatizada: aprovada.
+Windows tecnico: aprovado com base na execucao anterior da M2.11.1.
+Beta interna M2.11: aprovada para Web/Windows com a limitacao explicita de que
+M2.6 continua pendente de Android fisico real.
 ```

@@ -481,3 +481,88 @@ Ainda falta decisao de coordenacao sobre fechar/aprovar a beta interna completa
 ou abrir uma subfase curta para limpar o ruido visual/runtime observado no
 no-show.
 ```
+
+## Execucao 2026-05-22 - M2.11.10
+
+Objetivo:
+
+```text
+Corrigir o ruido runtime/visual do no-show Prestador e repetir a matriz
+tecnica/Web antes de aprovar a beta interna.
+```
+
+Checklist tecnico executado:
+
+```text
+flutter test test/features/cliente/widgets/pedido_detail_components_test.dart: passou, 6/6
+flutter test: passou, 152/152
+npm.cmd run test:scripts: passou
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 68/68
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+```
+
+Checklist Web/E2E:
+
+```text
+e2e:ui:dual:
+- passou ponta a ponta;
+- happy-path passou;
+- cancelamento Cliente passou;
+- convite manual Prestador passou;
+- chat Cliente -> Prestador passou;
+- chat Prestador -> Cliente passou;
+- no-show Prestador passou;
+- resultado final: FULL MULTI-SCENARIO FLOW OK;
+- log final sem RenderFlex overflowed, TextEditingController disposed,
+  dirty widget, Assertion failed ou EXCEPTION CAUGHT BY.
+
+e2e:ui:orcamento:
+- passou ponta a ponta;
+- orcamento min-max passou;
+- valor final/confirmacao passou;
+- resultado final: ORCAMENTO MIN-MAX FLOW OK;
+- log final sem os mesmos erros runtime.
+```
+
+Correcoes:
+
+```text
+PedidoDetailLayout passou a suportar rail lateral alto em desktop com scroll
+interno quando a altura e limitada.
+
+Dialogo de no-show passou a evitar dispose prematuro do TextEditingController,
+usar conteudo scrollavel e exibir SnackBar apos frame estavel.
+
+Aba de pedidos do Prestador passou a recuperar quando o AuthService.currentUser
+fica disponivel apos timeout inicial do bootstrap.
+
+Runner E2E passou a capturar mais contexto de excecoes Flutter para diagnostico.
+```
+
+Bugs:
+
+```text
+M2.11-BUG-003: corrigido
+M2.11-BUG-004: corrigido
+M2.11-BUG-005: corrigido
+M2.11-BUG-006: corrigido/mitigado
+M2.11-BUG-007: corrigido
+Ruido runtime no-show: corrigido/mitigado
+```
+
+Decisao:
+
+```text
+Beta Web automatizada: aprovada.
+Windows tecnico: aprovado com base na execucao anterior da M2.11.1.
+M2.11: aprovada para beta interna Web/Windows.
+M2.6: continua pendente de Android fisico real.
+
+Avisos locais restantes:
+- WebChannel/Auth/Firestore warm-up warnings no arranque do emulador;
+- avisos WebGL ReadPixels;
+- avisos de dry-run Wasm por dart_webrtc no build Web.
+
+Esses avisos nao bloquearam os fluxos e nao correspondem ao erro runtime de
+no-show corrigido nesta fase.
+```

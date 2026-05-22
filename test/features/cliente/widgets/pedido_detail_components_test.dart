@@ -1,4 +1,5 @@
 import 'package:chegaja_v2/core/models/pedido.dart';
+import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_detail_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
 import 'package:flutter/material.dart';
@@ -97,6 +98,44 @@ void main() {
       expect((sideTop.dy - mainTop.dy).abs(), lessThan(2));
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'evita overflow quando o rail lateral cresce em desktop',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 480));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          wrap(
+            PedidoDetailLayout(
+              mainColumn: const SizedBox(
+                key: Key('main-content'),
+                height: 900,
+                child: Text('Main longo'),
+              ),
+              sidePanel: Column(
+                key: const Key('side-content'),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var index = 0; index < 8; index += 1) ...[
+                    AppActionPanel(
+                      title: 'Painel $index',
+                      message: 'Mensagem operacional longa para simular acoes, '
+                          'no-show e resumo sem quebrar o layout.',
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byKey(const Key('pedido_detail_layout')), findsOneWidget);
+        expect(find.byKey(const Key('side-content')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   group('PedidoValueSummary', () {
