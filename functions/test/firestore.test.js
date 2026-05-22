@@ -135,6 +135,22 @@ describe("Firestore Security Rules", () => {
             });
         }
 
+        function manualInviteAcceptPatch(providerId, overrides = {}) {
+            return {
+                status: "aceito",
+                estado: "aceito",
+                prestadorId: providerId,
+                updatedAt: serverTimestamp(),
+                historico: arrayUnion({
+                    evento: "convite_aceite",
+                    timestamp: Timestamp.now(),
+                    userId: providerId,
+                    descricao: "Prestador aceitou o convite",
+                }),
+                ...overrides,
+            };
+        }
+
         it("should allow a client to create a valid order", async () => {
             const client = testEnv.authenticatedContext("client1");
             await assertSucceeds(
@@ -247,6 +263,153 @@ describe("Firestore Security Rules", () => {
                     estado: "aguarda_resposta_prestador",
                     prestadorId: "provider1",
                 })
+            );
+        });
+
+        it("should allow the invited provider to accept a manual invite", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_accept", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_accept").update(
+                    manualInviteAcceptPatch("provider1")
+                )
+            );
+        });
+
+        it("should deny another provider accepting someone else's manual invite", async () => {
+            await seedProvider("provider1");
+            await seedProvider("provider2");
+            await seedPedido("order_manual_invite_wrong_provider", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider2");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_wrong_provider").update(
+                    manualInviteAcceptPatch("provider2")
+                )
+            );
+        });
+
+        it("should deny invited provider changing prestadorId while accepting manual invite", async () => {
+            await seedProvider("provider1");
+            await seedProvider("provider2");
+            await seedPedido("order_manual_invite_provider_attack", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_provider_attack").update(
+                    manualInviteAcceptPatch("provider2")
+                )
+            );
+        });
+
+        it("should deny invited provider changing clienteId while accepting manual invite", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_client_attack", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_client_attack").update(
+                    manualInviteAcceptPatch("provider1", { clienteId: "client2" })
+                )
+            );
+        });
+
+        it("should deny invited provider changing economic fields while accepting manual invite", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_economic_attack", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_economic_attack").update(
+                    manualInviteAcceptPatch("provider1", {
+                        precoFinal: 1,
+                        commissionPlatform: 0,
+                        earningsProvider: 1,
+                        earningsTotal: 1,
+                    })
+                )
+            );
+        });
+
+        it("should deny provider accepting a cancelled manual invite", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_cancelled", {
+                status: "cancelado",
+                estado: "cancelado",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_cancelled").update(
+                    manualInviteAcceptPatch("provider1")
+                )
+            );
+        });
+
+        it("should deny provider accepting a concluded manual invite", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_concluded", {
+                status: "concluido",
+                estado: "concluido",
+                prestadorId: "provider1",
+                historico: [],
+                precoFinal: 100,
+                commissionPlatform: 15,
+                earningsProvider: 85,
+                earningsTotal: 100,
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_manual_invite_concluded").update(
+                    manualInviteAcceptPatch("provider1")
+                )
+            );
+        });
+
+        it("should deny client accepting a manual invite as provider", async () => {
+            await seedProvider("provider1");
+            await seedPedido("order_manual_invite_client_accept_attack", {
+                status: "aguarda_resposta_prestador",
+                estado: "aguarda_resposta_prestador",
+                prestadorId: "provider1",
+                historico: [],
+            });
+
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("pedidos").doc("order_manual_invite_client_accept_attack").update(
+                    manualInviteAcceptPatch("provider1")
+                )
             );
         });
 

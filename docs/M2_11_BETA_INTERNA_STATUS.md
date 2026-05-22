@@ -12,6 +12,7 @@ M2.11.3: avancado com execucao tecnica Web/Windows e bloqueio E2E Web documentad
 M2.11.4: avancada com runner E2E Web mais robusto; orcamento passou; dual bloqueado por cancelamento nas Rules
 M2.11.5: avancada com permissao de cancelamento Cliente corrigida nas Firestore Rules; dual ainda bloqueado por navegacao/lista no cancelamento
 M2.11.6: avancada com lista/navegacao Cliente pos-criacao corrigida; dual passou happy-path e cancelamento, mas bloqueou em convite manual Prestador
+M2.11.7: avancada com aceite de convite manual Prestador corrigido nas Rules; dual bloqueado por stream de chat/mensagens em Web
 M2.6: continua pendente de Android fisico real
 ```
 
@@ -607,10 +608,135 @@ Beta interna Web automatizada ainda nao aprovada porque o e2e:ui:dual agora
 bloqueia no novo M2.11-BUG-005.
 ```
 
+## M2.11.7 - Correcao do aceite de convite manual pelo Prestador
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-005: o Prestador convidado manualmente nao conseguia
+aceitar o convite no e2e:ui:dual porque Firestore Rules devolviam
+permission-denied no update do pedido para aceito.
+```
+
+Investigacao:
+
+```text
+O app usa PedidoService.aceitarConvitePrestador, que atualiza:
+- prestadorId;
+- status/estado para aceito;
+- updatedAt;
+- historico com evento convite_aceite.
+
+As Rules ja declaravam a transicao aguarda_resposta_prestador -> aceito como
+permitida para prestador, mas validPedidoUpdate nao tinha um caminho dedicado
+para este caso. O update caia em validPedidoGenericUpdate, que acabava por
+atingir o limite de avaliacao das Rules no emulador.
+```
+
+Teste RED:
+
+```text
+Foi adicionado teste de Rules para pedido com:
+- clienteId=client1;
+- prestadorId=provider1;
+- estado/status=aguarda_resposta_prestador.
+
+Antes da correcao, provider1 ao atualizar para estado/status=aceito falhou com
+o mesmo permission-denied e limite de 1000 expressoes observado no E2E.
+```
+
+Implementacao:
+
+```text
+Adicionado caminho especifico em firestore.rules:
+- validPedidoProviderManualInviteAccept
+- hasOnlyPedidoProviderManualAcceptFields
+
+A regra permite apenas:
+- prestador autenticado e existente;
+- prestadorId atual == auth.uid;
+- prestadorId final == auth.uid;
+- transicao aguarda_resposta_prestador -> aceito;
+- alteracao limitada a status, estado, updatedAt e historico;
+- identidade do pedido imutavel;
+- campos economicos e proposta final inalterados.
+```
+
+Testes adicionados:
+
+```text
+Positivo:
+- prestador convidado consegue aceitar convite manual.
+
+Negativos:
+- outro prestador nao consegue aceitar convite alheio;
+- prestador convidado nao consegue trocar prestadorId;
+- prestador convidado nao consegue alterar clienteId;
+- prestador convidado nao consegue alterar campos economicos;
+- prestador nao consegue aceitar pedido cancelado;
+- prestador nao consegue aceitar pedido concluido;
+- cliente nao consegue aceitar convite como prestador.
+```
+
+Validacoes executadas na M2.11.7:
+
+```text
+RED inicial: Firestore/Storage/Functions falhou no teste novo, reproduzindo M2.11-BUG-005.
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": 51/51 passou apos correcao.
+flutter test: 150/150 passou.
+npm.cmd run test:scripts: passou.
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou.
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:orcamento": passou.
+npx.cmd firebase emulators:exec --only auth,firestore,storage "node scripts/seed_servicos.js --emulator-host=127.0.0.1 && npm.cmd run e2e:ui:dual": falhou por novo bloqueio antes de confirmar novamente o convite manual.
+```
+
+Resultado do BUG-005:
+
+```text
+M2.11-BUG-005: corrigido no nivel Firestore Rules.
+O teste que reproduzia o permission-denied agora passa e os negativos protegem
+contra aceitar convite alheio, trocar prestadorId, alterar clienteId, alterar
+campos economicos ou reabrir estados finais.
+```
+
+Novo bloqueio encontrado:
+
+```text
+ID: M2.11-BUG-006
+Titulo: Stream/list de mensagens do chat causa permission-denied e instabilidade no Firestore Web SDK.
+Papel: Cliente/Prestador
+Plataforma: Web/emulador
+Fluxo: e2e:ui:dual, durante happy-path/cancelamento antes de chegar novamente ao convite manual
+Frequencia: reproduzido no e2e:ui:dual apos correcao do BUG-005; tambem aparece como warning no orcamento, mas sem bloquear esse fluxo.
+Severidade: alta para aprovacao automatizada completa da beta Web
+Estado: aberto
+
+Evidencia:
+- PrestadorHome e PrestadorHomeBanner registam:
+  chatSub(<pedidoId>) error: [cloud_firestore/permission-denied]
+  evaluation error em /chats/{chatId}/messages list.
+- Depois disso, o cliente recebe erro interno do Firestore Web SDK:
+  FIRESTORE (12.3.0) INTERNAL ASSERTION FAILED: Unexpected state.
+- O e2e:ui:dual termina com "Pedido not created (cancel scenario)".
+
+Decisao:
+Nao mascarar no runner. A permissao especifica do aceite de convite manual foi
+corrigida em Rules, mas a beta Web automatizada completa continua nao aprovada
+porque surgiu novo bloqueio real em stream/list de chat/mensagens.
+```
+
+Decisao da M2.11.7:
+
+```text
+M2.11.7 avancada.
+M2.11-BUG-005 corrigido com teste de Rules e protecoes negativas.
+Beta interna Web automatizada ainda nao aprovada por M2.11-BUG-006.
+```
+
 ## Proximo passo recomendado
 
 ```text
-M2.11.7 - Corrigir permissao/Rules do aceite de convite manual pelo Prestador,
-com teste de Rules reproduzindo o permission-denied antes de repetir
-e2e:ui:dual.
+M2.11.8 - Corrigir stream/list de mensagens do chat em Web/E2E, investigando
+PrestadorHome/PrestadorHomeBanner e as Rules de /chats/{chatId}/messages para
+eliminar permission-denied sem abrir acesso indevido.
 ```

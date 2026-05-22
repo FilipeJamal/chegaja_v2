@@ -384,6 +384,29 @@ service cloud.firestore {
         && immutablePedidoIdentity();
     }
 
+    function hasOnlyPedidoProviderManualAcceptFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status',
+        'estado',
+        'updatedAt',
+        'historico'
+      ]);
+    }
+
+    function validPedidoProviderManualInviteAccept() {
+      return isPrestador()
+        && isPedidoPrestadorActorForUpdate()
+        && hasValidPedidoEstado(request.resource.data)
+        && pedidoEstado(resource.data) == 'aguarda_resposta_prestador'
+        && pedidoEstado(request.resource.data) == 'aceito'
+        && fieldValueOrNull(resource.data, 'prestadorId') == uid()
+        && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()
+        && hasOnlyPedidoProviderManualAcceptFields()
+        && finalPricingFieldsUnchanged()
+        && finalProposalFieldsUnchanged()
+        && immutablePedidoIdentity();
+    }
+
     function validPedidoProviderQuoteProposal() {
       let minValue = fieldValueOrNull(request.resource.data, 'valorMinEstimadoPrestador');
       let maxValue = fieldValueOrNull(request.resource.data, 'valorMaxEstimadoPrestador');
@@ -502,24 +525,28 @@ service cloud.firestore {
                 currentEstado == 'criado' && nextEstado == 'aguarda_resposta_prestador'
                   ? validPedidoClientManualInvite()
                   : (
-                    nextEstado == 'aguarda_resposta_cliente'
-                      ? validPedidoProviderQuoteProposal()
+                    currentEstado == 'aguarda_resposta_prestador' && nextEstado == 'aceito'
+                      ? validPedidoProviderManualInviteAccept()
                       : (
-                        currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
-                          ? validPedidoProviderFinalProposal()
+                        nextEstado == 'aguarda_resposta_cliente'
+                          ? validPedidoProviderQuoteProposal()
                           : (
-                            currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
-                              ? validPedidoClientAcceptQuote()
+                            currentEstado == 'em_andamento' && nextEstado == 'aguarda_confirmacao_valor'
+                              ? validPedidoProviderFinalProposal()
                               : (
-                                currentEstado == 'aceito' && nextEstado == 'em_andamento'
-                                  ? validPedidoProviderStartService()
+                                currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'aceito'
+                                  ? validPedidoClientAcceptQuote()
                                   : (
-                                    currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
-                                      ? validPedidoClientFinalConfirmation()
+                                    currentEstado == 'aceito' && nextEstado == 'em_andamento'
+                                      ? validPedidoProviderStartService()
                                       : (
-                                        isPedidoClienteActor() && nextEstado == 'cancelado'
-                                          ? validPedidoClientCancellation()
-                                          : validPedidoGenericUpdate()
+                                        currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'concluido'
+                                          ? validPedidoClientFinalConfirmation()
+                                          : (
+                                            isPedidoClienteActor() && nextEstado == 'cancelado'
+                                              ? validPedidoClientCancellation()
+                                              : validPedidoGenericUpdate()
+                                          )
                                       )
                                   )
                               )

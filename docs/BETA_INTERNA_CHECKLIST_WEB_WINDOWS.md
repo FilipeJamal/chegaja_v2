@@ -285,3 +285,56 @@ O bloqueio de lista Cliente foi corrigido, mas o dual completo precisa de nova
 subfase para corrigir a permissao/Rules do aceite de convite manual pelo
 Prestador.
 ```
+
+## Execucao 2026-05-22 - M2.11.7
+
+Objetivo:
+
+```text
+Corrigir M2.11-BUG-005: Prestador convidado manualmente recebia
+permission-denied ao aceitar convite no e2e:ui:dual.
+```
+
+Checklist tecnico executado:
+
+```text
+Teste RED de Firestore Rules: falhou antes da correcao, reproduzindo o BUG-005.
+npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test": passou, 51/51
+flutter test: passou, 150/150
+npm.cmd run test:scripts: passou
+flutter build web --debug --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true: passou
+seed de servicos no emulador: passou
+npm.cmd run e2e:ui:orcamento: passou
+npm.cmd run e2e:ui:dual: falhou por novo bloqueio de stream/list de chat antes de confirmar novamente o convite manual
+```
+
+Resultado:
+
+```text
+M2.11-BUG-005: corrigido no nivel Firestore Rules.
+O prestador convidado agora consegue aceitar convite manual em teste de Rules.
+Foram adicionados negativos para impedir:
+- outro prestador aceitar convite alheio;
+- troca de prestadorId;
+- troca de clienteId;
+- alteracao de campos economicos;
+- aceite de pedido cancelado/concluido;
+- cliente aceitar como prestador.
+
+M2.11-BUG-006: aberto.
+O e2e:ui:dual deixou de evidenciar o BUG-005, mas ficou bloqueado antes de
+chegar novamente ao cenario manual por erro em stream/list de mensagens:
+PrestadorHome/PrestadorHomeBanner tentam ouvir /chats/{pedidoId}/messages e
+recebem permission-denied. Depois disso, o Firestore Web SDK entra em erro
+interno "Unexpected state" e o runner falha ao criar o pedido do cenario de
+cancelamento.
+```
+
+Decisao:
+
+```text
+Beta interna Web automatizada ainda nao aprovada.
+A correcao de Rules do aceite manual esta validada, e o fluxo de orcamento
+continua aprovado, mas o dual completo precisa de nova subfase para corrigir o
+M2.11-BUG-006 sem mascarar o runner.
+```
