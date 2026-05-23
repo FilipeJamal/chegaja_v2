@@ -32,7 +32,7 @@ FUTURO: falta/futuro
 | O | FECHADO | Visual Product System | M2.10 fechada: design system, Home Cliente, Home Prestador, pedidos, mensagens, conta e catalogo visual. |
 | P | FECHADO | Beta interna controlada | M2.11 fechada: dual e orcamento passaram; bugs criticos corrigidos; beta Web/Windows aprovada. |
 | Q | FECHADO | Pacote de entrega beta para tester real | Builds Web/Windows, guia, roteiro, checklist, templates e manifest de entrega foram preparados. |
-| R | PROXIMO | Beta externa/tester real | Entregar o pacote a uma pessoa real, recolher bugs e decidir aprovacao/reprovacao da beta externa. |
+| R | PROXIMO | Beta externa/tester real | Bloco iniciado: spec/status preparados para entregar pacote a tester real, recolher bugs e decidir aprovacao/reprovacao. |
 | S | FUTURO | Preparacao de lancamento publico | Falta package id final, Play Store, politica de privacidade, App Links, textos oficiais e release publico. |
 | T | FUTURO | Escala, operacao e negocio real | Falta suporte, moderacao, analytics real, backoffice robusto, legal, pagamentos e operacao continua. |
 
@@ -287,14 +287,14 @@ Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao prep
 
 | Subfase | Estado | Descricao |
 | --- | --- | --- |
-| R1 | FUTURO | Entregar app ao tester |
+| R1 | PROXIMO | Entregar app ao tester |
 | R2 | FUTURO | Tester executa roteiro |
 | R3 | FUTURO | Recolher bugs reais |
 | R4 | FUTURO | Classificar bugs |
 | R5 | FUTURO | Corrigir bloqueadores |
 | R6 | FUTURO | Decidir se beta externa passa |
 
-Estado: falta.
+Estado: iniciado. A spec/status da M2.13 foram preparados; a entrega real ao tester ainda esta pendente.
 
 ## Bloco S - Lancamento Publico / Play Store
 
