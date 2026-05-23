@@ -50,6 +50,20 @@ limitacoes conhecidas
 docs/superpowers/specs/2026-05-22-m2-12-pacote-entrega-beta-design.md
 ```
 
+## Roadmap Oficial
+
+O roadmap oficial atual do projeto passa a ser o mapa A-T:
+
+```text
+docs/ROADMAP_A_T_CHEGAJA.md
+```
+
+Neste mapa, a M2.12 corresponde ao Bloco Q:
+
+```text
+Q - Pacote de entrega beta para tester real
+```
+
 ## Documentos Esperados
 
 ```text
