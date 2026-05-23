@@ -31,8 +31,8 @@ FUTURO: falta/futuro
 | N | FECHADO | Web/Windows beta tecnica | Web automatizada e Windows tecnico passaram. Builds e E2E principais estao aprovados. |
 | O | FECHADO | Visual Product System | M2.10 fechada: design system, Home Cliente, Home Prestador, pedidos, mensagens, conta e catalogo visual. |
 | P | FECHADO | Beta interna controlada | M2.11 fechada: dual e orcamento passaram; bugs criticos corrigidos; beta Web/Windows aprovada. |
-| Q | PROXIMO | Pacote de entrega beta para tester real | Preparar build, guia, roteiro, checklist e template de feedback. |
-| R | FUTURO | Beta externa/tester real | Falta entregar para uma pessoa real testar e recolher bugs reais. |
+| Q | FECHADO | Pacote de entrega beta para tester real | Builds Web/Windows, guia, roteiro, checklist, templates e manifest de entrega foram preparados. |
+| R | PROXIMO | Beta externa/tester real | Entregar o pacote a uma pessoa real, recolher bugs e decidir aprovacao/reprovacao da beta externa. |
 | S | FUTURO | Preparacao de lancamento publico | Falta package id final, Play Store, politica de privacidade, App Links, textos oficiais e release publico. |
 | T | FUTURO | Escala, operacao e negocio real | Falta suporte, moderacao, analytics real, backoffice robusto, legal, pagamentos e operacao continua. |
 
@@ -273,15 +273,15 @@ Estado: fechado.
 | Subfase | Estado | Descricao |
 | --- | --- | --- |
 | Q1 | FECHADO | Spec do pacote de entrega beta |
-| Q2 | FUTURO | Build Web beta preparado |
-| Q3 | FUTURO | Build Windows beta preparado |
-| Q4 | FUTURO | Guia rapido para tester |
-| Q5 | FUTURO | Roteiro simplificado |
-| Q6 | FUTURO | Template de feedback externo |
-| Q7 | FUTURO | Checklist de entrega |
-| Q8 | FUTURO | Pasta/pacote final para tester |
+| Q2 | FECHADO | Build Web beta preparado |
+| Q3 | FECHADO | Build Windows beta preparado |
+| Q4 | FECHADO | Guia rapido para tester |
+| Q5 | FECHADO | Roteiro simplificado |
+| Q6 | FECHADO | Template de feedback externo |
+| Q7 | FECHADO | Checklist de entrega |
+| Q8 | FECHADO | Pasta/pacote final para tester |
 
-Estado: proximo passo oficial.
+Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao preparados; o proximo passo depende de tester real.
 
 ## Bloco R - Beta Externa / Tester Real
 
@@ -331,17 +331,16 @@ Estado: futuro.
 O proximo bloco oficial e:
 
 ```text
-Q - Pacote de entrega beta para tester real
+R - Beta externa / tester real
 ```
 
 Subfases imediatas:
 
 ```text
-Q2 - Build Web beta preparado
-Q3 - Build Windows beta preparado
-Q4 - Guia rapido para tester
-Q5 - Roteiro simplificado
-Q6 - Template de feedback externo
-Q7 - Checklist de entrega
-Q8 - Pasta/pacote final para tester
+R1 - Entregar app ao tester
+R2 - Tester executa roteiro
+R3 - Recolher bugs reais
+R4 - Classificar bugs
+R5 - Corrigir bloqueadores
+R6 - Decidir se beta externa passa
 ```
