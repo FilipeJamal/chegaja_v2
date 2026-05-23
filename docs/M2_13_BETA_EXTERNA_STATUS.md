@@ -5,8 +5,9 @@ Data: 2026-05-23
 ## Estado
 
 ```text
-M2.13: iniciada como beta externa / tester real
+M2.13: em preparacao para beta externa / tester real
 Bloco R: iniciado
+M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -61,22 +62,38 @@ R5: FUTURO - corrigir bloqueadores
 R6: FUTURO - decidir se beta externa passa
 ```
 
+## M2.13.1 - Preparacao da Entrega
+
+```text
+Estado: preparada
+Entrega real: pendente
+Motivo: tester/canal/plataforma ainda nao foram informados
+```
+
+A M2.13.1 preparou:
+
+```text
+1. Verificacao local do pacote M2.12.
+2. Registo de entrega pronto para preencher.
+3. Mensagem pronta para enviar ao tester.
+4. Confirmacao de que R1 nao deve ser fechado sem envio real.
+```
+
 ## Proxima Execucao Recomendada
 
 ```text
-M2.13.1 - Preparar e registar entrega ao tester real
+M2.13.2 - Registar entrega real ao tester
 ```
 
-Essa execucao deve:
+Essa execucao deve receber do responsavel humano:
 
 ```text
-1. Confirmar quem sera o tester.
-2. Confirmar plataforma inicial: Web, Windows ou ambas.
-3. Confirmar canal de entrega.
-4. Registar a data de entrega.
-5. Registar o pacote entregue.
-6. Garantir que o tester recebeu guia, roteiro, feedback form e bug report.
-7. Aguardar ou recolher feedback real.
+tester
+canal de entrega
+plataforma entregue: Web, Windows ou ambas
+data/hora de envio
+prazo esperado de retorno
+confirmacao de que o tester recebeu os documentos
 ```
 
 ## Fora do Escopo Mantido
