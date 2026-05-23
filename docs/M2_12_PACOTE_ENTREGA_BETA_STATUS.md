@@ -64,6 +64,27 @@ Neste mapa, a M2.12 corresponde ao Bloco Q:
 Q - Pacote de entrega beta para tester real
 ```
 
+## Plano
+
+```text
+docs/superpowers/plans/2026-05-23-m2-12-pacote-entrega-beta.md
+```
+
+Ordem planeada:
+
+```text
+1. Consolidar estrutura da entrega beta.
+2. Criar guia rapido para tester.
+3. Criar roteiro simplificado Cliente/Prestador.
+4. Criar templates de feedback e bug report.
+5. Criar checklist e instrucoes de build.
+6. Rodar validacoes tecnicas.
+7. Gerar build Web beta.
+8. Gerar build Windows beta.
+9. Montar manifest do pacote final para tester.
+10. Atualizar status e roadmap.
+```
+
 ## Documentos Esperados
 
 ```text
