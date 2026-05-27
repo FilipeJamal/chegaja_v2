@@ -10,6 +10,7 @@ Bloco R: iniciado
 M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
 M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
 M2.13.3: documentacao de entrega real preparada, aguardando envio humano
+M2.13.4: correcao de pesquisa do catalogo Cliente em beta solo manual
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -227,6 +228,56 @@ Decisao:
 ```text
 A M2.13.3 prepara a entrega real, mas nao declara que a entrega aconteceu.
 A beta externa real continua pendente.
+```
+
+## M2.13.4 - Corrigir Pesquisa do Catalogo Cliente
+
+```text
+Estado: corrigida e validada localmente
+Tipo: bug de usabilidade/performance encontrado em beta solo manual
+Entrega real a tester: ainda pendente
+R1: ainda pendente
+```
+
+Problema reportado:
+
+```text
+A barra de pesquisa da Home Cliente ficava lenta e confusa. Ao digitar termos
+como "retrato" ou "retratista", as sugestoes apareciam por cima da tela, mas a
+grelha real continuava a mostrar servicos nao relacionados.
+```
+
+Causa:
+
+```text
+A barra usada nesse ponto era um autocomplete, nao um filtro real da grelha de
+servicos. Alem disso, a grelha inicial renderizava muitos cards, tornando a
+interacao mais pesada para o tester.
+```
+
+Correcao:
+
+```text
+1. A Home Cliente passou a filtrar a propria grelha de servicos.
+2. O fluxo deixou de usar dropdown de sugestoes nesse catalogo.
+3. A pesquisa passou a usar debounce.
+4. O catalogo passou a limitar a renderizacao inicial e oferecer "Ver mais".
+5. Foi adicionado teste do filtro/limite de catalogo.
+```
+
+Validacoes:
+
+```text
+flutter test --no-pub: 158/158 passou
+flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release: passou
+Playwright/Chromium local: pesquisa por "retratista" filtrou resultados e removeu cards nao relacionados
+```
+
+Observacao:
+
+```text
+Esta correcao melhora a beta solo/manual, mas nao fecha R1. A entrega real a
+tester humano externo continua pendente.
 ```
 
 ## Fora do Escopo Mantido

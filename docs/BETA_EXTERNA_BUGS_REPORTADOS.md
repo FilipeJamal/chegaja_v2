@@ -101,3 +101,42 @@ Decisao:
 Nao bloqueia a beta solo. Manter observacao para investigar se reaparecer em
 teste humano ou ambiente de entrega real.
 ```
+
+### M2.13-SOLO-UX-001 - Pesquisa de servicos da Home Cliente lenta/bugada
+
+```text
+Data: 2026-05-27
+Tester: Filipe/Jamal em beta solo manual
+Plataforma: Web release local
+Papel: Cliente
+Severidade: alta
+Frequencia: sempre
+Estado: corrigido
+
+Resumo:
+Na Home Cliente, a pesquisa de servicos ficava muito lenta e confusa ao digitar.
+Ao pesquisar termos como "retrato" ou "retratista", a UI mostrava sugestoes
+sobrepostas, mas a grelha principal continuava com cards sem relacao, como
+"Assentamento...". O tester nao conseguia usar a pesquisa de forma fluida.
+
+Causa tecnica:
+A barra anterior era um autocomplete de sugestoes. Ela nao filtrava os cards
+visiveis do catalogo e ainda renderizava demasiados servicos iniciais, criando
+sensacao de bloqueio e resultado errado.
+
+Correcao:
+- A Home Cliente passou a usar pesquisa real do catalogo.
+- A grelha de servicos agora e filtrada pelo texto digitado.
+- A pesquisa passou a usar indice de servicos existente.
+- O dropdown de sugestoes foi removido desse fluxo.
+- A renderizacao inicial do catalogo foi limitada e ganhou "Ver mais servicos".
+- A barra recebeu debounce para evitar rebuild pesado a cada tecla.
+
+Validacao:
+- Pesquisa por "retratista" testada em Chromium/Playwright contra
+  http://127.0.0.1:5175.
+- Resultado esperado encontrado.
+- Cards nao relacionados, como "Assentamento...", deixaram de aparecer quando
+  a pesquisa esta ativa.
+- flutter test --no-pub passou com 158/158.
+```

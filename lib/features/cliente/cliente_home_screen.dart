@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
-import 'package:chegaja_v2/features/common/smart_search_bar.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
@@ -40,6 +39,7 @@ import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
 import 'package:chegaja_v2/features/cliente/widgets/cliente_home_components.dart';
+import 'package:chegaja_v2/features/cliente/widgets/cliente_service_catalog_search.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_list_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_status_presenter.dart';
@@ -577,7 +577,23 @@ class _ClienteServicesCatalog extends StatefulWidget {
 }
 
 class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
+  static const int _initialVisibleServices = 24;
+  static const int _visibleServicesStep = 24;
+  static const Duration _searchDebounce = Duration(milliseconds: 180);
+
+  final TextEditingController _serviceSearchController =
+      TextEditingController();
+  Timer? _serviceSearchDebounce;
   String _selectedMode = 'ORCAMENTO';
+  String _serviceQuery = '';
+  int _visibleLimit = _initialVisibleServices;
+
+  @override
+  void dispose() {
+    _serviceSearchDebounce?.cancel();
+    _serviceSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -589,11 +605,13 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
       'IMEDIATO': l10n.serviceTabImmediate,
     };
 
-    final filtered = widget.servicos
-        .where(
-          (servico) => _normalizeServicoMode(servico.mode) == _selectedMode,
-        )
-        .toList();
+    final catalog = visibleClienteCatalogServices(
+      services: widget.servicos,
+      selectedMode: _selectedMode,
+      query: _serviceQuery,
+      limit: _visibleLimit,
+    );
+    final visibleServices = catalog.services;
 
     return ClienteServicesSection(
       title: widget.title,
@@ -601,18 +619,7 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
       search: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SmartSearchBar<Servico>(
-            hintText: l10n.serviceSearchHint,
-            allItems: filtered,
-            idSelector: (s) => s.id,
-            nameSelector: (s) => s.name,
-            keywordsSelector: (s) => s.keywords,
-            onItemSelected: (servico) => _openNovoPedido(
-              context: context,
-              modo: _selectedMode,
-              servico: servico,
-            ),
-          ),
+          _buildServiceSearchField(context, l10n),
           const SizedBox(height: AppSpacing.x3),
           Wrap(
             spacing: AppSpacing.x2,
@@ -622,17 +629,35 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
                 ChoiceChip(
                   label: Text(entry.value),
                   selected: _selectedMode == entry.key,
-                  onSelected: (_) => setState(() => _selectedMode = entry.key),
+                  onSelected: (_) => setState(() {
+                    _selectedMode = entry.key;
+                    _visibleLimit = _initialVisibleServices;
+                    _serviceQuery = '';
+                    _serviceSearchController.clear();
+                  }),
                 ),
             ],
           ),
+          if (catalog.isSearching || catalog.isTruncated) ...[
+            const SizedBox(height: AppSpacing.x2),
+            _ClienteCatalogResultSummary(
+              query: _serviceQuery,
+              totalMatched: catalog.totalMatched,
+              visibleCount: visibleServices.length,
+              isSearching: catalog.isSearching,
+            ),
+          ],
         ],
       ),
       children: [
-        if (filtered.isEmpty)
-          const ClienteHomeEmptyServices()
+        if (visibleServices.isEmpty)
+          _ClienteCatalogEmptyResult(
+            message: catalog.isSearching
+                ? l10n.serviceSearchEmpty
+                : 'Nao ha servicos disponiveis neste modo.',
+          )
         else
-          for (final servico in filtered)
+          for (final servico in visibleServices)
             ClienteServiceTile(
               servico: servico,
               localeCode: locale.languageCode,
@@ -643,8 +668,91 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
                 servico: servico,
               ),
             ),
+        if (catalog.isTruncated)
+          _ClienteCatalogShowMoreCard(
+            visibleCount: visibleServices.length,
+            totalCount: catalog.totalMatched,
+            onPressed: () => setState(
+              () => _visibleLimit += _visibleServicesStep,
+            ),
+          ),
       ],
     );
+  }
+
+  Widget _buildServiceSearchField(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return TextField(
+      key: const Key('cliente_home_service_search_field'),
+      controller: _serviceSearchController,
+      onChanged: _onServiceSearchChanged,
+      onSubmitted: _applyServiceSearchNow,
+      textInputAction: TextInputAction.search,
+      cursorColor: colorScheme.primary,
+      style: TextStyle(color: colorScheme.onSurface),
+      decoration: InputDecoration(
+        hintText: l10n.serviceSearchHint,
+        prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary),
+        suffixIcon: _serviceSearchController.text.isEmpty
+            ? null
+            : IconButton(
+                key: const Key('cliente_home_service_search_clear'),
+                tooltip: 'Limpar pesquisa',
+                onPressed: _clearServiceSearch,
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x3,
+          vertical: AppSpacing.x3,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
+        ),
+      ),
+    );
+  }
+
+  void _onServiceSearchChanged(String value) {
+    _serviceSearchDebounce?.cancel();
+    _serviceSearchDebounce = Timer(
+      _searchDebounce,
+      () => _applyServiceSearchNow(value),
+    );
+  }
+
+  void _applyServiceSearchNow(String value) {
+    if (!mounted) return;
+    final nextQuery = value.trim();
+    if (nextQuery == _serviceQuery) return;
+
+    setState(() {
+      _serviceQuery = nextQuery;
+      _visibleLimit = _initialVisibleServices;
+    });
+  }
+
+  void _clearServiceSearch() {
+    _serviceSearchDebounce?.cancel();
+    _serviceSearchController.clear();
+    setState(() {
+      _serviceQuery = '';
+      _visibleLimit = _initialVisibleServices;
+    });
   }
 
   void _openNovoPedido({
@@ -658,6 +766,118 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
           modo: modo,
           servicoInicial: servico,
         ),
+      ),
+    );
+  }
+}
+
+class _ClienteCatalogResultSummary extends StatelessWidget {
+  const _ClienteCatalogResultSummary({
+    required this.query,
+    required this.totalMatched,
+    required this.visibleCount,
+    required this.isSearching,
+  });
+
+  final String query;
+  final int totalMatched;
+  final int visibleCount;
+  final bool isSearching;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = isSearching
+        ? 'Resultados para "$query": $visibleCount de $totalMatched'
+        : 'A mostrar $visibleCount de $totalMatched servicos. Usa a pesquisa para encontrar mais rapido.';
+
+    return Text(
+      label,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+class _ClienteCatalogEmptyResult extends StatelessWidget {
+  const _ClienteCatalogEmptyResult({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: AppSpacing.x3),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClienteCatalogShowMoreCard extends StatelessWidget {
+  const _ClienteCatalogShowMoreCard({
+    required this.visibleCount,
+    required this.totalCount,
+    required this.onPressed,
+  });
+
+  final int visibleCount;
+  final int totalCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$visibleCount de $totalCount servicos',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x2),
+          Text(
+            'Carrega mais categorias se quiseres navegar sem pesquisar.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x3),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.expand_more_rounded),
+              label: const Text('Ver mais servicos'),
+            ),
+          ),
+        ],
       ),
     );
   }
