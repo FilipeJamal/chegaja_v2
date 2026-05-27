@@ -950,7 +950,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
     final hasStates = _statesForCountry.isNotEmpty;
     final locale = Localizations.localeOf(context);
     final stateLabel = _stateLabelForCountry(_selectedCountry);
@@ -981,9 +983,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         const SizedBox(height: 4),
                         Text(
                           l10n.serviceAreaSubtitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: Colors.black54,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -1125,9 +1127,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         if (_todosServicos.isEmpty)
                           Text(
                             l10n.servicesCatalogEmpty,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Colors.black54,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           )
                         else
@@ -1157,17 +1159,17 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                               if (!hasQuery && servicosVisiveis.isEmpty)
                                 Text(
                                   l10n.servicesSearchPrompt,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.black54,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 )
                               else if (servicosVisiveis.isEmpty)
                                 Text(
                                   l10n.servicesSearchNoResults,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.black54,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 )
                               else ...[
@@ -1231,9 +1233,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                           ),
                           child: Text(
                             l10n.serviceAreaInfoNote,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black87,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                         ),

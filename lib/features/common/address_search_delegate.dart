@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:chegaja_v2/core/services/address_autocomplete_service.dart';
 
 class AddressSearchDelegate extends SearchDelegate<AddressResult?> {
-  final AddressAutocompleteService _service = AddressAutocompleteService.instance;
+  final AddressAutocompleteService _service =
+      AddressAutocompleteService.instance;
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -83,7 +84,8 @@ class _DebouncedSuggestionsState extends State<_DebouncedSuggestions> {
   @override
   void didUpdateWidget(covariant _DebouncedSuggestions oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.query != oldWidget.query || widget.immediate != oldWidget.immediate) {
+    if (widget.query != oldWidget.query ||
+        widget.immediate != oldWidget.immediate) {
       _onQueryChanged();
     }
   }
@@ -109,7 +111,10 @@ class _DebouncedSuggestionsState extends State<_DebouncedSuggestions> {
 
     // Se já buscamos esta exata query com sucesso, não fazemos nada (cache simples local)
     // Mas se for 'immediate' (enter pressionado), podemos querer forçar.
-    if (_lastQuery == widget.query && !_isLoading && _error == null && !widget.immediate) {
+    if (_lastQuery == widget.query &&
+        !_isLoading &&
+        _error == null &&
+        !widget.immediate) {
       return;
     }
 
@@ -135,7 +140,7 @@ class _DebouncedSuggestionsState extends State<_DebouncedSuggestions> {
     try {
       final results = await widget.service.search(widget.query);
       if (!mounted) return;
-      
+
       setState(() {
         _results = results;
         _isLoading = false;
@@ -156,7 +161,9 @@ class _DebouncedSuggestionsState extends State<_DebouncedSuggestions> {
       return Center(
         child: Text(
           'Digita pelo menos 3 letras...',
-          style: TextStyle(color: Colors.grey[600]),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }

@@ -79,6 +79,8 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus Favoritos'),
@@ -86,15 +88,22 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _favoritos.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.favorite_border, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
+                      Icon(
+                        Icons.favorite_border,
+                        size: 64,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         'Ainda não tens favoritos.',
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -161,9 +170,9 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 city,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.black54,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],

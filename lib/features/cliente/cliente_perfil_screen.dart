@@ -662,6 +662,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     final hasStates = _statesForCountry.isNotEmpty;
     final cities = hasStates ? _citiesForState : _citiesForCountry;
     final stateLabel = _stateLabelForCountry(_selectedCountry);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -714,7 +715,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
             leading: const Icon(Icons.favorite, color: Colors.red),
             title: const Text('Meus Favoritos'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            tileColor: Colors.white,
+            tileColor: colorScheme.surfaceContainerHighest,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onTap: () {
@@ -728,7 +729,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
             leading: const Icon(Icons.help_outline, color: Colors.blueGrey),
             title: const Text('Ajuda e Suporte'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            tileColor: Colors.white,
+            tileColor: colorScheme.surfaceContainerHighest,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onTap: () {
@@ -816,7 +817,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                 _bioCtrl.text.trim().isEmpty ? 'Sem bio' : _bioCtrl.text.trim(),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey.shade700),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
               TextButton.icon(
@@ -871,7 +874,10 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
               'País detectado: ${_selectedCountry!.name} ($_dialCode)',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
       ],

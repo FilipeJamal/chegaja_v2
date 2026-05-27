@@ -294,7 +294,7 @@ Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao prep
 | R5 | FUTURO | Corrigir bloqueadores |
 | R6 | FUTURO | Decidir se beta externa passa |
 
-Estado: iniciado. A spec/status da M2.13, a mensagem de entrega, as instrucoes do tester, o template de feedback e a beta solo assistida por Playwright foram preparados/executados; a entrega real ao tester ainda esta pendente.
+Estado: iniciado. A spec/status da M2.13, a mensagem de entrega, as instrucoes do tester, o template de feedback e a beta solo assistida por Playwright foram preparados/executados. A beta solo tambem gerou correcoes de usabilidade e contraste em dark mode; a entrega real ao tester ainda esta pendente.
 
 ## Bloco S - Lancamento Publico / Play Store
 
@@ -348,5 +348,5 @@ R6 - Decidir se beta externa passa
 Proxima fase operacional:
 
 ```text
-M2.13.6 - Registar envio real e feedback inicial do tester
+M2.13.7 - Registar envio real e feedback inicial do tester
 ```

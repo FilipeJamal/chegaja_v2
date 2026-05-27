@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,10 +12,10 @@ class PrestadorKycScreen extends StatefulWidget {
 
 class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
   final _picker = ImagePicker();
-  
+
   File? _frontImage;
   File? _backImage;
-  
+
   bool _loading = true;
   bool _submitting = false;
   String _status = 'none'; // none, pending, approved, rejected
@@ -29,7 +28,7 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
 
   Future<void> _checkStatus() async {
     setState(() => _loading = true);
-    // Aqui podiamos ler do repo ou do service. 
+    // Aqui podiamos ler do repo ou do service.
     // Como o service tem getKycStatus, usamos. Mas idealmente leriamos o doc todo se quisessmos mostrar as fotos antigas.
     // Para MVP, assumimos fluxo novo se for none/rejected.
     try {
@@ -48,7 +47,8 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
   Future<void> _pickImage(bool isFront) async {
     if (_status == 'pending' || _status == 'approved') return;
 
-    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final picked =
+        await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked != null) {
       setState(() {
         if (isFront) {
@@ -63,7 +63,8 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
   Future<void> _submit() async {
     if (_frontImage == null || _backImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, carrega ambas as fotos do documento.')),
+        const SnackBar(
+            content: Text('Por favor, carrega ambas as fotos do documento.')),
       );
       return;
     }
@@ -71,8 +72,10 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
     setState(() => _submitting = true);
     try {
       // 1. Upload images
-      final frontUrl = await KycService.instance.uploadDocument(_frontImage!, 'front');
-      final backUrl = await KycService.instance.uploadDocument(_backImage!, 'back');
+      final frontUrl =
+          await KycService.instance.uploadDocument(_frontImage!, 'front');
+      final backUrl =
+          await KycService.instance.uploadDocument(_backImage!, 'back');
 
       // 2. Submit data
       await KycService.instance.submitKyc(frontUrl, backUrl);
@@ -83,7 +86,9 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
           _submitting = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Documentos enviados com sucesso! Aguarda aprovação.')),
+          const SnackBar(
+              content:
+                  Text('Documentos enviados com sucesso! Aguarda aprovação.')),
         );
       }
     } catch (e) {
@@ -98,16 +103,17 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
 
   Widget _buildImageCard(String label, File? image, bool isFront) {
     final canEdit = _status == 'none' || _status == 'rejected';
-    
+    final colorScheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: () => _pickImage(isFront),
       child: Container(
         height: 180,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: colorScheme.outlineVariant),
           image: image != null
               ? DecorationImage(
                   image: FileImage(image),
@@ -119,11 +125,15 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.camera_alt, size: 40, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.camera_alt,
+                    size: 40,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     label,
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               )
@@ -132,9 +142,13 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: CircleAvatar(
-                    backgroundColor: Colors.white,
+                    backgroundColor: colorScheme.surface,
                     radius: 14,
-                    child: Icon(canEdit ? Icons.edit : Icons.check, size: 16, color: Colors.black),
+                    child: Icon(
+                      canEdit ? Icons.edit : Icons.check,
+                      size: 16,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ),
@@ -226,37 +240,37 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
                   children: [
                     Icon(Icons.error_outline, color: Colors.red),
                     SizedBox(width: 8),
-                    Expanded(child: Text('A tua submissão anterior foi rejeitada. Por favor envia fotos mais nítidas.')),
+                    Expanded(
+                        child: Text(
+                            'A tua submissão anterior foi rejeitada. Por favor envia fotos mais nítidas.')),
                   ],
                 ),
               ),
-            
             const Text(
               'Para garantir a segurança da plataforma, precisamos de verificar a sua identidade.',
               style: TextStyle(fontSize: 15),
             ),
             const SizedBox(height: 24),
-            
-            const Text('Frente do Bilhete de Identidade', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Frente do Bilhete de Identidade',
+                style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            _buildImageCard('Toque para adicionar foto da Frente', _frontImage, true),
-            
+            _buildImageCard(
+                'Toque para adicionar foto da Frente', _frontImage, true),
             const SizedBox(height: 24),
-            
-            const Text('Verso do Bilhete de Identidade', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Verso do Bilhete de Identidade',
+                style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            _buildImageCard('Toque para adicionar foto do Verso', _backImage, false),
-            
+            _buildImageCard(
+                'Toque para adicionar foto do Verso', _backImage, false),
             const SizedBox(height: 32),
-            
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
-                child: _submitting 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Submeter para Revisão'),
+                child: _submitting
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Submeter para Revisão'),
               ),
             ),
           ],

@@ -149,6 +149,8 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -171,7 +173,7 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                         image: isImage
                             ? DecorationImage(
@@ -225,8 +227,8 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                 icon: const Icon(Icons.photo),
                 label: const Text('Foto'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.black87,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  foregroundColor: theme.colorScheme.onSurface,
                   elevation: 0,
                 ),
               ),
@@ -238,8 +240,8 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Câmera'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.black87,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  foregroundColor: theme.colorScheme.onSurface,
                   elevation: 0,
                 ),
               ),

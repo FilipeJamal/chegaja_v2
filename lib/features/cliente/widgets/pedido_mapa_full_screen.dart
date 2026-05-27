@@ -203,13 +203,14 @@ class _PedidoMapaFullScreenState extends State<PedidoMapaFullScreen> {
                       Container(
                         height: 30,
                         width: 1,
-                        color: Colors.grey.shade300,
+                        color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                       Column(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.directions_car,
-                            color: Colors.black54,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(height: 4),
                           Text(

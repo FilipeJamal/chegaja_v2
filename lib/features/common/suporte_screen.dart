@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:chegaja_v2/core/services/support_service.dart';
 
@@ -17,7 +16,7 @@ class SuporteScreen extends StatefulWidget {
 class _SuporteScreenState extends State<SuporteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _messageCtrl = TextEditingController();
-  
+
   String _selectedSubject = 'Dúvida Geral';
   bool _sending = false;
 
@@ -41,7 +40,7 @@ class _SuporteScreenState extends State<SuporteScreen> {
       );
 
       if (!mounted) return;
-      
+
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -88,33 +87,38 @@ class _SuporteScreenState extends State<SuporteScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Preenche o formulário abaixo e entraremos em contacto o mais breve possível.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 24),
-
               DropdownButtonFormField<String>(
                 initialValue: _selectedSubject,
                 decoration: InputDecoration(
                   labelText: 'Assunto',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                items: _subjects
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) setState(() => _selectedSubject = val);
                 },
               ),
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _messageCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
                   labelText: 'Mensagem',
                   alignLabelWithHint: true,
-                  hintText: 'Descreve o problema ou a tua dúvida com detalhes...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText:
+                      'Descreve o problema ou a tua dúvida com detalhes...',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
@@ -127,7 +131,6 @@ class _SuporteScreenState extends State<SuporteScreen> {
                 },
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,

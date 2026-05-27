@@ -66,7 +66,9 @@ class PrestadorSearchDelegate extends SearchDelegate<PrestadorSearchResult?> {
             const SizedBox(height: 16),
             Text(
               'Pesquisa por nome ou especialidade...',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -215,7 +217,9 @@ class _PrestadorSearchBodyState extends State<_PrestadorSearchBody> {
                   child: Text(
                     'Nenhum prestador encontrado para "$widget.query".',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 );
               }
@@ -277,12 +281,17 @@ class _PrestadorSearchBodyState extends State<_PrestadorSearchBody> {
 
   Widget _buildFilterChip(SearchFilter value, String label, {IconData? icon}) {
     final selected = _filter == value;
+    final colorScheme = Theme.of(context).colorScheme;
     return ChoiceChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 16, color: selected ? Colors.white : Colors.grey),
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+            ),
             const SizedBox(width: 4),
           ],
           Text(label),
@@ -292,8 +301,10 @@ class _PrestadorSearchBodyState extends State<_PrestadorSearchBody> {
       onSelected: (bool selected) {
         if (selected) setState(() => _filter = value);
       },
-      selectedColor: Theme.of(context).primaryColor,
-      labelStyle: TextStyle(color: selected ? Colors.white : Colors.black),
+      selectedColor: colorScheme.primary,
+      labelStyle: TextStyle(
+        color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+      ),
     );
   }
 }

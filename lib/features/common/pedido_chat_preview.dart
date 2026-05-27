@@ -313,6 +313,7 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     // df removed
     final timeStr = (widget.lastMessageAt != null)
         ? DateTimeUtils.formatDateTime(widget.lastMessageAt!,
@@ -398,7 +399,9 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: Colors.grey.shade700, fontSize: 13),
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
                       ),
                       if (pedidoTitulo.isNotEmpty) ...[
                         const SizedBox(height: 2),
@@ -407,7 +410,9 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: Colors.grey.shade500, fontSize: 12),
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ],
@@ -416,7 +421,10 @@ class _PedidoChatPreviewState extends State<PedidoChatPreview> {
                 const SizedBox(width: 8),
                 Text(
                   timeStr,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),

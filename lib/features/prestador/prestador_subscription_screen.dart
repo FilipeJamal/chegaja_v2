@@ -82,13 +82,15 @@ class _PrestadorSubscriptionScreenState
     required VoidCallback onTap,
     required bool highlighted,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: highlighted ? Colors.blue : Colors.black12,
+          color: highlighted ? colorScheme.primary : colorScheme.outlineVariant,
           width: highlighted ? 1.4 : 1,
         ),
       ),
@@ -105,7 +107,7 @@ class _PrestadorSubscriptionScreenState
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: highlighted ? Colors.blue[700] : null,
+              color: highlighted ? colorScheme.primary : colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 10),
@@ -136,6 +138,8 @@ class _PrestadorSubscriptionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Assinatura')),
       body: StreamBuilder<Map<String, dynamic>?>(
@@ -156,7 +160,7 @@ class _PrestadorSubscriptionScreenState
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black12),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

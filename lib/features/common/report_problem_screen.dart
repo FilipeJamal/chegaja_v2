@@ -169,9 +169,12 @@ class _ReportProblemScreenState extends State<ReportProblemScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Nota: O reporte de "No-show" (não comparência) resultará no cancelamento imediato do pedido.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ],

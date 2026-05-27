@@ -67,6 +67,8 @@ class _PropostaPrestadorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final min = pedido.valorMinEstimadoPrestador;
     final max = pedido.valorMaxEstimadoPrestador;
     final mensagem = pedido.mensagemPropostaPrestador?.trim();
@@ -112,22 +114,26 @@ class _PropostaPrestadorCard extends StatelessWidget {
         children: [
           Text(
             copy.title,
-            style: const TextStyle(
+            style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 14,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             copy.body,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             faixaTexto,
-            style: const TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 13,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
           ),
           if (expiresTxt.isNotEmpty) ...[
@@ -147,9 +153,9 @@ class _PropostaPrestadorCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               mensagem,
-              style: const TextStyle(
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontSize: 12,
-                color: Colors.black87,
+                color: colorScheme.onSurface,
               ),
             ),
           ],
@@ -276,6 +282,8 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final valor = pedido.precoPropostoPrestador ?? pedido.precoFinal ?? 0;
     final acimaFaixa = _estaAcimaFaixa;
     final faixaTexto = _textoFaixa;
@@ -295,26 +303,27 @@ class _ValorFinalPendenteCard extends StatelessWidget {
         children: [
           Text(
             copy.title,
-            style: const TextStyle(
+            style: theme.textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 14,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Valor final enviado pelo prestador: ${CurrencyUtils.format(valor)}',
-            style: const TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 13,
-              color: Colors.black87,
+              color: colorScheme.onSurface,
             ),
           ),
           if (faixaTexto != null) ...[
             const SizedBox(height: 4),
             Text(
               faixaTexto,
-              style: const TextStyle(
+              style: theme.textTheme.bodySmall?.copyWith(
                 fontSize: 12,
-                color: Colors.black54,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -332,9 +341,9 @@ class _ValorFinalPendenteCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             copy.nextStep!,
-            style: const TextStyle(
+            style: theme.textTheme.bodySmall?.copyWith(
               fontSize: 12,
-              color: Colors.black54,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 10),

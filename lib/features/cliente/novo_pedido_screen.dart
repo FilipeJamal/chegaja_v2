@@ -740,7 +740,9 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final df = DateFormat('dd/MM/yyyy HH:mm');
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
 
     final isImediato = _modo == 'IMEDIATO';
     final isAgendado = _modo == 'AGENDADO';
@@ -824,10 +826,12 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       const SizedBox(height: 4),
                       Text(
                         subtituloTopo,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
                       ),
                       const SizedBox(height: 24),
 
@@ -934,7 +938,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.black12),
+                            border:
+                                Border.all(color: colorScheme.outlineVariant),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -973,9 +978,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.grey.shade50,
+                                    color: colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.black12),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                    ),
                                   ),
                                   child: _prestadorSelecionado == null
                                       ? const Text(
@@ -1016,9 +1023,12 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                                 children: [
                                                   Text(
                                                     _prestadorSelecionado!.nome,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
+                                                      fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w600,
+                                                      color:
+                                                          colorScheme.onSurface,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
@@ -1028,9 +1038,10 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                                             null
                                                         ? 'Sem avaliacoes'
                                                         : '${_prestadorSelecionado!.ratingAvg!.toStringAsFixed(1)} (${_prestadorSelecionado!.ratingCount})',
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 11,
-                                                      color: Colors.black54,
+                                                      color: colorScheme
+                                                          .onSurfaceVariant,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
@@ -1039,9 +1050,10 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                                       _prestadorSelecionado!
                                                           .distanciaKm,
                                                     ),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 11,
-                                                      color: Colors.black54,
+                                                      color: colorScheme
+                                                          .onSurfaceVariant,
                                                     ),
                                                   ),
                                                 ],
@@ -1132,7 +1144,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.black12),
+                          border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1285,7 +1297,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                   ),
                                   hintText: l10n.locationAddressHint,
                                   filled: true,
-                                  fillColor: Colors.grey.shade100,
+                                  fillColor:
+                                      colorScheme.surfaceContainerHighest,
                                 ),
                                 maxLines: 2,
                               ),
@@ -1349,7 +1362,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                             ),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.black12),
+                              border:
+                                  Border.all(color: colorScheme.outlineVariant),
                             ),
                             child: Row(
                               children: [
@@ -1398,7 +1412,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           ),
           if (_salvando)
             Container(
-              color: Colors.black26,
+              color: colorScheme.scrim.withValues(alpha: 0.26),
               child: const Center(
                 child: CircularProgressIndicator(),
               ),

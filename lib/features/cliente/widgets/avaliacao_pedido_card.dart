@@ -68,6 +68,7 @@ class _AvaliacaoPedidoCardState extends State<AvaliacaoPedidoCard> {
     required String comentario,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -91,7 +92,10 @@ class _AvaliacaoPedidoCardState extends State<AvaliacaoPedidoCard> {
             const SizedBox(height: 8),
             Text(
               comentario,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ],
         ],
@@ -101,6 +105,7 @@ class _AvaliacaoPedidoCardState extends State<AvaliacaoPedidoCard> {
 
   Widget _avaliacaoForm() {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -121,7 +126,10 @@ class _AvaliacaoPedidoCardState extends State<AvaliacaoPedidoCard> {
           const SizedBox(height: 6),
           Text(
             l10n.ratingPrompt,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           _starRow(_rating, readOnly: false),

@@ -37,6 +37,33 @@ Pedido buildPedido({
 
 Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
+Widget wrapDark(Widget child) => MaterialApp(
+      theme: ThemeData.dark(),
+      home: Scaffold(body: child),
+    );
+
+void expectNoHardcodedDarkTextColors(WidgetTester tester) {
+  final forbidden = <int>{
+    Colors.black.toARGB32(),
+    Colors.black87.toARGB32(),
+    Colors.black54.toARGB32(),
+    Colors.black45.toARGB32(),
+    Colors.black38.toARGB32(),
+  };
+
+  for (final element in find.byType(Text).evaluate()) {
+    final widget = element.widget as Text;
+    final color = widget.style?.color;
+    if (color != null) {
+      expect(
+        forbidden.contains(color.toARGB32()),
+        isFalse,
+        reason: 'Hardcoded dark text color on "${widget.data}"',
+      );
+    }
+  }
+}
+
 void main() {
   testWidgets('ClientePedidoAcoes agrupa proposta em AppActionPanel', (
     tester,
@@ -90,5 +117,38 @@ void main() {
     expect(find.byType(AppActionPanel), findsOneWidget);
     expect(find.byKey(const Key('prestador_iniciar_servico_button')),
         findsOneWidget);
+  });
+
+  testWidgets('acoes Cliente e Prestador evitam texto preto em dark mode', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrapDark(
+        ClientePedidoAcoes(
+          pedido: buildPedido(
+            estado: 'aguarda_confirmacao_valor',
+            statusProposta: 'aceita_cliente',
+            statusConfirmacaoValor: 'pendente_cliente',
+            precoPropostoPrestador: 85,
+          ),
+        ),
+      ),
+    );
+    expectNoHardcodedDarkTextColors(tester);
+
+    await tester.pumpWidget(
+      wrapDark(
+        PrestadorPedidoAcoes(
+          pedido: buildPedido(
+            estado: 'aguarda_confirmacao_valor',
+            tipoPreco: 'a_combinar',
+            statusProposta: 'aceita_cliente',
+            statusConfirmacaoValor: 'pendente_cliente',
+            precoPropostoPrestador: 85,
+          ),
+        ),
+      ),
+    );
+    expectNoHardcodedDarkTextColors(tester);
   });
 }

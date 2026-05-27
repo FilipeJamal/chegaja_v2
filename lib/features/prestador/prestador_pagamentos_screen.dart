@@ -20,6 +20,7 @@ class PrestadorPagamentosScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final uid = AuthService.currentUser?.uid;
     if (uid == null) {
       return Scaffold(
@@ -51,7 +52,9 @@ class PrestadorPagamentosScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 l10n.paymentsDescription,
-                style: const TextStyle(color: Colors.black54),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -93,7 +96,10 @@ class PrestadorPagamentosScreen extends StatelessWidget {
               if (stripeAccountId.isNotEmpty)
                 Text(
                   l10n.stripeAccountLabel(stripeAccountId),
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -149,7 +155,10 @@ class PrestadorPagamentosScreen extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 l10n.technicalNotesBody,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           );
@@ -165,6 +174,7 @@ class PrestadorPagamentosScreen extends StatelessWidget {
     required List<dynamic> docs,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final statusLabel = _kycStatusLabel(status, l10n);
     final statusColor = _kycStatusColor(status);
     final canUpload = status != 'aprovado';
@@ -209,7 +219,10 @@ class PrestadorPagamentosScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l10n.kycDescription,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           if (docNames.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -327,7 +340,8 @@ class PrestadorPagamentosScreen extends StatelessWidget {
       }
 
       final storageRef = FirebaseStorage.instance.ref().child(
-          'kyc/$prestadorId/${DateTime.now().millisecondsSinceEpoch}_$fileName',);
+            'kyc/$prestadorId/${DateTime.now().millisecondsSinceEpoch}_$fileName',
+          );
 
       await storageRef.putData(
         bytes,

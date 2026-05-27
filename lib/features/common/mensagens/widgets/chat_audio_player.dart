@@ -161,7 +161,8 @@ class _ChatAudioPlayerState extends State<ChatAudioPlayer> {
             color: accent,
           ),
           padding: EdgeInsets.zero,
-          constraints: BoxConstraints.tightFor(width: size + 8, height: size + 8),
+          constraints:
+              BoxConstraints.tightFor(width: size + 8, height: size + 8),
           splashRadius: size,
         );
       },
@@ -179,7 +180,7 @@ class _ChatAudioPlayerState extends State<ChatAudioPlayer> {
     final trackHeight = isCompact ? 2.0 : 3.0;
     final timeStyle = TextStyle(
       fontSize: isCompact ? 10 : 11,
-      color: Colors.grey.shade700,
+      color: theme.colorScheme.onSurfaceVariant,
     );
 
     return Column(
@@ -213,8 +214,7 @@ class _ChatAudioPlayerState extends State<ChatAudioPlayer> {
                       final duration = durSnap.data ?? _duration;
                       final maxMs = duration?.inMilliseconds ?? 0;
                       final posMs = position.inMilliseconds;
-                      final clampedMs =
-                          maxMs > 0 ? posMs.clamp(0, maxMs) : 0;
+                      final clampedMs = maxMs > 0 ? posMs.clamp(0, maxMs) : 0;
                       final timeLabel = duration == null
                           ? _formatDuration(position)
                           : '${_formatDuration(position)} / ${_formatDuration(duration)}';
@@ -253,8 +253,9 @@ class _ChatAudioPlayerState extends State<ChatAudioPlayer> {
                             children: [
                               Text(timeLabel, style: timeStyle),
                               TextButton(
-                                onPressed:
-                                    _loading || _loadFailed ? null : _cycleSpeed,
+                                onPressed: _loading || _loadFailed
+                                    ? null
+                                    : _cycleSpeed,
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: const Size(0, 0),

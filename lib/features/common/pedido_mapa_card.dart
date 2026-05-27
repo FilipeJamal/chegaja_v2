@@ -119,7 +119,9 @@ class _PedidoMapaCardState extends State<PedidoMapaCard> {
           markerId: const MarkerId('prestador'),
           position: _prestadorLocation!,
           icon: BitmapDescriptor.defaultMarkerWithHue(
-            _prestadorOnline ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
+            _prestadorOnline
+                ? BitmapDescriptor.hueGreen
+                : BitmapDescriptor.hueRed,
           ),
         ),
       );
@@ -128,7 +130,7 @@ class _PedidoMapaCardState extends State<PedidoMapaCard> {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,

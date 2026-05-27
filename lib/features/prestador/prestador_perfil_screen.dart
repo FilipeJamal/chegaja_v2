@@ -726,7 +726,9 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
                 _bioCtrl.text.trim().isEmpty ? 'Sem bio' : _bioCtrl.text.trim(),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey.shade700),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
               TextButton.icon(
@@ -957,6 +959,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
   }
 
   Widget _portfolio() {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -987,7 +991,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: colorScheme.outlineVariant),
             ),
             child: const Text(
               'Ainda não tens imagens no portfólio.\n'
@@ -1024,13 +1028,18 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
                         url,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(child: Icon(Icons.broken_image)),
+                          color: colorScheme.surfaceContainerHighest,
+                          child: Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                         ),
                         loadingBuilder: (context, child, progress) {
                           if (progress == null) return child;
                           return Container(
-                            color: Colors.grey.shade200,
+                            color: colorScheme.surfaceContainerHighest,
                             child: const Center(
                               child: SizedBox(
                                 height: 22,

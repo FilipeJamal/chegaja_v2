@@ -21,8 +21,9 @@ class PublicProfileScreen extends StatelessWidget {
 
   bool get _isPrestador => role == 'prestador';
 
-  DocumentReference<Map<String, dynamic>> get _doc =>
-      FirebaseFirestore.instance.collection(_isPrestador ? 'prestadores' : 'users').doc(userId);
+  DocumentReference<Map<String, dynamic>> get _doc => FirebaseFirestore.instance
+      .collection(_isPrestador ? 'prestadores' : 'users')
+      .doc(userId);
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,9 @@ class PublicProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isPrestador ? l10n.profileProviderTitle : l10n.profileCustomerTitle),
+        title: Text(_isPrestador
+            ? l10n.profileProviderTitle
+            : l10n.profileCustomerTitle),
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _doc.snapshots(),
@@ -39,11 +42,15 @@ class PublicProfileScreen extends StatelessWidget {
 
           final name = _resolveName(data, l10n);
           final photo = _resolvePhoto(data);
-          final bio = (data['bio'] ?? data['descricao'] ?? '').toString().trim();
+          final bio =
+              (data['bio'] ?? data['descricao'] ?? '').toString().trim();
           final city = (data['city'] ?? data['cidade'] ?? '').toString().trim();
           final state =
-              (data['state'] ?? data['province'] ?? data['region'] ?? '').toString().trim();
-          final country = (data['country'] ?? data['pais'] ?? '').toString().trim();
+              (data['state'] ?? data['province'] ?? data['region'] ?? '')
+                  .toString()
+                  .trim();
+          final country =
+              (data['country'] ?? data['pais'] ?? '').toString().trim();
           final phone = _resolvePhone(data);
           final services = _resolveServices(data);
           final portfolio = _resolvePortfolio(data);
@@ -58,7 +65,9 @@ class PublicProfileScreen extends StatelessWidget {
                 Text(bio),
                 const SizedBox(height: 16),
               ],
-              if (city.isNotEmpty || state.isNotEmpty || country.isNotEmpty) ...[
+              if (city.isNotEmpty ||
+                  state.isNotEmpty ||
+                  country.isNotEmpty) ...[
                 _buildSectionTitle(l10n.profileLocationTitle),
                 Text(
                   [city, state, country].where((e) => e.isNotEmpty).join(', '),
@@ -84,7 +93,9 @@ class PublicProfileScreen extends StatelessWidget {
                       .map(
                         (s) => Chip(
                           label: Text(s),
-                          backgroundColor: Colors.grey.shade200,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                         ),
                       )
                       .toList(),
@@ -104,8 +115,9 @@ class PublicProfileScreen extends StatelessWidget {
   }
 
   String _resolveName(Map<String, dynamic> data, AppLocalizations l10n) {
-    final fromDoc =
-        (data['nome'] ?? data['displayName'] ?? data['name'] ?? '').toString().trim();
+    final fromDoc = (data['nome'] ?? data['displayName'] ?? data['name'] ?? '')
+        .toString()
+        .trim();
     if (fromDoc.isNotEmpty) return fromDoc;
     final fromInitial = (initialName ?? '').trim();
     if (fromInitial.isNotEmpty) return fromInitial;
@@ -114,7 +126,9 @@ class PublicProfileScreen extends StatelessWidget {
 
   String? _resolvePhoto(Map<String, dynamic> data) {
     final fromDoc =
-        (data['photoUrl'] ?? data['fotoUrl'] ?? data['avatarUrl'] ?? '').toString().trim();
+        (data['photoUrl'] ?? data['fotoUrl'] ?? data['avatarUrl'] ?? '')
+            .toString()
+            .trim();
     if (fromDoc.startsWith('http')) return fromDoc;
     final fromInitial = (initialPhotoUrl ?? '').trim();
     if (fromInitial.startsWith('http')) return fromInitial;
@@ -124,7 +138,10 @@ class PublicProfileScreen extends StatelessWidget {
   List<String> _resolveServices(Map<String, dynamic> data) {
     final nomes = data['servicosNomes'] as List?;
     if (nomes != null) {
-      return nomes.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
+      return nomes
+          .map((e) => e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
     }
     return const <String>[];
   }
@@ -139,9 +156,10 @@ class PublicProfileScreen extends StatelessWidget {
   }
 
   String _resolvePhone(Map<String, dynamic> data) {
-    final phone = (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
-        .toString()
-        .trim();
+    final phone =
+        (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
+            .toString()
+            .trim();
     if (phone.isNotEmpty) return phone;
     final raw = (data['phoneRaw'] ?? '').toString().trim();
     return raw;
@@ -207,8 +225,11 @@ class PublicProfileScreen extends StatelessWidget {
               url,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),

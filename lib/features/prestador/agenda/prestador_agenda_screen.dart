@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/repositories/prestador_repo.dart';
@@ -69,14 +68,22 @@ class _PrestadorAgendaScreenState extends State<PrestadorAgendaScreen> {
 
   String _translateDay(String day) {
     switch (day) {
-      case 'monday': return 'Segunda-feira';
-      case 'tuesday': return 'Terça-feira';
-      case 'wednesday': return 'Quarta-feira';
-      case 'thursday': return 'Quinta-feira';
-      case 'friday': return 'Sexta-feira';
-      case 'saturday': return 'Sábado';
-      case 'sunday': return 'Domingo';
-      default: return day;
+      case 'monday':
+        return 'Segunda-feira';
+      case 'tuesday':
+        return 'Terça-feira';
+      case 'wednesday':
+        return 'Quarta-feira';
+      case 'thursday':
+        return 'Quinta-feira';
+      case 'friday':
+        return 'Sexta-feira';
+      case 'saturday':
+        return 'Sábado';
+      case 'sunday':
+        return 'Domingo';
+      default:
+        return day;
     }
   }
 
@@ -94,7 +101,8 @@ class _PrestadorAgendaScreenState extends State<PrestadorAgendaScreen> {
   Future<void> _pickTime(String day, int index) async {
     final currentStr = _workingHours[day]![index];
     final parts = currentStr.split(':');
-    final initial = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    final initial =
+        TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
 
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null) {
@@ -123,9 +131,12 @@ class _PrestadorAgendaScreenState extends State<PrestadorAgendaScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
+                Text(
                   'Defina os seus horários de atendimento.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ..._daysOfWeek.map((day) {
@@ -154,7 +165,9 @@ class _PrestadorAgendaScreenState extends State<PrestadorAgendaScreen> {
                               ),
                             ],
                           ),
-                          if (isActive && times != null && times.length >= 2) ...[
+                          if (isActive &&
+                              times != null &&
+                              times.length >= 2) ...[
                             const Divider(),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -164,7 +177,8 @@ class _PrestadorAgendaScreenState extends State<PrestadorAgendaScreen> {
                                   time: times[0],
                                   onTap: () => _pickTime(day, 0),
                                 ),
-                                const Icon(Icons.arrow_forward, color: Colors.grey),
+                                const Icon(Icons.arrow_forward,
+                                    color: Colors.grey),
                                 _TimeChip(
                                   label: 'Fim',
                                   time: times[1],
@@ -189,7 +203,8 @@ class _TimeChip extends StatelessWidget {
   final String time;
   final VoidCallback onTap;
 
-  const _TimeChip({required this.label, required this.time, required this.onTap});
+  const _TimeChip(
+      {required this.label, required this.time, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -201,11 +216,18 @@ class _TimeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+          border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             Text(
               time,
               style: TextStyle(

@@ -133,7 +133,7 @@ class _AcaoResponderConvite extends StatelessWidget {
       children: [
         Text(
           copy.body,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: _actionSecondaryText(context),
         ),
         const SizedBox(height: 8),
         Row(
@@ -226,25 +226,29 @@ class _AcaoAguardandoRespostaCliente extends StatelessWidget {
       children: [
         Text(
           copy.title,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          style: _actionPrimaryText(context, fontSize: 13),
         ),
         const SizedBox(height: 6),
         Text(
           copy.body,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: _actionSecondaryText(context),
         ),
         if (copy.nextStep != null) ...[
           const SizedBox(height: 4),
           Text(
             copy.nextStep!,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: _actionSecondaryText(context),
           ),
         ],
         if (pedido.precoPropostoPrestador != null) ...[
           const SizedBox(height: 6),
           Text(
             'Proposta enviada: ${CurrencyUtils.format(pedido.precoPropostoPrestador!)}',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: _actionPrimaryText(
+              context,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ],
@@ -292,9 +296,9 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Esta faixa ajuda o cliente a decidir. O valor final so deve ser enviado quando o servico terminar.',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: _actionSecondaryText(ctx),
                       ),
                       const SizedBox(height: 12),
                       Text('Valor mínimo (${CurrencyUtils.currencySymbol()})'),
@@ -422,7 +426,7 @@ class _AcaoIniciarServico extends StatelessWidget {
               ? 'Este serviço está agendado. Só deves iniciar perto da hora '
                   'combinada com o cliente.'
               : 'Quando chegares ao local do serviço, clica em "Iniciar serviço".',
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: _actionSecondaryText(context),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -535,17 +539,14 @@ class _AcaoLancarValorFinal extends StatelessWidget {
             children: [
               Text(
                 copy.body,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: _actionSecondaryText(ctx),
               ),
               const SizedBox(height: 12),
               if (pedido.valorMinEstimadoPrestador != null ||
                   pedido.valorMaxEstimadoPrestador != null) ...[
                 Text(
                   _descricaoFaixa(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                  style: _actionSecondaryText(ctx),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -691,7 +692,7 @@ class _AcaoLancarValorFinal extends StatelessWidget {
       children: [
         Text(
           faixa,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: _actionSecondaryText(context),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -721,15 +722,16 @@ class _AcaoAguardandoConfirmacao extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'À espera da confirmação do cliente para o valor final.',
-          style: TextStyle(fontSize: 12, color: Colors.black54),
+          style: _actionSecondaryText(context),
         ),
         const SizedBox(height: 6),
         if (valor != null) ...[
           Text(
             'Valor proposto: ${CurrencyUtils.format(valor)}',
-            style: const TextStyle(
+            style: _actionPrimaryText(
+              context,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -818,9 +820,9 @@ class _ResumoComissaoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showTitle) ...[
-            const Text(
+            Text(
               'Resumo do valor',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: _actionPrimaryText(context),
             ),
             const SizedBox(height: 6),
           ],
@@ -842,27 +844,59 @@ class _ResumoComissaoCard extends StatelessWidget {
   }
 
   Widget _linhaResumo(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-            ),
+    return Builder(
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: _actionSecondaryText(context),
+              ),
+              Text(
+                value,
+                style: _actionPrimaryText(
+                  context,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+}
+
+TextStyle _actionPrimaryText(
+  BuildContext context, {
+  double fontSize = 12,
+  FontWeight fontWeight = FontWeight.w600,
+}) {
+  final theme = Theme.of(context);
+  return theme.textTheme.bodyMedium?.copyWith(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: theme.colorScheme.onSurface,
+      ) ??
+      TextStyle(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: theme.colorScheme.onSurface,
+      );
+}
+
+TextStyle _actionSecondaryText(BuildContext context, {double fontSize = 12}) {
+  final theme = Theme.of(context);
+  return theme.textTheme.bodySmall?.copyWith(
+        fontSize: fontSize,
+        color: theme.colorScheme.onSurfaceVariant,
+      ) ??
+      TextStyle(
+        fontSize: fontSize,
+        color: theme.colorScheme.onSurfaceVariant,
+      );
 }

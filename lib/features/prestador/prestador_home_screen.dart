@@ -1494,12 +1494,18 @@ class _PrestadorMensagensBannerState extends State<_PrestadorMensagensBanner> {
                   const SizedBox(height: 2),
                   Text(
                     'No trabalho: ${pedido.titulo}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
+                  Text(
                     'Toca aqui para abrir o chat.',
-                    style: TextStyle(fontSize: 12, color: Colors.black87),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                 ],
               ),
@@ -1934,7 +1940,10 @@ class _PrestadorPedidoCard extends StatelessWidget {
       if (valorPrestadorLabel != null)
         Text(
           valorPrestadorLabel,
-          style: const TextStyle(fontSize: 11, color: Colors.black87),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
         ),
     ];
 
@@ -1951,7 +1960,10 @@ class _PrestadorPedidoCard extends StatelessWidget {
           if (temDescricao) ...[
             Text(
               desc,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
             ),
             const SizedBox(height: 8),
           ],

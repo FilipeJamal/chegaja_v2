@@ -132,14 +132,13 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
     }
   }
 
-  _PrestadorItem _mapPrestador(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+  _PrestadorItem _mapPrestador(
+      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
 
-    final nome = (data['nome'] ??
-            data['displayName'] ??
-            data['name'] ??
-            'Prestador')
-        .toString();
+    final nome =
+        (data['nome'] ?? data['displayName'] ?? data['name'] ?? 'Prestador')
+            .toString();
     final photoUrl = (data['photoUrl'] ??
             data['fotoUrl'] ??
             data['avatarUrl'] ??
@@ -274,6 +273,9 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Selecionar prestador'),
@@ -335,11 +337,12 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                               return Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: colorScheme.surface,
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.04),
+                                      color: colorScheme.shadow
+                                          .withValues(alpha: 0.08),
                                       blurRadius: 12,
                                       offset: const Offset(0, 6),
                                     ),
@@ -349,7 +352,8 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         CircleAvatar(
                                           radius: 22,
@@ -359,7 +363,8 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                           child: item.photoUrl == null
                                               ? Text(
                                                   item.nome.isNotEmpty
-                                                      ? item.nome[0].toUpperCase()
+                                                      ? item.nome[0]
+                                                          .toUpperCase()
                                                       : '?',
                                                 )
                                               : null,
@@ -372,31 +377,39 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                             children: [
                                               Row(
                                                 mainAxisAlignment:
-                                                    MainAxisAlignment.spaceBetween,
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
                                                   Expanded(
                                                     child: Text(
                                                       item.nome,
                                                       style: const TextStyle(
-                                                        fontWeight: FontWeight.w600,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
-                                                      overflow: TextOverflow.ellipsis,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                   InkWell(
                                                     onTap: () async {
-                                                      await FavoritesService.instance
-                                                          .toggleFavorite(item.id);
+                                                      await FavoritesService
+                                                          .instance
+                                                          .toggleFavorite(
+                                                              item.id);
                                                     },
                                                     borderRadius:
-                                                        BorderRadius.circular(20),
+                                                        BorderRadius.circular(
+                                                            20),
                                                     child: Padding(
                                                       padding:
-                                                          const EdgeInsets.all(4),
+                                                          const EdgeInsets.all(
+                                                              4),
                                                       child: Icon(
                                                         isFav
                                                             ? Icons.favorite
-                                                            : Icons.favorite_border,
+                                                            : Icons
+                                                                .favorite_border,
                                                         size: 20,
                                                         color: isFav
                                                             ? Colors.red
@@ -420,25 +433,28 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                                       item.ratingAvg,
                                                       item.ratingCount,
                                                     ),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 12,
-                                                      color: Colors.black54,
+                                                      color: colorScheme
+                                                          .onSurfaceVariant,
                                                     ),
                                                   ),
                                                   const SizedBox(width: 12),
-                                                  const Icon(
+                                                  Icon(
                                                     Icons.place,
                                                     size: 16,
-                                                    color: Colors.black45,
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
                                                     _distanciaLabel(
                                                       item.distanciaKm,
                                                     ),
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontSize: 12,
-                                                      color: Colors.black54,
+                                                      color: colorScheme
+                                                          .onSurfaceVariant,
                                                     ),
                                                   ),
                                                 ],
@@ -447,9 +463,10 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   local,
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                     fontSize: 12,
-                                                    color: Colors.black54,
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
                                                   ),
                                                 ),
                                               ],
@@ -465,11 +482,13 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                           onPressed: () {
                                             Navigator.of(context).push(
                                               MaterialPageRoute(
-                                                builder: (_) => PublicProfileScreen(
+                                                builder: (_) =>
+                                                    PublicProfileScreen(
                                                   userId: item.id,
                                                   role: 'prestador',
                                                   initialName: item.nome,
-                                                  initialPhotoUrl: item.photoUrl,
+                                                  initialPhotoUrl:
+                                                      item.photoUrl,
                                                 ),
                                               ),
                                             );

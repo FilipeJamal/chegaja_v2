@@ -349,10 +349,10 @@ class _AguardandoPrestadorScreenState extends State<AguardandoPrestadorScreen> {
           Text(
             subtitulo,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 24),
           if (mostrarLoader) const CircularProgressIndicator(),
@@ -416,14 +416,14 @@ class _AguardandoPrestadorScreenState extends State<AguardandoPrestadorScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Normalmente isto leva apenas alguns minutos.\n'
             'Fica atento às notificações.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black54,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
           const SizedBox(height: 24),
           const CircularProgressIndicator(),

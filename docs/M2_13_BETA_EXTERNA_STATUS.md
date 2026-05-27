@@ -343,6 +343,58 @@ Esta correcao melhora a beta solo/manual, mas nao fecha R1. A entrega real a
 tester humano externo continua pendente.
 ```
 
+## M2.13.6 - Corrigir Contraste Dark Mode Transversal
+
+```text
+Estado: corrigida e validada localmente
+Tipo: bug visual encontrado em beta solo manual
+Entrega real a tester: ainda pendente
+R1: ainda pendente
+```
+
+Problema reportado:
+
+```text
+Depois da primeira correcao de dark mode, ainda havia textos e cartoes em
+outras areas com cores hardcoded, causando leitura fraca em telas de pedido,
+chat, perfil, selecao de prestador, suporte, agenda e formularios auxiliares.
+```
+
+Causa:
+
+```text
+Varios widgets ainda usavam cores fixas como Colors.black54,
+Colors.black87, Colors.grey ou superficies claras fixas em vez dos tokens do
+tema. Em dark mode, isso deixava texto quase invisivel ou cartoes claros fora
+do padrao visual da app.
+```
+
+Correcao:
+
+```text
+1. Acoes Cliente/Prestador passaram a usar colorScheme.onSurface e
+   onSurfaceVariant.
+2. Chat preview, bolhas de chat, anexos, audio, contacto e timeline passaram a
+   respeitar o tema.
+3. Perfil Cliente/Prestador, KYC, favoritos, suporte, report problem,
+   selecionar prestador e novo pedido receberam surface/outline/texto do tema.
+4. Foi criado teste de regressao para impedir texto preto hardcoded nas acoes
+   Cliente/Prestador em dark mode.
+```
+
+Validacoes:
+
+```text
+flutter test --no-pub test/features/cliente/widgets/pedido_actions_visual_test.dart: passou
+```
+
+Observacao:
+
+```text
+Esta correcao melhora a beta solo/manual, mas nao fecha R1. A entrega real a
+tester humano externo continua pendente.
+```
+
 ## Fora do Escopo Mantido
 
 ```text

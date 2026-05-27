@@ -91,7 +91,9 @@ class _ChatExpandableState extends State<ChatExpandable> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ChatService.instance.streamChatMeta(widget.pedidoId),
@@ -141,9 +143,9 @@ class _ChatExpandableState extends State<ChatExpandable> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [
@@ -155,9 +157,9 @@ class _ChatExpandableState extends State<ChatExpandable> {
                         children: [
                           Text(
                             l10n.orderChatTitle,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -165,9 +167,9 @@ class _ChatExpandableState extends State<ChatExpandable> {
                             subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black54,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -177,9 +179,9 @@ class _ChatExpandableState extends State<ChatExpandable> {
                       const SizedBox(width: 8),
                       Text(
                         countLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.black54,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -301,6 +303,7 @@ class _ChatSectionState extends State<ChatSection> {
     if (_sending) return;
 
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     final user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -429,6 +432,7 @@ class _ChatSectionState extends State<ChatSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     final user = AuthService.currentUser;
     final canSend = user != null;
     final viewerRole = widget.isCliente ? 'cliente' : 'prestador';
@@ -438,7 +442,7 @@ class _ChatSectionState extends State<ChatSection> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade300,
+          color: colorScheme.outlineVariant,
         ),
       ),
       child: Column(
@@ -513,14 +517,16 @@ class _ChatSectionState extends State<ChatSection> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               label,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.black87,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -633,10 +639,15 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     final alignment = isMine ? Alignment.centerRight : Alignment.centerLeft;
 
-    final bgColor = isMine ? const Color(0xFFE1FFC7) : Colors.white;
+    final bgColor = isMine
+        ? colorScheme.primary.withValues(alpha: 0.16)
+        : colorScheme.surfaceContainerHighest;
+    final bubbleTextColor = colorScheme.onSurface;
+    final bubbleMetaColor = colorScheme.onSurfaceVariant;
 
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(12),
@@ -681,7 +692,7 @@ class ChatBubble extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               message.text,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13, color: bubbleTextColor),
             ),
           ],
         );
@@ -712,13 +723,12 @@ class ChatBubble extends StatelessWidget {
                     name.isNotEmpty ? name : l10n.chatFileLabel,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13, color: bubbleTextColor),
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                      style: TextStyle(fontSize: 11, color: bubbleMetaColor),
                     ),
                 ],
               ),
@@ -736,7 +746,7 @@ class ChatBubble extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               l10n.chatImageLabel,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13, color: bubbleTextColor),
             ),
           ],
         ),
@@ -747,7 +757,7 @@ class ChatBubble extends StatelessWidget {
         children: [
           Text(
             text,
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: bubbleTextColor),
           ),
           const SizedBox(height: 4),
           TextButton.icon(
@@ -765,7 +775,7 @@ class ChatBubble extends StatelessWidget {
     } else {
       messageBody = Text(
         text,
-        style: const TextStyle(fontSize: 13),
+        style: TextStyle(fontSize: 13, color: bubbleTextColor),
       );
     }
 
@@ -793,14 +803,14 @@ class ChatBubble extends StatelessWidget {
         statusIcon = Icon(
           Icons.done_all,
           size: 14,
-          color: Colors.grey.shade600,
+          color: bubbleMetaColor,
         );
       } else {
         // um certinho cinza
         statusIcon = Icon(
           Icons.check,
           size: 14,
-          color: Colors.grey.shade600,
+          color: bubbleMetaColor,
         );
       }
     }
@@ -816,8 +826,8 @@ class ChatBubble extends StatelessWidget {
           borderRadius: borderRadius,
           border: Border.all(
             color: isMine
-                ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                : Colors.grey.shade300,
+                ? colorScheme.primary.withValues(alpha: 0.24)
+                : colorScheme.outlineVariant,
           ),
         ),
         child: Column(
@@ -827,7 +837,7 @@ class ChatBubble extends StatelessWidget {
               isMine ? l10n.youLabel : senderLabel,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade700,
+                color: bubbleMetaColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -843,7 +853,7 @@ class ChatBubble extends StatelessWidget {
                       timeStr,
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade600,
+                        color: bubbleMetaColor,
                       ),
                     ),
                   if (statusIcon != null) ...[

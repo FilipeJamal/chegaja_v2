@@ -205,3 +205,39 @@ Validacao:
 - `flutter test --no-pub` passou com 160/160.
 - Build Web release local passou em `build/web_manual_release`.
 ```
+
+### M2.13-SOLO-UX-004 - Contraste dark mode inconsistente em areas adicionais
+
+```text
+Data: 2026-05-27
+Tester: Filipe/Jamal em beta solo manual
+Plataforma: Web release/local
+Papel: Cliente/Prestador
+Severidade: alta
+Frequencia: sempre nas areas afetadas
+Estado: corrigido localmente
+```
+
+Resumo:
+Depois da primeira correcao do detalhe, ainda havia areas com texto quase
+invisivel no modo escuro, especialmente nos painéis de acoes, chat/preview,
+perfil, favoritos, suporte, agenda, KYC, selecao de prestador e formularios de
+novo pedido.
+
+Causa tecnica:
+Widgets diferentes ainda usavam `Colors.black54`, `Colors.black87`,
+`Colors.grey` ou superficies claras fixas. Esses valores funcionam em light
+mode, mas quebram contraste quando a app esta em dark mode.
+
+Correcao:
+- Acoes Cliente/Prestador migradas para tokens do tema.
+- Chat preview, bolhas, audio, timeline e contacto usam `colorScheme`.
+- Perfil Cliente/Prestador, favoritos, KYC, suporte, report problem, agenda,
+  selecionar prestador e novo pedido deixaram de usar texto/superficie fixa
+  nos pontos encontrados.
+- Adicionado teste de regressao para bloquear texto preto hardcoded em dark
+  mode nas acoes Cliente/Prestador.
+
+Validacao:
+- `flutter test --no-pub test/features/cliente/widgets/pedido_actions_visual_test.dart` passou.
+```

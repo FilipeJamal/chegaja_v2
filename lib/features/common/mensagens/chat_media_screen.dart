@@ -24,7 +24,8 @@ class ChatMediaScreen extends StatelessWidget {
         final images = messages.where((m) => m.isImage).toList();
         final audio = messages.where((m) => m.isAudio).toList();
         final files = messages.where((m) => m.isFile).toList();
-        final links = messages.where((m) => _urlPattern.hasMatch(m.text)).toList();
+        final links =
+            messages.where((m) => _urlPattern.hasMatch(m.text)).toList();
 
         return DefaultTabController(
           length: 4,
@@ -54,7 +55,8 @@ class ChatMediaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildImages(BuildContext context, List<ChatMessage> items, AppLocalizations l10n) {
+  Widget _buildImages(
+      BuildContext context, List<ChatMessage> items, AppLocalizations l10n) {
     if (items.isEmpty) {
       return Center(child: Text(l10n.chatMediaEmptyPhotos));
     }
@@ -86,8 +88,11 @@ class ChatMediaScreen extends StatelessWidget {
               url,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -96,7 +101,8 @@ class ChatMediaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLinks(BuildContext context, List<ChatMessage> items, AppLocalizations l10n) {
+  Widget _buildLinks(
+      BuildContext context, List<ChatMessage> items, AppLocalizations l10n) {
     if (items.isEmpty) {
       return Center(child: Text(l10n.chatMediaEmptyLinks));
     }
@@ -126,7 +132,8 @@ class ChatMediaScreen extends StatelessWidget {
   }) {
     if (items.isEmpty) {
       return Center(
-        child: Text(isAudio ? l10n.chatMediaEmptyAudio : l10n.chatMediaEmptyFiles),
+        child:
+            Text(isAudio ? l10n.chatMediaEmptyAudio : l10n.chatMediaEmptyFiles),
       );
     }
 
@@ -136,7 +143,9 @@ class ChatMediaScreen extends StatelessWidget {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final msg = items[index];
-        final name = (msg.fileName ?? (isAudio ? l10n.chatAudioLabel : l10n.chatFileLabel)).trim();
+        final name = (msg.fileName ??
+                (isAudio ? l10n.chatAudioLabel : l10n.chatFileLabel))
+            .trim();
         final subtitle = msg.fileSize != null
             ? '${(msg.fileSize! / 1024).toStringAsFixed(0)} KB'
             : null;
@@ -158,7 +167,8 @@ class ChatMediaScreen extends StatelessWidget {
     if (uri == null) return;
     await launchUrl(
       uri,
-      mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      mode:
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
       webOnlyWindowName: kIsWeb ? '_blank' : null,
     );
   }

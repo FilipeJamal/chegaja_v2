@@ -1441,7 +1441,10 @@ class _AvaliacaoPedidoCardState extends State<_AvaliacaoPedidoCard> {
             const SizedBox(height: 8),
             Text(
               comentario,
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ],
         ],
@@ -1451,6 +1454,7 @@ class _AvaliacaoPedidoCardState extends State<_AvaliacaoPedidoCard> {
 
   Widget _avaliacaoForm() {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1471,7 +1475,10 @@ class _AvaliacaoPedidoCardState extends State<_AvaliacaoPedidoCard> {
           const SizedBox(height: 6),
           Text(
             l10n.ratingPrompt,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           _starRow(_rating, readOnly: false),
@@ -1575,6 +1582,8 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -1583,17 +1592,18 @@ class _InfoRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Colors.black54,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
+                color: colorScheme.onSurface,
               ),
             ),
           ),
@@ -1633,7 +1643,8 @@ class _PedidoTimeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final current = _stepIndex();
-    final primary = Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final primary = colorScheme.primary;
 
     Widget buildCircle(bool active) {
       return Container(
@@ -1641,7 +1652,7 @@ class _PedidoTimeline extends StatelessWidget {
         height: 18,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: active ? primary : Colors.grey.shade300,
+          color: active ? primary : colorScheme.outlineVariant,
         ),
       );
     }
@@ -1650,7 +1661,7 @@ class _PedidoTimeline extends StatelessWidget {
       return Expanded(
         child: Container(
           height: 2,
-          color: active ? primary : Colors.grey.shade300,
+          color: active ? primary : colorScheme.outlineVariant,
         ),
       );
     }
@@ -1662,7 +1673,7 @@ class _PedidoTimeline extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          color: active ? Colors.black87 : Colors.black54,
+          color: active ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
         ),
       );
     }
@@ -1713,7 +1724,9 @@ class _BannerAguardandoPrestador extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
 
     return Container(
       width: double.infinity,
@@ -1881,7 +1894,9 @@ class _ChatExpandableState extends State<_ChatExpandable> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final primary = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final primary = colorScheme.primary;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ChatService.instance.streamChatMeta(widget.pedidoId),
@@ -1931,9 +1946,9 @@ class _ChatExpandableState extends State<_ChatExpandable> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [
@@ -1945,9 +1960,9 @@ class _ChatExpandableState extends State<_ChatExpandable> {
                         children: [
                           Text(
                             l10n.orderChatTitle,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -1955,9 +1970,9 @@ class _ChatExpandableState extends State<_ChatExpandable> {
                             subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.black54,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -1967,9 +1982,9 @@ class _ChatExpandableState extends State<_ChatExpandable> {
                       const SizedBox(width: 8),
                       Text(
                         countLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: Colors.black54,
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -2089,6 +2104,7 @@ class _ChatSectionState extends State<_ChatSection> {
     if (_sending) return;
 
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     final user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2217,6 +2233,7 @@ class _ChatSectionState extends State<_ChatSection> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     final user = AuthService.currentUser;
     final canSend = user != null;
     final viewerRole = widget.isCliente ? 'cliente' : 'prestador';
@@ -2226,7 +2243,7 @@ class _ChatSectionState extends State<_ChatSection> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade300,
+          color: colorScheme.outlineVariant,
         ),
       ),
       child: Column(
@@ -2301,14 +2318,16 @@ class _ChatSectionState extends State<_ChatSection> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               label,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.black87,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -2417,10 +2436,15 @@ class _ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     final alignment = isMine ? Alignment.centerRight : Alignment.centerLeft;
 
-    final bgColor = isMine ? const Color(0xFFE1FFC7) : Colors.white;
+    final bgColor = isMine
+        ? colorScheme.primary.withValues(alpha: 0.16)
+        : colorScheme.surfaceContainerHighest;
+    final bubbleTextColor = colorScheme.onSurface;
+    final bubbleMetaColor = colorScheme.onSurfaceVariant;
 
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(12),
@@ -2465,7 +2489,7 @@ class _ChatBubble extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               message.text,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13, color: bubbleTextColor),
             ),
           ],
         );
@@ -2496,13 +2520,12 @@ class _ChatBubble extends StatelessWidget {
                     name.isNotEmpty ? name : l10n.chatFileLabel,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13, color: bubbleTextColor),
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                      style: TextStyle(fontSize: 11, color: bubbleMetaColor),
                     ),
                 ],
               ),
@@ -2520,7 +2543,7 @@ class _ChatBubble extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               l10n.chatImageLabel,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13, color: bubbleTextColor),
             ),
           ],
         ),
@@ -2531,7 +2554,7 @@ class _ChatBubble extends StatelessWidget {
         children: [
           Text(
             text,
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: bubbleTextColor),
           ),
           const SizedBox(height: 4),
           TextButton.icon(
@@ -2549,7 +2572,7 @@ class _ChatBubble extends StatelessWidget {
     } else {
       messageBody = Text(
         text,
-        style: const TextStyle(fontSize: 13),
+        style: TextStyle(fontSize: 13, color: bubbleTextColor),
       );
     }
 
@@ -2577,14 +2600,14 @@ class _ChatBubble extends StatelessWidget {
         statusIcon = Icon(
           Icons.done_all,
           size: 14,
-          color: Colors.grey.shade600,
+          color: bubbleMetaColor,
         );
       } else {
         // um certinho cinza
         statusIcon = Icon(
           Icons.check,
           size: 14,
-          color: Colors.grey.shade600,
+          color: bubbleMetaColor,
         );
       }
     }
@@ -2600,8 +2623,8 @@ class _ChatBubble extends StatelessWidget {
           borderRadius: borderRadius,
           border: Border.all(
             color: isMine
-                ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                : Colors.grey.shade300,
+                ? colorScheme.primary.withValues(alpha: 0.24)
+                : colorScheme.outlineVariant,
           ),
         ),
         child: Column(
@@ -2611,7 +2634,7 @@ class _ChatBubble extends StatelessWidget {
               isMine ? l10n.youLabel : senderLabel,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade700,
+                color: bubbleMetaColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2627,7 +2650,7 @@ class _ChatBubble extends StatelessWidget {
                       timeStr,
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade600,
+                        color: bubbleMetaColor,
                       ),
                     ),
                   if (statusIcon != null) ...[
@@ -2693,7 +2716,7 @@ class _ContatoSection extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return _buildContactCard(phone: '', loading: true);
+          return _buildContactCard(context, phone: '', loading: true);
         }
         final data = snapshot.data?.data() ?? <String, dynamic>{};
         final primaryPhone = resolvePhone(data);
@@ -2711,6 +2734,7 @@ class _ContatoSection extends StatelessWidget {
                   fallbackSnap.data?.data() ?? <String, dynamic>{};
               final fallbackPhone = resolvePhone(fallbackData);
               return _buildContactCard(
+                context,
                 phone: fallbackPhone,
               );
             },
@@ -2718,13 +2742,19 @@ class _ContatoSection extends StatelessWidget {
         }
 
         return _buildContactCard(
+          context,
           phone: primaryPhone,
         );
       },
     );
   }
 
-  Widget _buildContactCard({required String phone, bool loading = false}) {
+  Widget _buildContactCard(
+    BuildContext context, {
+    required String phone,
+    bool loading = false,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final hasPhone = phone.isNotEmpty;
     final label = loading
         ? 'A carregar...'
@@ -2742,9 +2772,9 @@ class _ContatoSection extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Row(
             children: [
@@ -2753,7 +2783,7 @@ class _ContatoSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
                 ),
               ),
               if (hasPhone)
