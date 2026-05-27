@@ -9,6 +9,7 @@ M2.13: em preparacao para beta externa / tester real
 Bloco R: iniciado
 M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
 M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
+M2.13.3: documentacao de entrega real preparada, aguardando envio humano
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -83,7 +84,7 @@ A M2.13.1 preparou:
 ## Proxima Execucao Recomendada
 
 ```text
-M2.13.3 - Registar entrega real ao tester
+M2.13.4 - Registar envio real e feedback inicial do tester
 ```
 
 Essa execucao deve receber do responsavel humano:
@@ -95,6 +96,7 @@ plataforma entregue: Web, Windows ou ambas
 data/hora de envio
 prazo esperado de retorno
 confirmacao de que o tester recebeu os documentos
+feedback inicial ou confirmacao de execucao, quando existir
 ```
 
 ## M2.13.2 - Beta Solo Assistida por Playwright
@@ -177,6 +179,54 @@ A beta solo assistida por Playwright fica aprovada tecnicamente.
 A beta externa real continua pendente, porque nenhum tester humano recebeu ou
 executou o pacote.
 R1 nao foi fechado.
+```
+
+## M2.13.3 - Preparar Entrega Real ao Tester
+
+```text
+Estado: preparada
+Tipo: documentacao de entrega real
+Entrega real a tester: ainda pendente
+R1: ainda pendente
+```
+
+Objetivo:
+
+```text
+Deixar a entrega real pronta para uma pessoa humana receber, abrir, testar e
+reportar feedback sem depender do ambiente de desenvolvimento.
+```
+
+Documentos criados:
+
+```text
+docs/BETA_EXTERNA_ENTREGA_TESTER.md
+docs/BETA_EXTERNA_INSTRUCOES_TESTER.md
+docs/BETA_EXTERNA_FEEDBACK_TEMPLATE.md
+```
+
+Documentos atualizados:
+
+```text
+docs/BETA_EXTERNA_REGISTO_ENTREGA.md
+docs/BETA_EXTERNA_MENSAGEM_TESTER.md
+docs/BETA_EXTERNA_DECISAO.md
+docs/BETA_EXTERNA_BUGS_REPORTADOS.md
+docs/ROADMAP_A_T_CHEGAJA.md
+```
+
+Criterio mantido:
+
+```text
+R1 so fecha quando um tester humano receber o link/pacote, confirmar acesso e
+executar pelo menos o roteiro principal com feedback registado.
+```
+
+Decisao:
+
+```text
+A M2.13.3 prepara a entrega real, mas nao declara que a entrega aconteceu.
+A beta externa real continua pendente.
 ```
 
 ## Fora do Escopo Mantido

@@ -83,5 +83,45 @@ Usar esta execucao como validacao solo antes de entregar o pacote a uma pessoa r
 Proximo passo recomendado:
 
 ```text
-M2.13.3 - Registar entrega real ao tester
+M2.13.4 - Registar envio real e feedback inicial do tester
+```
+
+## Criterio de Fecho de R1
+
+R1 nao pode ser fechado apenas por testes automatizados.
+
+Para fechar R1, e necessario:
+
+```text
+1. tester humano recebe link/pacote;
+2. tester confirma que conseguiu abrir ou recebeu instrucoes suficientes;
+3. tester executa pelo menos os fluxos principais;
+4. feedback e registado;
+5. bugs bloqueantes sao classificados;
+6. decisao final e documentada.
+```
+
+## M2.13.3 - Preparacao da Entrega Real
+
+Data: 2026-05-27
+
+```text
+Resultado: documentacao preparada
+Entrega real: pendente
+R1: pendente
+```
+
+Documentos criados:
+
+```text
+docs/BETA_EXTERNA_ENTREGA_TESTER.md
+docs/BETA_EXTERNA_INSTRUCOES_TESTER.md
+docs/BETA_EXTERNA_FEEDBACK_TEMPLATE.md
+```
+
+Decisao:
+
+```text
+A M2.13.3 deixa a entrega pronta para o tester real, mas nao declara execucao
+humana. A beta externa real continua pendente.
 ```

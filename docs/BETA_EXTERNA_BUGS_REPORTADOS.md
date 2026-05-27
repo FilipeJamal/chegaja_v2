@@ -8,6 +8,7 @@ Data de abertura: 2026-05-23
 Nenhum bug externo reportado ainda.
 Beta externa ainda nao foi executada por tester real.
 Beta solo assistida por Playwright foi executada em 2026-05-27 sem bug funcional bloqueador.
+M2.13.3 preparou template externo de feedback, mas ainda nao ha bugs de tester humano.
 ```
 
 ## Formato de Registo
@@ -42,6 +43,20 @@ Notas tecnicas:
 
 ```text
 Sem bugs registados.
+```
+
+## Como Converter Feedback em Bug
+
+Quando o tester preencher `docs/BETA_EXTERNA_FEEDBACK_TEMPLATE.md`, cada problema
+deve ser copiado para este ficheiro no formato de registo acima.
+
+Classificacao recomendada:
+
+```text
+bloqueador: impede abrir app ou concluir fluxo principal
+alto: quebra fluxo importante, mas ha contorno
+medio: atrapalha uso, mas nao bloqueia
+baixo: texto, polimento visual ou pequena melhoria
 ```
 
 ## Observacoes Tecnicas da Beta Solo

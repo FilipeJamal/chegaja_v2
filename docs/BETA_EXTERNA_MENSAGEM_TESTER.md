@@ -23,10 +23,12 @@ Objetivo do teste:
 - reportar qualquer bug com screenshot ou video, se possivel.
 
 Antes de comecar, abre estes ficheiros:
-1. BETA_TESTER_GUIA_RAPIDO.md
-2. BETA_TESTER_ROTEIRO_SIMPLIFICADO.md
-3. BETA_TESTER_FEEDBACK_FORM.md
-4. BETA_TESTER_BUG_REPORT.md
+1. BETA_EXTERNA_INSTRUCOES_TESTER.md
+2. BETA_EXTERNA_FEEDBACK_TEMPLATE.md
+3. BETA_TESTER_GUIA_RAPIDO.md
+4. BETA_TESTER_ROTEIRO_SIMPLIFICADO.md
+5. BETA_TESTER_FEEDBACK_FORM.md
+6. BETA_TESTER_BUG_REPORT.md
 
 Limites desta beta:
 - nao testar pagamentos reais;
@@ -47,6 +49,7 @@ Se encontrares bug, regista:
 Quando a app for entregue ao tester, preencher:
 
 ```text
+docs/BETA_EXTERNA_ENTREGA_TESTER.md
 docs/BETA_EXTERNA_REGISTO_ENTREGA.md
 ```
 
