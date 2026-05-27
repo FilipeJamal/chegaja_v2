@@ -24,7 +24,7 @@ class ChatMessage {
   final int? durationMs;
   final String? callType;
   final String? callDuration;
-  
+
   // Novos campos (E3 - Ultimate Chat)
   final Map<String, List<String>> reactions; // {'❤️': ['uid1', 'uid2']}
   final String? replyToId;
@@ -82,6 +82,11 @@ class ChatMessage {
   bool get isFile => type == 'file' && hasMedia;
   bool get isAudio => type == 'audio' && hasMedia;
   bool get isLocation => locationLat != null && locationLng != null;
+  Uri? get mapsUri {
+    if (!isLocation) return null;
+    return Uri.parse('https://maps.google.com/?q=$locationLat,$locationLng');
+  }
+
   bool isStarredBy(String uid) => starredBy.contains(uid);
 
   factory ChatMessage.fromFirestore(
@@ -90,7 +95,11 @@ class ChatMessage {
     final data = doc.data();
 
     // texto pode vir de vários campos por compatibilidade
-    final rawText = (data['text'] ?? data['texto'] ?? data['message'] ?? data['conteudo'] ?? '')
+    final rawText = (data['text'] ??
+            data['texto'] ??
+            data['message'] ??
+            data['conteudo'] ??
+            '')
         .toString();
 
     // tipo/metadata (novos)
@@ -98,8 +107,11 @@ class ChatMessage {
         ? (data['type'] as String).trim()
         : 'text';
 
-    final mediaUrl = (data['mediaUrl'] ?? data['fileUrl'] ?? data['url'])?.toString();
-    final fileName = (data['fileName'] ?? data['nomeArquivo'] ?? data['filename'])?.toString();
+    final mediaUrl =
+        (data['mediaUrl'] ?? data['fileUrl'] ?? data['url'])?.toString();
+    final fileName =
+        (data['fileName'] ?? data['nomeArquivo'] ?? data['filename'])
+            ?.toString();
 
     final fileSizeRaw = data['fileSize'];
     final fileSize = (fileSizeRaw is num) ? fileSizeRaw.toInt() : null;
@@ -112,7 +124,8 @@ class ChatMessage {
     final callType = data['callType']?.toString();
     final callDuration = data['callDuration']?.toString();
 
-    final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final createdAt =
+        (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final starredRaw = (data['starredBy'] as List?) ?? const <dynamic>[];
     final starredBy = starredRaw.map((e) => e.toString()).toList();
 
@@ -144,8 +157,10 @@ class ChatMessage {
       isDeleted: data['isDeleted'] == true,
       isEdited: data['isEdited'] == true,
       editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
-      locationLat: (data['locationLat'] as num?)?.toDouble(),
-      locationLng: (data['locationLng'] as num?)?.toDouble(),
+      locationLat:
+          (data['locationLat'] as num? ?? data['latitude'] as num?)?.toDouble(),
+      locationLng: (data['locationLng'] as num? ?? data['longitude'] as num?)
+          ?.toDouble(),
       senderRole: (data['senderRole'] ?? '').toString(),
       senderId: (data['senderId'] ?? '').toString(),
       createdAt: createdAt,
@@ -171,14 +186,12 @@ class ChatMessage {
       if (callDuration != null) 'callDuration': callDuration,
       if (locationLat != null) 'locationLat': locationLat,
       if (locationLng != null) 'locationLng': locationLng,
-      
       'reactions': reactions,
       if (replyToId != null) 'replyToId': replyToId,
       if (replyToText != null) 'replyToText': replyToText,
       'isDeleted': isDeleted,
       'isEdited': isEdited,
       if (editedAt != null) 'editedAt': Timestamp.fromDate(editedAt!),
-
       'senderRole': senderRole,
       'senderId': senderId,
       'createdAt': Timestamp.fromDate(createdAt),

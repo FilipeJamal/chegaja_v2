@@ -37,7 +37,7 @@ class ContatoSection extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return _buildContactCard(phone: '', loading: true);
+          return _buildContactCard(context, phone: '', loading: true);
         }
         final data = snapshot.data?.data() ?? <String, dynamic>{};
         final primaryPhone = resolvePhone(data);
@@ -55,6 +55,7 @@ class ContatoSection extends StatelessWidget {
                   fallbackSnap.data?.data() ?? <String, dynamic>{};
               final fallbackPhone = resolvePhone(fallbackData);
               return _buildContactCard(
+                context,
                 phone: fallbackPhone,
               );
             },
@@ -62,13 +63,20 @@ class ContatoSection extends StatelessWidget {
         }
 
         return _buildContactCard(
+          context,
           phone: primaryPhone,
         );
       },
     );
   }
 
-  Widget _buildContactCard({required String phone, bool loading = false}) {
+  Widget _buildContactCard(
+    BuildContext context, {
+    required String phone,
+    bool loading = false,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final hasPhone = phone.isNotEmpty;
     final label = loading
         ? 'A carregar...'
@@ -77,34 +85,43 @@ class ContatoSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Contacto',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: colorScheme.outlineVariant),
           ),
           child: Row(
             children: [
-              const Icon(Icons.phone_outlined),
+              Icon(
+                Icons.phone_outlined,
+                color: colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 13),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
               if (hasPhone)
                 IconButton(
                   tooltip: 'Ligar',
                   onPressed: () => onCall(phone),
-                  icon: const Icon(Icons.call),
+                  icon: Icon(Icons.call, color: colorScheme.primary),
                 ),
             ],
           ),

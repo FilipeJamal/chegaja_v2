@@ -140,3 +140,68 @@ Validacao:
   a pesquisa esta ativa.
 - flutter test --no-pub passou com 158/158.
 ```
+
+### M2.13-SOLO-UX-002 - Modo escuro do detalhe com contraste quebrado
+
+```text
+Data: 2026-05-27
+Tester: Filipe/Jamal em beta solo manual
+Plataforma: Web release local
+Papel: Prestador
+Severidade: alta
+Frequencia: sempre nas areas afetadas
+Estado: corrigido
+```
+
+Resumo:
+No detalhe do pedido em modo escuro, areas como No-show, Informacoes do pedido,
+Contacto, endereco e descricao usavam cores hardcoded. O resultado era texto
+quase invisivel e blocos claros dentro de uma tela escura.
+
+Causa tecnica:
+Alguns widgets do detalhe ainda usavam `Colors.black54`, `Colors.black87` e
+`Colors.grey.shade100`, em vez de `Theme.of(context).colorScheme`.
+
+Correcao:
+- `PedidoInfoRow` passou a usar cores do tema.
+- `ContatoSection` passou a usar surface/outline/texto do tema.
+- No-show, endereco e descricao no detalhe passaram a respeitar o tema.
+
+Validacao:
+- `flutter test --no-pub` passou com 160/160.
+- `npm.cmd run test:scripts` passou.
+- Build Web release local passou em `build/web_manual_release`.
+```
+
+### M2.13-SOLO-UX-003 - Localizacao do chat nao abria Google Maps
+
+```text
+Data: 2026-05-27
+Tester: Filipe/Jamal em beta solo manual
+Plataforma: Web release local
+Papel: Cliente/Prestador
+Severidade: alta
+Frequencia: sempre em mensagens antigas de localizacao
+Estado: corrigido
+```
+
+Resumo:
+A mensagem de localizacao aparecia como texto plano, com URL do Google Maps,
+mas nao se comportava como acao clicavel para abrir o mapa.
+
+Causa tecnica:
+As mensagens antigas de localizacao usavam `latitude` e `longitude`, enquanto
+`ChatMessage` so reconhecia `locationLat` e `locationLng`. Por isso a UI nao
+identificava a mensagem como localizacao.
+
+Correcao:
+- `ChatMessage` passou a aceitar os campos legados `latitude/longitude`.
+- `ChatMessage` ganhou `mapsUri`.
+- O envio de localizacao passou a gravar os dois formatos de coordenadas.
+- `ChatThreadScreen` passou a renderizar localizacao como item clicavel.
+
+Validacao:
+- Novo teste `test/core/chat_message_location_test.dart`.
+- `flutter test --no-pub` passou com 160/160.
+- Build Web release local passou em `build/web_manual_release`.
+```

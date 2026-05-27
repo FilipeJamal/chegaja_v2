@@ -348,5 +348,5 @@ R6 - Decidir se beta externa passa
 Proxima fase operacional:
 
 ```text
-M2.13.4 - Registar envio real e feedback inicial do tester
+M2.13.6 - Registar envio real e feedback inicial do tester
 ```

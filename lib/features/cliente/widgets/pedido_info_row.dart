@@ -14,6 +14,8 @@ class PedidoInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -22,17 +24,18 @@ class PedidoInfoRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(
+              style: theme.textTheme.labelMedium?.copyWith(
                 fontSize: 12,
-                color: Colors.black54,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13,
+                color: theme.colorScheme.onSurface,
               ),
             ),
           ),

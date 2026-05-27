@@ -11,6 +11,7 @@ M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
 M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
 M2.13.3: documentacao de entrega real preparada, aguardando envio humano
 M2.13.4: correcao de pesquisa do catalogo Cliente em beta solo manual
+M2.13.5: correcao de modo escuro e localizacao do chat em beta solo manual
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -85,7 +86,7 @@ A M2.13.1 preparou:
 ## Proxima Execucao Recomendada
 
 ```text
-M2.13.4 - Registar envio real e feedback inicial do tester
+M2.13.6 - Registar envio real e feedback inicial do tester
 ```
 
 Essa execucao deve receber do responsavel humano:
@@ -271,6 +272,68 @@ Validacoes:
 flutter test --no-pub: 158/158 passou
 flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release: passou
 Playwright/Chromium local: pesquisa por "retratista" filtrou resultados e removeu cards nao relacionados
+```
+
+Observacao:
+
+```text
+Esta correcao melhora a beta solo/manual, mas nao fecha R1. A entrega real a
+tester humano externo continua pendente.
+```
+
+## M2.13.5 - Corrigir Modo Escuro e Localizacao do Chat
+
+```text
+Estado: corrigida e validada localmente
+Tipo: bug visual/funcional encontrado em beta solo manual
+Entrega real a tester: ainda pendente
+R1: ainda pendente
+```
+
+Problemas reportados:
+
+```text
+1. No detalhe do pedido em modo escuro, blocos de informacao, contacto,
+   endereco e no-show tinham texto ou fundo com cores claras/escuras fixas,
+   ficando pouco legiveis.
+2. Mensagens de localizacao no chat apareciam como texto plano e nao abriam o
+   Google Maps.
+```
+
+Causa:
+
+```text
+O detalhe do pedido ainda tinha cores hardcoded como Colors.black54,
+Colors.black87 e Colors.grey.shade100 em areas visiveis no dark mode.
+
+As mensagens de localizacao antigas eram gravadas com latitude/longitude, mas
+o modelo ChatMessage so reconhecia locationLat/locationLng. Assim, a UI nao
+tratava essas mensagens como localizacao clicavel.
+```
+
+Correcao:
+
+```text
+1. PedidoInfoRow passou a usar colorScheme.onSurface/onSurfaceVariant.
+2. ContatoSection passou a usar surfaceContainerHighest/outlineVariant e cores
+   do tema.
+3. Trechos de no-show, endereco e descricao no detalhe passaram a respeitar o
+   tema.
+4. ChatMessage passou a aceitar latitude/longitude legados e expor mapsUri.
+5. O envio de localizacao grava tanto locationLat/locationLng como
+   latitude/longitude para compatibilidade.
+6. O ChatThreadScreen passou a renderizar localizacao como acao clicavel para
+   abrir Google Maps.
+```
+
+Validacoes:
+
+```text
+flutter test --no-pub: 160/160 passou
+npm.cmd run test:scripts: passou
+flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release: passou
+Playwright/Chromium local: build Web em 127.0.0.1:5175 montou a Home Cliente
+git diff --check: passou sem erros
 ```
 
 Observacao:

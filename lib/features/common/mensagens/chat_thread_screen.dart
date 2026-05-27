@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/call_service.dart';
@@ -946,6 +947,8 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         text: '$label: $url',
         extra: {
           'type': 'location',
+          'locationLat': lat,
+          'locationLng': lng,
           'latitude': lat,
           'longitude': lng,
         },
@@ -1616,11 +1619,20 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
           ),
         ],
       );
+    } else if (msg.isLocation && msg.mapsUri != null) {
+      content = _LocationMessageContent(
+        text: msg.text,
+        uri: msg.mapsUri!,
+        isMine: isMine,
+      );
     } else {
       // Default text or other types
       content = Text(
         msg.text,
-        style: const TextStyle(fontSize: 16),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface,
+          fontSize: 16,
+        ),
       );
     }
 
@@ -2051,5 +2063,90 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         );
       },
     );
+  }
+}
+
+class _LocationMessageContent extends StatelessWidget {
+  const _LocationMessageContent({
+    required this.text,
+    required this.uri,
+    required this.isMine,
+  });
+
+  final String text;
+  final Uri uri;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final actionColor = isMine ? colorScheme.primary : colorScheme.secondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: () => _openMaps(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.x1,
+            vertical: AppSpacing.x1,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                color: actionColor,
+                size: 22,
+              ),
+              const SizedBox(width: AppSpacing.x2),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Abrir localizacao',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: actionColor,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (text.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        text,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openMaps(BuildContext context) async {
+    final ok = await launchUrl(
+      uri,
+      mode:
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      webOnlyWindowName: kIsWeb ? '_blank' : null,
+    );
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nao conseguimos abrir a localizacao.')),
+      );
+    }
   }
 }
