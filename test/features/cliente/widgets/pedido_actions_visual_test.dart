@@ -1,4 +1,5 @@
 import 'package:chegaja_v2/core/models/pedido.dart';
+import 'package:chegaja_v2/core/theme/app_theme.dart';
 import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_pedido_acoes.dart';
@@ -38,7 +39,7 @@ Pedido buildPedido({
 Widget wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 Widget wrapDark(Widget child) => MaterialApp(
-      theme: ThemeData.dark(),
+      theme: AppTheme.darkTheme,
       home: Scaffold(body: child),
     );
 
@@ -150,5 +151,38 @@ void main() {
       ),
     );
     expectNoHardcodedDarkTextColors(tester);
+  });
+
+  testWidgets('resumo financeiro do prestador usa contraste forte no dark mode',
+      (tester) async {
+    await tester.pumpWidget(
+      wrapDark(
+        PrestadorPedidoAcoes(
+          pedido: buildPedido(
+            estado: 'aguarda_confirmacao_valor',
+            tipoPreco: 'a_combinar',
+            statusProposta: 'aceita_cliente',
+            statusConfirmacaoValor: 'pendente_cliente',
+            precoPropostoPrestador: 30,
+          ),
+        ),
+      ),
+    );
+
+    final expectedColor = AppTheme.darkTheme.colorScheme.onSurface;
+
+    for (final label in <String>[
+      'À espera da confirmação do cliente para o valor final.',
+      'Valor bruto',
+      'Taxa da plataforma (15%)',
+      'Valor líquido (para ti)',
+    ]) {
+      final text = tester.widget<Text>(find.text(label));
+      expect(
+        text.style?.color?.toARGB32(),
+        expectedColor.toARGB32(),
+        reason: '$label precisa de contraste principal em dark mode',
+      );
+    }
   });
 }

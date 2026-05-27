@@ -717,6 +717,7 @@ class _AcaoAguardandoConfirmacao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final valor = pedido.precoPropostoPrestador;
 
     return Column(
@@ -724,7 +725,10 @@ class _AcaoAguardandoConfirmacao extends StatelessWidget {
       children: [
         Text(
           'À espera da confirmação do cliente para o valor final.',
-          style: _actionSecondaryText(context),
+          style: _actionSecondaryText(
+            context,
+            color: colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 6),
         if (valor != null) ...[
@@ -846,6 +850,7 @@ class _ResumoComissaoCard extends StatelessWidget {
   Widget _linhaResumo(String label, String value) {
     return Builder(
       builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Row(
@@ -853,7 +858,10 @@ class _ResumoComissaoCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: _actionSecondaryText(context),
+                style: _actionSecondaryText(
+                  context,
+                  color: colorScheme.onSurface,
+                ),
               ),
               Text(
                 value,
@@ -889,14 +897,18 @@ TextStyle _actionPrimaryText(
       );
 }
 
-TextStyle _actionSecondaryText(BuildContext context, {double fontSize = 12}) {
+TextStyle _actionSecondaryText(
+  BuildContext context, {
+  double fontSize = 12,
+  Color? color,
+}) {
   final theme = Theme.of(context);
   return theme.textTheme.bodySmall?.copyWith(
         fontSize: fontSize,
-        color: theme.colorScheme.onSurfaceVariant,
+        color: color ?? theme.colorScheme.onSurfaceVariant,
       ) ??
       TextStyle(
         fontSize: fontSize,
-        color: theme.colorScheme.onSurfaceVariant,
+        color: color ?? theme.colorScheme.onSurfaceVariant,
       );
 }

@@ -235,9 +235,15 @@ Correcao:
 - Perfil Cliente/Prestador, favoritos, KYC, suporte, report problem, agenda,
   selecionar prestador e novo pedido deixaram de usar texto/superficie fixa
   nos pontos encontrados.
+- O resumo financeiro do Prestador foi reforcado para usar `onSurface` nas
+  linhas "Valor bruto", "Taxa da plataforma", "Valor liquido" e no aviso de
+  espera da confirmacao do cliente.
 - Adicionado teste de regressao para bloquear texto preto hardcoded em dark
   mode nas acoes Cliente/Prestador.
+- Adicionado teste especifico para garantir contraste forte no resumo
+  financeiro do Prestador em dark mode.
 
 Validacao:
 - `flutter test --no-pub test/features/cliente/widgets/pedido_actions_visual_test.dart` passou.
+- `flutter test --no-pub` passou.
 ```

@@ -380,12 +380,16 @@ Correcao:
    selecionar prestador e novo pedido receberam surface/outline/texto do tema.
 4. Foi criado teste de regressao para impedir texto preto hardcoded nas acoes
    Cliente/Prestador em dark mode.
+5. Ajuste complementar: o resumo financeiro do Prestador passou a usar
+   contraste principal em "A espera da confirmacao", "Valor bruto", "Taxa da
+   plataforma" e "Valor liquido".
 ```
 
 Validacoes:
 
 ```text
 flutter test --no-pub test/features/cliente/widgets/pedido_actions_visual_test.dart: passou
+flutter test --no-pub: passou
 ```
 
 Observacao:
