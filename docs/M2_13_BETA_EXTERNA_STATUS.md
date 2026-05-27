@@ -8,6 +8,7 @@ Data: 2026-05-23
 M2.13: em preparacao para beta externa / tester real
 Bloco R: iniciado
 M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
+M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -55,7 +56,7 @@ Executar uma beta externa controlada com tester real em Web/Windows, usando o pa
 
 ```text
 R1: PROXIMO - entregar app ao tester
-R2: FUTURO - tester executa roteiro
+R2: FUTURO - tester real executa roteiro
 R3: FUTURO - recolher bugs reais
 R4: FUTURO - classificar bugs
 R5: FUTURO - corrigir bloqueadores
@@ -82,7 +83,7 @@ A M2.13.1 preparou:
 ## Proxima Execucao Recomendada
 
 ```text
-M2.13.2 - Registar entrega real ao tester
+M2.13.3 - Registar entrega real ao tester
 ```
 
 Essa execucao deve receber do responsavel humano:
@@ -94,6 +95,88 @@ plataforma entregue: Web, Windows ou ambas
 data/hora de envio
 prazo esperado de retorno
 confirmacao de que o tester recebeu os documentos
+```
+
+## M2.13.2 - Beta Solo Assistida por Playwright
+
+```text
+Estado: executada
+Tipo: beta solo assistida por IA/Playwright
+Resultado: aprovada tecnicamente
+Entrega real a tester: ainda pendente
+```
+
+Motivo:
+
+```text
+Nao havia tester humano disponivel no momento. Para nao bloquear a validacao,
+foi executado um roteiro solo assistido por Playwright usando os fluxos E2E
+ja aprovados da M2.11/M2.12.
+```
+
+Ambiente usado:
+
+```text
+Build Web estatico: build/web
+Servidor local: http://127.0.0.1:5174
+Emuladores: auth, firestore, storage, functions
+Target E2E: http://127.0.0.1:5174
+```
+
+Observacao de ambiente:
+
+```text
+O alvo debug flutter run -d web-server em http://127.0.0.1:5173 carregou
+HTML/DDC, mas nao montou a UI Flutter no Chromium Playwright dentro do tempo
+esperado. O build Web estatico em http://127.0.0.1:5174 montou corretamente.
+Isto foi tratado como limitacao de ambiente debug/DDC, nao como bug funcional
+do produto.
+```
+
+Evidencia funcional:
+
+```text
+npm.cmd run e2e:ui:dual: passou
+Resultado: FULL MULTI-SCENARIO FLOW OK
+Cenarios: happy-path, cancelamento Cliente, convite manual Prestador, chat bidirecional, no-show Prestador
+Screenshots: C:\Users\Jamal\AppData\Local\Temp\chegaja-m2132-beta-solo\screenshots\2026-05-27T08-52-18-042Z
+
+npm.cmd run e2e:ui:orcamento: passou
+Resultado: ORCAMENTO MIN-MAX FLOW OK
+Cenarios: pedido por orcamento, proposta min/max, aceite Cliente, valor final, conclusao
+Screenshots: C:\Users\Jamal\AppData\Local\Temp\chegaja-m2132-beta-solo\screenshots\2026-05-27T09-04-35-468Z
+```
+
+Evidencia visual:
+
+```text
+Matriz visual capturada:
+C:\Users\Jamal\AppData\Local\Temp\chegaja-m2132-beta-solo\visual_matrix
+
+Telas:
+- Home Cliente mobile/tablet/desktop/wide
+- Home Prestador mobile/tablet/desktop/wide
+```
+
+Notas runtime:
+
+```text
+Foram registados avisos esperados de WebGL/Firestore Listen abortado durante
+trocas de pagina/contexto do Playwright.
+
+Tambem surgiram logs iniciais de timeout no bootstrap Auth, mas o login anonimo
+recuperou e os dois roteiros terminaram com sucesso ponta a ponta. Fica como
+observacao tecnica para monitorizacao futura, nao como bloqueador desta beta
+solo.
+```
+
+Decisao:
+
+```text
+A beta solo assistida por Playwright fica aprovada tecnicamente.
+A beta externa real continua pendente, porque nenhum tester humano recebeu ou
+executou o pacote.
+R1 nao foi fechado.
 ```
 
 ## Fora do Escopo Mantido

@@ -6,7 +6,8 @@ Data de abertura: 2026-05-23
 
 ```text
 Decisao: pendente
-Motivo: beta externa ainda nao foi executada por tester real
+Motivo: beta externa ainda nao foi executada por tester real.
+Beta solo assistida por Playwright foi aprovada tecnicamente, mas nao substitui teste humano.
 ```
 
 ## Criterios para Aprovar
@@ -44,4 +45,43 @@ Bugs bloqueadores:
 Bugs altos:
 Bugs medios/baixos:
 Proximo passo recomendado:
+```
+
+## Decisao Parcial - Beta Solo Assistida
+
+Data: 2026-05-27
+
+```text
+Resultado: beta solo assistida aprovada tecnicamente
+Escopo: Web local com build estatico + emuladores Firebase
+Tester humano: nao executado
+Beta externa real: pendente
+```
+
+Evidencia:
+
+```text
+npm.cmd run e2e:ui:dual: passou
+FULL MULTI-SCENARIO FLOW OK
+
+npm.cmd run e2e:ui:orcamento: passou
+ORCAMENTO MIN-MAX FLOW OK
+
+Matriz visual local capturada:
+Home Cliente mobile/tablet/desktop/wide
+Home Prestador mobile/tablet/desktop/wide
+```
+
+Decisao:
+
+```text
+Nao fechar beta externa real.
+Nao fechar R1.
+Usar esta execucao como validacao solo antes de entregar o pacote a uma pessoa real.
+```
+
+Proximo passo recomendado:
+
+```text
+M2.13.3 - Registar entrega real ao tester
 ```
