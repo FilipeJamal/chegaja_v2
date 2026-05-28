@@ -15,6 +15,7 @@ import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/prestador/widgets/prestador_portfolio_manager_section.dart';
 
 class PrestadorPerfilScreen extends StatefulWidget {
   const PrestadorPerfilScreen({super.key});
@@ -49,6 +50,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
 
   bool _loading = true;
   bool _saving = false;
+  bool _portfolioUploading = false;
 
   String? _photoUrl;
   List<String> _portfolioUrls = <String>[];
@@ -127,7 +129,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       _photoUrl = (data['photoUrl'] as String?) ?? (data['fotoUrl'] as String?);
 
       final raw = (data['portfolioUrls'] as List?) ?? <dynamic>[];
-      _portfolioUrls = raw.map((e) => e.toString()).toList();
+      _portfolioUrls = _cleanPortfolioUrls(raw.map((e) => e.toString()));
 
       final rk = data['radiusKm'];
       if (rk is num) _radiusKm = rk.toDouble();
@@ -503,6 +505,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
   }
 
   Future<void> _addPortfolioImages() async {
+    if (_portfolioUploading) return;
+
     final doc = _docOrNull;
     final uid = _uidOrNull;
 
@@ -516,52 +520,95 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       return;
     }
 
+    setState(() => _portfolioUploading = true);
+
     try {
       final files = await _picker.pickMultiImage(imageQuality: 85);
       if (files.isEmpty) return;
 
       final newUrls = <String>[];
+      var failedUploads = 0;
 
       for (final x in files) {
-        final Uint8List bytes = await x.readAsBytes();
-        final url = await _uploadBytes(
-          bytes: bytes,
-          path:
-              'prestadores/$uid/portfolio/item_${DateTime.now().millisecondsSinceEpoch}_${x.name}.jpg',
-          contentType: 'image/jpeg',
-        );
+        try {
+          final Uint8List bytes = await x.readAsBytes();
+          final url = await _uploadBytes(
+            bytes: bytes,
+            path:
+                'prestadores/$uid/portfolio/item_${DateTime.now().millisecondsSinceEpoch}_${x.name}.jpg',
+            contentType: 'image/jpeg',
+          );
 
-        newUrls.add(url);
+          newUrls.add(url);
+        } catch (_) {
+          failedUploads++;
+        }
       }
 
       if (!mounted) return;
-      setState(() => _portfolioUrls.addAll(newUrls));
+
+      if (newUrls.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nao conseguimos adicionar as imagens agora.'),
+          ),
+        );
+        return;
+      }
+
+      final nextUrls = _cleanPortfolioUrls([..._portfolioUrls, ...newUrls]);
+      setState(() => _portfolioUrls = nextUrls);
 
       await doc.set(
         {
-          'portfolioUrls': _portfolioUrls,
+          'portfolioUrls': nextUrls,
           'updatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+      final message = failedUploads > 0
+          ? '${newUrls.length} imagem(ns) adicionada(s). Algumas falharam.'
+          : '${newUrls.length} imagem(ns) adicionada(s) ao portfolio.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao adicionar imagens: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _portfolioUploading = false);
+      }
     }
   }
 
   Future<void> _removePortfolioImage(String url) async {
     final doc = _docOrNull;
-    if (doc == null) return;
+    if (doc == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Precisas estar autenticado para editar o portfolio.'),
+        ),
+      );
+      return;
+    }
+
+    final previous = List<String>.from(_portfolioUrls);
 
     try {
-      setState(() => _portfolioUrls.remove(url));
+      final nextUrls = _cleanPortfolioUrls(
+        _portfolioUrls.where((item) => item != url),
+      );
+      setState(() => _portfolioUrls = nextUrls);
 
       await doc.set(
         {
-          'portfolioUrls': _portfolioUrls,
+          'portfolioUrls': nextUrls,
           'updatedAt': FieldValue.serverTimestamp(),
         },
         SetOptions(merge: true),
@@ -574,12 +621,31 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       } catch (_) {
         // ignora
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Imagem removida do portfolio.')),
+      );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _portfolioUrls = previous);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao remover imagem: $e')),
       );
     }
+  }
+
+  List<String> _cleanPortfolioUrls(Iterable<String> urls) {
+    final seen = <String>{};
+    final clean = <String>[];
+    for (final url in urls) {
+      final value = url.trim();
+      if (!value.startsWith('http')) continue;
+      if (seen.contains(value)) continue;
+      seen.add(value);
+      clean.add(value);
+    }
+    return clean;
   }
 
   Future<String> _uploadBytes({
@@ -959,125 +1025,19 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
   }
 
   Widget _portfolio() {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'Portfólio',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ),
-
-            // ✅ FIX: não usar Size.fromHeight / width infinita dentro de Row
-            ElevatedButton.icon(
-              onPressed: _addPortfolioImages,
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(0, 48), // largura automática
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (_portfolioUrls.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            child: const Text(
-              'Ainda não tens imagens no portfólio.\n'
-              'Carrega algumas para o cliente ver os teus trabalhos.',
-              textAlign: TextAlign.center,
-            ),
-          )
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _portfolioUrls.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemBuilder: (context, i) {
-              final url = _portfolioUrls[i];
-
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // ✅ Tap para abrir em ecrã inteiro
-                    InkWell(
-                      onTap: () => _openImageViewer(
-                        urls: _portfolioUrls,
-                        initialIndex: i,
-                        title: 'Portfólio',
-                      ),
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: colorScheme.surfaceContainerHighest,
-                          child: Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Container(
-                            color: colorScheme.surfaceContainerHighest,
-                            child: const Center(
-                              child: SizedBox(
-                                height: 22,
-                                width: 22,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: InkWell(
-                        onTap: () => _removePortfolioImage(url),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            // ✅ Evita warning do withOpacity (usa alpha direto)
-                            color: Colors.black.withAlpha(153),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-      ],
+    return PrestadorPortfolioManagerSection(
+      urls: _portfolioUrls,
+      uploading: _portfolioUploading,
+      onAdd: _addPortfolioImages,
+      onPreview: (url, index) {
+        final urls = _cleanPortfolioUrls(_portfolioUrls);
+        _openImageViewer(
+          urls: urls,
+          initialIndex: index,
+          title: 'Portfolio',
+        );
+      },
+      onRemoveConfirmed: _removePortfolioImage,
     );
   }
 }

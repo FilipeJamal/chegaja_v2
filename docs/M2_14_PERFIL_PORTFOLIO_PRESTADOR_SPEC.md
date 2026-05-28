@@ -9,7 +9,8 @@ M2.14: bloco ativo
 M2.14.1: concluida
 M2.14.2: auditoria concluida
 M2.14.3: concluida - perfil publico do prestador melhorado
-M2.14.4: proximo passo - melhorar gestao do portfolio no perfil do prestador
+M2.14.4: concluida - gestao do portfolio no perfil do prestador melhorada
+M2.14.5: proximo passo - consolidar confianca/badges sem KYC real
 Bloco F: ativo
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
@@ -377,8 +378,8 @@ As integracoes existentes devem ser preservadas. Novas integracoes devem usar
 M2.14.1 - Spec perfil e portfolio do prestador
 M2.14.2 - Auditoria da base atual de perfil/portfolio
 M2.14.3 - Concluida: melhorar perfil publico do prestador
-M2.14.4 - Proximo passo: melhorar gestao do portfolio no perfil do prestador
-M2.14.5 - Criar cartao de confianca e badges leves
+M2.14.4 - Concluida: melhorar gestao do portfolio no perfil do prestador
+M2.14.5 - Proximo passo: consolidar confianca/badges sem KYC real
 M2.14.6 - Integrar perfil publico em pontos importantes do fluxo Cliente
 M2.14.7 - Testes, QA visual e documentacao
 ```
@@ -393,8 +394,11 @@ PublicProfileScreen mostra estado vazio de portfolio. Criado em test/features/co
 PublicProfileScreen mostra badges leves corretos. Criado em test/features/common/perfil_publico_screen_test.dart.
 PublicProfileScreen nao mostra badges proibidos. Criado em test/features/common/perfil_publico_screen_test.dart.
 Portfolio grid funciona sem imagem valida. Criado em test/features/common/perfil_publico_screen_test.dart.
-PrestadorPerfilScreen mostra portfolio vazio.
-PrestadorPerfilScreen confirma remocao de imagem, se implementado.
+PrestadorPortfolioManagerSection mostra portfolio vazio. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
+PrestadorPortfolioManagerSection mostra contador/limite recomendado. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
+PrestadorPortfolioManagerSection confirma remocao antes de chamar callback. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
+PrestadorPortfolioManagerSection bloqueia upload enquanto carrega. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
+PrestadorPortfolioManagerSection valida dark mode/layout com varias imagens. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
 ```
 
 ### Regressao Visual
