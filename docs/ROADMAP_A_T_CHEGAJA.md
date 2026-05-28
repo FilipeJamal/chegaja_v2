@@ -130,8 +130,8 @@ Estado: parcial. Visual e base existem; confianca/verificacao ainda faltam.
 | --- | --- | --- |
 | M2.14.1 | FECHADO | Spec perfil, portfolio e confianca do prestador |
 | M2.14.2 | FECHADO | Auditoria da base atual de perfil/portfolio |
-| M2.14.3 | PROXIMO | Melhorar perfil publico do prestador |
-| M2.14.4 | FUTURO | Melhorar gestao do portfolio no perfil do prestador |
+| M2.14.3 | FECHADO | Melhorar perfil publico do prestador |
+| M2.14.4 | PROXIMO | Melhorar gestao do portfolio no perfil do prestador |
 | M2.14.5 | FUTURO | Criar cartao de confianca e badges leves |
 | M2.14.6 | FUTURO | Integrar perfil publico nos pontos principais do fluxo Cliente |
 | M2.14.7 | FUTURO | Testes, QA visual e documentacao |
@@ -375,7 +375,7 @@ F - Perfil, portfolio e identidade do prestador
 Fase operacional:
 
 ```text
-M2.14.3 - Melhorar perfil publico do prestador
+M2.14.4 - Melhorar gestao do portfolio no perfil do prestador
 ```
 
 Dependencias pausadas:

@@ -8,7 +8,8 @@ Data: 2026-05-28
 M2.14: bloco ativo
 M2.14.1: concluida
 M2.14.2: auditoria concluida
-M2.14.3: proximo passo - melhorar perfil publico do prestador
+M2.14.3: concluida - perfil publico do prestador melhorado
+M2.14.4: proximo passo - melhorar gestao do portfolio no perfil do prestador
 Bloco F: ativo
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
@@ -375,8 +376,8 @@ As integracoes existentes devem ser preservadas. Novas integracoes devem usar
 ```text
 M2.14.1 - Spec perfil e portfolio do prestador
 M2.14.2 - Auditoria da base atual de perfil/portfolio
-M2.14.3 - Melhorar perfil publico do prestador
-M2.14.4 - Melhorar gestao do portfolio no perfil do prestador
+M2.14.3 - Concluida: melhorar perfil publico do prestador
+M2.14.4 - Proximo passo: melhorar gestao do portfolio no perfil do prestador
 M2.14.5 - Criar cartao de confianca e badges leves
 M2.14.6 - Integrar perfil publico em pontos importantes do fluxo Cliente
 M2.14.7 - Testes, QA visual e documentacao
@@ -387,11 +388,11 @@ M2.14.7 - Testes, QA visual e documentacao
 ### Widget/Unit
 
 ```text
-PublicProfileScreen renderiza nome/foto/bio/localizacao/servicos/portfolio.
-PublicProfileScreen mostra estado vazio de portfolio.
-PublicProfileScreen mostra badges leves corretos.
-PublicProfileScreen nao mostra badges proibidos.
-Portfolio grid funciona sem imagem valida.
+PublicProfileScreen renderiza nome/foto/bio/localizacao/servicos/portfolio. Criado em test/features/common/perfil_publico_screen_test.dart.
+PublicProfileScreen mostra estado vazio de portfolio. Criado em test/features/common/perfil_publico_screen_test.dart.
+PublicProfileScreen mostra badges leves corretos. Criado em test/features/common/perfil_publico_screen_test.dart.
+PublicProfileScreen nao mostra badges proibidos. Criado em test/features/common/perfil_publico_screen_test.dart.
+Portfolio grid funciona sem imagem valida. Criado em test/features/common/perfil_publico_screen_test.dart.
 PrestadorPerfilScreen mostra portfolio vazio.
 PrestadorPerfilScreen confirma remocao de imagem, se implementado.
 ```
