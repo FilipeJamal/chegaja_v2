@@ -95,6 +95,31 @@ void main() {
     expect(find.text('Perfil ativo'), findsOneWidget);
   });
 
+  testWidgets('perfil incompleto nao exagera sinais de confianca',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {
+      'bio': '',
+      'city': '',
+      'country': '',
+      'radiusKm': null,
+      'photoUrl': '',
+      'servicosNomes': <String>[],
+      'portfolioUrls': <String>[],
+    });
+
+    await _pumpProfile(tester, db: db);
+
+    expect(find.text('Foto adicionada'), findsNothing);
+    expect(find.text('Area definida'), findsNothing);
+    expect(find.text('Portfolio adicionado'), findsNothing);
+    expect(find.text('Perfil ativo'), findsNothing);
+    expect(
+      find.text('Este perfil ainda precisa de mais informacao.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('foto do perfil abre em ecra inteiro quando existe',
       (tester) async {
     final db = FakeFirebaseFirestore();
@@ -134,6 +159,9 @@ void main() {
     expect(find.text('Prestador certificado'), findsNothing);
     expect(find.text('Pagamento seguro'), findsNothing);
     expect(find.text('Profissional aprovado oficialmente'), findsNothing);
+    expect(find.text('Verificado oficialmente'), findsNothing);
+    expect(find.text('Certificado pelo ChegaJa'), findsNothing);
+    expect(find.text('Garantido pelo ChegaJa'), findsNothing);
     expect(find.text('Prestador disponivel'), findsNothing);
     expect(find.text('Servicos concluidos'), findsNothing);
   });

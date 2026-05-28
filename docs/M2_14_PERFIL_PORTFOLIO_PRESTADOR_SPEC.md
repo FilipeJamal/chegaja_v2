@@ -10,7 +10,8 @@ M2.14.1: concluida
 M2.14.2: auditoria concluida
 M2.14.3: concluida - perfil publico do prestador melhorado
 M2.14.4: concluida - gestao do portfolio no perfil do prestador melhorada
-M2.14.5: proximo passo - consolidar confianca/badges sem KYC real
+M2.14.5: concluida - confianca/badges consolidados sem KYC real
+M2.14.6: proximo passo - integrar perfil publico no fluxo Cliente
 Bloco F: ativo
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
@@ -76,16 +77,15 @@ Mostra portfolioUrls e portfolioImages quando existem.
 Abre imagens de portfolio com MediaViewerScreen.
 ```
 
-Limitacoes atuais:
+Limitacoes originais, ja tratadas em M2.14.3/M2.14.5:
 
 ```text
-Layout ainda e simples, em formato de ficha.
-Nao ha cartao forte de confianca.
-Nao ha badges leves.
-Nao ha estado vazio premium para portfolio.
-Nao ha composicao rica para desktop/tablet.
-Nao ha metricas de confianca bem explicadas.
-Nao ha teste dedicado ao perfil publico.
+Perfil publico saiu do formato de ficha simples.
+Cartao de confianca leve foi criado.
+Badges leves foram implementados e consolidados sem KYC real.
+Estado vazio de portfolio foi melhorado.
+Layout recebeu composicao mais rica e responsiva.
+Testes dedicados do perfil publico foram criados.
 ```
 
 ### Perfil/Editavel do Prestador
@@ -258,11 +258,10 @@ O perfil publico do prestador deve evoluir para uma pagina com:
 
 2. Cartao de confianca:
    - Perfil ativo
-   - Prestador disponivel
    - Portfolio adicionado
    - Area definida
    - Foto adicionada
-   - Servicos concluidos, se houver dado real
+   - sem KYC, certificacao oficial ou promessa de pagamento seguro
 
 3. Sobre:
    - bio/descricao
@@ -320,9 +319,7 @@ verificacao oficial:
 
 ```text
 Perfil ativo
-Prestador disponivel
 Portfolio adicionado
-Servicos concluidos
 Area definida
 Foto adicionada
 ```
@@ -330,12 +327,25 @@ Foto adicionada
 Regras:
 
 ```text
-"Perfil ativo" pode depender de nome/bio/foto/servicos minimos.
-"Prestador disponivel" so pode aparecer se houver dado real de disponibilidade.
+"Perfil ativo" depende de nome e pelo menos um dado complementar real.
 "Portfolio adicionado" depende de portfolioUrls/portfolioImages nao vazio.
-"Servicos concluidos" so pode aparecer se houver contagem real.
 "Area definida" depende de cidade/pais/radiusKm.
 "Foto adicionada" depende de photoUrl/fotoUrl/avatarUrl valido.
+```
+
+Badges adiados:
+
+```text
+Prestador disponivel
+Servicos concluidos
+```
+
+Motivo:
+
+```text
+Ainda falta consolidar fonte de disponibilidade real e contagem confiavel de
+servicos concluidos. Estes textos nao devem aparecer enquanto essa base nao
+estiver validada.
 ```
 
 ## Badges Proibidos
@@ -348,6 +358,9 @@ Documento verificado
 Prestador certificado
 Pagamento seguro
 Profissional aprovado oficialmente
+Verificado oficialmente
+Certificado pelo ChegaJa
+Garantido pelo ChegaJa
 ```
 
 Motivo:
@@ -379,8 +392,8 @@ M2.14.1 - Spec perfil e portfolio do prestador
 M2.14.2 - Auditoria da base atual de perfil/portfolio
 M2.14.3 - Concluida: melhorar perfil publico do prestador
 M2.14.4 - Concluida: melhorar gestao do portfolio no perfil do prestador
-M2.14.5 - Proximo passo: consolidar confianca/badges sem KYC real
-M2.14.6 - Integrar perfil publico em pontos importantes do fluxo Cliente
+M2.14.5 - Concluida: consolidar confianca/badges sem KYC real
+M2.14.6 - Proximo passo: integrar perfil publico em pontos importantes do fluxo Cliente
 M2.14.7 - Testes, QA visual e documentacao
 ```
 
@@ -392,6 +405,7 @@ M2.14.7 - Testes, QA visual e documentacao
 PublicProfileScreen renderiza nome/foto/bio/localizacao/servicos/portfolio. Criado em test/features/common/perfil_publico_screen_test.dart.
 PublicProfileScreen mostra estado vazio de portfolio. Criado em test/features/common/perfil_publico_screen_test.dart.
 PublicProfileScreen mostra badges leves corretos. Criado em test/features/common/perfil_publico_screen_test.dart.
+PublicProfileScreen nao mostra badges em perfil incompleto. Criado em test/features/common/perfil_publico_screen_test.dart.
 PublicProfileScreen nao mostra badges proibidos. Criado em test/features/common/perfil_publico_screen_test.dart.
 Portfolio grid funciona sem imagem valida. Criado em test/features/common/perfil_publico_screen_test.dart.
 PrestadorPortfolioManagerSection mostra portfolio vazio. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.

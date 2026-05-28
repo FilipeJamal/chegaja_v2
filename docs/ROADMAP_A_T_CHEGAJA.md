@@ -22,7 +22,7 @@ FUTURO: falta/futuro
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | ATIVO | Perfil, portfolio e identidade do prestador | Proximo bloco ativo via M2.14: fortalecer perfil publico, portfolio e confianca leve do prestador. |
+| F | ATIVO | Perfil, portfolio e identidade do prestador | M2.14 em execucao: perfil publico, portfolio e confianca leve ja evoluiram; proximo passo e integrar o perfil nos fluxos Cliente. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | FUTURO | Avaliacoes, reputacao e confianca | Falta sistema completo de avaliacoes, reviews, confianca, denuncias e reputacao publica. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
@@ -119,10 +119,11 @@ Estado: tecnicamente avancado, mas dependente do Android fisico para fechar de v
 | F3 | PARCIAL | Portfolio do prestador |
 | F4 | PARCIAL | Upload/gestao de imagens |
 | F5 | FUTURO | Verificacao/KYC |
-| F6 | FUTURO | Badges de confianca |
-| F7 | FUTURO | Perfil publico premium do prestador |
+| F6 | PARCIAL | Badges leves de confianca sem KYC real |
+| F7 | PARCIAL | Perfil publico premium do prestador |
 
-Estado: parcial. Visual e base existem; confianca/verificacao ainda faltam.
+Estado: parcial. Perfil publico, portfolio e badges leves ja evoluiram; KYC,
+reviews completas, verificacao oficial e integracao em todos os fluxos ainda faltam.
 
 ### M2.14 - Perfil, Portfolio e Confianca do Prestador
 
@@ -132,8 +133,8 @@ Estado: parcial. Visual e base existem; confianca/verificacao ainda faltam.
 | M2.14.2 | FECHADO | Auditoria da base atual de perfil/portfolio |
 | M2.14.3 | FECHADO | Melhorar perfil publico do prestador |
 | M2.14.4 | FECHADO | Melhorar gestao do portfolio no perfil do prestador |
-| M2.14.5 | PROXIMO | Consolidar confianca/badges sem KYC real |
-| M2.14.6 | FUTURO | Integrar perfil publico nos pontos principais do fluxo Cliente |
+| M2.14.5 | FECHADO | Consolidar confianca/badges sem KYC real |
+| M2.14.6 | PROXIMO | Integrar perfil publico nos pontos principais do fluxo Cliente |
 | M2.14.7 | FUTURO | Testes, QA visual e documentacao |
 
 Estado: M2.14 e o bloco ativo enquanto R fica pausado por falta de tester
@@ -375,7 +376,7 @@ F - Perfil, portfolio e identidade do prestador
 Fase operacional:
 
 ```text
-M2.14.5 - Consolidar confianca/badges sem KYC real
+M2.14.6 - Integrar perfil publico nos pontos principais do fluxo Cliente
 ```
 
 Dependencias pausadas:
