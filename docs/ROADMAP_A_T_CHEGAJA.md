@@ -22,7 +22,7 @@ FUTURO: falta/futuro
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | ATIVO | Perfil, portfolio e identidade do prestador | M2.14 em execucao: perfil publico, portfolio, confianca leve e integracao no detalhe Cliente ja evoluiram; proximo passo e QA/documentacao final. |
+| F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio, confianca leve e integracao Cliente; faltam KYC, reviews, verificacao oficial e reputacao avancada. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | FUTURO | Avaliacoes, reputacao e confianca | Falta sistema completo de avaliacoes, reviews, confianca, denuncias e reputacao publica. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
@@ -135,10 +135,12 @@ reviews completas, verificacao oficial e integracao em todos os fluxos ainda fal
 | M2.14.4 | FECHADO | Melhorar gestao do portfolio no perfil do prestador |
 | M2.14.5 | FECHADO | Consolidar confianca/badges sem KYC real |
 | M2.14.6 | FECHADO | Integrar perfil publico nos pontos principais do fluxo Cliente |
-| M2.14.7 | PROXIMO | Testes, QA visual e documentacao |
+| M2.14.7 | FECHADO | Testes, QA visual e documentacao final da M2.14 |
 
-Estado: M2.14 e o bloco ativo enquanto R fica pausado por falta de tester
-humano e M fica pausado por falta de Android fisico real.
+Estado: M2.14 fechada no escopo atual de perfil, portfolio e confianca leve.
+O Bloco F continua parcial porque KYC, reviews, verificacao oficial e
+reputacao avancada continuam futuros. R fica pausado por falta de tester humano
+e M fica pausado por falta de Android fisico real.
 
 ## Bloco G - Chat e Mensagens
 
@@ -367,16 +369,17 @@ Estado: futuro.
 
 ## Proximo Movimento
 
-O proximo bloco ativo e:
+A M2.14 foi fechada no escopo atual. O proximo bloco ativo deve ser decidido
+antes de iniciar nova feature.
+
+Opcoes recomendadas:
 
 ```text
-F - Perfil, portfolio e identidade do prestador
-```
-
-Fase operacional:
-
-```text
-M2.14.7 - Testes, QA visual e documentacao final da M2.14
+M2.15 - Avaliacoes e reputacao leve pos-servico
+J/Admin - backoffice leve para gestao interna
+D/Mapa - melhorar localizacao, raio e ETA
+R - retomar quando houver tester humano real
+M - retomar quando houver Android fisico real
 ```
 
 Dependencias pausadas:

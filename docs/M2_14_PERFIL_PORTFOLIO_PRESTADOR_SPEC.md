@@ -5,15 +5,15 @@ Data: 2026-05-28
 ## Estado
 
 ```text
-M2.14: bloco ativo
+M2.14: concluida no escopo atual
 M2.14.1: concluida
 M2.14.2: auditoria concluida
 M2.14.3: concluida - perfil publico do prestador melhorado
 M2.14.4: concluida - gestao do portfolio no perfil do prestador melhorada
 M2.14.5: concluida - confianca/badges consolidados sem KYC real
 M2.14.6: concluida - perfil publico integrado no detalhe do pedido Cliente
-M2.14.7: proximo passo - testes, QA visual e documentacao final
-Bloco F: ativo
+M2.14.7: concluida - testes, QA visual e documentacao final
+Bloco F: parcial
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
 M2.6: continua pendente de Android fisico
@@ -34,8 +34,11 @@ M - Android release/dispositivo fisico:
 Estado: pausado/pendente
 Motivo: falta de dispositivo Android fisico real
 
-Proximo bloco ativo:
+Ultimo bloco executado:
 M2.14 - Perfil, portfolio e confianca do prestador
+
+Proximo bloco:
+a decidir apos o fecho da M2.14
 ```
 
 ## Objetivo
@@ -397,7 +400,7 @@ M2.14.3 - Concluida: melhorar perfil publico do prestador
 M2.14.4 - Concluida: melhorar gestao do portfolio no perfil do prestador
 M2.14.5 - Concluida: consolidar confianca/badges sem KYC real
 M2.14.6 - Concluida: integrar perfil publico em pontos importantes do fluxo Cliente
-M2.14.7 - Proximo passo: testes, QA visual e documentacao
+M2.14.7 - Concluida: testes, QA visual e documentacao final
 ```
 
 ## Testes Necessarios
@@ -501,6 +504,22 @@ validar dark mode desde o primeiro bloco de UI
 reaproveitar PublicProfileScreen e PrestadorPerfilScreen
 manter R/M explicitamente pausados
 ```
+
+## Fecho da M2.14
+
+A M2.14 foi fechada em 2026-05-28 no escopo atual:
+
+```text
+perfil publico do prestador
+gestao do portfolio pelo prestador
+badges leves de confianca sem KYC real
+integracao do perfil publico no detalhe do pedido Cliente
+testes, E2E, QA visual e documentacao final
+```
+
+O Bloco F continua parcial porque KYC, verificacao oficial, reviews,
+reputacao publica completa, moderacao e confianca avancada continuam fora do
+escopo atual.
 
 ## Criterios de Aceitacao da M2.14
 
