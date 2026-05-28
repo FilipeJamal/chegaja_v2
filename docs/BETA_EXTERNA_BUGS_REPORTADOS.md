@@ -9,6 +9,8 @@ Nenhum bug externo reportado ainda.
 Beta externa ainda nao foi executada por tester real.
 Beta solo assistida por Playwright foi executada em 2026-05-27 sem bug funcional bloqueador.
 M2.13.3 preparou template externo de feedback, mas ainda nao ha bugs de tester humano.
+M2.13.4, M2.13.5 e M2.13.6 corrigiram bugs encontrados na beta solo/manual antes da entrega real.
+Proximo passo: M2.13.7 - registar envio real e feedback inicial do tester.
 ```
 
 ## Formato de Registo

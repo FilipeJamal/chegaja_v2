@@ -296,6 +296,20 @@ Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao prep
 
 Estado: iniciado. A spec/status da M2.13, a mensagem de entrega, as instrucoes do tester, o template de feedback e a beta solo assistida por Playwright foram preparados/executados. A beta solo tambem gerou correcoes de usabilidade e contraste em dark mode; a entrega real ao tester ainda esta pendente.
 
+### Detalhe Atual da M2.13
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.13.1 | FECHADO/PREPARADO | Preparacao da entrega ao tester real |
+| M2.13.2 | FECHADO | Beta solo assistida por Playwright |
+| M2.13.3 | FECHADO/PREPARADO | Documentacao de entrega real ao tester |
+| M2.13.4 | FECHADO | Correcao da pesquisa do catalogo Cliente |
+| M2.13.5 | FECHADO | Correcao de modo escuro e localizacao do chat |
+| M2.13.6 | FECHADO | Correcao de contraste dark mode transversal e resumo financeiro Prestador |
+| M2.13.7 | PROXIMO | Registar envio real e feedback inicial do tester |
+
+Estado: M2.13.6 esta concluida. R1 continua pendente porque nenhum tester humano recebeu/executou a beta. O proximo movimento operacional e M2.13.7.
+
 ## Bloco S - Lancamento Publico / Play Store
 
 | Subfase | Estado | Descricao |

@@ -83,7 +83,7 @@ Usar esta execucao como validacao solo antes de entregar o pacote a uma pessoa r
 Proximo passo recomendado:
 
 ```text
-M2.13.4 - Registar envio real e feedback inicial do tester
+M2.13.7 - Registar envio real e feedback inicial do tester
 ```
 
 ## Criterio de Fecho de R1
@@ -124,4 +124,30 @@ Decisao:
 ```text
 A M2.13.3 deixa a entrega pronta para o tester real, mas nao declara execucao
 humana. A beta externa real continua pendente.
+```
+
+## M2.13.4 a M2.13.6 - Correcao de Bugs de Beta Solo
+
+Data: 2026-05-27
+
+```text
+Resultado: correcoes tecnicas/visuais concluidas antes da entrega real
+Entrega real: pendente
+R1: pendente
+```
+
+Resumo:
+
+```text
+M2.13.4 corrigiu a pesquisa do catalogo Cliente.
+M2.13.5 corrigiu modo escuro no detalhe e localizacao clicavel no chat.
+M2.13.6 corrigiu contraste dark mode transversal e resumo financeiro Prestador.
+```
+
+Decisao:
+
+```text
+Estas correcoes melhoram a beta solo/manual, mas nao fecham R1.
+O proximo passo operacional e M2.13.7 - registar envio real e feedback inicial
+do tester.
 ```

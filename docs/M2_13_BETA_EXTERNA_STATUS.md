@@ -12,6 +12,8 @@ M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
 M2.13.3: documentacao de entrega real preparada, aguardando envio humano
 M2.13.4: correcao de pesquisa do catalogo Cliente em beta solo manual
 M2.13.5: correcao de modo escuro e localizacao do chat em beta solo manual
+M2.13.6: correcao de contraste dark mode transversal e resumo financeiro Prestador
+M2.13.7: proximo passo - registar envio real e feedback inicial do tester
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -86,7 +88,7 @@ A M2.13.1 preparou:
 ## Proxima Execucao Recomendada
 
 ```text
-M2.13.6 - Registar envio real e feedback inicial do tester
+M2.13.7 - Registar envio real e feedback inicial do tester
 ```
 
 Essa execucao deve receber do responsavel humano:
@@ -397,6 +399,14 @@ Observacao:
 ```text
 Esta correcao melhora a beta solo/manual, mas nao fecha R1. A entrega real a
 tester humano externo continua pendente.
+```
+
+## Proximo Passo Operacional
+
+```text
+M2.13.7 - Registar envio real e feedback inicial do tester
+R1: continua pendente ate envio/acesso humano confirmado
+Beta externa real: ainda nao executada por tester humano
 ```
 
 ## Fora do Escopo Mantido
