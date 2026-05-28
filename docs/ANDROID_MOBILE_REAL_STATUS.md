@@ -9,6 +9,16 @@ Android release readiness: o build release foi desbloqueado, o signing local
 foi validado sem commitar segredos, o APK release foi gerado e o AppBundle
 release tambem foi gerado.
 
+Estado operacional em 2026-05-28:
+
+```text
+Bloco M: pausado/pendente
+Motivo: falta de dispositivo Android fisico real para validar push, clique em
+notificacao, upload nativo e permissoes negadas.
+Proximo bloco ativo enquanto M esta pausado: M2.14 - Perfil, portfolio e
+confianca do prestador.
+```
+
 M2.6 ainda nao deve ser marcado como fechado completo porque estes itens
 continuam a exigir prova em dispositivo Android fisico ou ambiente FCM/Storage
 real:

@@ -6,14 +6,15 @@ Data: 2026-05-23
 
 ```text
 M2.13: em preparacao para beta externa / tester real
-Bloco R: iniciado
+Bloco R: pausado por falta de tester humano real
 M2.13.1: preparada entrega ao tester, aguardando dados reais de envio
 M2.13.2: beta solo assistida por Playwright executada, sem fechar entrega real
 M2.13.3: documentacao de entrega real preparada, aguardando envio humano
 M2.13.4: correcao de pesquisa do catalogo Cliente em beta solo manual
 M2.13.5: correcao de modo escuro e localizacao do chat em beta solo manual
 M2.13.6: correcao de contraste dark mode transversal e resumo financeiro Prestador
-M2.13.7: proximo passo - registar envio real e feedback inicial do tester
+M2.13.7: preparado como proximo passo de R quando houver tester humano
+M2.14: bloco ativo - perfil, portfolio e confianca do prestador
 M2.12: pacote de entrega beta Web/Windows preparado
 M2.11: fechada como beta interna controlada Web/Windows
 M2.6: continua pendente de Android fisico real
@@ -60,12 +61,19 @@ Executar uma beta externa controlada com tester real em Web/Windows, usando o pa
 ## Estado do Bloco R
 
 ```text
-R1: PROXIMO - entregar app ao tester
+R1: PAUSADO - entregar app ao tester quando houver tester humano
 R2: FUTURO - tester real executa roteiro
 R3: FUTURO - recolher bugs reais
 R4: FUTURO - classificar bugs
 R5: FUTURO - corrigir bloqueadores
 R6: FUTURO - decidir se beta externa passa
+```
+
+Motivo da pausa:
+
+```text
+Ainda nao ha tester humano real disponivel para receber/executar o pacote.
+Playwright e beta solo validam tecnicamente, mas nao substituem feedback humano.
 ```
 
 ## M2.13.1 - Preparacao da Entrega
@@ -404,9 +412,10 @@ tester humano externo continua pendente.
 ## Proximo Passo Operacional
 
 ```text
-M2.13.7 - Registar envio real e feedback inicial do tester
-R1: continua pendente ate envio/acesso humano confirmado
+M2.13.7 - Registar envio real e feedback inicial do tester quando houver tester humano
+R1: continua pausado/pendente ate envio/acesso humano confirmado
 Beta externa real: ainda nao executada por tester humano
+M2.14: bloco ativo enquanto R esta pausado
 ```
 
 ## Fora do Escopo Mantido

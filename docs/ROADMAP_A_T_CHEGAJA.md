@@ -7,6 +7,8 @@ Data: 2026-05-23
 ```text
 FECHADO: feito/fechado
 PARCIAL: parcial, em andamento ou pendente
+ATIVO: bloco em execucao atual
+PAUSADO: pendente por dependencia externa
 PROXIMO: proximo passo oficial
 FUTURO: falta/futuro
 ```
@@ -20,19 +22,19 @@ FUTURO: falta/futuro
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | PARCIAL | Perfil, portfolio e identidade do prestador | Perfil/conta e visual melhoraram. Portfolio, KYC e verificacao ainda nao estao completos como produto final. |
+| F | ATIVO | Perfil, portfolio e identidade do prestador | Proximo bloco ativo via M2.14: fortalecer perfil publico, portfolio e confianca leve do prestador. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | FUTURO | Avaliacoes, reputacao e confianca | Falta sistema completo de avaliacoes, reviews, confianca, denuncias e reputacao publica. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
 | J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. Backoffice/admin completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
-| M | PARCIAL | Android release e dispositivo fisico | APK/AAB passam, Android em emulador passa, mas falta Android fisico real para fechar M2.6. |
+| M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
 | N | FECHADO | Web/Windows beta tecnica | Web automatizada e Windows tecnico passaram. Builds e E2E principais estao aprovados. |
 | O | FECHADO | Visual Product System | M2.10 fechada: design system, Home Cliente, Home Prestador, pedidos, mensagens, conta e catalogo visual. |
 | P | FECHADO | Beta interna controlada | M2.11 fechada: dual e orcamento passaram; bugs criticos corrigidos; beta Web/Windows aprovada. |
 | Q | FECHADO | Pacote de entrega beta para tester real | Builds Web/Windows, guia, roteiro, checklist, templates e manifest de entrega foram preparados. |
-| R | PROXIMO | Beta externa/tester real | Bloco iniciado: spec/status, mensagem, instrucoes, template de feedback e beta solo Playwright preparados; envio real a tester ainda pendente. |
+| R | PAUSADO | Beta externa/tester real | Bloco iniciado e pacote preparado, mas pausado ate existir tester humano real para receber/executar a beta. |
 | S | FUTURO | Preparacao de lancamento publico | Falta package id final, Play Store, politica de privacidade, App Links, textos oficiais e release publico. |
 | T | FUTURO | Escala, operacao e negocio real | Falta suporte, moderacao, analytics real, backoffice robusto, legal, pagamentos e operacao continua. |
 
@@ -121,6 +123,21 @@ Estado: tecnicamente avancado, mas dependente do Android fisico para fechar de v
 | F7 | FUTURO | Perfil publico premium do prestador |
 
 Estado: parcial. Visual e base existem; confianca/verificacao ainda faltam.
+
+### M2.14 - Perfil, Portfolio e Confianca do Prestador
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.14.1 | ATIVO | Spec perfil, portfolio e confianca do prestador |
+| M2.14.2 | PROXIMO | Auditoria da base atual de perfil/portfolio |
+| M2.14.3 | FUTURO | Melhorar perfil publico do prestador |
+| M2.14.4 | FUTURO | Melhorar gestao do portfolio no perfil do prestador |
+| M2.14.5 | FUTURO | Criar cartao de confianca e badges leves |
+| M2.14.6 | FUTURO | Integrar perfil publico nos pontos principais do fluxo Cliente |
+| M2.14.7 | FUTURO | Testes, QA visual e documentacao |
+
+Estado: M2.14 e o bloco ativo enquanto R fica pausado por falta de tester
+humano e M fica pausado por falta de Android fisico real.
 
 ## Bloco G - Chat e Mensagens
 
@@ -221,7 +238,8 @@ Estado: fechado.
 | M8 | PARCIAL | Permissoes negadas |
 | M9 | FUTURO | Preparacao Play Store |
 
-Estado: parcial/bloqueado por falta de Android fisico.
+Estado: pausado/bloqueado por falta de Android fisico real. Nao fechar M2.6
+sem prova em dispositivo fisico.
 
 ## Bloco N - Web/Windows Beta Tecnica
 
@@ -294,7 +312,11 @@ Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao prep
 | R5 | FUTURO | Corrigir bloqueadores |
 | R6 | FUTURO | Decidir se beta externa passa |
 
-Estado: iniciado. A spec/status da M2.13, a mensagem de entrega, as instrucoes do tester, o template de feedback e a beta solo assistida por Playwright foram preparados/executados. A beta solo tambem gerou correcoes de usabilidade e contraste em dark mode; a entrega real ao tester ainda esta pendente.
+Estado: pausado por dependencia externa. A spec/status da M2.13, a mensagem de
+entrega, as instrucoes do tester, o template de feedback e a beta solo assistida
+por Playwright foram preparados/executados. A beta solo tambem gerou correcoes
+de usabilidade e contraste em dark mode; a entrega real ao tester humano ainda
+esta pendente.
 
 ### Detalhe Atual da M2.13
 
@@ -308,7 +330,9 @@ Estado: iniciado. A spec/status da M2.13, a mensagem de entrega, as instrucoes d
 | M2.13.6 | FECHADO | Correcao de contraste dark mode transversal e resumo financeiro Prestador |
 | M2.13.7 | PROXIMO | Registar envio real e feedback inicial do tester |
 
-Estado: M2.13.6 esta concluida. R1 continua pendente porque nenhum tester humano recebeu/executou a beta. O proximo movimento operacional e M2.13.7.
+Estado: M2.13.6 esta concluida. R1 continua pendente porque nenhum tester
+humano recebeu/executou a beta. M2.13.7 fica preparada como proximo passo de R,
+mas o bloco R esta pausado ate existir tester humano.
 
 ## Bloco S - Lancamento Publico / Play Store
 
@@ -342,25 +366,21 @@ Estado: futuro.
 
 ## Proximo Movimento
 
-O proximo bloco oficial e:
+O proximo bloco ativo e:
 
 ```text
-R - Beta externa / tester real
+F - Perfil, portfolio e identidade do prestador
 ```
 
-Subfases imediatas:
+Fase operacional:
 
 ```text
-R1 - Entregar app ao tester
-R2 - Tester executa roteiro
-R3 - Recolher bugs reais
-R4 - Classificar bugs
-R5 - Corrigir bloqueadores
-R6 - Decidir se beta externa passa
+M2.14.1 - Spec perfil, portfolio e confianca do prestador
 ```
 
-Proxima fase operacional:
+Dependencias pausadas:
 
 ```text
-M2.13.7 - Registar envio real e feedback inicial do tester
+R - Beta externa/tester real: pausado por falta de tester humano
+M - Android release/dispositivo fisico: pausado por falta de Android fisico real
 ```
