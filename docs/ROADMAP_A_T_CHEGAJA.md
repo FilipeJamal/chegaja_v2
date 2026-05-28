@@ -24,7 +24,7 @@ FUTURO: falta/futuro
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
 | F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio, confianca leve e integracao Cliente; faltam KYC, reviews, verificacao oficial e reputacao avancada. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
-| H | FUTURO | Avaliacoes, reputacao e confianca | Falta sistema completo de avaliacoes, reviews, confianca, denuncias e reputacao publica. |
+| H | ATIVO | Avaliacoes, reputacao e confianca | M2.15 iniciada: base de avaliacoes auditada; proximo passo e seguranca/consistencia das Rules e agregados. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
 | J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. Backoffice/admin completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
@@ -159,14 +159,31 @@ Estado: suficiente para beta Web/Windows.
 
 | Subfase | Estado | Descricao |
 | --- | --- | --- |
-| H1 | FUTURO | Cliente avalia prestador |
-| H2 | FUTURO | Prestador recebe reputacao publica |
-| H3 | FUTURO | Comentarios/reviews |
+| H1 | PARCIAL | Cliente avalia prestador; base existe, mas precisa endurecer Rules/testes |
+| H2 | PARCIAL | Prestador recebe agregados ratingCount/ratingSum/ratingAvg; precisa consistencia segura |
+| H3 | PARCIAL | Comentario opcional existe na avaliacao; reviews publicas continuam pendentes |
 | H4 | FUTURO | Denuncias |
 | H5 | FUTURO | Moderacao |
 | H6 | FUTURO | Ranking de confianca |
 
-Estado: falta.
+Estado: ativo via M2.15. A base de avaliacoes existe, mas reputacao publica
+so deve avancar depois de seguranca, consistencia de agregados e privacidade
+ficarem fechadas.
+
+### M2.15 - Avaliacoes e Reputacao Leve Pos-Servico
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.15.1 | FECHADO | Spec e auditoria da base atual de avaliacoes |
+| M2.15.2 | PROXIMO | Rules, seguranca e consistencia de avaliacao |
+| M2.15.3 | FUTURO | UI de avaliacao pos-servico |
+| M2.15.4 | FUTURO | Reputacao leve no perfil publico do prestador |
+| M2.15.5 | FUTURO | Testes, E2E, QA visual e documentacao final |
+
+Estado: M2.15 iniciada sem feature nova. A auditoria confirmou
+`AvaliacaoService`, `AvaliacaoRepo` e `AvaliacaoPedidoCard`, mas tambem
+identificou que agregados de rating precisam de hardening antes de exposicao
+publica no perfil.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -369,17 +386,12 @@ Estado: futuro.
 
 ## Proximo Movimento
 
-A M2.14 foi fechada no escopo atual. O proximo bloco ativo deve ser decidido
-antes de iniciar nova feature.
+A M2.15 e o bloco ativo atual.
 
-Opcoes recomendadas:
+Fase operacional:
 
 ```text
-M2.15 - Avaliacoes e reputacao leve pos-servico
-J/Admin - backoffice leve para gestao interna
-D/Mapa - melhorar localizacao, raio e ETA
-R - retomar quando houver tester humano real
-M - retomar quando houver Android fisico real
+M2.15.2 - Rules, seguranca e consistencia de avaliacao
 ```
 
 Dependencias pausadas:
