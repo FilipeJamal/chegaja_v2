@@ -11,7 +11,8 @@ M2.14.2: auditoria concluida
 M2.14.3: concluida - perfil publico do prestador melhorado
 M2.14.4: concluida - gestao do portfolio no perfil do prestador melhorada
 M2.14.5: concluida - confianca/badges consolidados sem KYC real
-M2.14.6: proximo passo - integrar perfil publico no fluxo Cliente
+M2.14.6: concluida - perfil publico integrado no detalhe do pedido Cliente
+M2.14.7: proximo passo - testes, QA visual e documentacao final
 Bloco F: ativo
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
@@ -191,15 +192,17 @@ lib/features/cliente/selecionar_prestador_screen.dart
 
 lib/features/cliente/favoritos_screen.dart
   abre PublicProfileScreen para prestadores favoritos.
+
+lib/features/cliente/widgets/pedido_contato_section.dart
+  mostra "Ver perfil" no detalhe do pedido Cliente quando ha prestadorId.
 ```
 
 Pontos a auditar nas proximas subfases:
 
 ```text
-detalhe do pedido Cliente quando ha prestador atribuido
 detalhe do pedido Prestador quando precisa ver perfil do Cliente
 PedidoChatPreview ou cards de conversa, se fizer sentido
-cards/listas onde aparece prestador sem atalho para perfil
+cards/listas onde aparece prestador sem atalho direto para perfil
 ```
 
 ## Campos Atuais a Reaproveitar
@@ -393,8 +396,8 @@ M2.14.2 - Auditoria da base atual de perfil/portfolio
 M2.14.3 - Concluida: melhorar perfil publico do prestador
 M2.14.4 - Concluida: melhorar gestao do portfolio no perfil do prestador
 M2.14.5 - Concluida: consolidar confianca/badges sem KYC real
-M2.14.6 - Proximo passo: integrar perfil publico em pontos importantes do fluxo Cliente
-M2.14.7 - Testes, QA visual e documentacao
+M2.14.6 - Concluida: integrar perfil publico em pontos importantes do fluxo Cliente
+M2.14.7 - Proximo passo: testes, QA visual e documentacao
 ```
 
 ## Testes Necessarios
@@ -413,6 +416,8 @@ PrestadorPortfolioManagerSection mostra contador/limite recomendado. Criado em t
 PrestadorPortfolioManagerSection confirma remocao antes de chamar callback. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
 PrestadorPortfolioManagerSection bloqueia upload enquanto carrega. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
 PrestadorPortfolioManagerSection valida dark mode/layout com varias imagens. Criado em test/features/prestador/prestador_perfil_portfolio_test.dart.
+PedidoProviderProfileAction mostra "Ver perfil" apenas quando existe prestador. Criado em test/features/cliente/widgets/pedido_provider_profile_action_test.dart.
+ContatoSection mostra "Ver perfil" no detalhe Cliente quando ha prestadorId. Criado em test/features/cliente/widgets/pedido_provider_profile_action_test.dart.
 ```
 
 ### Regressao Visual

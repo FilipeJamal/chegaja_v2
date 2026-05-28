@@ -22,7 +22,7 @@ FUTURO: falta/futuro
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | ATIVO | Perfil, portfolio e identidade do prestador | M2.14 em execucao: perfil publico, portfolio e confianca leve ja evoluiram; proximo passo e integrar o perfil nos fluxos Cliente. |
+| F | ATIVO | Perfil, portfolio e identidade do prestador | M2.14 em execucao: perfil publico, portfolio, confianca leve e integracao no detalhe Cliente ja evoluiram; proximo passo e QA/documentacao final. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | FUTURO | Avaliacoes, reputacao e confianca | Falta sistema completo de avaliacoes, reviews, confianca, denuncias e reputacao publica. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
@@ -134,8 +134,8 @@ reviews completas, verificacao oficial e integracao em todos os fluxos ainda fal
 | M2.14.3 | FECHADO | Melhorar perfil publico do prestador |
 | M2.14.4 | FECHADO | Melhorar gestao do portfolio no perfil do prestador |
 | M2.14.5 | FECHADO | Consolidar confianca/badges sem KYC real |
-| M2.14.6 | PROXIMO | Integrar perfil publico nos pontos principais do fluxo Cliente |
-| M2.14.7 | FUTURO | Testes, QA visual e documentacao |
+| M2.14.6 | FECHADO | Integrar perfil publico nos pontos principais do fluxo Cliente |
+| M2.14.7 | PROXIMO | Testes, QA visual e documentacao |
 
 Estado: M2.14 e o bloco ativo enquanto R fica pausado por falta de tester
 humano e M fica pausado por falta de Android fisico real.
@@ -376,7 +376,7 @@ F - Perfil, portfolio e identidade do prestador
 Fase operacional:
 
 ```text
-M2.14.6 - Integrar perfil publico nos pontos principais do fluxo Cliente
+M2.14.7 - Testes, QA visual e documentacao final da M2.14
 ```
 
 Dependencias pausadas:

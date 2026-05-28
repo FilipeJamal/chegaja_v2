@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
+import 'package:chegaja_v2/features/common/utils/open_public_profile.dart';
 
 /// Shows the contact information (phone) for the other party in an order.
 class ContatoSection extends StatelessWidget {
@@ -10,6 +11,7 @@ class ContatoSection extends StatelessWidget {
   final bool isCliente;
   final String Function(Map<String, dynamic>) resolvePhone;
   final Future<void> Function(String) onCall;
+  final FirebaseFirestore? firestore;
 
   const ContatoSection({
     super.key,
@@ -17,7 +19,10 @@ class ContatoSection extends StatelessWidget {
     required this.isCliente,
     required this.resolvePhone,
     required this.onCall,
+    this.firestore,
   });
+
+  FirebaseFirestore get _db => firestore ?? FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -30,26 +35,27 @@ class ContatoSection extends StatelessWidget {
     final fallbackCollection = isCliente ? 'users' : null;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection(collection)
-          .doc(otherId)
-          .snapshots(),
+      stream: _db.collection(collection).doc(otherId).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return _buildContactCard(context, phone: '', loading: true);
+          return _buildContactCard(
+            context,
+            phone: '',
+            loading: true,
+            profileUserId: isCliente ? otherId : null,
+          );
         }
         final data = snapshot.data?.data() ?? <String, dynamic>{};
         final primaryPhone = resolvePhone(data);
+        final profileName = _resolveProfileName(data);
+        final profilePhotoUrl = _resolveProfilePhotoUrl(data);
         final shouldFallback =
             primaryPhone.isEmpty && fallbackCollection != null;
 
         if (shouldFallback) {
           return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection(fallbackCollection)
-                .doc(otherId)
-                .snapshots(),
+            stream: _db.collection(fallbackCollection).doc(otherId).snapshots(),
             builder: (context, fallbackSnap) {
               final fallbackData =
                   fallbackSnap.data?.data() ?? <String, dynamic>{};
@@ -57,6 +63,12 @@ class ContatoSection extends StatelessWidget {
               return _buildContactCard(
                 context,
                 phone: fallbackPhone,
+                profileUserId: isCliente ? otherId : null,
+                profileName: profileName.isNotEmpty
+                    ? profileName
+                    : _resolveProfileName(fallbackData),
+                profilePhotoUrl:
+                    profilePhotoUrl ?? _resolveProfilePhotoUrl(fallbackData),
               );
             },
           );
@@ -65,6 +77,9 @@ class ContatoSection extends StatelessWidget {
         return _buildContactCard(
           context,
           phone: primaryPhone,
+          profileUserId: isCliente ? otherId : null,
+          profileName: profileName,
+          profilePhotoUrl: profilePhotoUrl,
         );
       },
     );
@@ -74,6 +89,9 @@ class ContatoSection extends StatelessWidget {
     BuildContext context, {
     required String phone,
     bool loading = false,
+    String? profileUserId,
+    String? profileName,
+    String? profilePhotoUrl,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -126,7 +144,87 @@ class ContatoSection extends StatelessWidget {
             ],
           ),
         ),
+        PedidoProviderProfileAction(
+          prestadorId: profileUserId,
+          onPressed: () => openPublicProfile(
+            context,
+            userId: profileUserId ?? '',
+            role: 'prestador',
+            initialName: profileName,
+            initialPhotoUrl: profilePhotoUrl,
+          ),
+        ),
       ],
     );
   }
+
+  String _resolveProfileName(Map<String, dynamic> data) {
+    return _firstNonEmpty([
+      data['nome'],
+      data['displayName'],
+      data['name'],
+    ]);
+  }
+
+  String? _resolveProfilePhotoUrl(Map<String, dynamic> data) {
+    return _firstValidUrl([
+      data['photoUrl'],
+      data['fotoUrl'],
+      data['avatarUrl'],
+    ]);
+  }
+}
+
+class PedidoProviderProfileAction extends StatelessWidget {
+  final String? prestadorId;
+  final VoidCallback onPressed;
+
+  const PedidoProviderProfileAction({
+    super.key,
+    required this.prestadorId,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final normalizedPrestadorId = prestadorId?.trim() ?? '';
+    if (normalizedPrestadorId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          key: const Key('pedido_provider_profile_action'),
+          onPressed: onPressed,
+          icon: const Icon(Icons.person_outline_rounded, size: 18),
+          label: const Text('Ver perfil'),
+        ),
+      ),
+    );
+  }
+}
+
+String _firstNonEmpty(List<Object?> values) {
+  for (final value in values) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isNotEmpty && text != 'null') {
+      return text;
+    }
+  }
+  return '';
+}
+
+String? _firstValidUrl(List<Object?> values) {
+  for (final value in values) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty || text == 'null') continue;
+    final uri = Uri.tryParse(text);
+    if (uri != null && uri.hasScheme) {
+      return text;
+    }
+  }
+  return null;
 }
