@@ -794,20 +794,57 @@ class _ProfileAvatar extends StatelessWidget {
 
     if (profile.photoUrl == null) return avatar;
 
+    void openPhoto() {
+      MediaViewerScreen.open(
+        context,
+        urls: [profile.photoUrl!],
+        title: 'Foto de perfil',
+      );
+    }
+
     return Tooltip(
       message: 'Ver foto de perfil',
       child: Semantics(
         button: true,
         label: 'Ver foto de perfil',
         child: GestureDetector(
-          onTap: () {
-            MediaViewerScreen.open(
-              context,
-              urls: [profile.photoUrl!],
-              title: 'Foto de perfil',
-            );
-          },
-          child: avatar,
+          behavior: HitTestBehavior.opaque,
+          onTap: openPhoto,
+          child: SizedBox(
+            key: const Key('public_profile_photo_open_button'),
+            width: radius * 2 + 12,
+            height: radius * 2 + 12,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Center(child: avatar),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colorScheme.surface,
+                          width: 2,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.zoom_in_rounded,
+                          color: colorScheme.onPrimary,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

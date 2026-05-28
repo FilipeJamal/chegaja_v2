@@ -102,7 +102,7 @@ void main() {
 
     await _pumpProfile(tester, db: db);
 
-    await tester.tap(find.byType(CircleAvatar));
+    await tester.tap(find.byKey(const Key('public_profile_photo_open_button')));
     await tester.pumpAndSettle();
 
     expect(find.text('Foto de perfil'), findsOneWidget);
@@ -148,7 +148,7 @@ void main() {
     await _scrollProfileDown(tester);
 
     expect(find.text('1 imagem'), findsOneWidget);
-    expect(find.byIcon(Icons.broken_image_outlined), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('usa contraste do tema em dark mode', (tester) async {

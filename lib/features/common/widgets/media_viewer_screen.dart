@@ -62,19 +62,42 @@ class MediaViewerScreen extends StatefulWidget {
 
 class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late final PageController _controller;
+  late final TransformationController _transformationController;
   late int _index;
+  double _scale = 1;
 
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex.clamp(0, widget.urls.length - 1);
     _controller = PageController(initialPage: _index);
+    _transformationController = TransformationController();
   }
 
   @override
   void dispose() {
+    _transformationController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _setScale(double value) {
+    final nextScale = value.clamp(1.0, 4.0).toDouble();
+    setState(() {
+      _scale = nextScale;
+      _transformationController.value = Matrix4.identity()..scale(nextScale);
+    });
+  }
+
+  void _resetZoom() => _setScale(1);
+
+  void _handleInteractionEnd(ScaleEndDetails details) {
+    final nextScale = _transformationController.value
+        .getMaxScaleOnAxis()
+        .clamp(1.0, 4.0)
+        .toDouble();
+    if (nextScale == _scale) return;
+    setState(() => _scale = nextScale);
   }
 
   @override
@@ -103,48 +126,147 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
           ],
         ),
       ),
-      body: PageView.builder(
-        controller: _controller,
-        itemCount: urls.length,
-        onPageChanged: (i) => setState(() => _index = i),
-        itemBuilder: (context, i) {
-          final url = urls[i];
-          final heroTag = widget.heroTagBuilder?.call(url, i);
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: urls.length,
+            onPageChanged: (i) {
+              setState(() => _index = i);
+              _resetZoom();
+            },
+            itemBuilder: (context, i) {
+              final url = urls[i];
+              final heroTag = widget.heroTagBuilder?.call(url, i);
 
-          Widget image = InteractiveViewer(
-            minScale: 0.8,
-            maxScale: 4,
-            child: Center(
-              child: Image.network(
-                url,
-                fit: BoxFit.contain,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const Center(
-                    child: SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(),
+              Widget image = InteractiveViewer(
+                transformationController: _transformationController,
+                minScale: 1,
+                maxScale: 4,
+                onInteractionEnd: _handleInteractionEnd,
+                child: Center(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        color: Colors.white70,
+                        size: 56,
+                      ),
                     ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(
-                    Icons.broken_image,
-                    color: Colors.white70,
-                    size: 56,
                   ),
+                ),
+              );
+
+              if (heroTag != null) {
+                image = Hero(tag: heroTag, child: image);
+              }
+
+              return image;
+            },
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 18,
+            child: SafeArea(
+              child: Center(
+                child: _ZoomControls(
+                  scale: _scale,
+                  onZoomIn: () => _setScale(_scale + 0.25),
+                  onZoomOut: () => _setScale(_scale - 0.25),
+                  onReset: _resetZoom,
                 ),
               ),
             ),
-          );
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-          if (heroTag != null) {
-            image = Hero(tag: heroTag, child: image);
-          }
+class _ZoomControls extends StatelessWidget {
+  const _ZoomControls({
+    required this.scale,
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.onReset,
+  });
 
-          return image;
-        },
+  final double scale;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Tooltip(
+              message: 'Afastar',
+              child: IconButton(
+                onPressed: scale <= 1 ? null : onZoomOut,
+                icon: const Icon(Icons.remove_rounded),
+                color: Colors.white,
+                disabledColor: Colors.white38,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            SizedBox(
+              width: 56,
+              child: Text(
+                '${(scale * 100).round()}%',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Tooltip(
+              message: 'Aproximar',
+              child: IconButton(
+                onPressed: scale >= 4 ? null : onZoomIn,
+                icon: const Icon(Icons.add_rounded),
+                color: Colors.white,
+                disabledColor: Colors.white38,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Tooltip(
+              message: 'Repor zoom',
+              child: IconButton(
+                onPressed: scale == 1 ? null : onReset,
+                icon: const Icon(Icons.fit_screen_rounded),
+                color: Colors.white,
+                disabledColor: Colors.white38,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
