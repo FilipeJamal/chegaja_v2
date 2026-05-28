@@ -6,7 +6,9 @@ Data: 2026-05-28
 
 ```text
 M2.14: bloco ativo
-M2.14.1: spec em execucao/conclusao
+M2.14.1: concluida
+M2.14.2: auditoria concluida
+M2.14.3: proximo passo - melhorar perfil publico do prestador
 Bloco F: ativo
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real

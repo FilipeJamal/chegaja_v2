@@ -128,9 +128,9 @@ Estado: parcial. Visual e base existem; confianca/verificacao ainda faltam.
 
 | Fase | Estado | Descricao |
 | --- | --- | --- |
-| M2.14.1 | ATIVO | Spec perfil, portfolio e confianca do prestador |
-| M2.14.2 | PROXIMO | Auditoria da base atual de perfil/portfolio |
-| M2.14.3 | FUTURO | Melhorar perfil publico do prestador |
+| M2.14.1 | FECHADO | Spec perfil, portfolio e confianca do prestador |
+| M2.14.2 | FECHADO | Auditoria da base atual de perfil/portfolio |
+| M2.14.3 | PROXIMO | Melhorar perfil publico do prestador |
 | M2.14.4 | FUTURO | Melhorar gestao do portfolio no perfil do prestador |
 | M2.14.5 | FUTURO | Criar cartao de confianca e badges leves |
 | M2.14.6 | FUTURO | Integrar perfil publico nos pontos principais do fluxo Cliente |
@@ -305,7 +305,7 @@ Estado: fechado para entrega beta Web/Windows. Os builds e documentos estao prep
 
 | Subfase | Estado | Descricao |
 | --- | --- | --- |
-| R1 | PROXIMO | Entregar app ao tester; pacote, mensagem, instrucoes, feedback template e validacao solo preparados, envio real pendente |
+| R1 | PAUSADO | Entregar app ao tester; pacote, mensagem, instrucoes, feedback template e validacao solo preparados, envio real pendente ate existir tester humano |
 | R2 | FUTURO | Tester real executa roteiro; beta solo Playwright ja validou fluxo tecnico |
 | R3 | FUTURO | Recolher bugs reais |
 | R4 | FUTURO | Classificar bugs |
@@ -375,7 +375,7 @@ F - Perfil, portfolio e identidade do prestador
 Fase operacional:
 
 ```text
-M2.14.1 - Spec perfil, portfolio e confianca do prestador
+M2.14.3 - Melhorar perfil publico do prestador
 ```
 
 Dependencias pausadas:
