@@ -95,6 +95,20 @@ void main() {
     expect(find.text('Perfil ativo'), findsOneWidget);
   });
 
+  testWidgets('foto do perfil abre em ecra inteiro quando existe',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db);
+
+    await _pumpProfile(tester, db: db);
+
+    await tester.tap(find.byType(CircleAvatar));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Foto de perfil'), findsOneWidget);
+    expect(find.text('1 / 1'), findsOneWidget);
+  });
+
   testWidgets('perfil sem portfolio mostra estado vazio', (tester) async {
     final db = FakeFirebaseFirestore();
     await _seedPrestador(db, overrides: {'portfolioUrls': <String>[]});

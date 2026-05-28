@@ -775,7 +775,7 @@ class _ProfileAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: colorScheme.primary.withValues(alpha: 0.14),
       backgroundImage:
@@ -790,6 +790,26 @@ class _ProfileAvatar extends StatelessWidget {
                   ),
             )
           : null,
+    );
+
+    if (profile.photoUrl == null) return avatar;
+
+    return Tooltip(
+      message: 'Ver foto de perfil',
+      child: Semantics(
+        button: true,
+        label: 'Ver foto de perfil',
+        child: GestureDetector(
+          onTap: () {
+            MediaViewerScreen.open(
+              context,
+              urls: [profile.photoUrl!],
+              title: 'Foto de perfil',
+            );
+          },
+          child: avatar,
+        ),
+      ),
     );
   }
 }
