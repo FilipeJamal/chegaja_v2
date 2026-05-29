@@ -8,10 +8,16 @@ class ProviderSearchCard extends StatelessWidget {
     super.key,
     required this.profile,
     required this.onTap,
+    this.isFavorite = false,
+    this.onToggleFavorite,
+    this.favoriteLoading = false,
   });
 
   final ProviderSearchProfile profile;
   final VoidCallback onTap;
+  final bool isFavorite;
+  final VoidCallback? onToggleFavorite;
+  final bool favoriteLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -93,9 +99,43 @@ class ProviderSearchCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.x2),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: colorScheme.onSurfaceVariant,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onToggleFavorite != null)
+                  Tooltip(
+                    message: isFavorite
+                        ? 'Remover dos favoritos'
+                        : 'Adicionar aos favoritos',
+                    child: IconButton(
+                      key: Key(
+                        'provider_search_favorite_button_${profile.id}',
+                      ),
+                      onPressed: favoriteLoading ? null : onToggleFavorite,
+                      icon: favoriteLoading
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colorScheme.primary,
+                              ),
+                            )
+                          : Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isFavorite
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                    ),
+                  ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
             ),
           ],
         ),

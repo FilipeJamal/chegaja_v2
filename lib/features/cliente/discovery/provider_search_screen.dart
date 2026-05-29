@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
+import 'package:chegaja_v2/core/services/favorites_service.dart';
 import 'package:chegaja_v2/features/cliente/discovery/provider_search_matcher.dart';
 import 'package:chegaja_v2/features/cliente/discovery/provider_search_normalizer.dart';
 import 'package:chegaja_v2/features/cliente/discovery/provider_search_profile.dart';
@@ -13,18 +16,28 @@ typedef ProviderSearchOpenCallback = void Function(
   ProviderSearchProfile profile,
 );
 
+typedef ProviderFavoriteToggleCallback = Future<bool> Function(
+  String providerId,
+);
+
 class ProviderSearchScreen extends StatefulWidget {
   const ProviderSearchScreen({
     super.key,
     this.firestore,
     this.profilesStream,
+    this.favoriteIdsStream,
+    this.onToggleFavorite,
     this.onOpenProfile,
+    this.enableFavoriteActions = true,
     this.limit = 80,
   });
 
   final FirebaseFirestore? firestore;
   final Stream<List<ProviderSearchProfile>>? profilesStream;
+  final Stream<List<String>>? favoriteIdsStream;
+  final ProviderFavoriteToggleCallback? onToggleFavorite;
   final ProviderSearchOpenCallback? onOpenProfile;
+  final bool enableFavoriteActions;
   final int limit;
 
   @override
@@ -34,6 +47,8 @@ class ProviderSearchScreen extends StatefulWidget {
 class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
   late final TextEditingController _queryController;
   late final Stream<List<ProviderSearchProfile>> _profilesStream;
+  late final Stream<List<String>> _favoriteIdsStream;
+  final Set<String> _favoriteLoadingIds = <String>{};
   String _query = '';
 
   @override
@@ -41,6 +56,7 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
     super.initState();
     _queryController = TextEditingController();
     _profilesStream = widget.profilesStream ?? _buildFirestoreStream();
+    _favoriteIdsStream = _resolveFavoriteIdsStream();
   }
 
   @override
@@ -127,6 +143,18 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
         );
   }
 
+  Stream<List<String>> _resolveFavoriteIdsStream() {
+    final injectedStream = widget.favoriteIdsStream;
+    if (injectedStream != null) return injectedStream;
+    if (!widget.enableFavoriteActions) return Stream.value(const <String>[]);
+
+    try {
+      return FavoritesService.instance.getFavoritesStream();
+    } catch (_) {
+      return Stream.value(const <String>[]);
+    }
+  }
+
   Widget _buildBody() {
     final normalizedQuery = ProviderSearchNormalizer.normalize(_query);
     if (normalizedQuery.length < 2) {
@@ -152,14 +180,26 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
           return const _ProviderSearchLoadingState();
         }
 
-        final results = _filterAndSort(snapshot.data ?? const []);
-        if (results.isEmpty) {
-          return const ProviderSearchEmptyState(
-            icon: Icons.person_search_rounded,
-            title: 'Nenhum prestador encontrado',
-            message: 'Tenta pesquisar por nome, servico ou cidade.',
-          );
-        }
+        return _buildResults(snapshot.data ?? const []);
+      },
+    );
+  }
+
+  Widget _buildResults(List<ProviderSearchProfile> profiles) {
+    final results = _filterAndSort(profiles);
+    if (results.isEmpty) {
+      return const ProviderSearchEmptyState(
+        icon: Icons.person_search_rounded,
+        title: 'Nenhum prestador encontrado',
+        message: 'Tenta pesquisar por nome, servico ou cidade.',
+      );
+    }
+
+    return StreamBuilder<List<String>>(
+      stream: _favoriteIdsStream,
+      initialData: const <String>[],
+      builder: (context, snapshot) {
+        final favoriteIds = (snapshot.data ?? const <String>[]).toSet();
 
         return ListView.separated(
           itemCount: results.length,
@@ -168,6 +208,11 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
             final profile = results[index];
             return ProviderSearchCard(
               profile: profile,
+              isFavorite: favoriteIds.contains(profile.id),
+              favoriteLoading: _favoriteLoadingIds.contains(profile.id),
+              onToggleFavorite: widget.enableFavoriteActions
+                  ? () => _toggleFavorite(profile)
+                  : null,
               onTap: () => _openProfile(profile),
             );
           },
@@ -208,6 +253,38 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
       initialName: profile.displayName,
       initialPhotoUrl: profile.photoUrl,
     );
+  }
+
+  Future<void> _toggleFavorite(ProviderSearchProfile profile) async {
+    if (_favoriteLoadingIds.contains(profile.id)) return;
+
+    setState(() => _favoriteLoadingIds.add(profile.id));
+    try {
+      final toggle =
+          widget.onToggleFavorite ?? FavoritesService.instance.toggleFavorite;
+      final isFavorite = await toggle(profile.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isFavorite
+                ? 'Adicionado aos favoritos.'
+                : 'Removido dos favoritos.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel atualizar favorito.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _favoriteLoadingIds.remove(profile.id));
+      }
+    }
   }
 
   void _clearQuery() {

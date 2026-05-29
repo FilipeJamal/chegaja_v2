@@ -39,15 +39,21 @@ ProviderSearchProfile _profile({
 Future<void> _pumpScreen(
   WidgetTester tester, {
   Stream<List<ProviderSearchProfile>>? profilesStream,
+  Stream<List<String>>? favoriteIdsStream,
   FakeFirebaseFirestore? firestore,
+  Future<bool> Function(String providerId)? onToggleFavorite,
   ProviderSearchOpenCallback? onOpenProfile,
+  bool enableFavoriteActions = true,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       home: ProviderSearchScreen(
         profilesStream: profilesStream,
+        favoriteIdsStream: favoriteIdsStream,
         firestore: firestore,
+        onToggleFavorite: onToggleFavorite,
         onOpenProfile: onOpenProfile,
+        enableFavoriteActions: enableFavoriteActions,
       ),
     ),
   );
@@ -148,6 +154,89 @@ void main() {
 
     await _typeQuery(tester, 'joao');
     await tester.pump();
+    await tester.tap(find.byKey(const Key('provider_search_card_p1')));
+
+    expect(openedProfile?.id, 'p1');
+  });
+
+  testWidgets('resultado mostra estado favorito correto', (tester) async {
+    await _pumpScreen(
+      tester,
+      profilesStream: Stream.value([
+        _profile(id: 'p1', name: 'Joao Bolos', services: ['Bolos']),
+      ]),
+      favoriteIdsStream: Stream.value(['p1']),
+    );
+
+    await _typeQuery(tester, 'joao');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+  });
+
+  testWidgets('toggle favorito chama callback injetado', (tester) async {
+    String? toggledId;
+
+    await _pumpScreen(
+      tester,
+      profilesStream: Stream.value([
+        _profile(id: 'p1', name: 'Joao Bolos', services: ['Bolos']),
+      ]),
+      favoriteIdsStream: Stream.value(const <String>[]),
+      onToggleFavorite: (providerId) async {
+        toggledId = providerId;
+        return true;
+      },
+    );
+
+    await _typeQuery(tester, 'joao');
+    await tester.pump();
+    await tester
+        .tap(find.byKey(const Key('provider_search_favorite_button_p1')));
+    await tester.pump();
+
+    expect(toggledId, 'p1');
+    expect(find.text('Adicionado aos favoritos.'), findsOneWidget);
+  });
+
+  testWidgets('erro ao favoritar mostra feedback simples', (tester) async {
+    await _pumpScreen(
+      tester,
+      profilesStream: Stream.value([
+        _profile(id: 'p1', name: 'Joao Bolos', services: ['Bolos']),
+      ]),
+      favoriteIdsStream: Stream.value(const <String>[]),
+      onToggleFavorite: (_) async => throw Exception('sem auth'),
+    );
+
+    await _typeQuery(tester, 'joao');
+    await tester.pump();
+    await tester
+        .tap(find.byKey(const Key('provider_search_favorite_button_p1')));
+    await tester.pump();
+
+    expect(find.text('Nao foi possivel atualizar favorito.'), findsOneWidget);
+  });
+
+  testWidgets('card sem favorito continua abrindo perfil', (tester) async {
+    ProviderSearchProfile? openedProfile;
+
+    await _pumpScreen(
+      tester,
+      profilesStream: Stream.value([
+        _profile(id: 'p1', name: 'Joao Bolos', services: ['Bolos']),
+      ]),
+      enableFavoriteActions: false,
+      onOpenProfile: (_, profile) => openedProfile = profile,
+    );
+
+    await _typeQuery(tester, 'joao');
+    await tester.pump();
+
+    expect(find.byKey(const Key('provider_search_favorite_button_p1')),
+        findsNothing);
+
     await tester.tap(find.byKey(const Key('provider_search_card_p1')));
 
     expect(openedProfile?.id, 'p1');

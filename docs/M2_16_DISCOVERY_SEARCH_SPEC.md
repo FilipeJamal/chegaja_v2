@@ -9,7 +9,8 @@ M2.16: iniciada
 M2.16.1: concluida - spec e auditoria da pesquisa manual/discovery
 M2.16.2: concluida - modelo e normalizacao de perfil pesquisavel
 M2.16.3: concluida - UI de pesquisa manual estilo Instagram
-M2.16.4: proximo passo - integracao com perfil publico, favoritos e pedido
+M2.16.4: concluida - integracao com perfil publico, favoritos e pedido
+M2.16.5: proximo passo - sugestoes compactas na Home Cliente
 M2.15: fechada no escopo atual
 Bloco F: parcial
 Bloco H: parcial
@@ -513,9 +514,9 @@ responsividade - base criada com largura maxima.
 M2.16.4:
 
 ```text
-abrir PublicProfileScreen;
-favoritar/desfavoritar;
-iniciar pedido ou selecionar prestador, se aplicavel.
+abrir PublicProfileScreen - preservado;
+favoritar/desfavoritar - coberto;
+pedido direto - adiado com motivo tecnico.
 ```
 
 M2.16.5:
@@ -533,8 +534,8 @@ cards nao mostram dados privados.
 M2.16.1 - Spec e auditoria da pesquisa manual/discovery - concluida
 M2.16.2 - Modelo/normalizacao de perfil pesquisavel - concluida
 M2.16.3 - UI de pesquisa manual estilo Instagram - concluida
-M2.16.4 - Integracao com perfil publico, favoritos e pedido - proximo passo
-M2.16.5 - Sugestoes compactas na Home Cliente
+M2.16.4 - Integracao com perfil publico, favoritos e pedido - concluida
+M2.16.5 - Sugestoes compactas na Home Cliente - proximo passo
 M2.16.6 - Testes, E2E, QA visual e documentacao final
 ```
 
@@ -581,6 +582,34 @@ Proximo passo:
 
 ```text
 M2.16.4 - Integracao com perfil publico, favoritos e pedido
+```
+
+## Fecho da M2.16.4
+
+A M2.16.4 preservou a abertura do `PublicProfileScreen` e integrou favoritos
+diretamente nos cards da pesquisa manual.
+
+Decisoes:
+
+```text
+ProviderSearchCard mostra estado de favorito e bloqueia duplo clique em loading.
+ProviderSearchScreen usa FavoritesService no runtime e injecoes em testes.
+Tap no coracao nao abre perfil por acidente.
+Dados privados continuam fora dos cards.
+Pedido direto foi adiado porque NovoPedidoScreen ainda depende de servico/categoria antes da selecao de prestador.
+Rules, Functions e deploy nao foram alterados.
+```
+
+Ficheiro de status:
+
+```text
+docs/M2_16_4_INTEGRACAO_SEARCH_PERFIL_FAVORITOS_PEDIDO_STATUS.md
+```
+
+Proximo passo:
+
+```text
+M2.16.5 - Sugestoes compactas na Home Cliente
 ```
 
 ## Fora do Escopo da M2.16.1

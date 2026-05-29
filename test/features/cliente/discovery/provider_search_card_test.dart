@@ -30,6 +30,9 @@ Future<void> _pumpCard(
   WidgetTester tester, {
   required ProviderSearchProfile profile,
   VoidCallback? onTap,
+  VoidCallback? onToggleFavorite,
+  bool isFavorite = false,
+  bool favoriteLoading = false,
   ThemeData? theme,
 }) async {
   await tester.pumpWidget(
@@ -39,6 +42,9 @@ Future<void> _pumpCard(
         body: ProviderSearchCard(
           profile: profile,
           onTap: onTap ?? () {},
+          isFavorite: isFavorite,
+          onToggleFavorite: onToggleFavorite,
+          favoriteLoading: favoriteLoading,
         ),
       ),
     ),
@@ -62,6 +68,70 @@ void main() {
 
     expect(find.text('4,8'), findsNothing);
     expect(find.textContaining('avaliacoes'), findsNothing);
+  });
+
+  testWidgets('mostra botao de favorito quando callback existe',
+      (tester) async {
+    await _pumpCard(
+      tester,
+      profile: _profile(),
+      onToggleFavorite: () {},
+    );
+
+    expect(
+      find.byKey(const Key('provider_search_favorite_button_prestador-1')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
+  });
+
+  testWidgets('favorito true mostra icone preenchido', (tester) async {
+    await _pumpCard(
+      tester,
+      profile: _profile(),
+      isFavorite: true,
+      onToggleFavorite: () {},
+    );
+
+    expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border_rounded), findsNothing);
+  });
+
+  testWidgets('tocar no favorito chama callback sem abrir perfil',
+      (tester) async {
+    var favoriteTapped = false;
+    var cardTapped = false;
+
+    await _pumpCard(
+      tester,
+      profile: _profile(),
+      onTap: () => cardTapped = true,
+      onToggleFavorite: () => favoriteTapped = true,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('provider_search_favorite_button_prestador-1')),
+    );
+
+    expect(favoriteTapped, isTrue);
+    expect(cardTapped, isFalse);
+  });
+
+  testWidgets('estado loading bloqueia toggle favorito', (tester) async {
+    var favoriteTaps = 0;
+
+    await _pumpCard(
+      tester,
+      profile: _profile(),
+      favoriteLoading: true,
+      onToggleFavorite: () => favoriteTaps++,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('provider_search_favorite_button_prestador-1')),
+    );
+
+    expect(favoriteTaps, 0);
   });
 
   testWidgets('nao mostra telefone nem email', (tester) async {
