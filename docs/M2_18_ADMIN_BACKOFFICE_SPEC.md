@@ -4,7 +4,7 @@ Data: 2026-05-29
 
 ## Estado
 
-M2.18 iniciada com spec e auditoria.
+M2.18 ativa.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -12,7 +12,8 @@ M2.15 - FECHADA no escopo atual de avaliacoes e reputacao leve
 M2.16 - FECHADA no escopo atual de pesquisa manual/discovery
 M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18.1 - FECHADA com spec e auditoria
-M2.18.2 - PROXIMO passo
+M2.18.2 - FECHADA com reorganizacao de navegacao/secoes
+M2.18.3 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -327,25 +328,79 @@ QA visual admin.
 ## Subfases M2.18
 
 ```text
-M2.18.1 - Spec e auditoria Admin/backoffice leve
-M2.18.2 - Reorganizar navegacao/secoes do AdminPanel
-M2.18.3 - Melhorar dashboard e metricas essenciais
+M2.18.1 - FECHADA - Spec e auditoria Admin/backoffice leve
+M2.18.2 - FECHADA - Reorganizar navegacao/secoes do AdminPanel
+M2.18.3 - PROXIMO - Melhorar dashboard e metricas essenciais
 M2.18.4 - Melhorar filas operacionais: reports, suporte, no-show, stories
 M2.18.5 - Logs/auditoria leve e estados operacionais
 M2.18.6 - Testes, E2E, QA visual e documentacao final
 ```
 
+## Implementacao M2.18.2
+
+A M2.18.2 reorganizou o `AdminPanelScreen` sem criar painel paralelo e sem
+alterar callables admin.
+
+Estrutura criada:
+
+```text
+AdminPanelScreen - carrega dados, callbacks e estados
+AdminPanelContent - navegacao por secoes
+AdminOverviewSection - visao geral
+AdminReportsSection - moderacao e denuncias
+AdminSupportTicketsSection - suporte
+AdminNoShowSection - no-show
+AdminStoriesSection - conteudo/stories
+AdminFinanceLedgerSection - financeiro/ledger
+AdminSectionError/AdminSectionEmptyState - estados comuns
+AdminMetricTile - metricas compactas
+```
+
+Secoes atuais:
+
+```text
+Visao geral
+Moderacao
+Suporte
+No-show
+Conteudo
+Financeiro
+```
+
+Foram mantidos:
+
+```text
+AdminService existente;
+callables admin existentes;
+AdminReportsSection;
+erros e estados vazios por secao;
+refresh geral;
+acoes de suporte, no-show, stories e reports.
+```
+
+Nao entraram:
+
+```text
+novas Functions;
+novas Rules;
+KYC;
+pagamentos;
+roles granulares;
+admin enterprise completo;
+deploy.
+```
+
 ## Proximo Passo
 
 ```text
-M2.18.2 - Reorganizar navegacao/secoes do AdminPanel
+M2.18.3 - Melhorar dashboard e metricas essenciais
 ```
 
 Objetivo recomendado:
 
 ```text
-separar o AdminPanel em secoes/tabs;
-manter os dados e callables existentes;
-nao redesenhar metricas em profundidade ainda;
-preparar componentes testaveis para as fases seguintes.
+melhorar clareza das metricas essenciais;
+documentar significado dos numeros principais;
+manter as secoes criadas na M2.18.2;
+nao criar analytics avancado ou graficos complexos ainda.
 ```

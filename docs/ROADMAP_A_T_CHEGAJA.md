@@ -208,13 +208,14 @@ denuncias, moderacao e ranking continuam fora.
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
-| M2.18 | ATIVO | Admin/backoffice leve para operacao interna; M2.18.1 fechada e M2.18.2 proxima |
+| M2.18 | ATIVO | Admin/backoffice leve para operacao interna; M2.18.2 fechada e M2.18.3 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
 de denuncia/bloqueio, fila admin inicial, filtros de servicos
 proibidos/categorias sensiveis, testes, E2E, build Web e QA visual. M2.18 foi
-iniciada com spec/auditoria do admin/backoffice leve; M2.18.2 e o proximo passo
+iniciada com spec/auditoria do admin/backoffice leve; M2.18.2 reorganizou a
+navegacao/secoes do AdminPanel; M2.18.3 e o proximo passo
 recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
@@ -287,19 +288,20 @@ para fases futuras.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.18.1 | FECHADO | Spec e auditoria do Admin/backoffice leve |
-| M2.18.2 | PROXIMO | Reorganizar navegacao/secoes do AdminPanel |
-| M2.18.3 | FUTURO | Melhorar dashboard e metricas essenciais |
+| M2.18.2 | FECHADO | Reorganizar navegacao/secoes do AdminPanel |
+| M2.18.3 | PROXIMO | Melhorar dashboard e metricas essenciais |
 | M2.18.4 | FUTURO | Melhorar filas operacionais: reports, suporte, no-show, stories |
 | M2.18.5 | FUTURO | Logs/auditoria leve e estados operacionais |
 | M2.18.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.18 |
 
-Estado: M2.18 iniciada. A M2.18.1 auditou o AdminPanel existente, o
+Estado: M2.18 ativa. A M2.18.1 auditou o AdminPanel existente, o
 AdminService, as callables admin, a secao de reports e os testes existentes.
 O admin atual ja cobre dashboard, ops, custos/retencao, suporte, reports,
-no-show, stories e ledger anomalies, mas ainda esta concentrado numa tela unica
-e precisa de navegacao/secoes mais claras antes de crescer. M2.18.2 deve
-reorganizar a navegacao do AdminPanel sem criar admin enterprise, KYC,
-pagamentos, deploy ou roles granulares.
+no-show, stories e ledger anomalies. A M2.18.2 reorganizou o AdminPanel em
+secoes navegaveis: Visao geral, Moderacao, Suporte, No-show, Conteudo e
+Financeiro, preservando callables/AdminService e extraindo widgets testaveis.
+M2.18.3 deve melhorar dashboard e metricas essenciais sem criar admin
+enterprise, KYC, pagamentos, deploy ou roles granulares.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -506,12 +508,12 @@ A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
 fechada no escopo atual de Trust & Safety basico: denuncias, bloqueios, UI,
 fila admin inicial, filtros simples, testes, E2E, build Web e QA visual. A
-M2.18 esta iniciada com spec/auditoria do Admin/backoffice leve.
+M2.18 esta ativa. A M2.18.2 reorganizou a navegacao/secoes do AdminPanel.
 
 Fase operacional:
 
 ```text
-M2.18.2 - Reorganizar navegacao/secoes do AdminPanel
+M2.18.3 - Melhorar dashboard e metricas essenciais
 ```
 
 Dependencias pausadas:

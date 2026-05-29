@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/services/admin_service.dart';
-import 'package:chegaja_v2/features/admin/widgets/admin_reports_section.dart';
+import 'package:chegaja_v2/features/admin/widgets/admin_panel_content.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -35,35 +35,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _loadAll(initial: true);
   }
 
-  int _asInt(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse('${value ?? ''}') ?? 0;
-  }
-
-  double _asDouble(Object? value) {
-    if (value is double) return value;
-    if (value is num) return value.toDouble();
-    return double.tryParse('${value ?? ''}') ?? 0;
-  }
-
-  String _moneyCents(int cents) {
-    final euros = cents / 100.0;
-    return '€ ${euros.toStringAsFixed(2)}';
-  }
-
-  String _formatMs(Object? value) {
-    final ms = _asInt(value);
-    if (ms <= 0) return '-';
-    final dt = DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
-    final y = dt.year.toString().padLeft(4, '0');
-    final m = dt.month.toString().padLeft(2, '0');
-    final d = dt.day.toString().padLeft(2, '0');
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$y-$m-$d $hh:$mm';
-  }
-
   Future<void> _loadAll({bool initial = false}) async {
     if (initial) {
       setState(() {
@@ -91,7 +62,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
       final results = await Future.wait<Object?>([
         guarded(
-            'dashboard', () => AdminService.instance.getDashboardSnapshot()),
+          'dashboard',
+          () => AdminService.instance.getDashboardSnapshot(),
+        ),
         guarded('ops', () => AdminService.instance.getOpsMetrics(days: 30)),
         guarded(
           'cost',
@@ -213,7 +186,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       await _loadAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Decisão de no-show registrada.')),
+        const SnackBar(content: Text('Decisao de no-show registrada.')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -229,75 +202,39 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       await _loadAll();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('História removida com sucesso.')),
+        const SnackBar(content: Text('Historia removida com sucesso.')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Falha ao remover história: $e')),
+        SnackBar(content: Text('Falha ao remover historia: $e')),
       );
     }
   }
 
-  Widget _metricTile({
-    required String label,
-    required String value,
-    IconData? icon,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
+  void _changeTicketFilter(String value) {
+    setState(() => _ticketFilter = value);
+    _loadAll();
+  }
+
+  void _changeReportFilter(String value) {
+    setState(() => _reportFilter = value);
+    _loadAll();
+  }
+
+  void _changeNoShowFilter(String value) {
+    setState(() => _noShowFilter = value);
+    _loadAll();
   }
 
   @override
   Widget build(BuildContext context) {
-    final funnel = (_ops['funnel'] is Map)
-        ? Map<String, dynamic>.from(_ops['funnel'] as Map)
-        : <String, dynamic>{};
-    final noShow = (_ops['noShow'] is Map)
-        ? Map<String, dynamic>.from(_ops['noShow'] as Map)
-        : <String, dynamic>{};
-    final revenue = (_ops['revenue'] is Map)
-        ? Map<String, dynamic>.from(_ops['revenue'] as Map)
-        : <String, dynamic>{};
-    final retention = (_cost['retention'] is Map)
-        ? Map<String, dynamic>.from(_cost['retention'] as Map)
-        : <String, dynamic>{};
-    final acquisition = (_cost['acquisition'] is Map)
-        ? Map<String, dynamic>.from(_cost['acquisition'] as Map)
-        : <String, dynamic>{};
-    final revenueCost = (_cost['revenue'] is Map)
-        ? Map<String, dynamic>.from(_cost['revenue'] as Map)
-        : <String, dynamic>{};
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Backoffice Admin'),
         actions: [
           IconButton(
+            tooltip: 'Atualizar admin',
             onPressed: _refreshing ? null : () => _loadAll(),
             icon: _refreshing
                 ? const SizedBox(
@@ -313,477 +250,27 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadAll,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (_error != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.red.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Text('Erro: $_error'),
-                    ),
-                  ],
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Resumo operacional (7d/30d)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _metricTile(
-                            label: 'Tickets abertos',
-                            value: '${_asInt(_dashboard['openTickets'])}',
-                            icon: Icons.support_agent,
-                          ),
-                          _metricTile(
-                            label: 'No-show pendente',
-                            value: '${_asInt(_dashboard['pendingNoShow'])}',
-                            icon: Icons.report_problem_outlined,
-                          ),
-                          _metricTile(
-                            label: 'Pedidos (30d)',
-                            value: '${_asInt(funnel['created'])}',
-                            icon: Icons.shopping_bag_outlined,
-                          ),
-                          _metricTile(
-                            label: 'Concluídos (30d)',
-                            value: '${_asInt(funnel['completed'])}',
-                            icon: Icons.task_alt_outlined,
-                          ),
-                          _metricTile(
-                            label: 'Receita líquida (30d)',
-                            value: _moneyCents(_asInt(revenue['netCents'])),
-                            icon: Icons.euro_outlined,
-                          ),
-                          _metricTile(
-                            label: 'No-show aprovados (30d)',
-                            value: '${_asInt(noShow['approved'])}',
-                            icon: Icons.gavel_outlined,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  AdminReportsSection(
-                    reports: _reports,
-                    statusFilter: _reportFilter,
-                    error: _sectionErrors['reports'],
-                    onFilterChanged: (value) async {
-                      setState(() => _reportFilter = value);
-                      await _loadAll();
-                    },
-                    onUpdateStatus: _changeReportStatus,
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Custos e retenção',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _metricTile(
-                            label: 'Novos utilizadores (30d)',
-                            value: '${_asInt(acquisition['newUsers30'])}',
-                            icon: Icons.person_add_alt_1_outlined,
-                          ),
-                          _metricTile(
-                            label: 'CAC',
-                            value: _moneyCents(_asInt(acquisition['cacCents'])),
-                            icon: Icons.trending_up_outlined,
-                          ),
-                          _metricTile(
-                            label: 'LTV (estimado)',
-                            value: _moneyCents(_asInt(revenueCost['ltvCents'])),
-                            icon: Icons.query_stats_outlined,
-                          ),
-                          _metricTile(
-                            label: 'Churn (30d)',
-                            value:
-                                '${(_asDouble(retention['churnRate30']) * 100).toStringAsFixed(2)}%',
-                            icon: Icons.trending_down_outlined,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Suporte interno',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              DropdownButton<String>(
-                                value: _ticketFilter,
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'all',
-                                    child: Text('Todos'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'open',
-                                    child: Text('Open'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'in_progress',
-                                    child: Text('In progress'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'resolved',
-                                    child: Text('Resolved'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'closed',
-                                    child: Text('Closed'),
-                                  ),
-                                ],
-                                onChanged: (value) async {
-                                  if (value == null) return;
-                                  setState(() => _ticketFilter = value);
-                                  await _loadAll();
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (_tickets.isEmpty)
-                            const Text('Sem tickets para este filtro.')
-                          else
-                            for (final ticket in _tickets)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outlineVariant,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${ticket['subject'] ?? ''}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${ticket['message'] ?? ''}',
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: [
-                                        Chip(
-                                          label: Text(
-                                            'Status: ${ticket['status'] ?? 'open'}',
-                                          ),
-                                        ),
-                                        Chip(
-                                          label: Text(
-                                            'User: ${ticket['userType'] ?? '-'}',
-                                          ),
-                                        ),
-                                        Chip(
-                                          label: Text(
-                                            _formatMs(ticket['createdAt']),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 8,
-                                      children: [
-                                        for (final status in const [
-                                          'open',
-                                          'in_progress',
-                                          'resolved',
-                                          'closed',
-                                        ])
-                                          OutlinedButton(
-                                            onPressed: () =>
-                                                _changeTicketStatus(
-                                              ticketId: '${ticket['id'] ?? ''}'
-                                                  .trim(),
-                                              status: status,
-                                            ),
-                                            child: Text(status),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Moderação no-show',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              DropdownButton<String>(
-                                value: _noShowFilter,
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'pending',
-                                    child: Text('Pendentes'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'approved',
-                                    child: Text('Aprovados'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'rejected',
-                                    child: Text('Rejeitados'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'all',
-                                    child: Text('Todos'),
-                                  ),
-                                ],
-                                onChanged: (value) async {
-                                  if (value == null) return;
-                                  setState(() => _noShowFilter = value);
-                                  await _loadAll();
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (_noShowCases.isEmpty)
-                            const Text('Sem casos para este filtro.')
-                          else
-                            for (final item in _noShowCases)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outlineVariant,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Pedido ${item['pedidoId'] ?? ''}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text('Título: ${item['titulo'] ?? '-'}'),
-                                    Text(
-                                      'Reportado por: ${item['noShowReportedBy'] ?? '-'}',
-                                    ),
-                                    if ('${item['noShowReason'] ?? ''}'
-                                        .trim()
-                                        .isNotEmpty)
-                                      Text('Motivo: ${item['noShowReason']}'),
-                                    Text(
-                                      'Status: ${item['noShowDecision'] ?? 'pending'}',
-                                    ),
-                                    Text(
-                                      'Atualizado: ${_formatMs(item['updatedAt'])}',
-                                    ),
-                                    if ('${item['noShowDecision'] ?? 'pending'}' ==
-                                        'pending') ...[
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        children: [
-                                          ElevatedButton.icon(
-                                            onPressed: () => _decideNoShow(
-                                              pedidoId:
-                                                  '${item['pedidoId'] ?? ''}',
-                                              decision: 'approved',
-                                            ),
-                                            icon: const Icon(Icons.check),
-                                            label: const Text('Aprovar'),
-                                          ),
-                                          OutlinedButton.icon(
-                                            onPressed: () => _decideNoShow(
-                                              pedidoId:
-                                                  '${item['pedidoId'] ?? ''}',
-                                              decision: 'rejected',
-                                            ),
-                                            icon: const Icon(Icons.close),
-                                            label: const Text('Rejeitar'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Moderação de Histórias',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (_stories.isEmpty)
-                            const Text('Sem histórias ativas.')
-                          else
-                            for (final story in _stories)
-                              ListTile(
-                                leading: Image.network(
-                                  '${story['mediaUrl']}',
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const Icon(Icons.broken_image),
-                                ),
-                                title: Text('${story['prestadorNome']}'),
-                                subtitle: Text(
-                                  '${story['descricao'] ?? ''}\nExpira: ${_formatMs(story['expiresAt'])}',
-                                ),
-                                isThreeLine: true,
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.red),
-                                  onPressed: () =>
-                                      _deleteStory('${story['id']}'),
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Saúde do Ledger (Anomalias)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (_ledgerAnomalies.isEmpty)
-                            const Row(
-                              children: [
-                                Icon(Icons.check_circle, color: Colors.green),
-                                SizedBox(width: 8),
-                                Text('Tudo ok! Nenhuma anomalia detectada.'),
-                              ],
-                            )
-                          else
-                            for (final anom in _ledgerAnomalies)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
-                                  border: Border.all(color: Colors.orange),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'PI: ${anom['paymentIntentId']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12),
-                                    ),
-                                    Text('Pedido: ${anom['pedidoId']}'),
-                                    Text('Valor: ${anom['amount']} cents'),
-                                    Text(
-                                        'Data: ${_formatMs(anom['updatedAt'])}'),
-                                    const Text(
-                                      'Aviso: Pagamento sem entrada no Ledger!',
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              child: AdminPanelContent(
+                dashboard: _dashboard,
+                ops: _ops,
+                cost: _cost,
+                tickets: _tickets,
+                reports: _reports,
+                noShowCases: _noShowCases,
+                stories: _stories,
+                ledgerAnomalies: _ledgerAnomalies,
+                ticketFilter: _ticketFilter,
+                reportFilter: _reportFilter,
+                noShowFilter: _noShowFilter,
+                sectionErrors: _sectionErrors,
+                globalError: _error,
+                onTicketFilterChanged: _changeTicketFilter,
+                onReportFilterChanged: _changeReportFilter,
+                onNoShowFilterChanged: _changeNoShowFilter,
+                onChangeTicketStatus: _changeTicketStatus,
+                onChangeReportStatus: _changeReportStatus,
+                onDecideNoShow: _decideNoShow,
+                onDeleteStory: _deleteStory,
               ),
             ),
     );
