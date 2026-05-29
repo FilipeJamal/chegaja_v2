@@ -8,7 +8,8 @@ Data: 2026-05-29
 M2.16: iniciada
 M2.16.1: concluida - spec e auditoria da pesquisa manual/discovery
 M2.16.2: concluida - modelo e normalizacao de perfil pesquisavel
-M2.16.3: proximo passo - UI de pesquisa manual estilo Instagram
+M2.16.3: concluida - UI de pesquisa manual estilo Instagram
+M2.16.4: proximo passo - integracao com perfil publico, favoritos e pedido
 M2.15: fechada no escopo atual
 Bloco F: parcial
 Bloco H: parcial
@@ -429,7 +430,7 @@ Estado atual:
 
 ```text
 Home Cliente ja tem hero, StoriesCarouselWidget e catalogo de servicos.
-Hero chama PrestadorSearchDelegate.
+Hero abre ProviderSearchScreen desde a M2.16.3.
 Catalogo de servicos tem pesquisa propria e renderizacao limitada.
 Ainda ha muitos cards/categorias quando a lista cresce.
 ```
@@ -500,13 +501,13 @@ matcher e score simples - coberto.
 M2.16.3:
 
 ```text
-busca por nome;
-busca por servico/categoria;
-busca por cidade;
-estado vazio;
-loading/erro;
-dark mode;
-responsividade.
+busca por nome - coberto;
+busca por servico/categoria - coberto;
+busca por cidade - coberto;
+estado vazio - coberto;
+loading/erro - coberto;
+dark mode - coberto no card;
+responsividade - base criada com largura maxima.
 ```
 
 M2.16.4:
@@ -531,8 +532,8 @@ cards nao mostram dados privados.
 ```text
 M2.16.1 - Spec e auditoria da pesquisa manual/discovery - concluida
 M2.16.2 - Modelo/normalizacao de perfil pesquisavel - concluida
-M2.16.3 - UI de pesquisa manual estilo Instagram - proximo passo
-M2.16.4 - Integracao com perfil publico, favoritos e pedido
+M2.16.3 - UI de pesquisa manual estilo Instagram - concluida
+M2.16.4 - Integracao com perfil publico, favoritos e pedido - proximo passo
 M2.16.5 - Sugestoes compactas na Home Cliente
 M2.16.6 - Testes, E2E, QA visual e documentacao final
 ```
@@ -552,6 +553,34 @@ Proximo passo:
 
 ```text
 M2.16.3 - UI de pesquisa manual estilo Instagram
+```
+
+## Fecho da M2.16.3
+
+A M2.16.3 criou `ProviderSearchScreen`, `ProviderSearchCard` e
+`ProviderSearchEmptyState`, usando `prestadores` como fonte inicial e a camada
+`ProviderSearchProfile`/matcher da M2.16.2.
+
+Decisoes:
+
+```text
+Home Cliente abre a nova tela pelo CTA "Pesquisar prestadores".
+PrestadorSearchDelegate antigo foi mantido, mas deixou de ser o CTA principal.
+Search carrega limit 80 de prestadores e filtra client-side nesta primeira versao.
+Resultados abrem PublicProfileScreen via openPublicProfile.
+Dados privados continuam fora dos cards.
+```
+
+Ficheiro de status:
+
+```text
+docs/M2_16_3_UI_PESQUISA_MANUAL_STATUS.md
+```
+
+Proximo passo:
+
+```text
+M2.16.4 - Integracao com perfil publico, favoritos e pedido
 ```
 
 ## Fora do Escopo da M2.16.1

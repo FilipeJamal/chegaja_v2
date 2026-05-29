@@ -99,6 +99,7 @@ class ClienteHomeHero extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.x2),
               AppButton(
+                key: const Key('cliente_home_provider_search_cta'),
                 label: 'Pesquisar prestadores',
                 onPressed: onSearch,
                 leadingIcon: Icons.search_rounded,

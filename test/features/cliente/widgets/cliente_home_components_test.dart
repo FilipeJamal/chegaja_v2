@@ -53,6 +53,30 @@ void main() {
       expect(find.byKey(const Key('cliente_home_primary_cta')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('botao de pesquisa chama callback dedicado', (tester) async {
+      var searched = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ClienteHomeHero(
+              greeting: 'Ola',
+              title: 'Que servico precisas?',
+              subtitle: 'Escolhe um servico e acompanha tudo num unico lugar.',
+              primaryActionLabel: 'Escolher servico',
+              onPrimaryAction: () {},
+              onSearch: () => searched = true,
+            ),
+          ),
+        ),
+      );
+
+      await tester
+          .tap(find.byKey(const Key('cliente_home_provider_search_cta')));
+
+      expect(searched, isTrue);
+    });
   });
 
   group('ClienteServiceTile', () {

@@ -28,7 +28,7 @@ import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
 import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
-import 'package:chegaja_v2/features/cliente/prestador_search_delegate.dart';
+import 'package:chegaja_v2/features/cliente/discovery/provider_search_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 import 'package:chegaja_v2/features/common/widgets/role_mode_switch_tile.dart';
@@ -414,9 +414,10 @@ class _ClienteInicioTab extends StatelessWidget {
         onOpenOrders: onOpenOrders,
         onOpenMessages: onOpenMessages,
         onSearch: () {
-          showSearch(
-            context: context,
-            delegate: PrestadorSearchDelegate(),
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ProviderSearchScreen(),
+            ),
           );
         },
       ),
