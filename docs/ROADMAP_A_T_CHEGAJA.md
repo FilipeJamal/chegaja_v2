@@ -217,8 +217,8 @@ Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16.1 | FECHADO | Spec e auditoria da pesquisa manual/discovery |
-| M2.16.2 | PROXIMO | Modelo e normalizacao de perfil pesquisavel |
-| M2.16.3 | FUTURO | UI de pesquisa manual estilo Instagram |
+| M2.16.2 | FECHADO | Modelo e normalizacao de perfil pesquisavel |
+| M2.16.3 | PROXIMO | UI de pesquisa manual estilo Instagram |
 | M2.16.4 | FUTURO | Integracao com perfil publico, favoritos e pedido |
 | M2.16.5 | FUTURO | Sugestoes compactas na Home Cliente |
 | M2.16.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.16 |
@@ -226,10 +226,10 @@ Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
 Estado: M2.16 em andamento. A auditoria confirmou que
 `PrestadorSearchDelegate` existe, mas esta fragil porque le `users` e nao a
 colecao `prestadores`, onde vivem perfil publico, portfolio, localizacao e
-reputacao leve. A recomendacao e criar em M2.16.2 um modelo/normalizador
-testavel de perfil pesquisavel usando `prestadores` como fonte inicial, com
-whitelist de campos publicos e preparacao futura para `publicProfiles` ou
-`providerSearchIndex`.
+reputacao leve. A M2.16.2 criou `ProviderSearchProfile`,
+`ProviderSearchNormalizer` e `matchesProviderSearch`/`scoreProviderSearch`,
+usando `prestadores` como fonte inicial, whitelist de campos publicos e
+preparacao futura para `publicProfiles` ou `providerSearchIndex`.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -433,12 +433,12 @@ Estado: futuro.
 ## Proximo Movimento
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
-esta iniciada como bloco ativo de discovery/pesquisa manual.
+esta em andamento como bloco ativo de discovery/pesquisa manual.
 
 Fase operacional:
 
 ```text
-M2.16.2 - Modelo e normalizacao de perfil pesquisavel
+M2.16.3 - UI de pesquisa manual estilo Instagram
 ```
 
 Dependencias pausadas:

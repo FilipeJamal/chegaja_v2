@@ -7,7 +7,8 @@ Data: 2026-05-29
 ```text
 M2.16: iniciada
 M2.16.1: concluida - spec e auditoria da pesquisa manual/discovery
-M2.16.2: proximo passo - modelo e normalizacao de perfil pesquisavel
+M2.16.2: concluida - modelo e normalizacao de perfil pesquisavel
+M2.16.3: proximo passo - UI de pesquisa manual estilo Instagram
 M2.15: fechada no escopo atual
 Bloco F: parcial
 Bloco H: parcial
@@ -298,15 +299,17 @@ Nao mostrar localizacao precisa em cards de pesquisa.
 Nao mostrar dados de KYC/moderacao/operacao.
 ```
 
-## Modelo Recomendado para M2.16.2
+## Modelo Implementado na M2.16.2
 
-Criar um modelo leve e testavel, por exemplo:
+A M2.16.2 criou uma camada pura e testavel em:
 
 ```text
-ProviderSearchProfile
+lib/features/cliente/discovery/provider_search_profile.dart
+lib/features/cliente/discovery/provider_search_normalizer.dart
+lib/features/cliente/discovery/provider_search_matcher.dart
 ```
 
-Campos recomendados:
+Modelo:
 
 ```text
 id
@@ -321,20 +324,31 @@ categories
 portfolioPreviewUrls
 ratingAvg
 ratingCount
-radiusKm
-isOnline opcional
-distanceKm opcional
+searchTerms
+latitude/longitude opcionais
+handle opcional/futuro
 ```
 
 Helpers:
 
 ```text
-normalizar texto
+ProviderSearchNormalizer.normalize
+ProviderSearchNormalizer.normalizeTerms
+ProviderSearchProfile.fromPrestadorDoc
+matchesProviderSearch
+scoreProviderSearch
+```
+
+Comportamento implementado:
+
+```text
+normaliza texto
 extrair nome/foto de campos legados
 extrair servicos de servicosNomes/categories/servicos
 validar ratingAvg/ratingCount
 decidir se perfil tem dados minimos
-calcular searchText local
+calcular searchTerms/searchText local
+ignorar campos privados por whitelist
 ```
 
 Campos futuros:
@@ -475,11 +489,12 @@ nao abrir comentarios publicos sem moderacao.
 M2.16.2:
 
 ```text
-normalizacao de texto;
-mapeamento de prestadores para ProviderSearchProfile;
-rating valido/invalido;
-perfil com dados minimos;
-campos privados nao entram no modelo de search.
+normalizacao de texto - coberto;
+mapeamento de prestadores para ProviderSearchProfile - coberto;
+rating valido/invalido - coberto;
+perfil com dados minimos - coberto;
+campos privados nao entram no modelo de search - coberto;
+matcher e score simples - coberto.
 ```
 
 M2.16.3:
@@ -515,11 +530,28 @@ cards nao mostram dados privados.
 
 ```text
 M2.16.1 - Spec e auditoria da pesquisa manual/discovery - concluida
-M2.16.2 - Modelo/normalizacao de perfil pesquisavel - proximo passo
-M2.16.3 - UI de pesquisa manual estilo Instagram
+M2.16.2 - Modelo/normalizacao de perfil pesquisavel - concluida
+M2.16.3 - UI de pesquisa manual estilo Instagram - proximo passo
 M2.16.4 - Integracao com perfil publico, favoritos e pedido
 M2.16.5 - Sugestoes compactas na Home Cliente
 M2.16.6 - Testes, E2E, QA visual e documentacao final
+```
+
+## Fecho da M2.16.2
+
+A M2.16.2 criou o modelo de perfil pesquisavel, normalizador textual e matcher
+de busca sem alterar UI, Rules, Functions ou deploy.
+
+Ficheiro de status:
+
+```text
+docs/M2_16_2_MODELO_PERFIL_PESQUISAVEL_STATUS.md
+```
+
+Proximo passo:
+
+```text
+M2.16.3 - UI de pesquisa manual estilo Instagram
 ```
 
 ## Fora do Escopo da M2.16.1
@@ -546,4 +578,3 @@ fechar M
 fechar R1
 fechar M2.6
 ```
-
