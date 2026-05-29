@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/services/admin_service.dart';
+import 'package:chegaja_v2/features/admin/widgets/admin_reports_section.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -16,12 +17,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Map<String, String> _sectionErrors = <String, String>{};
 
   String _ticketFilter = 'open';
+  String _reportFilter = 'pending_review';
   String _noShowFilter = 'pending';
 
   Map<String, dynamic> _dashboard = <String, dynamic>{};
   Map<String, dynamic> _ops = <String, dynamic>{};
   Map<String, dynamic> _cost = <String, dynamic>{};
   List<Map<String, dynamic>> _tickets = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _reports = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _noShowCases = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _stories = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _ledgerAnomalies = <Map<String, dynamic>>[];
@@ -102,6 +105,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
         ),
         guarded(
+          'reports',
+          () => AdminService.instance.listReports(
+            status: _reportFilter,
+            limit: 60,
+          ),
+        ),
+        guarded(
           'no_show',
           () => AdminService.instance.listNoShowCases(
             decision: _noShowFilter,
@@ -123,11 +133,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         _cost = (results[2] as Map<String, dynamic>?) ?? <String, dynamic>{};
         _tickets = (results[3] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
-        _noShowCases = (results[4] as List<Map<String, dynamic>>?) ??
+        _reports = (results[4] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
-        _stories = (results[5] as List<Map<String, dynamic>>?) ??
+        _noShowCases = (results[5] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
-        _ledgerAnomalies = (results[6] as List<Map<String, dynamic>>?) ??
+        _stories = (results[6] as List<Map<String, dynamic>>?) ??
+            <Map<String, dynamic>>[];
+        _ledgerAnomalies = (results[7] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
         _sectionErrors = sectionErrors;
         _loading = false;
@@ -161,6 +173,30 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Falha ao atualizar ticket: $e')),
+      );
+    }
+  }
+
+  Future<void> _changeReportStatus({
+    required String reportId,
+    required String status,
+    String? decisionReason,
+  }) async {
+    try {
+      await AdminService.instance.updateReportStatus(
+        reportId: reportId,
+        status: status,
+        decisionReason: decisionReason,
+      );
+      await _loadAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Denuncia atualizada.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao atualizar denuncia: $e')),
       );
     }
   }
@@ -341,6 +377,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         ],
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  AdminReportsSection(
+                    reports: _reports,
+                    statusFilter: _reportFilter,
+                    error: _sectionErrors['reports'],
+                    onFilterChanged: (value) async {
+                      setState(() => _reportFilter = value);
+                      await _loadAll();
+                    },
+                    onUpdateStatus: _changeReportStatus,
                   ),
                   const SizedBox(height: 12),
                   Card(

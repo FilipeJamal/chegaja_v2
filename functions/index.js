@@ -1709,6 +1709,135 @@ exports.payments_stripeWebhook = onRequest(
 // 5) Admin Backoffice (K1/K2/K3 + E3/E4)
 // ------------------------------------------------------------
 
+const ADMIN_REPORT_STATUS_FILTERS = new Set([
+  'all',
+  'pending_review',
+  'reviewed',
+  'resolved',
+  'hidden',
+  'rejected',
+  'dismissed',
+  'escalated',
+]);
+
+const ADMIN_REPORT_UPDATE_STATUSES = new Set([
+  'pending_review',
+  'reviewed',
+  'resolved',
+  'hidden',
+  'rejected',
+  'dismissed',
+  'escalated',
+]);
+
+function normalizeAdminReportStatus(value, { allowAll = false } = {}) {
+  const status = String(value || (allowAll ? 'all' : 'pending_review')).trim().toLowerCase();
+  const allowed = allowAll ? ADMIN_REPORT_STATUS_FILTERS : ADMIN_REPORT_UPDATE_STATUSES;
+  if (!allowed.has(status)) {
+    throw new HttpsError('invalid-argument', 'status inválido');
+  }
+  return status;
+}
+
+function serializeAdminReport(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    reporterId: String(data.reporterId || ''),
+    targetType: String(data.targetType || ''),
+    targetId: String(data.targetId || ''),
+    targetOwnerId: String(data.targetOwnerId || ''),
+    reasonCode: String(data.reasonCode || ''),
+    severity: String(data.severity || ''),
+    status: String(data.status || 'pending_review'),
+    details: String(data.details || ''),
+    sourceContext: String(data.sourceContext || ''),
+    pedidoId: String(data.pedidoId || ''),
+    chatId: String(data.chatId || ''),
+    messageId: String(data.messageId || ''),
+    mediaUrl: String(data.mediaUrl || ''),
+    mediaPath: String(data.mediaPath || ''),
+    reviewedBy: String(data.reviewedBy || ''),
+    decisionReason: String(data.decisionReason || ''),
+    createdAt: toMillis(data.createdAt),
+    updatedAt: toMillis(data.updatedAt),
+    reviewedAt: toMillis(data.reviewedAt),
+  };
+}
+
+async function adminListReportsCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+
+  const statusFilter = normalizeAdminReportStatus(data.status || 'pending_review', { allowAll: true });
+  const limitRaw = Number(data.limit || 50);
+  const limit = Math.min(200, Math.max(1, Number.isFinite(limitRaw) ? Math.round(limitRaw) : 50));
+
+  const rawLimit = Math.max(limit * 4, 200);
+  const snap = await database.collection('reports')
+    .orderBy('createdAt', 'desc')
+    .limit(rawLimit)
+    .get();
+
+  const counts = {};
+  const reports = [];
+
+  for (const doc of snap.docs) {
+    const item = serializeAdminReport(doc);
+    const status = item.status || 'pending_review';
+    counts[status] = (counts[status] || 0) + 1;
+    if (statusFilter !== 'all' && status !== statusFilter) continue;
+    reports.push(item);
+    if (reports.length >= limit) break;
+  }
+
+  return {
+    generatedAt: Date.now(),
+    total: reports.length,
+    status: statusFilter,
+    counts,
+    reports,
+  };
+}
+
+async function adminUpdateReportStatusCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+
+  const reportId = String(data.reportId || '').trim();
+  const status = normalizeAdminReportStatus(data.status || 'reviewed');
+  const decisionReasonRaw = String(data.decisionReason || '').trim();
+  const decisionReason = decisionReasonRaw.length > 500
+    ? decisionReasonRaw.slice(0, 500)
+    : decisionReasonRaw;
+
+  if (!reportId) {
+    throw new HttpsError('invalid-argument', 'reportId obrigatório');
+  }
+
+  const ref = database.collection('reports').doc(reportId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Denúncia não encontrada.');
+  }
+
+  const update = {
+    status,
+    updatedAt: FieldValue.serverTimestamp(),
+    reviewedAt: FieldValue.serverTimestamp(),
+    reviewedBy: auth.uid,
+  };
+  if (decisionReason) {
+    update.decisionReason = decisionReason;
+  }
+
+  await ref.set(update, { merge: true });
+
+  return {
+    ok: true,
+    reportId,
+    status,
+  };
+}
+
 exports.admin_getDashboardSnapshot = onCall(
   {
     region: REGION,
@@ -1749,6 +1878,28 @@ exports.admin_getDashboardSnapshot = onCall(
       completedLast7d: completedSnap.size,
     };
   }
+);
+
+exports.admin_listReports = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => adminListReportsCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
+);
+
+exports.admin_updateReportStatus = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => adminUpdateReportStatusCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
 );
 
 exports.admin_updateSupportTicketStatus = onCall(
@@ -2423,5 +2574,9 @@ exports.__test__ = {
     calculatePedidoEconomics,
     confirmarValorFinalPedidoCore,
     proporValorFinalPedidoCore,
+  },
+  admin: {
+    adminListReportsCore,
+    adminUpdateReportStatusCore,
   },
 };

@@ -35,6 +35,10 @@ void main() {
         'pending_review',
       );
       expect(moderationStatusFromFirestore('hidden'), ModerationStatus.hidden);
+      expect(
+        moderationStatusFromFirestore('escalated'),
+        ModerationStatus.escalated,
+      );
       expect(moderationStatusFromFirestore('bad_status'), isNull);
     });
   });

@@ -62,6 +62,31 @@ class AdminService {
     });
   }
 
+  Future<List<Map<String, dynamic>>> listReports({
+    String status = 'pending_review',
+    int limit = 50,
+  }) async {
+    final res = await _callable('admin_listReports').call({
+      'status': status,
+      'limit': limit,
+    });
+    final map = _asMap(res.data);
+    return _asListOfMaps(map['reports']);
+  }
+
+  Future<void> updateReportStatus({
+    required String reportId,
+    required String status,
+    String? decisionReason,
+  }) async {
+    await _callable('admin_updateReportStatus').call({
+      'reportId': reportId,
+      'status': status,
+      if (decisionReason != null && decisionReason.trim().isNotEmpty)
+        'decisionReason': decisionReason.trim(),
+    });
+  }
+
   Future<List<Map<String, dynamic>>> listNoShowCases({
     String decision = 'pending',
     int limit = 50,

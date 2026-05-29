@@ -13,7 +13,8 @@ M2.16 - FECHADA no escopo atual de pesquisa manual e discovery
 M2.17.1 - FECHADA com spec e auditoria
 M2.17.2 - FECHADA com modelo de denuncias, bloqueios e moderacao
 M2.17.3 - FECHADA com UI inicial de denuncia/bloqueio
-M2.17.4 - PROXIMO passo
+M2.17.4 - FECHADA com fila basica de moderacao/admin leve
+M2.17.5 - PROXIMO passo
 ```
 
 Blocos relacionados continuam parciais:
@@ -654,18 +655,44 @@ A fase nao alterou Rules, Storage Rules, Cloud Functions nem deploy. O bloqueio
 fica gravado em `blockedUsers`, mas ainda nao impede mensagens por regra de
 seguranca ou logica de envio; esse enforcement fica para fase posterior.
 
+## Implementacao M2.17.4
+
+```text
+admin_listReports
+admin_updateReportStatus
+AdminService.listReports
+AdminService.updateReportStatus
+AdminReportsSection
+```
+
+A M2.17.4 criou uma fila basica de reports dentro do admin existente. O admin
+consegue listar reports por status e atualizar reports para estados de triagem
+como `reviewed`, `dismissed` e `escalated`. A atualizacao grava `updatedAt`,
+`reviewedAt`, `reviewedBy` e `decisionReason`.
+
+Decisoes mantidas:
+
+```text
+reports sao a fila inicial;
+ModerationCase automatico continua adiado;
+conteudo denunciado nao e ocultado automaticamente;
+bloqueio ainda nao faz enforcement completo no chat;
+admin completo continua fora;
+KYC continua fora;
+deploy continua fora.
+```
+
 ## Proximo Passo
 
 ```text
-M2.17.4 - Fila basica de moderacao/admin leve
+M2.17.5 - Filtros de servicos proibidos e categorias sensiveis
 ```
 
-Objetivo recomendado da M2.17.4:
+Objetivo recomendado da M2.17.5:
 
 ```text
-criar a primeira fila interna de reports;
-permitir leitura/triagem basica por admin/dev;
-preparar moderationCases reais;
-documentar decisoes de aprovacao/rejeicao;
-sem KYC, pagamentos ou admin completo ainda.
+criar filtros simples para termos/servicos proibidos;
+preparar categorias sensiveis;
+impedir que conteudo claramente proibido avance sem analise;
+preservar escopo sem IA pesada, KYC ou banimentos automaticos.
 ```
