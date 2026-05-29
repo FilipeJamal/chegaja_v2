@@ -207,10 +207,11 @@ denuncias, moderacao e ranking continuam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | PROXIMO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
+| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.1 fechada e M2.17.2 proxima |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
-Estado: M2.16 fechada no escopo atual. M2.17 e o proximo passo recomendado.
+Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria
+de Trust & Safety; M2.17.2 e o proximo passo recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -240,6 +241,25 @@ compacta "Prestadores para conhecer" na Home Cliente, usando `prestadores` e
 A M2.16.6 validou discovery/search com testes focados, Flutter completo, build
 Web, E2E dual, E2E orcamento e QA visual. M2.17 passa a ser o proximo passo
 recomendado para Trust & Safety basico antes de expandir discovery publico.
+
+### M2.17 - Trust & Safety, Servicos Proibidos e Moderacao Basica
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.17.1 | FECHADO | Spec e auditoria Trust & Safety, servicos proibidos e moderacao basica |
+| M2.17.2 | PROXIMO | Modelo de denuncias, bloqueios e moderacao |
+| M2.17.3 | FUTURO | UI de denuncia/bloqueio em perfil, chat e portfolio |
+| M2.17.4 | FUTURO | Fila basica de moderacao/admin leve |
+| M2.17.5 | FUTURO | Filtros de servicos proibidos e categorias sensiveis |
+| M2.17.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.17 |
+
+Estado: M2.17 iniciada. A M2.17.1 mapeou superficies de risco em perfil
+publico, discovery, portfolio, stories, chat, avaliacoes, pedidos e suporte;
+definiu servicos proibidos, conteudo proibido, categorias sensiveis, estados de
+moderacao, tipos/motivos de denuncia e modelo futuro de reports, blocks,
+moderationCases e auditLogs. A fase foi documental: nao alterou Dart, Rules,
+Functions nem deploy. M2.17.2 deve criar o modelo minimo e a base de seguranca
+antes de UI de denuncia/bloqueio ou fila admin.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -443,12 +463,13 @@ Estado: futuro.
 ## Proximo Movimento
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
-tambem esta fechada no escopo atual de discovery/pesquisa manual.
+tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 foi
+iniciada com spec/auditoria de Trust & Safety.
 
 Fase operacional:
 
 ```text
-M2.17 - Trust & Safety, servicos proibidos e moderacao basica
+M2.17.2 - Modelo de denuncias, bloqueios e moderacao
 ```
 
 Dependencias pausadas:
