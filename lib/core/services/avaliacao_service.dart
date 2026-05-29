@@ -18,50 +18,19 @@ class AvaliacaoService {
     final String docId = '${pedidoId}_$clienteId';
 
     final avaliacaoRef = _db.collection('avaliacoes').doc(docId);
-    final prestadorRef = _db.collection('prestadores').doc(prestadorId);
+    final avaliacaoSnap = await avaliacaoRef.get();
+    if (avaliacaoSnap.exists) {
+      return;
+    }
 
-    await _db.runTransaction((tx) async {
-      final avaliacaoSnap = await tx.get(avaliacaoRef);
-      if (avaliacaoSnap.exists) {
-        return;
-      }
-
-      tx.set(avaliacaoRef, {
-        'pedidoId': pedidoId,
-        'clienteId': clienteId,
-        'prestadorId': prestadorId,
-        'estrelas': rating,
-        if (comentario != null && comentario.trim().isNotEmpty)
-          'comentario': comentario.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      final prestadorSnap = await tx.get(prestadorRef);
-      final data = prestadorSnap.data() ?? <String, dynamic>{};
-
-      final num countRaw = _parseNum(data['ratingCount']);
-      final num sumRaw = _parseNum(data['ratingSum']);
-
-      final int newCount = countRaw.toInt() + 1;
-      final double newSum = sumRaw.toDouble() + rating.toDouble();
-      final double newAvg = newSum / newCount;
-
-      tx.set(
-        prestadorRef,
-        {
-          'ratingCount': newCount,
-          'ratingSum': newSum,
-          'ratingAvg': newAvg,
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+    await avaliacaoRef.set({
+      'pedidoId': pedidoId,
+      'clienteId': clienteId,
+      'prestadorId': prestadorId,
+      'estrelas': rating,
+      if (comentario != null && comentario.trim().isNotEmpty)
+        'comentario': comentario.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
-  }
-
-  num _parseNum(dynamic value) {
-    if (value is num) return value;
-    if (value is String) return num.tryParse(value) ?? 0;
-    return 0;
   }
 }

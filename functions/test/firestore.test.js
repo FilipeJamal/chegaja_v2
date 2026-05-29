@@ -107,6 +107,31 @@ describe("Firestore Security Rules", () => {
                 })
             );
         });
+
+        it("should deny updates to rating fields by another signed-in user", async () => {
+            const outsider = testEnv.authenticatedContext("outsider");
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context
+                    .firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .set({
+                        name: "Provider",
+                        ratingCount: 10,
+                        ratingSum: 45,
+                        ratingAvg: 4.5,
+                    });
+            });
+
+            await assertFails(
+                outsider.firestore().collection("prestadores").doc("provider1").update({
+                    ratingCount: 999,
+                    ratingSum: 999,
+                    ratingAvg: 5,
+                    updatedAt: serverTimestamp(),
+                })
+            );
+        });
     });
 
     describe("Pedidos Collection", () => {
@@ -134,6 +159,234 @@ describe("Firestore Security Rules", () => {
                 });
             });
         }
+
+        function avaliacaoPayload(overrides = {}) {
+            return {
+                pedidoId: "order_review_done",
+                clienteId: "client1",
+                prestadorId: "provider1",
+                estrelas: 5,
+                comentario: "Servico bem feito",
+                createdAt: serverTimestamp(),
+                ...overrides,
+            };
+        }
+
+        async function seedCompletedPedido(id = "order_review_done", data = {}) {
+            await seedProvider("provider1");
+            await seedPedido(id, {
+                clienteId: "client1",
+                status: "concluido",
+                estado: "concluido",
+                prestadorId: "provider1",
+                ...data,
+            });
+        }
+
+        describe("Avaliacoes Collection", () => {
+            it("should allow owner client to create a review for a completed order with the expected doc id", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertSucceeds(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload())
+                );
+            });
+
+            it("should deny review creation when order is not completed", async () => {
+                await seedProvider("provider1");
+                await seedPedido("order_review_open", {
+                    clienteId: "client1",
+                    status: "aceito",
+                    estado: "aceito",
+                    prestadorId: "provider1",
+                });
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_open_client1")
+                        .set(avaliacaoPayload({
+                            pedidoId: "order_review_open",
+                        }))
+                );
+            });
+
+            it("should deny another client reviewing someone else's order", async () => {
+                await seedCompletedPedido();
+                const otherClient = testEnv.authenticatedContext("client2");
+
+                await assertFails(
+                    otherClient.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client2")
+                        .set(avaliacaoPayload({
+                            clienteId: "client2",
+                        }))
+                );
+            });
+
+            it("should deny provider reviewing their own completed order as client", async () => {
+                await seedCompletedPedido();
+                const provider = testEnv.authenticatedContext("provider1");
+
+                await assertFails(
+                    provider.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_provider1")
+                        .set(avaliacaoPayload({
+                            clienteId: "provider1",
+                        }))
+                );
+            });
+
+            it("should deny unauthenticated review creation", async () => {
+                await seedCompletedPedido();
+                const unauth = testEnv.unauthenticatedContext();
+
+                await assertFails(
+                    unauth.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload())
+                );
+            });
+
+            it("should deny rating below one", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ estrelas: 0 }))
+                );
+            });
+
+            it("should deny rating above five", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ estrelas: 6 }))
+                );
+            });
+
+            it("should deny non-string comments", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ comentario: 123 }))
+                );
+            });
+
+            it("should deny comments that are too long", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ comentario: "x".repeat(501) }))
+                );
+            });
+
+            it("should deny extra fields in reviews", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ moderationStatus: "approved" }))
+                );
+            });
+
+            it("should deny reviews with a client-controlled createdAt", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ createdAt: new Date("2026-05-01T12:00:00Z") }))
+                );
+            });
+
+            it("should deny review creation with wrong document id", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("wrong_doc")
+                        .set(avaliacaoPayload())
+                );
+            });
+
+            it("should deny duplicate review using another document id", async () => {
+                await seedCompletedPedido();
+                await testEnv.withSecurityRulesDisabled(async (context) => {
+                    await context.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({
+                            createdAt: new Date(),
+                        }));
+                });
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1_copy")
+                        .set(avaliacaoPayload())
+                );
+            });
+
+            it("should deny reviewing a different provider than the assigned provider", async () => {
+                await seedProvider("provider2");
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore()
+                        .collection("avaliacoes")
+                        .doc("order_review_done_client1")
+                        .set(avaliacaoPayload({ prestadorId: "provider2" }))
+                );
+            });
+
+            it("should deny client directly changing provider rating aggregates", async () => {
+                await seedCompletedPedido();
+                const client = testEnv.authenticatedContext("client1");
+
+                await assertFails(
+                    client.firestore().collection("prestadores").doc("provider1").update({
+                        ratingCount: 99,
+                        ratingSum: 495,
+                        ratingAvg: 5,
+                        updatedAt: serverTimestamp(),
+                    })
+                );
+            });
+        });
 
         function manualInviteAcceptPatch(providerId, overrides = {}) {
             return {

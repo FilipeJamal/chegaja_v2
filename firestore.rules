@@ -104,6 +104,50 @@ service cloud.firestore {
           : (data.keys().hasAny(['estado']) ? data['estado'] : null));
     }
 
+    function validAvaliacaoComentario(data) {
+      return !data.keys().hasAny(['comentario']) ||
+        (data['comentario'] is string && data['comentario'].size() <= 500);
+    }
+
+    function validAvaliacaoCreate(avaliacaoId) {
+      let data = request.resource.data;
+      let pedido = pedidoSnap(data['pedidoId']).data;
+      return signedIn()
+        && data.keys().hasOnly([
+          'pedidoId',
+          'clienteId',
+          'prestadorId',
+          'estrelas',
+          'comentario',
+          'createdAt',
+        ])
+        && data.keys().hasAll([
+          'pedidoId',
+          'clienteId',
+          'prestadorId',
+          'estrelas',
+          'createdAt',
+        ])
+        && data['pedidoId'] is string
+        && data['pedidoId'].size() > 0
+        && data['clienteId'] is string
+        && data['clienteId'] == uid()
+        && avaliacaoId == data['pedidoId'] + '_' + uid()
+        && data['prestadorId'] is string
+        && data['prestadorId'].size() > 0
+        && data['estrelas'] is int
+        && data['estrelas'] >= 1
+        && data['estrelas'] <= 5
+        && validAvaliacaoComentario(data)
+        && data['createdAt'] is timestamp
+        && data['createdAt'] == request.time
+        && pedido is map
+        && clienteIdFromData(pedido) == uid()
+        && pedidoEstado(pedido) == 'concluido'
+        && pedido.keys().hasAny(['prestadorId'])
+        && pedido['prestadorId'] == data['prestadorId'];
+    }
+
     function isValidPedidoEstadoValue(value) {
       return value is string
         && value in [
@@ -722,19 +766,13 @@ service cloud.firestore {
       allow create: if isSelf(prestadorId) || isAdmin();
       
       // Owner can update own profile, but cannot self-edit rating aggregates.
-      // Rating aggregates are allowed only for other signed-in users (or backend/admin).
+      // Rating aggregates are updated by trusted backend/admin only.
       allow update: if isAdmin()
         || (
           isSelf(prestadorId)
           && request.resource.data.diff(resource.data).affectedKeys()
             .difference(['ratingCount', 'ratingSum', 'ratingAvg'].toSet()).size()
             == request.resource.data.diff(resource.data).affectedKeys().size()
-        )
-        || (
-          signedIn()
-          && uid() != prestadorId
-          && request.resource.data.diff(resource.data).affectedKeys()
-             .difference(['ratingCount', 'ratingSum', 'ratingAvg', 'updatedAt'].toSet()).size() == 0
         );
 
       allow delete: if isAdmin() || devMode();
@@ -747,20 +785,7 @@ service cloud.firestore {
       allow read: if isPedidoParticipantById(resource.data['pedidoId'])
         || isAdmin();
 
-      allow create: if signedIn()
-        && request.resource.data['pedidoId'] is string
-        && clienteIdFromData(request.resource.data) == uid()
-        && request.resource.data['prestadorId'] is string
-        && request.resource.data['estrelas'] is int
-        && request.resource.data['estrelas'] >= 1
-        && request.resource.data['estrelas'] <= 5
-        && isPedidoParticipantById(request.resource.data['pedidoId'])
-        && (
-          pedidoSnap(request.resource.data['pedidoId']).data['estado'] == 'concluido' ||
-          pedidoSnap(request.resource.data['pedidoId']).data['status'] == 'concluido'
-        )
-        && pedidoSnap(request.resource.data['pedidoId']).data['prestadorId']
-          == request.resource.data['prestadorId'];
+      allow create: if validAvaliacaoCreate(avaliacaoId);
 
       allow update, delete: if isAdmin() || devMode();
     }

@@ -166,6 +166,112 @@ function getPedidoEstado(data) {
   return String(data.status || data.estado || '').trim();
 }
 
+function normalizeAvaliacaoRating(value) {
+  if (!Number.isInteger(value)) return null;
+  if (value < 1 || value > 5) return null;
+  return value;
+}
+
+function calculateAvaliacaoRatingAggregates(currentData, estrelas) {
+  const currentCount = Number(currentData?.ratingCount || 0);
+  const currentSum = Number(currentData?.ratingSum || 0);
+  const safeCount = Number.isFinite(currentCount) && currentCount > 0
+    ? Math.floor(currentCount)
+    : 0;
+  const safeSum = Number.isFinite(currentSum) && currentSum > 0 ? currentSum : 0;
+  const rating = normalizeAvaliacaoRating(estrelas);
+  if (rating === null) {
+    return null;
+  }
+  const ratingCount = safeCount + 1;
+  const ratingSum = safeSum + rating;
+  const ratingAvg = ratingSum / ratingCount;
+  return { ratingCount, ratingSum, ratingAvg };
+}
+
+async function onAvaliacaoCreatedCore({ database = db, avaliacaoId, avaliacao }) {
+  const pedidoId = cleanString(avaliacao?.pedidoId);
+  const clienteId = cleanString(avaliacao?.clienteId);
+  const prestadorId = cleanString(avaliacao?.prestadorId);
+  const estrelas = normalizeAvaliacaoRating(avaliacao?.estrelas);
+
+  if (!pedidoId || !clienteId || !prestadorId || estrelas === null) {
+    logger.warn('[onAvaliacaoCreated] Avaliacao ignorada por dados invalidos.', {
+      avaliacaoId,
+      pedidoId: maskIdentifier(pedidoId),
+      clienteId: maskIdentifier(clienteId),
+      prestadorId: maskIdentifier(prestadorId),
+    });
+    return { updated: false, reason: 'invalid-review-data' };
+  }
+
+  const expectedId = `${pedidoId}_${clienteId}`;
+  if (avaliacaoId !== expectedId) {
+    logger.warn('[onAvaliacaoCreated] Avaliacao ignorada por docId invalido.', {
+      avaliacaoId,
+      expectedId,
+    });
+    return { updated: false, reason: 'invalid-review-id' };
+  }
+
+  const pedidoRef = database.collection('pedidos').doc(pedidoId);
+  const prestadorRef = database.collection('prestadores').doc(prestadorId);
+
+  return database.runTransaction(async (tx) => {
+    const pedidoSnap = await tx.get(pedidoRef);
+    if (!pedidoSnap.exists) {
+      logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: pedido inexistente.', {
+        avaliacaoId,
+        pedidoId: maskIdentifier(pedidoId),
+      });
+      return { updated: false, reason: 'missing-order' };
+    }
+
+    const pedido = pedidoSnap.data() || {};
+    if (
+      getClienteId(pedido) !== clienteId ||
+      cleanString(pedido.prestadorId) !== prestadorId ||
+      getPedidoEstado(pedido) !== 'concluido'
+    ) {
+      logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: pedido nao corresponde.', {
+        avaliacaoId,
+        pedidoId: maskIdentifier(pedidoId),
+      });
+      return { updated: false, reason: 'order-mismatch' };
+    }
+
+    const prestadorSnap = await tx.get(prestadorRef);
+    if (!prestadorSnap.exists) {
+      logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: prestador inexistente.', {
+        avaliacaoId,
+        prestadorId: maskIdentifier(prestadorId),
+      });
+      return { updated: false, reason: 'missing-provider' };
+    }
+
+    const aggregates = calculateAvaliacaoRatingAggregates(
+      prestadorSnap.data() || {},
+      estrelas,
+    );
+    if (!aggregates) {
+      return { updated: false, reason: 'invalid-rating' };
+    }
+
+    tx.set(
+      prestadorRef,
+      {
+        ratingCount: aggregates.ratingCount,
+        ratingSum: aggregates.ratingSum,
+        ratingAvg: aggregates.ratingAvg,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return { updated: true, ...aggregates };
+  });
+}
+
 function cleanString(value) {
   return (value || '').toString().trim();
 }
@@ -517,6 +623,27 @@ exports.onChatMessageCreated = onDocumentCreated(
     });
 
     logger.info(`[chat] push enviado pedido=${pedidoId} msg=${messageId} -> ${recipientId}`);
+  }
+);
+
+// ------------------------------------------------------------
+// 1.1) AVALIACOES -> agregados autoritativos do prestador
+// ------------------------------------------------------------
+
+exports.onAvaliacaoCreated = onDocumentCreated(
+  {
+    region: REGION,
+    document: 'avaliacoes/{avaliacaoId}',
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
+    await onAvaliacaoCreatedCore({
+      database: db,
+      avaliacaoId: event.params.avaliacaoId,
+      avaliacao: snap.data() || {},
+    });
   }
 );
 
@@ -2288,6 +2415,10 @@ exports.scheduled_expireRequests = onSchedule(
 
 exports.__test__ = {
   db,
+  avaliacoes: {
+    calculateAvaliacaoRatingAggregates,
+    onAvaliacaoCreatedCore,
+  },
   pedidos: {
     calculatePedidoEconomics,
     confirmarValorFinalPedidoCore,

@@ -7,7 +7,8 @@ Data: 2026-05-28
 ```text
 M2.15: iniciada
 M2.15.1: concluida - spec e auditoria da base atual
-M2.15.2: proximo passo - Rules, seguranca e consistencia das avaliacoes
+M2.15.2: concluida - Rules, Function autoritativa e consistencia das avaliacoes
+M2.15.3: proximo passo - UI de avaliacao pos-servico
 Bloco H: ativo
 Bloco F: parcial
 Bloco R: pausado por falta de tester humano real
@@ -50,18 +51,17 @@ Estado atual:
 Existe AvaliacaoService.instance.enviarAvaliacao.
 Grava em avaliacoes/{pedidoId}_{clienteId}.
 Campos gravados: pedidoId, clienteId, prestadorId, estrelas, comentario opcional, createdAt.
-Usa FirebaseFirestore.runTransaction.
+Cria apenas o documento de avaliacao.
 Se a avaliacao ja existe, retorna sem duplicar no mesmo docId.
-Atualiza prestadores/{prestadorId} com ratingCount, ratingSum, ratingAvg e updatedAt.
-Faz parse defensivo de ratingCount/ratingSum.
+Nao atualiza agregados do prestador pelo cliente.
+A atualizacao de ratingCount/ratingSum/ratingAvg ficou autoritativa em Cloud Function.
 ```
 
 Riscos:
 
 ```text
 O service depende das Rules para garantir que o pedido esta concluido.
-O service atualiza agregados diretamente do cliente.
-Se as Rules de agregados estiverem abertas demais, um utilizador assinado pode manipular rating.
+O service depende da Function onCreate para atualizar agregados.
 O retorno silencioso quando a avaliacao ja existe evita duplicacao no docId esperado, mas nao informa a UI.
 ```
 
@@ -179,13 +179,15 @@ Ficheiro:
 firestore.rules
 ```
 
-Regra atual:
+Regra atual apos M2.15.2:
 
 ```text
 read: participante do pedido ou admin
-create: signedIn, pedidoId string, clienteId == auth.uid, prestadorId string,
-        estrelas int entre 1 e 5, participante do pedido, pedido concluido,
-        prestadorId igual ao pedido
+create: signedIn, docId == {pedidoId}_{clienteId}, clienteId == auth.uid,
+        pedido existente, cliente dono do pedido, pedido concluido,
+        prestadorId igual ao pedido, estrelas int 1..5,
+        comentario opcional string <= 500, createdAt == request.time,
+        campos extras bloqueados
 update/delete: admin ou devMode
 ```
 
@@ -197,17 +199,19 @@ Pedido precisa estar concluido.
 Prestador avaliado precisa ser o prestador do pedido.
 Prestador nao pode editar/deletar avaliacao.
 Rating fora de 1..5 e bloqueado.
+DocId errado e campos extras sao bloqueados.
+Comentario e createdAt sao validados.
 ```
 
-Riscos a corrigir/testar em M2.15.2:
+Riscos corrigidos em M2.15.2:
 
 ```text
-Nao ha hasOnly/whitelist de campos.
-Nao ha validacao de tipo/tamanho de comentario.
-Nao ha exigencia de createdAt como timestamp/server timestamp.
-Nao ha regra ligando avaliacaoId ao formato {pedidoId}_{clienteId}.
-Um cliente pode tentar criar outra avaliacao para o mesmo pedido em docId diferente.
-Nao ha testes de Rules para avaliacoes.
+hasOnly/whitelist de campos adicionada.
+Comentario validado.
+createdAt validado como server timestamp/request.time.
+avaliacaoId ligado ao formato {pedidoId}_{clienteId}.
+Tentativa de duplicar avaliacao por docId diferente bloqueada.
+Testes de Rules adicionados.
 ```
 
 ### Agregados em prestadores
@@ -218,29 +222,29 @@ Ficheiro:
 firestore.rules
 ```
 
-Regra atual:
+Regra atual apos M2.15.2:
 
 ```text
 O proprio prestador nao pode alterar ratingCount/ratingSum/ratingAvg.
-Qualquer signedIn com uid != prestadorId pode alterar apenas ratingCount,
-ratingSum, ratingAvg e updatedAt.
+Clientes, prestadores e outros utilizadores comuns nao podem alterar
+ratingCount, ratingSum ou ratingAvg.
+Admin SDK/Cloud Function atualiza os agregados de forma autoritativa.
 ```
 
-Risco principal:
+Risco corrigido:
 
 ```text
-Esta regra permite que qualquer utilizador autenticado que nao seja o proprio
-prestador manipule os agregados de rating de qualquer prestador. A protecao
-contra self-boost existe, mas a consistencia dos agregados nao esta garantida.
+Foi removida a superficie que permitia a qualquer utilizador autenticado
+nao-prestador manipular agregados de rating.
 ```
 
 Decisao:
 
 ```text
-M2.15.2 deve corrigir isto antes de expor reputacao publica no perfil.
+M2.15.2 escolheu Cloud Function autoritativa para agregados.
 ```
 
-Opcoes para M2.15.2:
+Opcoes consideradas em M2.15.2:
 
 ```text
 A. Manter transacao cliente-side, mas endurecer Rules com docId esperado,
@@ -251,11 +255,11 @@ C. Como passo intermedio, permitir create de avaliacao e manter apenas leitura
    de agregados existentes, sem expor comentarios publicos ate a seguranca estar fechada.
 ```
 
-Preferencia inicial:
+Resultado:
 
 ```text
-Primeiro tentar A com teste RED, se as Rules conseguirem validar de forma
-simples e robusta. Se ficar fragil, escolher B.
+Apos testes RED, a opcao B foi implementada: cliente cria avaliacao,
+Function onCreate atualiza agregados e Rules bloqueiam escrita direta.
 ```
 
 ### firestore.rules.local
@@ -263,15 +267,15 @@ simples e robusta. Se ficar fragil, escolher B.
 Estado atual:
 
 ```text
-firestore.rules.local tem regra de prestadores mais permissiva/simplificada
-para owner/admin e nao replica exatamente a regra de agregados de firestore.rules.
+firestore.rules.local foi alinhado para bloquear escrita direta dos agregados
+ratingCount/ratingSum/ratingAvg por owner/prestador comum.
 ```
 
 Risco:
 
 ```text
-Pode haver divergencia entre validacao local e regra principal em fluxos de avaliacao.
-M2.15.2 deve decidir se sincroniza ou documenta claramente essa diferenca.
+Permanece como ficheiro local/dev, mas a regra de avaliacoes e agregados foi
+sincronizada com a decisao de M2.15.2.
 ```
 
 ## Reputacao no Perfil Publico
@@ -329,7 +333,7 @@ Pedido nao concluido: nao pode avaliar.
 Pedido concluido sem avaliacao: Cliente ve formulario.
 Pedido concluido ja avaliado: Cliente ve resumo.
 Prestador sem avaliacoes: perfil publico mostra estado neutro.
-Prestador com avaliacoes: perfil publico pode mostrar media e contagem, apos M2.15.2.
+Prestador com avaliacoes: perfil publico pode mostrar media e contagem apenas em M2.15.4.
 Erro de envio: mensagem clara.
 Sem estrelas selecionadas: pedir selecao.
 Prestador/outsider: nao avalia como Cliente.
@@ -347,6 +351,8 @@ prestador nao consegue avaliar como cliente
 nao autenticado nao consegue avaliar
 rating 0/6 falha
 comentario nao-string falha
+comentario longo falha
+createdAt controlado pelo cliente falha
 campos extras falham
 docId errado falha
 cliente nao consegue duplicar avaliacao em outro docId
@@ -381,8 +387,8 @@ Perfil publico mostra reputacao leve quando permitido.
 
 ```text
 M2.15.1 - Spec e auditoria da base atual de avaliacoes
-M2.15.2 - Rules, seguranca e consistencia de avaliacao
-M2.15.3 - UI de avaliacao pos-servico
+M2.15.2 - Rules, seguranca e consistencia de avaliacao - concluida
+M2.15.3 - UI de avaliacao pos-servico - proximo passo
 M2.15.4 - Reputacao leve no perfil publico do prestador
 M2.15.5 - Testes, E2E, QA visual e documentacao final
 ```
