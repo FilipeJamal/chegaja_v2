@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
@@ -98,6 +99,10 @@ class PublicProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      if (_isPrestador) ...[
+                        _ReputationCard(profile: profile),
+                        const SizedBox(height: 16),
+                      ],
                       _ProfileSection(
                         title: 'Area atendida',
                         icon: Icons.location_on_outlined,
@@ -153,6 +158,8 @@ class _PublicProfileData {
     required this.services,
     required this.portfolio,
     required this.radiusKm,
+    required this.ratingAvg,
+    required this.ratingCount,
     required this.isPrestador,
   });
 
@@ -166,6 +173,8 @@ class _PublicProfileData {
   final List<String> services;
   final List<String> portfolio;
   final double? radiusKm;
+  final double? ratingAvg;
+  final int? ratingCount;
   final bool isPrestador;
 
   factory _PublicProfileData.fromMap(
@@ -212,6 +221,8 @@ class _PublicProfileData {
       services: _stringList(data['servicosNomes']),
       portfolio: portfolio,
       radiusKm: _numToDouble(data['radiusKm']),
+      ratingAvg: _numToDouble(data['ratingAvg']),
+      ratingCount: _numToInt(data['ratingCount']),
       isPrestador: isPrestador,
     );
   }
@@ -236,6 +247,17 @@ class _PublicProfileData {
           services.isNotEmpty ||
           hasLocation ||
           hasPortfolio);
+
+  bool get hasValidReputation {
+    final avg = ratingAvg;
+    final count = ratingCount;
+    return isPrestador &&
+        avg != null &&
+        count != null &&
+        count > 0 &&
+        avg >= 1 &&
+        avg <= 5;
+  }
 
   String get locationLabel {
     final parts = [city, state, country].where((e) => e.trim().isNotEmpty);
@@ -436,6 +458,127 @@ class _TrustBadgeData {
 
   final String label;
   final IconData icon;
+}
+
+class _ReputationCard extends StatelessWidget {
+  const _ReputationCard({required this.profile});
+
+  final _PublicProfileData profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(context),
+      child: profile.hasValidReputation
+          ? _ReputationSummary(
+              ratingAvg: profile.ratingAvg!,
+              ratingCount: profile.ratingCount!,
+              localeName: l10n.localeName,
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.star_outline_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ainda sem avaliacoes publicas',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Quando clientes concluirem servicos e avaliarem, a media aparecera aqui.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _ReputationSummary extends StatelessWidget {
+  const _ReputationSummary({
+    required this.ratingAvg,
+    required this.ratingCount,
+    required this.localeName,
+  });
+
+  final double ratingAvg;
+  final int ratingCount;
+  final String localeName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final ratingLabel = NumberFormat('0.0', localeName).format(ratingAvg);
+    final countLabel = ratingCount == 1
+        ? 'Baseado em 1 avaliacao'
+        : 'Baseado em $ratingCount avaliacoes';
+
+    return Semantics(
+      label: 'Avaliacao media $ratingLabel de 5. $countLabel.',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.star_rounded,
+            color: colorScheme.tertiary,
+            size: 32,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Avaliacao media',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$ratingLabel de 5',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  countLabel,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ProfileSection extends StatelessWidget {
@@ -949,5 +1092,10 @@ bool _isValidUrl(String value) {
 
 double? _numToDouble(Object? value) {
   if (value is num) return value.toDouble();
+  return null;
+}
+
+int? _numToInt(Object? value) {
+  if (value is num) return value.toInt();
   return null;
 }

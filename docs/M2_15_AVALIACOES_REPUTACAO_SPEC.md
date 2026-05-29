@@ -9,7 +9,8 @@ M2.15: iniciada
 M2.15.1: concluida - spec e auditoria da base atual
 M2.15.2: concluida - Rules, Function autoritativa e consistencia das avaliacoes
 M2.15.3: concluida - UI de avaliacao pos-servico
-M2.15.4: proximo passo - reputacao leve no perfil publico do prestador
+M2.15.4: concluida - reputacao leve no perfil publico do prestador
+M2.15.5: proximo passo - testes, E2E, QA visual e documentacao final
 Bloco H: ativo
 Bloco F: parcial
 Bloco R: pausado por falta de tester humano real
@@ -26,6 +27,7 @@ docs/CHEGAJA_TRUST_SAFETY_POLICY_DRAFT.md
 docs/CHEGAJA_DISCOVERY_SEARCH_PROFILE_SPEC.md
 docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md
 docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_STATUS.md
+docs/M2_15_4_REPUTACAO_PERFIL_PUBLICO_STATUS.md
 ```
 
 Estes documentos foram criados a partir da pesquisa e da fala de produto
@@ -118,7 +120,7 @@ Riscos:
 ```text
 O widget nao valida estado do pedido por si; depende do parent e das Rules.
 Comentario/review publico continua fora.
-Reputacao publica continua fora ate M2.15.4.
+Reputacao leve por agregados foi adicionada em M2.15.4.
 ```
 
 Nota tecnica:
@@ -295,13 +297,25 @@ sincronizada com a decisao de M2.15.2.
 
 ## Reputacao no Perfil Publico
 
-M2.15 pode mostrar apenas reputacao leve:
+M2.15.4 passou a mostrar apenas reputacao leve:
 
 ```text
 ratingAvg se ratingCount > 0
 ratingCount
 Texto: "Avaliacao media de clientes"
 Texto: "Baseado em pedidos concluidos avaliados"
+```
+
+Implementacao atual:
+
+```text
+PublicProfileScreen le ratingAvg/ratingCount do documento prestadores/{id}.
+Mostra media apenas para role == prestador.
+Mostra media apenas se ratingCount > 0 e ratingAvg estiver entre 1 e 5.
+Mostra estado neutro quando nao ha avaliacao valida.
+Nao consulta a colecao avaliacoes.
+Nao usa AvaliacaoRepo no perfil publico.
+Nao mostra comentarios publicos.
 ```
 
 Nao mostrar:
@@ -348,7 +362,7 @@ Pedido nao concluido: nao pode avaliar.
 Pedido concluido sem avaliacao: Cliente ve formulario.
 Pedido concluido ja avaliado: Cliente ve resumo.
 Prestador sem avaliacoes: perfil publico mostra estado neutro.
-Prestador com avaliacoes: perfil publico pode mostrar media e contagem apenas em M2.15.4.
+Prestador com avaliacoes: perfil publico mostra media e contagem desde M2.15.4.
 Erro de envio: mensagem clara.
 Sem estrelas selecionadas: pedir selecao.
 Prestador/outsider: nao avalia como Cliente.
@@ -408,8 +422,8 @@ Perfil publico mostra reputacao leve quando permitido.
 M2.15.1 - Spec e auditoria da base atual de avaliacoes
 M2.15.2 - Rules, seguranca e consistencia de avaliacao - concluida
 M2.15.3 - UI de avaliacao pos-servico - concluida
-M2.15.4 - Reputacao leve no perfil publico do prestador - proximo passo
-M2.15.5 - Testes, E2E, QA visual e documentacao final
+M2.15.4 - Reputacao leve no perfil publico do prestador - concluida
+M2.15.5 - Testes, E2E, QA visual e documentacao final - proximo passo
 ```
 
 ## Fora do Escopo
