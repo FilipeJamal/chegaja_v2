@@ -4,7 +4,7 @@ Data: 2026-05-29
 
 ## Estado
 
-M2.17 iniciada.
+M2.17 fechada no escopo atual de Trust & Safety basico.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -15,14 +15,14 @@ M2.17.2 - FECHADA com modelo de denuncias, bloqueios e moderacao
 M2.17.3 - FECHADA com UI inicial de denuncia/bloqueio
 M2.17.4 - FECHADA com fila basica de moderacao/admin leve
 M2.17.5 - FECHADA com filtros simples de servicos proibidos/categorias sensiveis
-M2.17.6 - PROXIMO passo
+M2.17.6 - FECHADA com QA final, E2E e documentacao final
 ```
 
 Blocos relacionados continuam parciais:
 
 ```text
 Bloco F - parcial: KYC, verificacao oficial e identidade real ainda faltam.
-Bloco H - parcial: reviews publicas, denuncias, moderacao e ranking ainda faltam.
+Bloco H - parcial: reviews publicas, moderacao avancada e ranking ainda faltam.
 R - pausado por falta de tester humano real.
 M - pausado por falta de Android fisico real.
 R1 - pendente.
@@ -704,7 +704,7 @@ termos claramente proibidos geram block;
 categorias sensiveis geram needsReview;
 termos ambiguos geram needsReview;
 texto limpo gera allow;
-mensagens ao utilizador nao expõem termos internos nem ensinam contorno;
+mensagens ao utilizador nao expoem termos internos nem ensinam contorno;
 client-side e camada preventiva, nao enforcement final de seguranca.
 ```
 
@@ -732,14 +732,52 @@ deploy.
 ## Proximo Passo
 
 ```text
-M2.17.6 - Testes, E2E, QA visual e documentacao final da M2.17
+M2.18 - Admin/backoffice leve para operacao interna
 ```
 
-Objetivo recomendado da M2.17.6:
+## Implementacao M2.17.6
 
 ```text
-validar M2.17 de ponta a ponta;
-confirmar denuncia, bloqueio, fila admin e filtros;
-executar testes, build, E2E e QA visual;
-fechar M2.17 no escopo atual de Trust & Safety basico.
+docs/M2_17_6_QA_FINAL_TRUST_SAFETY_STATUS.md
+docs/M2_17_FINAL_REPORT.md
+```
+
+A M2.17.6 fechou o bloco com QA final, sem criar feature nova.
+
+Validacoes executadas:
+
+```text
+npm.cmd run test:scripts;
+node --check functions/index.js;
+npm.cmd --prefix functions test;
+testes focados de Trust & Safety;
+testes focados de UI denuncia/bloqueio;
+testes focados de admin reports, media viewer, novo pedido e perfil prestador;
+flutter test --no-pub;
+flutter build web release;
+e2e:ui:dual;
+e2e:ui:orcamento;
+QA visual.
+```
+
+Resultado:
+
+```text
+Functions tests - 119 passing;
+Flutter completo - 289/289;
+E2E dual - FULL MULTI-SCENARIO FLOW OK;
+E2E orcamento - ORCAMENTO MIN-MAX FLOW OK;
+QA visual - 8 screenshots gerados.
+```
+
+Decisao:
+
+```text
+M2.17 fechada no escopo atual de Trust & Safety basico;
+Trust & Safety completo absoluto ainda nao esta fechado;
+server-side enforcement completo continua futuro;
+KYC continua futuro;
+ocultacao/banimento automaticos continuam fora;
+admin/backoffice completo continua fora;
+M2.18 passa a ser o proximo bloco recomendado.
 ```

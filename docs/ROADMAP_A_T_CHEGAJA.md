@@ -207,13 +207,14 @@ denuncias, moderacao e ranking continuam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio, moderacao leve e filtros iniciais; M2.17.5 fechada e M2.17.6 proxima |
-| M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
+| M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
+| M2.18 | PROXIMO | Admin/backoffice leve para operacao interna |
 
-Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria,
-modelo tecnico minimo de Trust & Safety, UI de denuncia/bloqueio, fila admin e
-filtros iniciais de servicos proibidos/categorias sensiveis; M2.17.6 e o
-proximo passo recomendado.
+Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
+atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
+de denuncia/bloqueio, fila admin inicial, filtros de servicos
+proibidos/categorias sensiveis, testes, E2E, build Web e QA visual. M2.18 e o
+proximo bloco recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -253,9 +254,9 @@ recomendado para Trust & Safety basico antes de expandir discovery publico.
 | M2.17.3 | FECHADO | UI de denuncia/bloqueio em perfil, chat e portfolio |
 | M2.17.4 | FECHADO | Fila basica de moderacao/admin leve |
 | M2.17.5 | FECHADO | Filtros de servicos proibidos e categorias sensiveis |
-| M2.17.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.17 |
+| M2.17.6 | FECHADO | Testes, E2E, QA visual e documentacao final da M2.17 |
 
-Estado: M2.17 iniciada. A M2.17.1 mapeou superficies de risco em perfil
+Estado: M2.17 fechada no escopo atual. A M2.17.1 mapeou superficies de risco em perfil
 publico, discovery, portfolio, stories, chat, avaliacoes, pedidos e suporte;
 definiu servicos proibidos, conteudo proibido, categorias sensiveis, estados de
 moderacao, tipos/motivos de denuncia e modelo futuro de reports, blocks,
@@ -273,8 +274,12 @@ alterados nesta fase. A M2.17.4 criou as callables `admin_listReports` e
 ao `AdminPanelScreen`. Reports agora funcionam como fila inicial de triagem,
 sem ocultar conteudo automaticamente e sem banir utilizadores. A M2.17.5 criou
 normalizador, termos proibidos, categorias sensiveis e classifier, com
-integracao leve no perfil do prestador e no novo pedido. M2.17.6 deve fechar
-QA final da M2.17.
+integracao leve no perfil do prestador e no novo pedido. A M2.17.6 validou o
+bloco com testes focados, Functions, Flutter completo, build Web, E2E dual, E2E
+orcamento e QA visual. Trust & Safety completo absoluto continua fora:
+server-side enforcement definitivo, KYC, ocultacao automatica, banimento
+automatico, moderationCases automaticos e admin/backoffice completo ainda ficam
+para fases futuras.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -479,14 +484,13 @@ Estado: futuro.
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
-ativa com spec/auditoria, base tecnica minima de denuncias/bloqueios, UI
-inicial de denuncia/bloqueio, fila basica de reports no admin e filtros
-iniciais de servicos proibidos/categorias sensiveis.
+fechada no escopo atual de Trust & Safety basico: denuncias, bloqueios, UI,
+fila admin inicial, filtros simples, testes, E2E, build Web e QA visual.
 
 Fase operacional:
 
 ```text
-M2.17.6 - Testes, E2E, QA visual e documentacao final da M2.17
+M2.18 - Admin/backoffice leve para operacao interna
 ```
 
 Dependencias pausadas:
