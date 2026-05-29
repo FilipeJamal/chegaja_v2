@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/models/moderation_types.dart';
+import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
+
 /// Visualizador simples de imagens (URLs) em ecrã inteiro, com zoom/pan.
 ///
 /// - Swipe entre várias imagens (PageView)
@@ -16,6 +19,9 @@ class MediaViewerScreen extends StatefulWidget {
     this.initialIndex = 0,
     this.title,
     this.heroTagBuilder,
+    this.enableReport = false,
+    this.reportTargetOwnerId,
+    this.onReportSubmit,
   });
 
   /// URLs das imagens.
@@ -31,6 +37,11 @@ class MediaViewerScreen extends StatefulWidget {
   /// (Tem de coincidir com a tag do widget de origem.)
   final String Function(String url, int index)? heroTagBuilder;
 
+  /// Mostra acao discreta para denunciar a imagem atual.
+  final bool enableReport;
+  final String? reportTargetOwnerId;
+  final ReportSubmitCallback? onReportSubmit;
+
   /// Helper para abrir rapidamente.
   static Future<void> open(
     BuildContext context, {
@@ -38,6 +49,9 @@ class MediaViewerScreen extends StatefulWidget {
     int initialIndex = 0,
     String? title,
     String Function(String url, int index)? heroTagBuilder,
+    bool enableReport = false,
+    String? reportTargetOwnerId,
+    ReportSubmitCallback? onReportSubmit,
   }) {
     if (urls.isEmpty) return Future.value();
 
@@ -51,6 +65,9 @@ class MediaViewerScreen extends StatefulWidget {
           initialIndex: safeIndex,
           title: title,
           heroTagBuilder: heroTagBuilder,
+          enableReport: enableReport,
+          reportTargetOwnerId: reportTargetOwnerId,
+          onReportSubmit: onReportSubmit,
         ),
       ),
     );
@@ -100,6 +117,20 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     setState(() => _scale = nextScale);
   }
 
+  Future<void> _reportCurrentImage() {
+    final currentUrl = widget.urls[_index];
+    return ReportContentSheet.show(
+      context,
+      title: 'Denunciar imagem',
+      targetType: ReportTargetType.portfolioMedia,
+      targetId: currentUrl,
+      targetOwnerId: widget.reportTargetOwnerId,
+      sourceContext: 'portfolio_media',
+      mediaUrl: currentUrl,
+      onSubmit: widget.onReportSubmit,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final urls = widget.urls;
@@ -125,6 +156,14 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
             ),
           ],
         ),
+        actions: [
+          if (widget.enableReport)
+            IconButton(
+              tooltip: 'Denunciar imagem',
+              onPressed: _reportCurrentImage,
+              icon: const Icon(Icons.flag_outlined),
+            ),
+        ],
       ),
       body: Stack(
         children: [

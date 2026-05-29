@@ -207,11 +207,11 @@ denuncias, moderacao e ranking continuam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.2 fechada e M2.17.3 proxima |
+| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.3 fechada e M2.17.4 proxima |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
 Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria
-e modelo tecnico minimo de Trust & Safety; M2.17.3 e o proximo passo
+e modelo tecnico minimo de Trust & Safety; M2.17.4 e o proximo passo
 recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
@@ -249,8 +249,8 @@ recomendado para Trust & Safety basico antes de expandir discovery publico.
 | --- | --- | --- |
 | M2.17.1 | FECHADO | Spec e auditoria Trust & Safety, servicos proibidos e moderacao basica |
 | M2.17.2 | FECHADO | Modelo de denuncias, bloqueios e moderacao |
-| M2.17.3 | PROXIMO | UI de denuncia/bloqueio em perfil, chat e portfolio |
-| M2.17.4 | FUTURO | Fila basica de moderacao/admin leve |
+| M2.17.3 | FECHADO | UI de denuncia/bloqueio em perfil, chat e portfolio |
+| M2.17.4 | PROXIMO | Fila basica de moderacao/admin leve |
 | M2.17.5 | FUTURO | Filtros de servicos proibidos e categorias sensiveis |
 | M2.17.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.17 |
 
@@ -262,8 +262,11 @@ moderationCases e auditLogs. A fase foi documental: nao alterou Dart, Rules,
 Functions nem deploy. A M2.17.2 criou modelos/enums, `TrustSafetyService`,
 Rules e testes para `reports/{reportId}` e
 `users/{uid}/blockedUsers/{blockedUid}`; `ModerationCase` ficou como
-modelo/contrato, com fila automatica/admin adiada. M2.17.3 deve ligar a UI de
-denuncia/bloqueio em perfil, chat e portfolio, sem admin completo ainda.
+modelo/contrato, com fila automatica/admin adiada. A M2.17.3 criou
+`ReportContentSheet`, `BlockUserDialog` e `TrustSafetyActionsMenu`, integrou
+denuncia/bloqueio no perfil publico e no chat, e permitiu denuncia de imagem de
+portfolio pelo `MediaViewerScreen`. Rules, Functions e deploy nao foram
+alterados nesta fase. M2.17.4 deve criar a fila basica de moderacao/admin leve.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -468,12 +471,13 @@ Estado: futuro.
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
-ativa com spec/auditoria e base tecnica minima de denuncias/bloqueios.
+ativa com spec/auditoria, base tecnica minima de denuncias/bloqueios e UI
+inicial de denuncia/bloqueio.
 
 Fase operacional:
 
 ```text
-M2.17.3 - UI de denuncia/bloqueio em perfil, chat e portfolio
+M2.17.4 - Fila basica de moderacao/admin leve
 ```
 
 Dependencias pausadas:

@@ -12,7 +12,8 @@ M2.15 - FECHADA no escopo atual de avaliacoes e reputacao leve
 M2.16 - FECHADA no escopo atual de pesquisa manual e discovery
 M2.17.1 - FECHADA com spec e auditoria
 M2.17.2 - FECHADA com modelo de denuncias, bloqueios e moderacao
-M2.17.3 - PROXIMO passo
+M2.17.3 - FECHADA com UI inicial de denuncia/bloqueio
+M2.17.4 - PROXIMO passo
 ```
 
 Blocos relacionados continuam parciais:
@@ -630,18 +631,41 @@ moderationCases automaticos e fila visual ficam para M2.17.4/M2.18;
 UI de denuncia/bloqueio fica para M2.17.3.
 ```
 
+## Implementacao M2.17.3
+
+```text
+lib/features/common/trust_safety/report_content_sheet.dart
+lib/features/common/trust_safety/block_user_dialog.dart
+lib/features/common/trust_safety/trust_safety_actions.dart
+```
+
+A M2.17.3 criou a primeira UI reutilizavel de denuncia/bloqueio:
+
+```text
+ReportContentSheet - motivo, detalhes opcionais, limite de 1000 caracteres e envio via TrustSafetyService.
+BlockUserDialog - confirmacao de bloqueio, loading e feedback de erro/sucesso.
+TrustSafetyActionsMenu - menu discreto para perfil publico.
+PublicProfileScreen - Denunciar perfil e Bloquear utilizador.
+ChatThreadScreen - Denunciar conversa, Denunciar mensagem e Bloquear utilizador.
+MediaViewerScreen - Denunciar imagem de portfolio quando aberto pelo perfil publico.
+```
+
+A fase nao alterou Rules, Storage Rules, Cloud Functions nem deploy. O bloqueio
+fica gravado em `blockedUsers`, mas ainda nao impede mensagens por regra de
+seguranca ou logica de envio; esse enforcement fica para fase posterior.
+
 ## Proximo Passo
 
 ```text
-M2.17.3 - UI de denuncia/bloqueio em perfil, chat e portfolio
+M2.17.4 - Fila basica de moderacao/admin leve
 ```
 
-Objetivo recomendado da M2.17.3:
+Objetivo recomendado da M2.17.4:
 
 ```text
-ligar denuncia/bloqueio ao perfil publico, chat e portfolio;
-usar TrustSafetyService;
-mostrar feedback claro;
-preservar Rules/Functions;
-nao criar admin completo ainda.
+criar a primeira fila interna de reports;
+permitir leitura/triagem basica por admin/dev;
+preparar moderationCases reais;
+documentar decisoes de aprovacao/rejeicao;
+sem KYC, pagamentos ou admin completo ainda.
 ```

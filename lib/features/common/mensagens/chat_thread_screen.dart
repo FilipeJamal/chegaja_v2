@@ -14,6 +14,7 @@ import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
+import 'package:chegaja_v2/core/models/moderation_types.dart';
 import 'package:chegaja_v2/core/services/call_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/storage_path_policy.dart';
@@ -25,6 +26,8 @@ import 'package:chegaja_v2/features/common/mensagens/chat_favorites_screen.dart'
 import 'package:chegaja_v2/features/common/mensagens/chat_media_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_search_screen.dart';
 import 'package:chegaja_v2/features/common/perfil_publico_screen.dart';
+import 'package:chegaja_v2/features/common/trust_safety/block_user_dialog.dart';
+import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
@@ -44,6 +47,8 @@ class ChatThreadScreen extends StatefulWidget {
     this.otherUserName,
     this.otherUserPhotoUrl,
     this.pedidoTitulo,
+    this.onReportSubmit,
+    this.onBlockUser,
   });
 
   /// ID do pedido (é também o ID do chat)
@@ -63,6 +68,9 @@ class ChatThreadScreen extends StatefulWidget {
 
   /// Título do pedido (mostra por baixo do nome)
   final String? pedidoTitulo;
+
+  final ReportSubmitCallback? onReportSubmit;
+  final BlockUserCallback? onBlockUser;
 
   @override
   State<ChatThreadScreen> createState() => _ChatThreadScreenState();
@@ -1404,6 +1412,42 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     }
   }
 
+  Future<void> _reportConversation() {
+    return ReportContentSheet.show(
+      context,
+      title: 'Denunciar conversa',
+      targetType: ReportTargetType.chatMessage,
+      targetId: widget.pedidoId,
+      targetOwnerId: widget.otherUserId,
+      sourceContext: 'chat_thread',
+      chatId: widget.pedidoId,
+      onSubmit: widget.onReportSubmit,
+    );
+  }
+
+  Future<void> _reportMessage(ChatMessage msg, {required bool isMine}) {
+    return ReportContentSheet.show(
+      context,
+      title: 'Denunciar mensagem',
+      targetType: ReportTargetType.chatMessage,
+      targetId: msg.id,
+      targetOwnerId: isMine ? _auth.currentUser?.uid : widget.otherUserId,
+      sourceContext: 'chat_message',
+      chatId: widget.pedidoId,
+      messageId: msg.id,
+      onSubmit: widget.onReportSubmit,
+    );
+  }
+
+  Future<void> _blockOtherUser() {
+    return BlockUserDialog.show(
+      context,
+      blockedUid: widget.otherUserId,
+      userLabel: _lastOtherName ?? widget.otherUserName,
+      onConfirm: widget.onBlockUser,
+    );
+  }
+
   Widget _buildDayHeader(String label) {
     final theme = Theme.of(context);
 
@@ -1483,6 +1527,14 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                     messageId: msg.id,
                     starred: !isStarred,
                   );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('Denunciar mensagem'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _reportMessage(msg, isMine: isMine);
                 },
               ),
               if (isMine)
@@ -1948,6 +2000,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                             ChatFavoritesScreen(pedidoId: widget.pedidoId),
                       ),
                     );
+                  } else if (v == 'denunciar_conversa') {
+                    _reportConversation();
+                  } else if (v == 'bloquear_utilizador') {
+                    _blockOtherUser();
                   } else if (v == 'marcar_lidas') {
                     ChatService.instance.marcarVistasParaRole(
                       pedidoId: widget.pedidoId,
@@ -1973,6 +2029,14 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                   PopupMenuItem(
                     value: 'favoritos',
                     child: Text(_l10n.chatFavoritesAction),
+                  ),
+                  const PopupMenuItem(
+                    value: 'denunciar_conversa',
+                    child: Text('Denunciar conversa'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'bloquear_utilizador',
+                    child: Text('Bloquear utilizador'),
                   ),
                   const PopupMenuDivider(),
                   PopupMenuItem(

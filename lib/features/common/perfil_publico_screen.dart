@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:chegaja_v2/core/models/moderation_types.dart';
+import 'package:chegaja_v2/features/common/trust_safety/block_user_dialog.dart';
+import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
+import 'package:chegaja_v2/features/common/trust_safety/trust_safety_actions.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
@@ -14,6 +18,8 @@ class PublicProfileScreen extends StatelessWidget {
     this.initialName,
     this.initialPhotoUrl,
     this.firestore,
+    this.onReportSubmit,
+    this.onBlockUser,
   });
 
   final String userId;
@@ -21,6 +27,8 @@ class PublicProfileScreen extends StatelessWidget {
   final String? initialName;
   final String? initialPhotoUrl;
   final FirebaseFirestore? firestore;
+  final ReportSubmitCallback? onReportSubmit;
+  final BlockUserCallback? onBlockUser;
 
   bool get _isPrestador => role == 'prestador';
 
@@ -38,6 +46,20 @@ class PublicProfileScreen extends StatelessWidget {
         title: Text(
           _isPrestador ? l10n.profileProviderTitle : l10n.profileCustomerTitle,
         ),
+        actions: [
+          TrustSafetyActionsMenu(
+            targetType: _isPrestador
+                ? ReportTargetType.providerProfile
+                : ReportTargetType.clientProfile,
+            targetId: userId,
+            targetOwnerId: userId,
+            targetName: initialName,
+            blockedUid: userId,
+            sourceContext: 'public_profile',
+            onReportSubmit: onReportSubmit,
+            onBlockUser: onBlockUser,
+          ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _doc.snapshots(),
@@ -124,7 +146,11 @@ class PublicProfileScreen extends StatelessWidget {
                                 style: Theme.of(context).textTheme.labelMedium,
                               )
                             : null,
-                        child: _PortfolioGrid(urls: profile.portfolio),
+                        child: _PortfolioGrid(
+                          urls: profile.portfolio,
+                          ownerId: userId,
+                          onReportSubmit: onReportSubmit,
+                        ),
                       ),
                       if (profile.phone.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -708,9 +734,15 @@ class _ServicesWrap extends StatelessWidget {
 }
 
 class _PortfolioGrid extends StatelessWidget {
-  const _PortfolioGrid({required this.urls});
+  const _PortfolioGrid({
+    required this.urls,
+    required this.ownerId,
+    this.onReportSubmit,
+  });
 
   final List<String> urls;
+  final String ownerId;
+  final ReportSubmitCallback? onReportSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -781,6 +813,9 @@ class _PortfolioGrid extends StatelessWidget {
                   urls: urls,
                   initialIndex: index,
                   title: 'Portfolio',
+                  enableReport: true,
+                  reportTargetOwnerId: ownerId,
+                  onReportSubmit: onReportSubmit,
                 );
               },
             );
