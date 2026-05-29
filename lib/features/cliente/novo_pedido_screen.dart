@@ -13,9 +13,11 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
+import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
@@ -464,6 +466,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       return;
     }
 
+    if (_handleTrustSafetyBeforeSubmit()) return;
+
     if (!isEditing &&
         _buscaPrestadorModo == _BuscaPrestadorModo.manual &&
         _prestadorSelecionado == null) {
@@ -583,6 +587,24 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         setState(() => _salvando = false);
       }
     }
+  }
+
+  bool _handleTrustSafetyBeforeSubmit() {
+    final classification = TrustSafetyClassifier.classifyFields([
+      _tituloController.text,
+      _descricaoController.text,
+      _categoriaNome,
+    ]);
+
+    if (classification.decision == TrustSafetyDecision.allow) {
+      return false;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(classification.messageForUser)),
+    );
+
+    return classification.decision == TrustSafetyDecision.block;
   }
 
   String _exemploTitulo(

@@ -9,9 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
+import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
+import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
@@ -417,6 +419,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       return;
     }
 
+    if (_handleTrustSafetyBeforeSavingProfile()) return;
+
     setState(() => _saving = true);
 
     try {
@@ -456,6 +460,23 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  bool _handleTrustSafetyBeforeSavingProfile() {
+    final classification = TrustSafetyClassifier.classifyFields([
+      _nomeCtrl.text,
+      _bioCtrl.text,
+    ]);
+
+    if (classification.decision == TrustSafetyDecision.allow) {
+      return false;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(classification.messageForUser)),
+    );
+
+    return classification.decision == TrustSafetyDecision.block;
   }
 
   Future<void> _pickAndUploadProfilePhoto() async {

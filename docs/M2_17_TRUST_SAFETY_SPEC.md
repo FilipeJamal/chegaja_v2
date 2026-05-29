@@ -14,7 +14,8 @@ M2.17.1 - FECHADA com spec e auditoria
 M2.17.2 - FECHADA com modelo de denuncias, bloqueios e moderacao
 M2.17.3 - FECHADA com UI inicial de denuncia/bloqueio
 M2.17.4 - FECHADA com fila basica de moderacao/admin leve
-M2.17.5 - PROXIMO passo
+M2.17.5 - FECHADA com filtros simples de servicos proibidos/categorias sensiveis
+M2.17.6 - PROXIMO passo
 ```
 
 Blocos relacionados continuam parciais:
@@ -682,17 +683,63 @@ KYC continua fora;
 deploy continua fora.
 ```
 
+## Implementacao M2.17.5
+
+```text
+TrustSafetyTextNormalizer
+ProhibitedTerms
+SensitiveCategories
+TrustSafetyClassifier
+TrustSafetyClassification
+```
+
+A M2.17.5 criou a primeira barreira simples e auditavel para textos de perfil,
+servico e pedido. O normalizador remove acentos, normaliza espacos e pontuacao,
+e permite classificar termos com consistencia sem depender de IA.
+
+Decisoes implementadas:
+
+```text
+termos claramente proibidos geram block;
+categorias sensiveis geram needsReview;
+termos ambiguos geram needsReview;
+texto limpo gera allow;
+mensagens ao utilizador nao expõem termos internos nem ensinam contorno;
+client-side e camada preventiva, nao enforcement final de seguranca.
+```
+
+Integracao leve:
+
+```text
+PrestadorPerfilScreen classifica nome/bio antes de guardar perfil;
+NovoPedidoScreen classifica titulo/descricao/categoria antes de submeter pedido;
+block impede guardar/submeter;
+needsReview/warn mostra aviso e permite continuar.
+```
+
+Fora do escopo mantido:
+
+```text
+IA de moderacao;
+KYC;
+banimento automatico;
+ocultar conteudo existente;
+moderationCases automaticos;
+server-side enforcement;
+deploy.
+```
+
 ## Proximo Passo
 
 ```text
-M2.17.5 - Filtros de servicos proibidos e categorias sensiveis
+M2.17.6 - Testes, E2E, QA visual e documentacao final da M2.17
 ```
 
-Objetivo recomendado da M2.17.5:
+Objetivo recomendado da M2.17.6:
 
 ```text
-criar filtros simples para termos/servicos proibidos;
-preparar categorias sensiveis;
-impedir que conteudo claramente proibido avance sem analise;
-preservar escopo sem IA pesada, KYC ou banimentos automaticos.
+validar M2.17 de ponta a ponta;
+confirmar denuncia, bloqueio, fila admin e filtros;
+executar testes, build, E2E e QA visual;
+fechar M2.17 no escopo atual de Trust & Safety basico.
 ```

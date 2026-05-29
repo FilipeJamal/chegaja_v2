@@ -207,12 +207,13 @@ denuncias, moderacao e ranking continuam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.4 fechada e M2.17.5 proxima |
+| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio, moderacao leve e filtros iniciais; M2.17.5 fechada e M2.17.6 proxima |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
-Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria
-e modelo tecnico minimo de Trust & Safety; M2.17.5 e o proximo passo
-recomendado.
+Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria,
+modelo tecnico minimo de Trust & Safety, UI de denuncia/bloqueio, fila admin e
+filtros iniciais de servicos proibidos/categorias sensiveis; M2.17.6 e o
+proximo passo recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -251,8 +252,8 @@ recomendado para Trust & Safety basico antes de expandir discovery publico.
 | M2.17.2 | FECHADO | Modelo de denuncias, bloqueios e moderacao |
 | M2.17.3 | FECHADO | UI de denuncia/bloqueio em perfil, chat e portfolio |
 | M2.17.4 | FECHADO | Fila basica de moderacao/admin leve |
-| M2.17.5 | PROXIMO | Filtros de servicos proibidos e categorias sensiveis |
-| M2.17.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.17 |
+| M2.17.5 | FECHADO | Filtros de servicos proibidos e categorias sensiveis |
+| M2.17.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.17 |
 
 Estado: M2.17 iniciada. A M2.17.1 mapeou superficies de risco em perfil
 publico, discovery, portfolio, stories, chat, avaliacoes, pedidos e suporte;
@@ -270,8 +271,10 @@ alterados nesta fase. A M2.17.4 criou as callables `admin_listReports` e
 `admin_updateReportStatus`, integrou `AdminService.listReports` /
 `AdminService.updateReportStatus` e adicionou a secao "Moderacao e denuncias"
 ao `AdminPanelScreen`. Reports agora funcionam como fila inicial de triagem,
-sem ocultar conteudo automaticamente e sem banir utilizadores. M2.17.5 deve
-tratar filtros de servicos proibidos e categorias sensiveis.
+sem ocultar conteudo automaticamente e sem banir utilizadores. A M2.17.5 criou
+normalizador, termos proibidos, categorias sensiveis e classifier, com
+integracao leve no perfil do prestador e no novo pedido. M2.17.6 deve fechar
+QA final da M2.17.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -476,13 +479,14 @@ Estado: futuro.
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
-ativa com spec/auditoria, base tecnica minima de denuncias/bloqueios e UI
-inicial de denuncia/bloqueio, alem de fila basica de reports no admin.
+ativa com spec/auditoria, base tecnica minima de denuncias/bloqueios, UI
+inicial de denuncia/bloqueio, fila basica de reports no admin e filtros
+iniciais de servicos proibidos/categorias sensiveis.
 
 Fase operacional:
 
 ```text
-M2.17.5 - Filtros de servicos proibidos e categorias sensiveis
+M2.17.6 - Testes, E2E, QA visual e documentacao final da M2.17
 ```
 
 Dependencias pausadas:
