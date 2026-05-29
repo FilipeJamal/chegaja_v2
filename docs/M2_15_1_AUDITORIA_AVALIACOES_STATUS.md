@@ -90,6 +90,13 @@ M2.15.4 - Reputacao leve no perfil publico do prestador
 M2.15.5 - Testes, E2E, QA visual e documentacao final
 ```
 
+Nota posterior, 2026-05-29:
+
+```text
+M2.15.2 foi concluida com Rules endurecidas e Cloud Function autoritativa.
+O proximo passo atual e M2.15.3 - UI de avaliacao pos-servico.
+```
+
 ## Fora do Escopo Mantido
 
 ```text

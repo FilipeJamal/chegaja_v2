@@ -17,6 +17,20 @@ R1: pendente
 M2.6: pendente
 ```
 
+## Documentos Relacionados
+
+```text
+docs/CHEGAJA_PRODUCT_MASTER_VISION.md
+docs/CHEGAJA_TRUST_SAFETY_POLICY_DRAFT.md
+docs/CHEGAJA_DISCOVERY_SEARCH_PROFILE_SPEC.md
+docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md
+```
+
+Estes documentos foram criados a partir da pesquisa e da fala de produto
+recebida em 2026-05-29. A conclusao operacional para esta spec e que a
+M2.15.3 deve focar apenas a UI da avaliacao pos-servico; reputacao publica,
+discovery, Trust & Safety completo e admin ficam para fases posteriores.
+
 ## Objetivo
 
 Permitir reputacao leve pos-servico sem criar confianca falsa.

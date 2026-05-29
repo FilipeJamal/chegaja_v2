@@ -13,6 +13,20 @@ PROXIMO: proximo passo oficial
 FUTURO: falta/futuro
 ```
 
+## Documentos Mestre de Produto
+
+```text
+docs/CHEGAJA_PRODUCT_MASTER_VISION.md
+docs/CHEGAJA_TRUST_SAFETY_POLICY_DRAFT.md
+docs/CHEGAJA_DISCOVERY_SEARCH_PROFILE_SPEC.md
+```
+
+Estes documentos consolidam a visao de produto recebida em 2026-05-29:
+marketplace premium de servicos locais, discovery manual estilo perfil social,
+perfil publico forte, Trust & Safety, moderacao, ranking organico, KYC futuro,
+admin/backoffice e monetizacao futura. Eles orientam fases futuras, mas nao
+fecham R, M, KYC, pagamentos, Play Store ou beta externa.
+
 ## Mapa Principal
 
 | Bloco | Estado | Nome | Situacao atual |
@@ -176,7 +190,7 @@ ficarem fechadas.
 | --- | --- | --- |
 | M2.15.1 | FECHADO | Spec e auditoria da base atual de avaliacoes |
 | M2.15.2 | FECHADO | Rules, seguranca, Function autoritativa e consistencia de avaliacao |
-| M2.15.3 | PROXIMO | UI de avaliacao pos-servico |
+| M2.15.3 | PROXIMO | UI de avaliacao pos-servico; spec em docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md |
 | M2.15.4 | FUTURO | Reputacao leve no perfil publico do prestador |
 | M2.15.5 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
@@ -184,6 +198,17 @@ Estado: M2.15 em andamento. A auditoria confirmou `AvaliacaoService`,
 `AvaliacaoRepo` e `AvaliacaoPedidoCard`; M2.15.2 fechou Rules, testes e
 agregados autoritativos via Cloud Function. Reputacao publica continua fora
 ate M2.15.4.
+
+### Sequencia Recomendada Depois da M2.15
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.16 | FUTURO | Discovery, pesquisa manual e perfis pesquisaveis |
+| M2.17 | FUTURO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
+| M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
+
+Estado: fases futuras registadas como direcao de produto. Nao iniciar antes de
+fechar M2.15 no escopo de avaliacoes/reputacao leve.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
