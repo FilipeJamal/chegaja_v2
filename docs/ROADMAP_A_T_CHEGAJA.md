@@ -206,11 +206,11 @@ denuncias, moderacao e ranking continuam fora.
 
 | Fase | Estado | Descricao |
 | --- | --- | --- |
-| M2.16 | ATIVO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | FUTURO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
+| M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
+| M2.17 | PROXIMO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
-Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
+Estado: M2.16 fechada no escopo atual. M2.17 e o proximo passo recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -221,9 +221,9 @@ Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
 | M2.16.3 | FECHADO | UI de pesquisa manual estilo Instagram |
 | M2.16.4 | FECHADO | Integracao com perfil publico, favoritos e pedido |
 | M2.16.5 | FECHADO | Sugestoes compactas na Home Cliente |
-| M2.16.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.16 |
+| M2.16.6 | FECHADO | Testes, E2E, QA visual e documentacao final da M2.16 |
 
-Estado: M2.16 em andamento. A auditoria confirmou que
+Estado: M2.16 fechada no escopo atual. A auditoria confirmou que
 `PrestadorSearchDelegate` existe, mas esta fragil porque le `users` e nao a
 colecao `prestadores`, onde vivem perfil publico, portfolio, localizacao e
 reputacao leve. A M2.16.2 criou `ProviderSearchProfile`,
@@ -237,6 +237,9 @@ perfil publico e adiou pedido direto porque `NovoPedidoScreen` ainda depende de
 servico/categoria antes da selecao de prestador. A M2.16.5 adicionou a seccao
 compacta "Prestadores para conhecer" na Home Cliente, usando `prestadores` e
 `ProviderSearchProfile`, sem ranking complexo, patrocinados ou dados privados.
+A M2.16.6 validou discovery/search com testes focados, Flutter completo, build
+Web, E2E dual, E2E orcamento e QA visual. M2.17 passa a ser o proximo passo
+recomendado para Trust & Safety basico antes de expandir discovery publico.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -440,12 +443,12 @@ Estado: futuro.
 ## Proximo Movimento
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
-esta em andamento como bloco ativo de discovery/pesquisa manual.
+tambem esta fechada no escopo atual de discovery/pesquisa manual.
 
 Fase operacional:
 
 ```text
-M2.16.6 - Testes, E2E, QA visual e documentacao final da M2.16
+M2.17 - Trust & Safety, servicos proibidos e moderacao basica
 ```
 
 Dependencias pausadas:

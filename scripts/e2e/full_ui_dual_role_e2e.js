@@ -944,6 +944,14 @@ async function clickVisibleServiceCard(page, rx) {
   return false;
 }
 
+async function leavePublicProfileIfOpen(page) {
+  const body = await page.locator('body').innerText({ timeout: 1200 }).catch(() => '');
+  if (!/Perfil do prestador/i.test(body)) return false;
+  const returned = await waitAndClick(page, /Voltar|Back/i, 3000);
+  if (returned) await page.waitForTimeout(700);
+  return returned;
+}
+
 async function tryConfirmDialogs(page) {
   await tryClick(page, /Confirmar|Confirm|Sim|Yes|Iniciar agora|Start now/i, 600);
   await tryClick(page, /OK|Entendido|Fechar|Close/i, 600);
@@ -1502,9 +1510,13 @@ async function createOrder(
   await ensureClientHome(client);
   await tryConfirmDialogs(client);
   await waitForClientServiceCatalog(client, serviceNameRegex);
+  await waitAndClick(client, /Escolher servi[cç]o|Escolher servico/i, 2500);
+  await client.waitForTimeout(700);
   let openedService = false;
   const openDeadline = Date.now() + 30000;
   while (Date.now() < openDeadline) {
+    await leavePublicProfileIfOpen(client);
+
     if (await isOnOrderForm(client)) {
       openedService = true;
       break;
@@ -1519,6 +1531,7 @@ async function createOrder(
     }
 
     await waitAndClick(client, /In[iI].cio|Home/i, 1200);
+    await leavePublicProfileIfOpen(client);
     await tryConfirmDialogs(client);
     await client.keyboard.press('Escape').catch(() => {});
     await sleep(400);

@@ -5,13 +5,13 @@ Data: 2026-05-29
 ## Estado
 
 ```text
-M2.16: iniciada
+M2.16: fechada no escopo atual
 M2.16.1: concluida - spec e auditoria da pesquisa manual/discovery
 M2.16.2: concluida - modelo e normalizacao de perfil pesquisavel
 M2.16.3: concluida - UI de pesquisa manual estilo Instagram
 M2.16.4: concluida - integracao com perfil publico, favoritos e pedido
 M2.16.5: concluida - sugestoes compactas na Home Cliente
-M2.16.6: proximo passo - testes, E2E, QA visual e documentacao final
+M2.16.6: concluida - testes, E2E, QA visual e documentacao final
 M2.15: fechada no escopo atual
 Bloco F: parcial
 Bloco H: parcial
@@ -538,7 +538,7 @@ M2.16.2 - Modelo/normalizacao de perfil pesquisavel - concluida
 M2.16.3 - UI de pesquisa manual estilo Instagram - concluida
 M2.16.4 - Integracao com perfil publico, favoritos e pedido - concluida
 M2.16.5 - Sugestoes compactas na Home Cliente - concluida
-M2.16.6 - Testes, E2E, QA visual e documentacao final - proximo passo
+M2.16.6 - Testes, E2E, QA visual e documentacao final - concluida
 ```
 
 ## Fecho da M2.16.2
@@ -642,6 +642,49 @@ Proximo passo:
 
 ```text
 M2.16.6 - Testes, E2E, QA visual e documentacao final da M2.16
+```
+
+## Fecho da M2.16.6
+
+A M2.16.6 fechou a M2.16 no escopo atual com testes, E2E, QA visual e
+documentacao final.
+
+Validacoes principais:
+
+```text
+npm.cmd run test:scripts - passou
+flutter test --no-pub - passou, 248/248
+functions npm test com FIRESTORE_EMULATOR_HOST - passou, 88/88
+flutter build web release - passou
+e2e:ui:dual - passou, FULL MULTI-SCENARIO FLOW OK
+e2e:ui:orcamento - passou, ORCAMENTO MIN-MAX FLOW OK
+qa:visual:m2-10-6 - passou, 8 screenshots
+```
+
+Decisoes:
+
+```text
+M2.16 fica fechada no escopo atual de discovery/pesquisa manual.
+Bloco F continua parcial.
+Bloco H continua parcial.
+R continua pausado.
+M continua pausado.
+R1 continua pendente.
+M2.6 continua pendente.
+Rules, Functions e deploy nao foram alterados nesta fase.
+```
+
+Ficheiros de fecho:
+
+```text
+docs/M2_16_6_QA_FINAL_DISCOVERY_STATUS.md
+docs/M2_16_FINAL_REPORT.md
+```
+
+Proximo passo recomendado:
+
+```text
+M2.17 - Trust & Safety, servicos proibidos e moderacao basica
 ```
 
 ## Fora do Escopo da M2.16.1
