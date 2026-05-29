@@ -207,11 +207,12 @@ denuncias, moderacao e ranking continuam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
-| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.1 fechada e M2.17.2 proxima |
+| M2.17 | ATIVO | Trust & Safety base: denuncia, bloqueio e moderacao leve; M2.17.2 fechada e M2.17.3 proxima |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
 Estado: M2.16 fechada no escopo atual. M2.17 foi iniciada com spec/auditoria
-de Trust & Safety; M2.17.2 e o proximo passo recomendado.
+e modelo tecnico minimo de Trust & Safety; M2.17.3 e o proximo passo
+recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -247,8 +248,8 @@ recomendado para Trust & Safety basico antes de expandir discovery publico.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.17.1 | FECHADO | Spec e auditoria Trust & Safety, servicos proibidos e moderacao basica |
-| M2.17.2 | PROXIMO | Modelo de denuncias, bloqueios e moderacao |
-| M2.17.3 | FUTURO | UI de denuncia/bloqueio em perfil, chat e portfolio |
+| M2.17.2 | FECHADO | Modelo de denuncias, bloqueios e moderacao |
+| M2.17.3 | PROXIMO | UI de denuncia/bloqueio em perfil, chat e portfolio |
 | M2.17.4 | FUTURO | Fila basica de moderacao/admin leve |
 | M2.17.5 | FUTURO | Filtros de servicos proibidos e categorias sensiveis |
 | M2.17.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.17 |
@@ -258,8 +259,11 @@ publico, discovery, portfolio, stories, chat, avaliacoes, pedidos e suporte;
 definiu servicos proibidos, conteudo proibido, categorias sensiveis, estados de
 moderacao, tipos/motivos de denuncia e modelo futuro de reports, blocks,
 moderationCases e auditLogs. A fase foi documental: nao alterou Dart, Rules,
-Functions nem deploy. M2.17.2 deve criar o modelo minimo e a base de seguranca
-antes de UI de denuncia/bloqueio ou fila admin.
+Functions nem deploy. A M2.17.2 criou modelos/enums, `TrustSafetyService`,
+Rules e testes para `reports/{reportId}` e
+`users/{uid}/blockedUsers/{blockedUid}`; `ModerationCase` ficou como
+modelo/contrato, com fila automatica/admin adiada. M2.17.3 deve ligar a UI de
+denuncia/bloqueio em perfil, chat e portfolio, sem admin completo ainda.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -463,13 +467,13 @@ Estado: futuro.
 ## Proximo Movimento
 
 A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
-tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 foi
-iniciada com spec/auditoria de Trust & Safety.
+tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
+ativa com spec/auditoria e base tecnica minima de denuncias/bloqueios.
 
 Fase operacional:
 
 ```text
-M2.17.2 - Modelo de denuncias, bloqueios e moderacao
+M2.17.3 - UI de denuncia/bloqueio em perfil, chat e portfolio
 ```
 
 Dependencias pausadas:

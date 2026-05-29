@@ -1475,4 +1475,308 @@ describe("Firestore Security Rules", () => {
             );
         });
     });
+
+    describe("Trust & Safety reports", () => {
+        function validReportPayload(overrides = {}) {
+            return {
+                reporterId: "client1",
+                targetType: "provider_profile",
+                targetId: "provider1",
+                reasonCode: "fraud",
+                severity: "high",
+                status: "pending_review",
+                details: "Perfil parece enganoso",
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                ...overrides,
+            };
+        }
+
+        async function seedReport(id = "report1", data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore().collection("reports").doc(id).set({
+                    reporterId: "client1",
+                    targetType: "provider_profile",
+                    targetId: "provider1",
+                    reasonCode: "fraud",
+                    severity: "high",
+                    status: "pending_review",
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    ...data,
+                });
+            });
+        }
+
+        it("should allow an authenticated user to create a valid report", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("reports").doc("report1").set(validReportPayload())
+            );
+        });
+
+        it("should deny unauthenticated report creation", async () => {
+            const unauth = testEnv.unauthenticatedContext();
+            await assertFails(
+                unauth.firestore().collection("reports").doc("report1").set(validReportPayload())
+            );
+        });
+
+        it("should deny reports with reporterId different from auth uid", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ reporterId: "client2" })
+                )
+            );
+        });
+
+        it("should deny reports with invalid targetType", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ targetType: "bad_target" })
+                )
+            );
+        });
+
+        it("should deny reports with invalid reasonCode", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ reasonCode: "bad_reason" })
+                )
+            );
+        });
+
+        it("should deny reports with invalid severity", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ severity: "urgent" })
+                )
+            );
+        });
+
+        it("should deny reports with a non-pending initial status", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ status: "approved" })
+                )
+            );
+        });
+
+        it("should deny reports with details above the limit", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ details: "x".repeat(1001) })
+                )
+            );
+        });
+
+        it("should deny reports with extra fields", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ reviewedBy: "client1" })
+                )
+            );
+        });
+
+        it("should deny reports with client-controlled timestamps", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").set(
+                    validReportPayload({ createdAt: new Date("2026-05-01T12:00:00Z") })
+                )
+            );
+        });
+
+        it("should deny common users from updating report status", async () => {
+            await seedReport();
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").update({
+                    status: "approved",
+                    updatedAt: serverTimestamp(),
+                })
+            );
+        });
+
+        it("should deny common users from deleting reports", async () => {
+            await seedReport();
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore().collection("reports").doc("report1").delete()
+            );
+        });
+
+        it("should allow reporter to read their own report", async () => {
+            await seedReport();
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore().collection("reports").doc("report1").get()
+            );
+        });
+
+        it("should deny another user reading someone else's report", async () => {
+            await seedReport();
+            const other = testEnv.authenticatedContext("client2");
+            await assertFails(
+                other.firestore().collection("reports").doc("report1").get()
+            );
+        });
+    });
+
+    describe("Trust & Safety blocked users", () => {
+        function validBlockPayload(overrides = {}) {
+            return {
+                blockedUid: "provider1",
+                createdAt: serverTimestamp(),
+                reason: "Nao quero receber novas mensagens",
+                source: "chat",
+                ...overrides,
+            };
+        }
+
+        async function seedBlock(ownerId = "client1", blockedUid = "provider1", data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore()
+                    .collection("users")
+                    .doc(ownerId)
+                    .collection("blockedUsers")
+                    .doc(blockedUid)
+                    .set({
+                        blockedUid,
+                        createdAt: new Date(),
+                        ...data,
+                    });
+            });
+        }
+
+        it("should allow an authenticated user to block another user", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload())
+            );
+        });
+
+        it("should deny unauthenticated block creation", async () => {
+            const unauth = testEnv.unauthenticatedContext();
+            await assertFails(
+                unauth.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload())
+            );
+        });
+
+        it("should deny creating a block under another user's path", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore()
+                    .collection("users")
+                    .doc("client2")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload())
+            );
+        });
+
+        it("should deny blocks where blockedUid differs from document id", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload({ blockedUid: "provider2" }))
+            );
+        });
+
+        it("should deny users blocking themselves", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("client1")
+                    .set(validBlockPayload({ blockedUid: "client1" }))
+            );
+        });
+
+        it("should deny blocked user records with extra fields", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload({ moderationStatus: "hidden" }))
+            );
+        });
+
+        it("should deny blocked user records with client-controlled createdAt", async () => {
+            const client = testEnv.authenticatedContext("client1");
+            await assertFails(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .set(validBlockPayload({ createdAt: new Date("2026-05-01T12:00:00Z") }))
+            );
+        });
+
+        it("should allow users to read their own blocked users", async () => {
+            await seedBlock();
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .get()
+            );
+        });
+
+        it("should deny users reading another user's blocked users", async () => {
+            await seedBlock();
+            const other = testEnv.authenticatedContext("client2");
+            await assertFails(
+                other.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .get()
+            );
+        });
+
+        it("should allow users to remove their own block", async () => {
+            await seedBlock();
+            const client = testEnv.authenticatedContext("client1");
+            await assertSucceeds(
+                client.firestore()
+                    .collection("users")
+                    .doc("client1")
+                    .collection("blockedUsers")
+                    .doc("provider1")
+                    .delete()
+            );
+        });
+    });
 });

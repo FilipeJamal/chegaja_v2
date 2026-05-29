@@ -148,6 +148,134 @@ service cloud.firestore {
         && pedido['prestadorId'] == data['prestadorId'];
     }
 
+    function isModerator() {
+      return signedIn()
+        && request.auth.token != null
+        && request.auth.token.keys().hasAny(['moderator'])
+        && request.auth.token['moderator'] == true;
+    }
+
+    function canModerate() {
+      return isAdmin() || isModerator() || devMode();
+    }
+
+    function allowedReportTargetType(value) {
+      return value in [
+        'provider_profile',
+        'client_profile',
+        'portfolio_media',
+        'story',
+        'chat_message',
+        'review',
+        'service_category',
+        'service_request',
+        'user',
+        'other',
+      ];
+    }
+
+    function allowedReportReasonCode(value) {
+      return value in [
+        'illegal_service',
+        'sexual_content',
+        'drugs',
+        'fraud',
+        'harassment',
+        'hate_speech',
+        'violence',
+        'child_safety',
+        'personal_data',
+        'spam',
+        'scam',
+        'impersonation',
+        'unsafe_service',
+        'copyright_or_stolen_media',
+        'off_platform_circumvention',
+        'other',
+      ];
+    }
+
+    function allowedReportSeverity(value) {
+      return value in ['low', 'medium', 'high', 'critical'];
+    }
+
+    function validOptionalString(data, key, maxLength) {
+      return !data.keys().hasAny([key]) ||
+        (data[key] is string && data[key].size() <= maxLength);
+    }
+
+    function validReportCreate() {
+      let data = request.resource.data;
+      return signedIn()
+        && data.keys().hasOnly([
+          'reporterId',
+          'targetType',
+          'targetId',
+          'targetOwnerId',
+          'reasonCode',
+          'severity',
+          'details',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'sourceContext',
+          'pedidoId',
+          'chatId',
+          'messageId',
+          'mediaUrl',
+          'mediaPath',
+        ])
+        && data.keys().hasAll([
+          'reporterId',
+          'targetType',
+          'targetId',
+          'reasonCode',
+          'severity',
+          'status',
+          'createdAt',
+          'updatedAt',
+        ])
+        && data['reporterId'] is string
+        && data['reporterId'] == uid()
+        && data['targetType'] is string
+        && allowedReportTargetType(data['targetType'])
+        && data['targetId'] is string
+        && data['targetId'].size() > 0
+        && data['reasonCode'] is string
+        && allowedReportReasonCode(data['reasonCode'])
+        && data['severity'] is string
+        && allowedReportSeverity(data['severity'])
+        && data['status'] == 'pending_review'
+        && validOptionalString(data, 'targetOwnerId', 128)
+        && validOptionalString(data, 'details', 1000)
+        && validOptionalString(data, 'sourceContext', 120)
+        && validOptionalString(data, 'pedidoId', 128)
+        && validOptionalString(data, 'chatId', 128)
+        && validOptionalString(data, 'messageId', 128)
+        && validOptionalString(data, 'mediaUrl', 1000)
+        && validOptionalString(data, 'mediaPath', 500)
+        && data['createdAt'] is timestamp
+        && data['createdAt'] == request.time
+        && data['updatedAt'] is timestamp
+        && data['updatedAt'] == request.time;
+    }
+
+    function validBlockedUserCreate(userId, blockedUid) {
+      let data = request.resource.data;
+      return isSelf(userId)
+        && blockedUid is string
+        && blockedUid.size() > 0
+        && blockedUid != userId
+        && data.keys().hasOnly(['blockedUid', 'createdAt', 'reason', 'source'])
+        && data.keys().hasAll(['blockedUid', 'createdAt'])
+        && data['blockedUid'] is string
+        && data['blockedUid'] == blockedUid
+        && validOptionalString(data, 'reason', 500)
+        && validOptionalString(data, 'source', 120)
+        && data['createdAt'] is timestamp
+        && data['createdAt'] == request.time;
+    }
+
     function isValidPedidoEstadoValue(value) {
       return value is string
         && value in [
@@ -758,6 +886,13 @@ service cloud.firestore {
       allow read, write: if isSelf(userId) || isAdmin();
     }
 
+    match /users/{userId}/blockedUsers/{blockedUid} {
+      allow read: if isSelf(userId) || canModerate();
+      allow create: if validBlockedUserCreate(userId, blockedUid);
+      allow update: if false;
+      allow delete: if isSelf(userId) || canModerate();
+    }
+
     // -------------------------
     // PRESTADORES
     // -------------------------
@@ -793,6 +928,19 @@ service cloud.firestore {
     // -------------------------
     // SERVICOS (catÃ¡logo)
     // -------------------------
+    // -------------------------
+    // TRUST & SAFETY REPORTS
+    // -------------------------
+    match /reports/{reportId} {
+      allow read: if canModerate()
+        || (signedIn()
+          && resource.data is map
+          && resource.data.keys().hasAny(['reporterId'])
+          && resource.data['reporterId'] == uid());
+      allow create: if validReportCreate();
+      allow update, delete: if canModerate();
+    }
+
     match /servicos/{servicoId} {
       allow read: if true;
       allow create, update, delete: if devMode() || isAdmin();

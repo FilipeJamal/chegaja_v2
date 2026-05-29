@@ -11,7 +11,8 @@ M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
 M2.15 - FECHADA no escopo atual de avaliacoes e reputacao leve
 M2.16 - FECHADA no escopo atual de pesquisa manual e discovery
 M2.17.1 - FECHADA com spec e auditoria
-M2.17.2 - PROXIMO passo
+M2.17.2 - FECHADA com modelo de denuncias, bloqueios e moderacao
+M2.17.3 - PROXIMO passo
 ```
 
 Blocos relacionados continuam parciais:
@@ -593,19 +594,54 @@ Nao e seguro adicionar apenas botoes de denuncia sem modelo, estados,
 permissoes e auditoria. Tambem nao e seguro expandir discovery publico sem
 campo de visibilidade/moderacao.
 
+## Implementacao M2.17.2
+
+A M2.17.2 criou a base tecnica minima:
+
+```text
+lib/core/models/moderation_types.dart
+lib/core/models/trust_safety_report.dart
+lib/core/models/user_block.dart
+lib/core/models/moderation_case.dart
+lib/core/services/trust_safety_service.dart
+```
+
+Rules adicionadas:
+
+```text
+reports/{reportId}
+users/{uid}/blockedUsers/{blockedUid}
+```
+
+Testes adicionados:
+
+```text
+functions/test/firestore.test.js
+test/core/trust_safety_models_test.dart
+test/core/trust_safety_service_test.dart
+```
+
+Decisao:
+
+```text
+reports e blockedUsers foram implementados agora;
+ModerationCase foi criado como modelo/contrato;
+moderationCases automaticos e fila visual ficam para M2.17.4/M2.18;
+UI de denuncia/bloqueio fica para M2.17.3.
+```
+
 ## Proximo Passo
 
 ```text
-M2.17.2 - Modelo de denuncias, bloqueios e moderacao
+M2.17.3 - UI de denuncia/bloqueio em perfil, chat e portfolio
 ```
 
-Objetivo recomendado da M2.17.2:
+Objetivo recomendado da M2.17.3:
 
 ```text
-definir e implementar modelo minimo de reports/blocks/moderation fields;
-criar Rules e testes RED/GREEN;
-proteger moderationStatus contra usuarios comuns;
-preparar discovery para ignorar perfis ocultos/suspensos quando os campos
-existirem;
+ligar denuncia/bloqueio ao perfil publico, chat e portfolio;
+usar TrustSafetyService;
+mostrar feedback claro;
+preservar Rules/Functions;
 nao criar admin completo ainda.
 ```
