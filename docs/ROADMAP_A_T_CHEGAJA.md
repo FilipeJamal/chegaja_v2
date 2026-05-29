@@ -38,7 +38,7 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
 | F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio, confianca leve e integracao Cliente; faltam KYC, reviews, verificacao oficial e reputacao avancada. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
-| H | ATIVO | Avaliacoes, reputacao e confianca | M2.15 em andamento: Rules/agregados estao protegidos, UI pos-servico foi melhorada e reputacao leve ja aparece no perfil publico; proximo passo e QA final. |
+| H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
 | J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. Backoffice/admin completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
@@ -180,9 +180,9 @@ Estado: suficiente para beta Web/Windows.
 | H5 | FUTURO | Moderacao |
 | H6 | FUTURO | Ranking de confianca |
 
-Estado: ativo via M2.15. A base de avaliacoes existe, mas reputacao publica
-so deve avancar depois de seguranca, consistencia de agregados e privacidade
-ficarem fechadas.
+Estado: parcial. M2.15 fechou avaliacao pos-servico, seguranca de agregados e
+reputacao leve. Reviews publicas completas, comentarios publicos moderados,
+denuncias, moderacao e ranking continuam futuros.
 
 ### M2.15 - Avaliacoes e Reputacao Leve Pos-Servico
 
@@ -192,24 +192,25 @@ ficarem fechadas.
 | M2.15.2 | FECHADO | Rules, seguranca, Function autoritativa e consistencia de avaliacao |
 | M2.15.3 | FECHADO | UI de avaliacao pos-servico; status em docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_STATUS.md |
 | M2.15.4 | FECHADO | Reputacao leve no perfil publico do prestador |
-| M2.15.5 | PROXIMO | Testes, E2E, QA visual e documentacao final |
+| M2.15.5 | FECHADO | Testes, E2E, QA visual e documentacao final |
 
-Estado: M2.15 em andamento. A auditoria confirmou `AvaliacaoService`,
+Estado: M2.15 fechada no escopo atual. A auditoria confirmou `AvaliacaoService`,
 `AvaliacaoRepo` e `AvaliacaoPedidoCard`; M2.15.2 fechou Rules, testes e
 agregados autoritativos via Cloud Function. M2.15.3 melhorou a UI de
 avaliacao pos-servico. M2.15.4 mostrou reputacao leve no perfil publico sem
-comentarios publicos. M2.15.5 fica como QA final.
+comentarios publicos. M2.15.5 validou testes, E2E, build Web e QA visual.
+O Bloco H continua parcial porque reviews publicas completas, comentarios,
+denuncias, moderacao e ranking continuam fora.
 
 ### Sequencia Recomendada Depois da M2.15
 
 | Fase | Estado | Descricao |
 | --- | --- | --- |
-| M2.16 | FUTURO | Discovery, pesquisa manual e perfis pesquisaveis |
+| M2.16 | PROXIMO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FUTURO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
-Estado: fases futuras registadas como direcao de produto. Nao iniciar antes de
-fechar M2.15 no escopo de avaliacoes/reputacao leve.
+Estado: M2.16 fica como proximo bloco recomendado depois do fecho da M2.15.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -412,12 +413,12 @@ Estado: futuro.
 
 ## Proximo Movimento
 
-A M2.15 e o bloco ativo atual.
+A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve.
 
 Fase operacional:
 
 ```text
-M2.15.5 - Testes, E2E, QA visual e documentacao final da M2.15
+M2.16 - Pesquisa manual e descoberta de prestadores estilo Instagram
 ```
 
 Dependencias pausadas:

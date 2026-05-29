@@ -1,17 +1,17 @@
 # M2.15 - Avaliacoes e Reputacao Leve Pos-Servico
 
-Data: 2026-05-28
+Data: 2026-05-29
 
 ## Estado
 
 ```text
-M2.15: iniciada
+M2.15: fechada no escopo atual
 M2.15.1: concluida - spec e auditoria da base atual
 M2.15.2: concluida - Rules, Function autoritativa e consistencia das avaliacoes
 M2.15.3: concluida - UI de avaliacao pos-servico
 M2.15.4: concluida - reputacao leve no perfil publico do prestador
-M2.15.5: proximo passo - testes, E2E, QA visual e documentacao final
-Bloco H: ativo
+M2.15.5: concluida - testes, E2E, QA visual e documentacao final
+Bloco H: parcial
 Bloco F: parcial
 Bloco R: pausado por falta de tester humano real
 Bloco M: pausado por falta de Android fisico real
@@ -28,12 +28,15 @@ docs/CHEGAJA_DISCOVERY_SEARCH_PROFILE_SPEC.md
 docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md
 docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_STATUS.md
 docs/M2_15_4_REPUTACAO_PERFIL_PUBLICO_STATUS.md
+docs/M2_15_5_QA_FINAL_AVALIACOES_STATUS.md
+docs/M2_15_FINAL_REPORT.md
 ```
 
 Estes documentos foram criados a partir da pesquisa e da fala de produto
 recebida em 2026-05-29. A conclusao operacional para esta spec e que a
-M2.15.3 deve focar apenas a UI da avaliacao pos-servico; reputacao publica,
-discovery, Trust & Safety completo e admin ficam para fases posteriores.
+M2.15 ficou fechada no escopo atual de avaliacoes e reputacao leve; comentarios
+publicos, ranking, discovery, Trust & Safety completo e admin ficam para fases
+posteriores.
 
 ## Objetivo
 
@@ -423,7 +426,19 @@ M2.15.1 - Spec e auditoria da base atual de avaliacoes
 M2.15.2 - Rules, seguranca e consistencia de avaliacao - concluida
 M2.15.3 - UI de avaliacao pos-servico - concluida
 M2.15.4 - Reputacao leve no perfil publico do prestador - concluida
-M2.15.5 - Testes, E2E, QA visual e documentacao final - proximo passo
+M2.15.5 - Testes, E2E, QA visual e documentacao final - concluida
+```
+
+## Fecho da M2.15
+
+```text
+M2.15 fechada no escopo atual.
+Rules e Function de avaliacao foram validadas.
+UI de avaliacao pos-servico foi validada.
+Reputacao leve no perfil publico foi validada com ratingAvg/ratingCount.
+Comentarios publicos e reviews completas continuam fora.
+Ranking e discovery ficam para fases futuras.
+M2.16 fica como proximo bloco recomendado.
 ```
 
 ## Fora do Escopo
