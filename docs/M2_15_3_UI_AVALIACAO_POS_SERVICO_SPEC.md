@@ -7,7 +7,8 @@ Data: 2026-05-29
 ```text
 M2.15.1: concluida
 M2.15.2: concluida
-M2.15.3: proximo passo
+M2.15.3: concluida
+M2.15.4: proximo passo - reputacao leve no perfil publico do prestador
 Bloco H: ativo
 R: pausado
 M: pausado

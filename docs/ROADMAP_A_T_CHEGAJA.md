@@ -38,7 +38,7 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
 | F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio, confianca leve e integracao Cliente; faltam KYC, reviews, verificacao oficial e reputacao avancada. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
-| H | ATIVO | Avaliacoes, reputacao e confianca | M2.15 em andamento: Rules de avaliacoes endurecidas e agregados passaram para Function autoritativa; proximo passo e UI pos-servico. |
+| H | ATIVO | Avaliacoes, reputacao e confianca | M2.15 em andamento: Rules/agregados estao protegidos e a UI pos-servico foi melhorada; proximo passo e reputacao leve no perfil publico. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
 | J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. Backoffice/admin completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
@@ -173,7 +173,7 @@ Estado: suficiente para beta Web/Windows.
 
 | Subfase | Estado | Descricao |
 | --- | --- | --- |
-| H1 | PARCIAL | Cliente avalia prestador; Rules/testes de criacao foram endurecidos, UI ainda precisa polish |
+| H1 | PARCIAL | Cliente avalia prestador; Rules/testes de criacao foram endurecidos e UI pos-servico foi revista |
 | H2 | PARCIAL | Prestador recebe agregados ratingCount/ratingSum/ratingAvg por Function autoritativa; falta exposicao publica controlada |
 | H3 | PARCIAL | Comentario opcional existe na avaliacao; reviews publicas continuam pendentes |
 | H4 | FUTURO | Denuncias |
@@ -190,14 +190,14 @@ ficarem fechadas.
 | --- | --- | --- |
 | M2.15.1 | FECHADO | Spec e auditoria da base atual de avaliacoes |
 | M2.15.2 | FECHADO | Rules, seguranca, Function autoritativa e consistencia de avaliacao |
-| M2.15.3 | PROXIMO | UI de avaliacao pos-servico; spec em docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md |
-| M2.15.4 | FUTURO | Reputacao leve no perfil publico do prestador |
+| M2.15.3 | FECHADO | UI de avaliacao pos-servico; status em docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_STATUS.md |
+| M2.15.4 | PROXIMO | Reputacao leve no perfil publico do prestador |
 | M2.15.5 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
 Estado: M2.15 em andamento. A auditoria confirmou `AvaliacaoService`,
 `AvaliacaoRepo` e `AvaliacaoPedidoCard`; M2.15.2 fechou Rules, testes e
-agregados autoritativos via Cloud Function. Reputacao publica continua fora
-ate M2.15.4.
+agregados autoritativos via Cloud Function. M2.15.3 melhorou a UI de
+avaliacao pos-servico. Reputacao publica continua fora ate M2.15.4.
 
 ### Sequencia Recomendada Depois da M2.15
 
@@ -416,7 +416,7 @@ A M2.15 e o bloco ativo atual.
 Fase operacional:
 
 ```text
-M2.15.3 - UI de avaliacao pos-servico
+M2.15.4 - Reputacao leve no perfil publico do prestador
 ```
 
 Dependencias pausadas:

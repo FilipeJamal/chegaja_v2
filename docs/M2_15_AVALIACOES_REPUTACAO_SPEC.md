@@ -8,7 +8,8 @@ Data: 2026-05-28
 M2.15: iniciada
 M2.15.1: concluida - spec e auditoria da base atual
 M2.15.2: concluida - Rules, Function autoritativa e consistencia das avaliacoes
-M2.15.3: proximo passo - UI de avaliacao pos-servico
+M2.15.3: concluida - UI de avaliacao pos-servico
+M2.15.4: proximo passo - reputacao leve no perfil publico do prestador
 Bloco H: ativo
 Bloco F: parcial
 Bloco R: pausado por falta de tester humano real
@@ -24,6 +25,7 @@ docs/CHEGAJA_PRODUCT_MASTER_VISION.md
 docs/CHEGAJA_TRUST_SAFETY_POLICY_DRAFT.md
 docs/CHEGAJA_DISCOVERY_SEARCH_PROFILE_SPEC.md
 docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_SPEC.md
+docs/M2_15_3_UI_AVALIACAO_POS_SERVICO_STATUS.md
 ```
 
 Estes documentos foram criados a partir da pesquisa e da fala de produto
@@ -76,7 +78,7 @@ Riscos:
 ```text
 O service depende das Rules para garantir que o pedido esta concluido.
 O service depende da Function onCreate para atualizar agregados.
-O retorno silencioso quando a avaliacao ja existe evita duplicacao no docId esperado, mas nao informa a UI.
+O retorno silencioso quando a avaliacao ja existe evita duplicacao no docId esperado.
 ```
 
 ### AvaliacaoPedidoCard
@@ -90,12 +92,14 @@ lib/features/cliente/widgets/avaliacao_pedido_card.dart
 Estado atual:
 
 ```text
-Existe widget de formulario/resumo.
+Existe widget de formulario/resumo com UI revista em M2.15.3.
 Le avaliacoes/{pedidoId}_{clienteId} por StreamBuilder.
 Mostra resumo quando a avaliacao ja existe.
 Mostra formulario quando nao existe.
 Exige selecionar pelo menos 1 estrela antes de enviar.
-Permite comentario opcional.
+Permite comentario opcional com contador 0/500.
+Bloqueia envio localmente se o comentario passar de 500 caracteres.
+Tem estado visual de loading/erro do StreamBuilder.
 Mostra loading no botao durante envio.
 Mostra SnackBar de sucesso/erro.
 Usa l10n rating*.
@@ -105,26 +109,23 @@ Integracao atual:
 
 ```text
 lib/features/cliente/pedido_detalhe_screen.dart importa AvaliacaoPedidoCard.
-Aparece quando isCliente, pedido.estado == 'concluido', prestadorId != null e clienteId != null.
+Aparece quando isCliente, pedido.estado == 'concluido', prestadorId != null,
+clienteId != null e clienteId == pedido.clienteId.
 ```
 
 Riscos:
 
 ```text
 O widget nao valida estado do pedido por si; depende do parent e das Rules.
-O parent deveria ser mais explicito e exigir clienteId == pedido.clienteId.
-Nao ha teste dedicado para AvaliacaoPedidoCard.
-O StreamBuilder nao tem estado visual especifico de loading/erro.
-Ainda existem cores diretas no widget; dark mode deve ser revisto em M2.15.3.
+Comentario/review publico continua fora.
+Reputacao publica continua fora ate M2.15.4.
 ```
 
 Nota tecnica:
 
 ```text
-Existe uma classe privada _AvaliacaoPedidoCard antiga dentro de
-lib/features/cliente/pedido_detalhe_screen.dart. O detalhe usa o widget
-importado publico, mas a classe privada duplicada aumenta ruido e deve ser
-removida/refatorada numa fase de UI/testes, nao nesta auditoria.
+A classe privada _AvaliacaoPedidoCard antiga dentro de
+lib/features/cliente/pedido_detalhe_screen.dart foi removida em M2.15.3.
 ```
 
 ### AvaliacaoRepo
@@ -383,7 +384,11 @@ AvaliacaoPedidoCard mostra resumo com avaliacao existente.
 Enviar sem estrela mostra erro.
 Enviar com estrela chama service.
 Erro de envio mostra SnackBar.
-Dark mode sem texto hardcoded problemático.
+Comentario acima de 500 caracteres bloqueia envio.
+Contador de comentario atualiza.
+Botao fica desativado durante envio.
+StreamBuilder loading/erro.
+Dark mode renderiza sem excecao.
 PedidoDetalheScreen mostra card apenas para cliente dono e pedido concluido.
 Pedido nao concluido nao mostra formulario.
 ```
@@ -402,8 +407,8 @@ Perfil publico mostra reputacao leve quando permitido.
 ```text
 M2.15.1 - Spec e auditoria da base atual de avaliacoes
 M2.15.2 - Rules, seguranca e consistencia de avaliacao - concluida
-M2.15.3 - UI de avaliacao pos-servico - proximo passo
-M2.15.4 - Reputacao leve no perfil publico do prestador
+M2.15.3 - UI de avaliacao pos-servico - concluida
+M2.15.4 - Reputacao leve no perfil publico do prestador - proximo passo
 M2.15.5 - Testes, E2E, QA visual e documentacao final
 ```
 
