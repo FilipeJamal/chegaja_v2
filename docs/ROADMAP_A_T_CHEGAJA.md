@@ -206,11 +206,30 @@ denuncias, moderacao e ranking continuam fora.
 
 | Fase | Estado | Descricao |
 | --- | --- | --- |
-| M2.16 | PROXIMO | Discovery, pesquisa manual e perfis pesquisaveis |
+| M2.16 | ATIVO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FUTURO | Trust & Safety base: denuncia, bloqueio e moderacao leve |
 | M2.18 | FUTURO | Admin/backoffice leve para operacao interna |
 
-Estado: M2.16 fica como proximo bloco recomendado depois do fecho da M2.15.
+Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
+
+### M2.16 - Pesquisa Manual e Discovery de Prestadores
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.16.1 | FECHADO | Spec e auditoria da pesquisa manual/discovery |
+| M2.16.2 | PROXIMO | Modelo e normalizacao de perfil pesquisavel |
+| M2.16.3 | FUTURO | UI de pesquisa manual estilo Instagram |
+| M2.16.4 | FUTURO | Integracao com perfil publico, favoritos e pedido |
+| M2.16.5 | FUTURO | Sugestoes compactas na Home Cliente |
+| M2.16.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.16 |
+
+Estado: M2.16 em andamento. A auditoria confirmou que
+`PrestadorSearchDelegate` existe, mas esta fragil porque le `users` e nao a
+colecao `prestadores`, onde vivem perfil publico, portfolio, localizacao e
+reputacao leve. A recomendacao e criar em M2.16.2 um modelo/normalizador
+testavel de perfil pesquisavel usando `prestadores` como fonte inicial, com
+whitelist de campos publicos e preparacao futura para `publicProfiles` ou
+`providerSearchIndex`.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -413,12 +432,13 @@ Estado: futuro.
 
 ## Proximo Movimento
 
-A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve.
+A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
+esta iniciada como bloco ativo de discovery/pesquisa manual.
 
 Fase operacional:
 
 ```text
-M2.16 - Pesquisa manual e descoberta de prestadores estilo Instagram
+M2.16.2 - Modelo e normalizacao de perfil pesquisavel
 ```
 
 Dependencias pausadas:
