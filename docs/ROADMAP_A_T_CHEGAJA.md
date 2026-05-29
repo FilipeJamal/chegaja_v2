@@ -220,8 +220,8 @@ Estado: M2.16 iniciado com spec/auditoria da pesquisa manual.
 | M2.16.2 | FECHADO | Modelo e normalizacao de perfil pesquisavel |
 | M2.16.3 | FECHADO | UI de pesquisa manual estilo Instagram |
 | M2.16.4 | FECHADO | Integracao com perfil publico, favoritos e pedido |
-| M2.16.5 | PROXIMO | Sugestoes compactas na Home Cliente |
-| M2.16.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.16 |
+| M2.16.5 | FECHADO | Sugestoes compactas na Home Cliente |
+| M2.16.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.16 |
 
 Estado: M2.16 em andamento. A auditoria confirmou que
 `PrestadorSearchDelegate` existe, mas esta fragil porque le `users` e nao a
@@ -234,7 +234,9 @@ criou a primeira UI manual de pesquisa, com cards compactos, estados
 loading/erro/vazio e abertura do perfil publico unico via `openPublicProfile`.
 A M2.16.4 integrou favoritos nos cards da pesquisa, preservou a abertura do
 perfil publico e adiou pedido direto porque `NovoPedidoScreen` ainda depende de
-servico/categoria antes da selecao de prestador.
+servico/categoria antes da selecao de prestador. A M2.16.5 adicionou a seccao
+compacta "Prestadores para conhecer" na Home Cliente, usando `prestadores` e
+`ProviderSearchProfile`, sem ranking complexo, patrocinados ou dados privados.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -443,7 +445,7 @@ esta em andamento como bloco ativo de discovery/pesquisa manual.
 Fase operacional:
 
 ```text
-M2.16.5 - Sugestoes compactas na Home Cliente
+M2.16.6 - Testes, E2E, QA visual e documentacao final da M2.16
 ```
 
 Dependencias pausadas:

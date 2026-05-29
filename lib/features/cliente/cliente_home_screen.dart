@@ -29,6 +29,7 @@ import 'package:chegaja_v2/core/widgets/app_shell_scaffold.dart';
 import 'package:chegaja_v2/core/widgets/app_state_views.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/features/cliente/discovery/provider_search_screen.dart';
+import 'package:chegaja_v2/features/cliente/discovery/widgets/provider_suggestions_section.dart';
 import 'package:chegaja_v2/features/common/widgets/region_selection_widget.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 import 'package:chegaja_v2/features/common/widgets/role_mode_switch_tile.dart';
@@ -460,6 +461,13 @@ class _ClienteHomeDashboard extends StatelessWidget {
               primaryActionLabel: 'Escolher servico',
               onPrimaryAction: () => _scrollToServices(context),
               onSearch: onSearch,
+            ),
+            ProviderSuggestionsSection(
+              margin: const EdgeInsets.only(
+                top: AppSpacing.x5,
+                bottom: AppSpacing.x5,
+              ),
+              onOpenSearch: onSearch,
             ),
             const SizedBox(height: AppSpacing.x5),
             const StoriesCarouselWidget(),

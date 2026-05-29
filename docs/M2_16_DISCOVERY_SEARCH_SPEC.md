@@ -10,7 +10,8 @@ M2.16.1: concluida - spec e auditoria da pesquisa manual/discovery
 M2.16.2: concluida - modelo e normalizacao de perfil pesquisavel
 M2.16.3: concluida - UI de pesquisa manual estilo Instagram
 M2.16.4: concluida - integracao com perfil publico, favoritos e pedido
-M2.16.5: proximo passo - sugestoes compactas na Home Cliente
+M2.16.5: concluida - sugestoes compactas na Home Cliente
+M2.16.6: proximo passo - testes, E2E, QA visual e documentacao final
 M2.15: fechada no escopo atual
 Bloco F: parcial
 Bloco H: parcial
@@ -522,10 +523,11 @@ pedido direto - adiado com motivo tecnico.
 M2.16.5:
 
 ```text
-sugestoes compactas na Home;
-sem sugestoes quando nao ha perfis publicos;
-rating so aparece quando valido;
-cards nao mostram dados privados.
+sugestoes compactas na Home - coberto;
+sem sugestoes quando nao ha perfis publicos - coberto;
+rating so aparece quando valido - coberto;
+cards nao mostram dados privados - coberto;
+abrir perfil publico e pesquisa completa - coberto.
 ```
 
 ## Subfases
@@ -535,8 +537,8 @@ M2.16.1 - Spec e auditoria da pesquisa manual/discovery - concluida
 M2.16.2 - Modelo/normalizacao de perfil pesquisavel - concluida
 M2.16.3 - UI de pesquisa manual estilo Instagram - concluida
 M2.16.4 - Integracao com perfil publico, favoritos e pedido - concluida
-M2.16.5 - Sugestoes compactas na Home Cliente - proximo passo
-M2.16.6 - Testes, E2E, QA visual e documentacao final
+M2.16.5 - Sugestoes compactas na Home Cliente - concluida
+M2.16.6 - Testes, E2E, QA visual e documentacao final - proximo passo
 ```
 
 ## Fecho da M2.16.2
@@ -610,6 +612,36 @@ Proximo passo:
 
 ```text
 M2.16.5 - Sugestoes compactas na Home Cliente
+```
+
+## Fecho da M2.16.5
+
+A M2.16.5 adicionou a seccao compacta `Prestadores para conhecer` na Home
+Cliente, usando `prestadores` como fonte inicial e `ProviderSearchProfile` como
+modelo seguro.
+
+Decisoes:
+
+```text
+Home Cliente recebeu uma seccao pequena antes do restante discovery/catalogo.
+ProviderSuggestionsSection carrega ate 16 prestadores e exibe ate 6.
+ProviderSuggestionCompactCard mostra apenas dados publicos.
+Cards abrem PublicProfileScreen via openPublicProfile.
+Botao "Pesquisar prestadores" abre ProviderSearchScreen.
+Texto evita promessas de melhores, verificados, garantidos ou perto de ti.
+Nao ha ranking complexo, patrocinados, pedido direto, Rules, Functions ou deploy.
+```
+
+Ficheiro de status:
+
+```text
+docs/M2_16_5_SUGESTOES_HOME_CLIENTE_STATUS.md
+```
+
+Proximo passo:
+
+```text
+M2.16.6 - Testes, E2E, QA visual e documentacao final da M2.16
 ```
 
 ## Fora do Escopo da M2.16.1

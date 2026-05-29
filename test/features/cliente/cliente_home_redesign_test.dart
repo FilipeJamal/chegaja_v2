@@ -1,9 +1,31 @@
 import 'package:chegaja_v2/core/models/servico.dart';
+import 'package:chegaja_v2/features/cliente/discovery/provider_search_profile.dart';
+import 'package:chegaja_v2/features/cliente/discovery/widgets/provider_suggestions_section.dart';
 import 'package:chegaja_v2/features/cliente/widgets/cliente_home_components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  ProviderSearchProfile profile() {
+    return const ProviderSearchProfile(
+      id: 'prestador-1',
+      displayName: 'Joao Bolos',
+      photoUrl: null,
+      bio: 'Bolos para festas.',
+      city: 'Coimbra',
+      state: '',
+      country: 'Portugal',
+      services: ['Bolos personalizados'],
+      categories: ['Pastelaria'],
+      portfolioPreviewUrls: [],
+      ratingAvg: 4.8,
+      ratingCount: 12,
+      searchTerms: [],
+      latitude: null,
+      longitude: null,
+    );
+  }
+
   testWidgets('Home Cliente foundation compoe hero, operacoes e servicos',
       (tester) async {
     const servicos = [
@@ -40,6 +62,10 @@ void main() {
                   onPrimaryAction: () {},
                   onSearch: () {},
                 ),
+                ProviderSuggestionsSection(
+                  profilesStream: Stream.value([profile()]),
+                  onOpenSearch: () {},
+                ),
                 ClienteHomeOperationsPanel(
                   title: 'Tens algo para decidir',
                   message: 'Uma proposta aguarda resposta.',
@@ -68,6 +94,11 @@ void main() {
     );
 
     expect(find.byKey(const Key('cliente_home_hero')), findsOneWidget);
+    await tester.pump();
+    expect(
+      find.byKey(const Key('provider_suggestions_section')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('cliente_home_operations_panel')),
       findsOneWidget,
