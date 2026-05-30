@@ -2083,6 +2083,15 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
       const hasCancelButton = /Cancelar pedido|Cancelar trabalho|Cancel order|Cancel/i.test(bodyBeforeOpen);
       const onDetail = detectScreenKind(bodyBeforeOpen) === 'pedido_detail';
       if (!hasCancelButton && !onDetail) {
+        if (/Novo pedido|Pedir servi.o|Request service/i.test(bodyBeforeOpen)) {
+          log(`clientCancelPedido leaving order form before cancel pedido=${pedidoId}`);
+          const wentBack =
+            (await tryClick(client, /Voltar|Back/i, 1000)) ||
+            (await clickVisibleTextCenter(client, /Voltar|Back/i));
+          if (!wentBack) await client.mouse.click(28, 28).catch(() => {});
+          await sleep(900);
+          continue;
+        }
         const clientUid = await readUid(client).catch(() => null);
         log(
           `clientCancelPedido locating detail pedido=${pedidoId} title="${expectedTitle}" pageUid=${clientUid || ''} clienteId=${data?.clienteId || ''} estado=${data?.estado || data?.status || ''} ui=${JSON.stringify(summarizeClientOrdersBody(bodyBeforeOpen))}`,
@@ -2109,6 +2118,9 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
       continue;
     }
 
+    log(
+      `clientCancelPedido attempting cancel pedido=${pedidoId} screen=${detectScreenKind(bodyBeforeCancel)} body=${bodyBeforeCancel.slice(0, 120).replace(/\s+/g, ' ')}`,
+    );
     let cancelClicked = await tryClick(client, /Cancelar pedido|Cancelar trabalho|Cancel order|Cancel/i, 1600);
     if (!cancelClicked) {
       cancelClicked = await clickVisibleTextCenter(client, /Cancelar pedido|Cancelar trabalho|Cancel order|Cancel/i);
@@ -2117,18 +2129,32 @@ async function clientCancelPedido(client, pedidoId, expectedTitle = null) {
       await client.mouse.click(640, 606).catch(() => {});
       cancelClicked = true;
     }
+    log(`clientCancelPedido cancelClicked=${cancelClicked} pedido=${pedidoId}`);
     await sleep(350);
 
-    let hadDialog =
-      (await tryClick(client, /Sim, cancelar|Sim cancelar|Yes, cancel|Sim/i, 1400)) ||
-      (await clickVisibleTextCenter(client, /Sim, cancelar|Sim cancelar|Yes, cancel|Sim/i)) ||
-      (await tryClick(client, /Confirmar|Confirm/i, 1000));
-    if (!hadDialog) {
-      await client.mouse.click(812, 474).catch(() => {});
-      hadDialog = true;
+    let hadDialog = false;
+    for (let i = 0; i < 8; i++) {
+      const dialogBody = await currentBodyText(client);
+      if (/Sim, cancelar|Sim cancelar|Yes, cancel|Confirmar|Confirm/i.test(dialogBody)) {
+        hadDialog =
+          (await tryClick(client, /Sim, cancelar|Sim cancelar|Yes, cancel|Sim/i, 1800)) ||
+          (await clickVisibleTextCenter(client, /Sim, cancelar|Sim cancelar|Yes, cancel|Sim/i)) ||
+          (await tryClick(client, /Confirmar|Confirm/i, 1200));
+        if (hadDialog) break;
+      }
+      await sleep(450);
     }
     if (hadDialog) {
       await sleep(850);
+      const afterConfirmBody = await currentBodyText(client);
+      log(
+        `clientCancelPedido confirm clicked pedido=${pedidoId} body=${afterConfirmBody.slice(0, 160).replace(/\s+/g, ' ')}`,
+      );
+    } else {
+      const dialogBody = await currentBodyText(client);
+      log(
+        `clientCancelPedido did not find confirm dialog pedido=${pedidoId} body=${dialogBody.slice(0, 220).replace(/\s+/g, ' ')}`,
+      );
     }
 
     try {
@@ -2443,7 +2469,7 @@ async function runManualChatNoShowScenario(
   { serviceId = null, serviceName = null } = {},
 ) {
   console.log(`[${now()}] Scenario 3/3 manual-provider + chat + no-show`);
-  await waitAndClick(client, /In[iI].cio|Home/i, 5000);
+  await gotoRole(client, 'cliente');
   await seedProviderBase(providerUid, { online: true, serviceId, serviceName });
   await ensureProviderSetupDone(provider);
   await ensureProviderOnline(provider);

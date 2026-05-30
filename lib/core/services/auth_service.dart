@@ -214,6 +214,12 @@ class AuthService {
 
   static User? get currentUser => _auth.currentUser;
 
+  static Future<User?> waitForCurrentUser({
+    Duration? timeout,
+  }) {
+    return _waitForRestoredUser(timeout: timeout);
+  }
+
   /// Atualiza a regiao do utilizador (ex: 'PT', 'MZ').
   static Future<void> updateUserRegion(String region) async {
     final user = _auth.currentUser;

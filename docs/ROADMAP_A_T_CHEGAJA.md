@@ -40,7 +40,7 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
-| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. Backoffice/admin completo ainda falta. |
+| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; admin enterprise completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
 | M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
@@ -208,7 +208,7 @@ denuncias, moderacao e ranking continuam fora.
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
-| M2.18 | ATIVO | Admin/backoffice leve para operacao interna; M2.18.5 fechada e M2.18.6 proxima |
+| M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual; M2.19 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -217,7 +217,8 @@ proibidos/categorias sensiveis, testes, E2E, build Web e QA visual. M2.18 foi
 iniciada com spec/auditoria do admin/backoffice leve; M2.18.2 reorganizou a
 navegacao/secoes do AdminPanel; M2.18.3 melhorou a Visao geral e as metricas
 essenciais; M2.18.4 melhorou reports, suporte, no-show e stories; M2.18.5 criou
-auditoria leve para acoes admin principais; M2.18.6 e o proximo passo recomendado.
+auditoria leve para acoes admin principais; M2.18.6 fechou QA final e documentacao.
+O proximo bloco recomendado e M2.19.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -293,9 +294,9 @@ para fases futuras.
 | M2.18.3 | FECHADO | Melhorar dashboard e metricas essenciais |
 | M2.18.4 | FECHADO | Melhorar filas operacionais: reports, suporte, no-show, stories |
 | M2.18.5 | FECHADO | Logs/auditoria leve e estados operacionais |
-| M2.18.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.18 |
+| M2.18.6 | FECHADO | Testes, E2E, QA visual e documentacao final da M2.18 |
 
-Estado: M2.18 ativa. A M2.18.1 auditou o AdminPanel existente, o
+Estado: M2.18 fechada no escopo atual. A M2.18.1 auditou o AdminPanel existente, o
 AdminService, as callables admin, a secao de reports e os testes existentes.
 O admin atual ja cobre dashboard, ops, custos/retencao, suporte, reports,
 no-show, stories e ledger anomalies. A M2.18.2 reorganizou o AdminPanel em
@@ -308,7 +309,9 @@ filas operacionais e melhorou reports, suporte, no-show e stories com labels
 legiveis, fallbacks, erros/vazios e acoes preservadas. A M2.18.5 criou
 `adminAuditLogs`, auditou acoes admin principais e adicionou a secao Auditoria
 ao AdminPanel, sem criar admin enterprise, KYC, pagamentos, deploy ou roles
-granulares. M2.18.6 deve fechar QA final da M2.18.
+granulares. A M2.18.6 validou o bloco e criou a documentacao final. Bloco J
+continua parcial porque admin enterprise, roles granulares, exportacoes,
+operacao completa e KYC/admin futuro continuam fora.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -336,7 +339,9 @@ Estado: futuro. Nao iniciar antes de beta real estar mais madura.
 | J6 | FUTURO | Gestao de pedidos/conflitos |
 | J7 | FUTURO | Moderacao/admin real |
 
-Estado: parcial.
+Estado: parcial. M2.18 fechou Admin/backoffice leve, mas gestao completa de
+servicos, utilizadores, pedidos/conflitos, moderacao/admin real e backoffice
+enterprise continuam futuros.
 
 ## Bloco K - Seguranca, Rules e Producao Firebase
 
@@ -515,15 +520,15 @@ A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
 fechada no escopo atual de Trust & Safety basico: denuncias, bloqueios, UI,
 fila admin inicial, filtros simples, testes, E2E, build Web e QA visual. A
-M2.18 esta ativa. A M2.18.2 reorganizou a navegacao/secoes do AdminPanel e a
+M2.18 esta fechada no escopo atual. A M2.18.2 reorganizou a navegacao/secoes do AdminPanel e a
 M2.18.3 melhorou a Visao geral com metricas essenciais mais claras. A M2.18.4
 melhorou as filas operacionais. A M2.18.5 criou auditoria leve para reports,
-suporte, no-show e stories.
+suporte, no-show e stories. A M2.18.6 fechou QA final e documentacao.
 
 Fase operacional:
 
 ```text
-M2.18.6 - Testes, E2E, QA visual e documentacao final da M2.18
+M2.19 - Link publico, @handle e partilha social
 ```
 
 Dependencias pausadas:

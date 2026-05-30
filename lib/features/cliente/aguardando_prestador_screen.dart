@@ -106,8 +106,21 @@ class _AguardandoPrestadorScreenState extends State<AguardandoPrestadorScreen> {
   }
 
   Future<void> _cancelarPedidoComoCliente(Pedido pedido) async {
-    final user = AuthService.currentUser;
-    if (user == null || user.uid != pedido.clienteId) return;
+    final user = AuthService.currentUser ??
+        await AuthService.waitForCurrentUser(
+          timeout: const Duration(seconds: 3),
+        );
+    if (!mounted) return;
+    if (user == null || user.uid != pedido.clienteId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nao conseguimos confirmar a tua sessao para cancelar agora.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final motivoController = TextEditingController();
 

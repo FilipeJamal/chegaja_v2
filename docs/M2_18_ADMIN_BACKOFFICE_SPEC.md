@@ -4,7 +4,7 @@ Data: 2026-05-29
 
 ## Estado
 
-M2.18 ativa.
+M2.18 fechada no escopo atual de Admin/backoffice leve.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -16,7 +16,7 @@ M2.18.2 - FECHADA com reorganizacao de navegacao/secoes
 M2.18.3 - FECHADA com dashboard e metricas essenciais
 M2.18.4 - FECHADA com filas operacionais melhoradas
 M2.18.5 - FECHADA com auditoria leve e estados operacionais
-M2.18.6 - PROXIMO passo
+M2.18.6 - FECHADA com QA final e documentacao
 ```
 
 Blocos relacionados:
@@ -336,7 +336,7 @@ M2.18.2 - FECHADA - Reorganizar navegacao/secoes do AdminPanel
 M2.18.3 - FECHADA - Melhorar dashboard e metricas essenciais
 M2.18.4 - FECHADA - Melhorar filas operacionais: reports, suporte, no-show, stories
 M2.18.5 - FECHADA - Logs/auditoria leve e estados operacionais
-M2.18.6 - PROXIMO - Testes, E2E, QA visual e documentacao final
+M2.18.6 - FECHADA - Testes, E2E, QA visual e documentacao final
 ```
 
 ## Implementacao M2.18.2
@@ -542,16 +542,67 @@ sem roles granulares;
 sem KYC/pagamentos/deploy.
 ```
 
+## Implementacao M2.18.6
+
+A M2.18.6 fechou a M2.18 sem criar feature nova.
+
+Foram criados:
+
+```text
+docs/M2_18_6_QA_FINAL_ADMIN_STATUS.md
+docs/M2_18_FINAL_REPORT.md
+```
+
+O fecho validou:
+
+```text
+AdminPanel organizado;
+dashboard/Visao geral;
+filas operacionais;
+reports/moderacao;
+auditoria leve;
+Functions admin;
+Flutter completo;
+build Web;
+E2E principal;
+QA visual geral.
+```
+
+Resultados finais:
+
+```text
+Functions tests - 123 passing;
+Flutter test completo - 314/314;
+E2E dual - FULL MULTI-SCENARIO FLOW OK;
+E2E orcamento - ORCAMENTO MIN-MAX FLOW OK;
+QA visual - 8 screenshots.
+```
+
+M2.18 fica fechada apenas no escopo atual de Admin/backoffice leve.
+
+Continuam fora:
+
+```text
+admin enterprise completo;
+roles granulares;
+custom claims novos;
+KYC;
+pagamentos;
+export CSV/PDF;
+paginacao/cursor real;
+auditoria enterprise;
+deploy.
+```
+
 ## Proximo Passo
 
 ```text
-M2.18.6 - Testes, E2E, QA visual e documentacao final
+M2.19 - Link publico, @handle e partilha social
 ```
 
 Objetivo recomendado:
 
 ```text
-validar Admin/backoffice leve com testes focados, Functions, Flutter completo,
-build Web, E2E se necessario, QA visual e relatorio final;
-fechar M2.18 no escopo atual sem transformar em admin enterprise.
+permitir que o prestador tenha handle/link publico partilhavel em redes sociais,
+sem iniciar essa implementacao dentro da M2.18.
 ```
