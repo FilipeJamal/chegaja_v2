@@ -1730,6 +1730,21 @@ const ADMIN_REPORT_UPDATE_STATUSES = new Set([
   'escalated',
 ]);
 
+const ADMIN_AUDIT_ACTIONS = new Set([
+  'report.update_status',
+  'support_ticket.update_status',
+  'no_show.set_decision',
+  'story.delete',
+]);
+
+const ADMIN_AUDIT_TARGET_TYPES = new Set([
+  'report',
+  'support_ticket',
+  'pedido',
+  'no_show',
+  'story',
+]);
+
 function normalizeAdminReportStatus(value, { allowAll = false } = {}) {
   const status = String(value || (allowAll ? 'all' : 'pending_review')).trim().toLowerCase();
   const allowed = allowAll ? ADMIN_REPORT_STATUS_FILTERS : ADMIN_REPORT_UPDATE_STATUSES;
@@ -1737,6 +1752,104 @@ function normalizeAdminReportStatus(value, { allowAll = false } = {}) {
     throw new HttpsError('invalid-argument', 'status inválido');
   }
   return status;
+}
+
+function normalizeAdminAuditAction(value, { allowEmpty = false } = {}) {
+  const action = String(value || '').trim();
+  if (allowEmpty && !action) return '';
+  if (!ADMIN_AUDIT_ACTIONS.has(action)) {
+    throw new HttpsError('invalid-argument', 'action inválida');
+  }
+  return action;
+}
+
+function normalizeAdminAuditTargetType(value, { allowEmpty = false } = {}) {
+  const targetType = String(value || '').trim();
+  if (allowEmpty && !targetType) return '';
+  if (!ADMIN_AUDIT_TARGET_TYPES.has(targetType)) {
+    throw new HttpsError('invalid-argument', 'targetType inválido');
+  }
+  return targetType;
+}
+
+function auditText(value, max = 160) {
+  const text = String(value || '').trim();
+  if (text.length <= max) return text;
+  return text.slice(0, max);
+}
+
+function sanitizeAuditMetadata(metadata) {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+  const out = {};
+  Object.entries(metadata).slice(0, 10).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (!['string', 'number', 'boolean'].includes(typeof value)) return;
+    out[String(key).slice(0, 60)] = auditText(value, 140);
+  });
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function adminAuditLogPayload({
+  auth,
+  action,
+  targetType,
+  targetId,
+  beforeStatus = '',
+  afterStatus = '',
+  reason = '',
+  metadata = null,
+}) {
+  const actorUid = cleanString(auth && auth.uid);
+  if (!actorUid) {
+    throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
+  }
+  const payload = {
+    actorUid,
+    actorRole: auth && auth.token && auth.token.admin === true ? 'admin' : 'dev',
+    action: normalizeAdminAuditAction(action),
+    targetType: normalizeAdminAuditTargetType(targetType),
+    targetId: auditText(targetId, 180),
+    beforeStatus: auditText(beforeStatus, 80),
+    afterStatus: auditText(afterStatus, 80),
+    reason: auditText(reason, 500),
+    source: 'admin_callable',
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  const safeMetadata = sanitizeAuditMetadata(metadata);
+  if (safeMetadata) payload.metadata = safeMetadata;
+  return payload;
+}
+
+function writeAdminAuditLog({
+  database = db,
+  batch = null,
+  auth,
+  action,
+  targetType,
+  targetId,
+  beforeStatus = '',
+  afterStatus = '',
+  reason = '',
+  metadata = null,
+}) {
+  const ref = database.collection('adminAuditLogs').doc();
+  const payload = adminAuditLogPayload({
+    auth,
+    action,
+    targetType,
+    targetId,
+    beforeStatus,
+    afterStatus,
+    reason,
+    metadata,
+  });
+  if (batch) {
+    batch.set(ref, payload);
+    return Promise.resolve(ref.id);
+  }
+  return ref.set(payload).then(() => ref.id);
 }
 
 function serializeAdminReport(doc) {
@@ -1762,6 +1875,23 @@ function serializeAdminReport(doc) {
     createdAt: toMillis(data.createdAt),
     updatedAt: toMillis(data.updatedAt),
     reviewedAt: toMillis(data.reviewedAt),
+  };
+}
+
+function serializeAdminAuditLog(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    actorUid: String(data.actorUid || ''),
+    actorRole: String(data.actorRole || ''),
+    action: String(data.action || ''),
+    targetType: String(data.targetType || ''),
+    targetId: String(data.targetId || ''),
+    beforeStatus: String(data.beforeStatus || ''),
+    afterStatus: String(data.afterStatus || ''),
+    reason: String(data.reason || ''),
+    source: String(data.source || ''),
+    createdAt: toMillis(data.createdAt),
   };
 }
 
@@ -1799,6 +1929,36 @@ async function adminListReportsCore({ database = db, auth, data = {} }) {
   };
 }
 
+async function adminListAuditLogsCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+
+  const limitRaw = Number(data.limit || 50);
+  const limit = Math.min(100, Math.max(1, Number.isFinite(limitRaw) ? Math.round(limitRaw) : 50));
+  const targetTypeFilter = normalizeAdminAuditTargetType(data.targetType, { allowEmpty: true });
+  const actionFilter = normalizeAdminAuditAction(data.action, { allowEmpty: true });
+
+  const rawLimit = Math.max(limit * 4, 100);
+  const snap = await database.collection('adminAuditLogs')
+    .orderBy('createdAt', 'desc')
+    .limit(rawLimit)
+    .get();
+
+  const logs = [];
+  for (const doc of snap.docs) {
+    const item = serializeAdminAuditLog(doc);
+    if (targetTypeFilter && item.targetType !== targetTypeFilter) continue;
+    if (actionFilter && item.action !== actionFilter) continue;
+    logs.push(item);
+    if (logs.length >= limit) break;
+  }
+
+  return {
+    generatedAt: Date.now(),
+    total: logs.length,
+    logs,
+  };
+}
+
 async function adminUpdateReportStatusCore({ database = db, auth, data = {} }) {
   ensureAdmin(auth);
 
@@ -1818,6 +1978,7 @@ async function adminUpdateReportStatusCore({ database = db, auth, data = {} }) {
   if (!snap.exists) {
     throw new HttpsError('not-found', 'Denúncia não encontrada.');
   }
+  const beforeStatus = String((snap.data() || {}).status || 'pending_review');
 
   const update = {
     status,
@@ -1829,13 +1990,134 @@ async function adminUpdateReportStatusCore({ database = db, auth, data = {} }) {
     update.decisionReason = decisionReason;
   }
 
-  await ref.set(update, { merge: true });
+  const batch = database.batch();
+  batch.set(ref, update, { merge: true });
+  writeAdminAuditLog({
+    database,
+    batch,
+    auth,
+    action: 'report.update_status',
+    targetType: 'report',
+    targetId: reportId,
+    beforeStatus,
+    afterStatus: status,
+    reason: decisionReason,
+  });
+  await batch.commit();
 
   return {
     ok: true,
     reportId,
     status,
   };
+}
+
+async function adminUpdateSupportTicketStatusCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+  const ticketId = String(data.ticketId || '').trim();
+  const status = String(data.status || '').trim().toLowerCase();
+  const allowed = new Set(['open', 'in_progress', 'resolved', 'closed']);
+  if (!ticketId) throw new HttpsError('invalid-argument', 'ticketId obrigatório');
+  if (!allowed.has(status)) throw new HttpsError('invalid-argument', 'status inválido');
+
+  const ref = database.collection('support_tickets').doc(ticketId);
+  const snap = await ref.get();
+  const beforeStatus = snap.exists
+    ? String((snap.data() || {}).status || 'open').toLowerCase()
+    : '';
+
+  const batch = database.batch();
+  batch.set(
+    ref,
+    {
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: auth.uid,
+    },
+    { merge: true }
+  );
+  writeAdminAuditLog({
+    database,
+    batch,
+    auth,
+    action: 'support_ticket.update_status',
+    targetType: 'support_ticket',
+    targetId: ticketId,
+    beforeStatus,
+    afterStatus: status,
+  });
+  await batch.commit();
+  return { ok: true };
+}
+
+async function adminSetNoShowDecisionCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+  const pedidoId = String(data.pedidoId || '').trim();
+  const decision = String(data.decision || '').trim().toLowerCase();
+  if (!pedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatório');
+  if (!['approved', 'rejected'].includes(decision)) {
+    throw new HttpsError('invalid-argument', 'decision inválido');
+  }
+
+  const ref = database.collection('pedidos').doc(pedidoId);
+  const snap = await ref.get();
+  const beforeDecision = snap.exists
+    ? String((snap.data() || {}).noShowDecision || 'pending').toLowerCase()
+    : '';
+
+  const batch = database.batch();
+  batch.set(
+    ref,
+    {
+      noShowDecision: decision,
+      noShowDecidedAt: FieldValue.serverTimestamp(),
+      noShowDecidedBy: auth.uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  writeAdminAuditLog({
+    database,
+    batch,
+    auth,
+    action: 'no_show.set_decision',
+    targetType: 'no_show',
+    targetId: pedidoId,
+    beforeStatus: beforeDecision,
+    afterStatus: decision,
+  });
+  await batch.commit();
+
+  return { ok: true };
+}
+
+async function adminDeleteStoryCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+  const storyId = String(data.storyId || '').trim();
+  if (!storyId) throw new HttpsError('invalid-argument', 'storyId obrigatório');
+
+  const ref = database.collection('stories').doc(storyId);
+  const snap = await ref.get();
+  const beforeStatus = snap.exists ? 'active' : 'missing';
+  const story = snap.exists ? snap.data() || {} : {};
+
+  const batch = database.batch();
+  batch.delete(ref);
+  writeAdminAuditLog({
+    database,
+    batch,
+    auth,
+    action: 'story.delete',
+    targetType: 'story',
+    targetId: storyId,
+    beforeStatus,
+    afterStatus: 'deleted',
+    metadata: {
+      ownerId: story.prestadorId || story.ownerId || '',
+    },
+  });
+  await batch.commit();
+  return { ok: true };
 }
 
 exports.admin_getDashboardSnapshot = onCall(
@@ -1906,51 +2188,22 @@ exports.admin_updateSupportTicketStatus = onCall(
   {
     region: REGION,
   },
-  async (req) => {
-    ensureAdmin(req.auth);
-    const ticketId = String(req.data?.ticketId || '').trim();
-    const status = String(req.data?.status || '').trim().toLowerCase();
-    const allowed = new Set(['open', 'in_progress', 'resolved', 'closed']);
-    if (!ticketId) throw new HttpsError('invalid-argument', 'ticketId obrigatório');
-    if (!allowed.has(status)) throw new HttpsError('invalid-argument', 'status inválido');
-
-    await db.collection('support_tickets').doc(ticketId).set(
-      {
-        status,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: req.auth.uid,
-      },
-      { merge: true }
-    );
-    return { ok: true };
-  }
+  async (req) => adminUpdateSupportTicketStatusCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
 );
 
 exports.admin_setNoShowDecision = onCall(
   {
     region: REGION,
   },
-  async (req) => {
-    ensureAdmin(req.auth);
-    const pedidoId = String(req.data?.pedidoId || '').trim();
-    const decision = String(req.data?.decision || '').trim().toLowerCase();
-    if (!pedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatório');
-    if (!['approved', 'rejected'].includes(decision)) {
-      throw new HttpsError('invalid-argument', 'decision inválido');
-    }
-
-    await db.collection('pedidos').doc(pedidoId).set(
-      {
-        noShowDecision: decision,
-        noShowDecidedAt: FieldValue.serverTimestamp(),
-        noShowDecidedBy: req.auth.uid,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    return { ok: true };
-  }
+  async (req) => adminSetNoShowDecisionCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
 );
 
 exports.admin_listSupportTickets = onCall(
@@ -2359,14 +2612,22 @@ exports.admin_deleteStory = onCall(
   {
     region: REGION,
   },
-  async (req) => {
-    ensureAdmin(req.auth);
-    const storyId = String(req.data?.storyId || '').trim();
-    if (!storyId) throw new HttpsError('invalid-argument', 'storyId obrigatório');
+  async (req) => adminDeleteStoryCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
+);
 
-    await db.collection('stories').doc(storyId).delete();
-    return { ok: true };
-  }
+exports.admin_listAuditLogs = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => adminListAuditLogsCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
 );
 
 exports.admin_getLedgerAnomalies = onCall(
@@ -2578,5 +2839,10 @@ exports.__test__ = {
   admin: {
     adminListReportsCore,
     adminUpdateReportStatusCore,
+    adminUpdateSupportTicketStatusCore,
+    adminSetNoShowDecisionCore,
+    adminDeleteStoryCore,
+    adminListAuditLogsCore,
+    writeAdminAuditLog,
   },
 };

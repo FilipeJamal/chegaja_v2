@@ -14,7 +14,7 @@ class AdminQueueStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final normalized = value.trim().toLowerCase();
-    final display = _displayValue(normalized);
+    final display = adminQueueDisplayValue(normalized);
     final tone = _toneFor(normalized);
 
     final Color background;
@@ -87,7 +87,7 @@ _QueueChipTone _toneFor(String value) {
   return _QueueChipTone.neutral;
 }
 
-String _displayValue(String value) {
+String adminQueueDisplayValue(String value) {
   if (value.isEmpty) return '-';
   return _labels[value] ?? value;
 }
@@ -105,6 +105,9 @@ const Map<String, String> _labels = {
   'closed': 'Fechado',
   'approved': 'Aprovado',
   'rejected': 'Rejeitado',
+  'active': 'Ativo',
+  'deleted': 'Apagado',
+  'missing': 'Inexistente',
   'low': 'Baixa',
   'medium': 'Media',
   'high': 'Alta',

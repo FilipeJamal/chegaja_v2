@@ -28,6 +28,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   List<Map<String, dynamic>> _noShowCases = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _stories = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _ledgerAnomalies = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _auditLogs = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -96,6 +97,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           'ledger',
           () => AdminService.instance.getLedgerAnomalies(limit: 60),
         ),
+        guarded(
+          'audit',
+          () => AdminService.instance.listAuditLogs(limit: 60),
+        ),
       ]);
 
       if (!mounted) return;
@@ -113,6 +118,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         _stories = (results[6] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
         _ledgerAnomalies = (results[7] as List<Map<String, dynamic>>?) ??
+            <Map<String, dynamic>>[];
+        _auditLogs = (results[8] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
         _sectionErrors = sectionErrors;
         _loading = false;
@@ -259,6 +266,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 noShowCases: _noShowCases,
                 stories: _stories,
                 ledgerAnomalies: _ledgerAnomalies,
+                auditLogs: _auditLogs,
                 ticketFilter: _ticketFilter,
                 reportFilter: _reportFilter,
                 noShowFilter: _noShowFilter,

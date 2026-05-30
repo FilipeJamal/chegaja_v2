@@ -136,4 +136,19 @@ class AdminService {
     final map = _asMap(res.data);
     return _asListOfMaps(map['anomalies']);
   }
+
+  Future<List<Map<String, dynamic>>> listAuditLogs({
+    int limit = 50,
+    String? targetType,
+    String? action,
+  }) async {
+    final res = await _callable('admin_listAuditLogs').call({
+      'limit': limit,
+      if (targetType != null && targetType.trim().isNotEmpty)
+        'targetType': targetType.trim(),
+      if (action != null && action.trim().isNotEmpty) 'action': action.trim(),
+    });
+    final map = _asMap(res.data);
+    return _asListOfMaps(map['logs']);
+  }
 }

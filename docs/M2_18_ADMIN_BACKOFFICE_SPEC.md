@@ -15,7 +15,8 @@ M2.18.1 - FECHADA com spec e auditoria
 M2.18.2 - FECHADA com reorganizacao de navegacao/secoes
 M2.18.3 - FECHADA com dashboard e metricas essenciais
 M2.18.4 - FECHADA com filas operacionais melhoradas
-M2.18.5 - PROXIMO passo
+M2.18.5 - FECHADA com auditoria leve e estados operacionais
+M2.18.6 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -334,8 +335,8 @@ M2.18.1 - FECHADA - Spec e auditoria Admin/backoffice leve
 M2.18.2 - FECHADA - Reorganizar navegacao/secoes do AdminPanel
 M2.18.3 - FECHADA - Melhorar dashboard e metricas essenciais
 M2.18.4 - FECHADA - Melhorar filas operacionais: reports, suporte, no-show, stories
-M2.18.5 - PROXIMO - Logs/auditoria leve e estados operacionais
-M2.18.6 - Testes, E2E, QA visual e documentacao final
+M2.18.5 - FECHADA - Logs/auditoria leve e estados operacionais
+M2.18.6 - PROXIMO - Testes, E2E, QA visual e documentacao final
 ```
 
 ## Implementacao M2.18.2
@@ -484,17 +485,73 @@ exportacoes;
 admin enterprise completo.
 ```
 
+## Implementacao M2.18.5
+
+A M2.18.5 criou rastreabilidade minima para acoes admin principais, sem criar
+auditoria enterprise, roles granulares ou novas acoes destrutivas.
+
+Backend criado/alterado:
+
+```text
+adminAuditLogs/{logId}
+writeAdminAuditLog(...)
+admin_listAuditLogs
+```
+
+Acoes auditadas:
+
+```text
+admin_updateReportStatus - report.update_status
+admin_updateSupportTicketStatus - support_ticket.update_status
+admin_setNoShowDecision - no_show.set_decision
+admin_deleteStory - story.delete
+```
+
+Cada log guarda:
+
+```text
+actorUid;
+actorRole;
+action;
+targetType;
+targetId;
+beforeStatus;
+afterStatus;
+reason, quando existir;
+createdAt;
+source = admin_callable.
+```
+
+UI/admin:
+
+```text
+AdminService.listAuditLogs(...)
+AdminAuditLogsSection
+secao Auditoria no AdminPanel
+```
+
+Decisoes importantes:
+
+```text
+logs sao leves e nao guardam payloads sensiveis completos;
+listagem acontece por callable admin/dev;
+utilizador comum e anonimo nao conseguem listar logs;
+sem exportacao CSV/PDF;
+sem paginacao/cursor real;
+sem roles granulares;
+sem KYC/pagamentos/deploy.
+```
+
 ## Proximo Passo
 
 ```text
-M2.18.5 - Logs/auditoria leve e estados operacionais
+M2.18.6 - Testes, E2E, QA visual e documentacao final
 ```
 
 Objetivo recomendado:
 
 ```text
-preparar rastreio leve de acoes admin;
-documentar estados operacionais importantes;
-manter escopo leve;
-nao criar auditoria completa ou roles granulares ainda.
+validar Admin/backoffice leve com testes focados, Functions, Flutter completo,
+build Web, E2E se necessario, QA visual e relatorio final;
+fechar M2.18 no escopo atual sem transformar em admin enterprise.
 ```

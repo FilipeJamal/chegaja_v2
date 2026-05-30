@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/features/admin/widgets/admin_audit_logs_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_finance_ledger_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_no_show_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_overview_section.dart';
@@ -19,6 +20,7 @@ class AdminPanelContent extends StatefulWidget {
     required this.noShowCases,
     required this.stories,
     required this.ledgerAnomalies,
+    required this.auditLogs,
     required this.ticketFilter,
     required this.reportFilter,
     required this.noShowFilter,
@@ -41,6 +43,7 @@ class AdminPanelContent extends StatefulWidget {
   final List<Map<String, dynamic>> noShowCases;
   final List<Map<String, dynamic>> stories;
   final List<Map<String, dynamic>> ledgerAnomalies;
+  final List<Map<String, dynamic>> auditLogs;
   final String ticketFilter;
   final String reportFilter;
   final String noShowFilter;
@@ -140,6 +143,11 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
           ledgerAnomalies: widget.ledgerAnomalies,
           error: _firstError(['cost', 'ledger']),
         );
+      case _AdminPanelSection.audit:
+        return AdminAuditLogsSection(
+          logs: widget.auditLogs,
+          error: widget.sectionErrors['audit'],
+        );
     }
   }
 
@@ -184,7 +192,8 @@ enum _AdminPanelSection {
   support('Suporte'),
   noShow('No-show'),
   content('Conteudo'),
-  finance('Financeiro');
+  finance('Financeiro'),
+  audit('Auditoria');
 
   const _AdminPanelSection(this.label);
 

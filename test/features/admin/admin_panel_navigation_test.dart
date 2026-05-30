@@ -91,6 +91,18 @@ void main() {
                 'updatedAt': 1710000000000,
               },
             ],
+            auditLogs: const [
+              {
+                'id': 'log1',
+                'actorUid': 'admin1',
+                'action': 'story.delete',
+                'targetType': 'story',
+                'targetId': 'story1',
+                'beforeStatus': 'active',
+                'afterStatus': 'deleted',
+                'createdAt': 1710000000000,
+              },
+            ],
             ticketFilter: 'open',
             reportFilter: 'pending_review',
             noShowFilter: 'pending',
@@ -148,6 +160,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Financeiro e ledger'), findsOneWidget);
     expect(find.textContaining('pi_123'), findsOneWidget);
+
+    await tester.tap(find.text('Auditoria'));
+    await tester.pumpAndSettle();
+    expect(find.text('Auditoria recente'), findsOneWidget);
+    expect(find.text('story.delete'), findsOneWidget);
   });
 
   testWidgets('navegacao renderiza em dark mode', (tester) async {
