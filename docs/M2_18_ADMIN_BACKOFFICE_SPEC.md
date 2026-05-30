@@ -14,7 +14,8 @@ M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18.1 - FECHADA com spec e auditoria
 M2.18.2 - FECHADA com reorganizacao de navegacao/secoes
 M2.18.3 - FECHADA com dashboard e metricas essenciais
-M2.18.4 - PROXIMO passo
+M2.18.4 - FECHADA com filas operacionais melhoradas
+M2.18.5 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -332,8 +333,8 @@ QA visual admin.
 M2.18.1 - FECHADA - Spec e auditoria Admin/backoffice leve
 M2.18.2 - FECHADA - Reorganizar navegacao/secoes do AdminPanel
 M2.18.3 - FECHADA - Melhorar dashboard e metricas essenciais
-M2.18.4 - PROXIMO - Melhorar filas operacionais: reports, suporte, no-show, stories
-M2.18.5 - Logs/auditoria leve e estados operacionais
+M2.18.4 - FECHADA - Melhorar filas operacionais: reports, suporte, no-show, stories
+M2.18.5 - PROXIMO - Logs/auditoria leve e estados operacionais
 M2.18.6 - Testes, E2E, QA visual e documentacao final
 ```
 
@@ -436,17 +437,64 @@ exportacoes;
 admin enterprise completo.
 ```
 
+## Implementacao M2.18.4
+
+A M2.18.4 melhorou as filas operacionais existentes sem alterar AdminService,
+Functions, Rules ou deploy.
+
+Widgets comuns criados:
+
+```text
+AdminQueueStatusChip - labels legiveis para status/severidade/motivo/tipo
+AdminQueueCard - card padrao para item de fila
+AdminQueueActionRow - linha de acoes com suporte a acao destrutiva
+AdminQueueFilterBar - titulo, descricao e filtro de status
+```
+
+Filas melhoradas:
+
+```text
+AdminReportsSection - reports com chips legiveis e acoes existentes
+AdminSupportTicketsSection - tickets com status, user, data e fallbacks
+AdminNoShowSection - pedidos no-show com decisao, reporter, motivo e acoes
+AdminStoriesSection - stories com owner, descricao, expiracao e aviso destrutivo
+```
+
+Decisoes importantes:
+
+```text
+manter acoes existentes;
+nao criar acoes destrutivas novas;
+nao ocultar conteudo automaticamente;
+nao banir utilizadores;
+mostrar "Sem dados" ou "-" quando informacao estiver ausente;
+traduzir status internos para labels legiveis.
+```
+
+Nao entraram:
+
+```text
+novas Functions;
+alteracoes em Rules;
+roles granulares;
+audit logs completos;
+KYC;
+pagamentos;
+exportacoes;
+admin enterprise completo.
+```
+
 ## Proximo Passo
 
 ```text
-M2.18.4 - Melhorar filas operacionais: reports, suporte, no-show, stories
+M2.18.5 - Logs/auditoria leve e estados operacionais
 ```
 
 Objetivo recomendado:
 
 ```text
-melhorar usabilidade das filas operacionais existentes;
-priorizar reports, suporte, no-show e stories;
-manter callables existentes salvo necessidade documentada;
-nao criar admin enterprise ou roles granulares ainda.
+preparar rastreio leve de acoes admin;
+documentar estados operacionais importantes;
+manter escopo leve;
+nao criar auditoria completa ou roles granulares ainda.
 ```

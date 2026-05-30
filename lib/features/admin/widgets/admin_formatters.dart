@@ -66,3 +66,8 @@ String adminFormatMs(Object? value) {
   final mm = dt.minute.toString().padLeft(2, '0');
   return '$y-$m-$d $hh:$mm';
 }
+
+String adminTextOrFallback(Object? value, {String fallback = 'Sem dados'}) {
+  final text = '${value ?? ''}'.trim();
+  return text.isEmpty ? fallback : text;
+}

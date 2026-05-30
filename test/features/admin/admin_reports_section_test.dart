@@ -59,13 +59,15 @@ void main() {
     await pumpSection(tester);
 
     expect(find.text('Moderacao e denuncias'), findsOneWidget);
-    expect(find.text('provider_profile'), findsOneWidget);
-    expect(find.text('fraud'), findsOneWidget);
-    expect(find.text('high'), findsOneWidget);
-    expect(find.text('pending_review'), findsOneWidget);
+    expect(find.text('Tipo: Perfil prestador'), findsOneWidget);
+    expect(find.text('Motivo: Fraude/golpe'), findsOneWidget);
+    expect(find.text('Severidade: Alta'), findsOneWidget);
+    expect(find.text('Status: Pendente'), findsOneWidget);
     expect(find.textContaining('Perfil suspeito'), findsOneWidget);
-    expect(find.textContaining('client1'), findsOneWidget);
-    expect(find.textContaining('provider1'), findsWidgets);
+    expect(find.textContaining('Reporter: client1'), findsOneWidget);
+    expect(find.textContaining('Target: provider1'), findsOneWidget);
+    expect(find.textContaining('Owner: provider1'), findsOneWidget);
+    expect(find.text('pending_review'), findsNothing);
   });
 
   testWidgets('estado vazio e erro renderizam sem quebrar', (tester) async {
@@ -77,7 +79,7 @@ void main() {
       reports: const [],
       error: 'permission-denied',
     );
-    expect(find.textContaining('Falha ao carregar denuncias'), findsOneWidget);
+    expect(find.textContaining('Falha ao carregar'), findsOneWidget);
     expect(find.textContaining('permission-denied'), findsOneWidget);
   });
 

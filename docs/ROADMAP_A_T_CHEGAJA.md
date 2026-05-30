@@ -208,7 +208,7 @@ denuncias, moderacao e ranking continuam fora.
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
-| M2.18 | ATIVO | Admin/backoffice leve para operacao interna; M2.18.3 fechada e M2.18.4 proxima |
+| M2.18 | ATIVO | Admin/backoffice leve para operacao interna; M2.18.4 fechada e M2.18.5 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -216,7 +216,7 @@ de denuncia/bloqueio, fila admin inicial, filtros de servicos
 proibidos/categorias sensiveis, testes, E2E, build Web e QA visual. M2.18 foi
 iniciada com spec/auditoria do admin/backoffice leve; M2.18.2 reorganizou a
 navegacao/secoes do AdminPanel; M2.18.3 melhorou a Visao geral e as metricas
-essenciais; M2.18.4 e o proximo passo
+essenciais; M2.18.4 melhorou reports, suporte, no-show e stories; M2.18.5 e o proximo passo
 recomendado.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
@@ -291,8 +291,8 @@ para fases futuras.
 | M2.18.1 | FECHADO | Spec e auditoria do Admin/backoffice leve |
 | M2.18.2 | FECHADO | Reorganizar navegacao/secoes do AdminPanel |
 | M2.18.3 | FECHADO | Melhorar dashboard e metricas essenciais |
-| M2.18.4 | PROXIMO | Melhorar filas operacionais: reports, suporte, no-show, stories |
-| M2.18.5 | FUTURO | Logs/auditoria leve e estados operacionais |
+| M2.18.4 | FECHADO | Melhorar filas operacionais: reports, suporte, no-show, stories |
+| M2.18.5 | PROXIMO | Logs/auditoria leve e estados operacionais |
 | M2.18.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.18 |
 
 Estado: M2.18 ativa. A M2.18.1 auditou o AdminPanel existente, o
@@ -303,8 +303,11 @@ secoes navegaveis: Visao geral, Moderacao, Suporte, No-show, Conteudo e
 Financeiro, preservando callables/AdminService e extraindo widgets testaveis.
 A M2.18.3 melhorou a Visao geral com grupos de pendencias, pedidos, financeiro
 operacional e crescimento/retencao, mantendo fallbacks honestos para dados
-ausentes e sem criar metricas falsas. M2.18.4 deve melhorar filas operacionais
-sem criar admin enterprise, KYC, pagamentos, deploy ou roles granulares.
+ausentes e sem criar metricas falsas. A M2.18.4 criou padroes visuais para as
+filas operacionais e melhorou reports, suporte, no-show e stories com labels
+legiveis, fallbacks, erros/vazios e acoes preservadas. M2.18.5 deve preparar
+logs/auditoria leve e estados operacionais sem criar admin enterprise, KYC,
+pagamentos, deploy ou roles granulares.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -512,12 +515,13 @@ tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
 fechada no escopo atual de Trust & Safety basico: denuncias, bloqueios, UI,
 fila admin inicial, filtros simples, testes, E2E, build Web e QA visual. A
 M2.18 esta ativa. A M2.18.2 reorganizou a navegacao/secoes do AdminPanel e a
-M2.18.3 melhorou a Visao geral com metricas essenciais mais claras.
+M2.18.3 melhorou a Visao geral com metricas essenciais mais claras. A M2.18.4
+melhorou as filas operacionais.
 
 Fase operacional:
 
 ```text
-M2.18.4 - Melhorar filas operacionais: reports, suporte, no-show, stories
+M2.18.5 - Logs/auditoria leve e estados operacionais
 ```
 
 Dependencias pausadas:

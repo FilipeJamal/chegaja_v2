@@ -44,10 +44,54 @@ void main() {
 
     expect(find.text('Suporte interno'), findsOneWidget);
     expect(find.text('Conta'), findsOneWidget);
+    expect(find.text('Status: Aberto'), findsOneWidget);
+    expect(find.text('Ticket ticket1'), findsOneWidget);
+    expect(find.text('Utilizador: cliente'), findsOneWidget);
 
-    await tester.tap(find.text('resolved'));
+    await tester.tap(find.text('Resolver'));
     await tester.pump();
     expect(calls, contains('ticket1:resolved'));
+  });
+
+  testWidgets('support section mostra erro, vazio e fallback sem dados',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              AdminSupportTicketsSection(
+                tickets: const [],
+                statusFilter: 'open',
+                error: 'permission-denied',
+                onFilterChanged: (_) {},
+                onChangeStatus: ({
+                  required ticketId,
+                  required status,
+                }) async {},
+              ),
+              AdminSupportTicketsSection(
+                tickets: const [
+                  {'id': '', 'status': 'open'},
+                ],
+                statusFilter: 'open',
+                onFilterChanged: (_) {},
+                onChangeStatus: ({
+                  required ticketId,
+                  required status,
+                }) async {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('Falha ao carregar'), findsOneWidget);
+    expect(find.text('Sem tickets para este filtro.'), findsOneWidget);
+    expect(find.text('Ticket sem ID'), findsOneWidget);
+    expect(find.text('Assunto sem titulo'), findsOneWidget);
+    expect(find.text('Sem dados'), findsWidgets);
   });
 
   testWidgets('no-show section mostra casos, vazio e chama callback',
@@ -86,10 +130,52 @@ void main() {
 
     expect(find.text('Moderacao no-show'), findsOneWidget);
     expect(find.textContaining('pedido1'), findsOneWidget);
+    expect(find.text('Decisao: Pendente'), findsOneWidget);
+    expect(find.text('Reportado por: prestador'), findsOneWidget);
 
     await tester.tap(find.text('Aprovar'));
     await tester.pump();
     expect(calls, contains('pedido1:approved'));
+  });
+
+  testWidgets('no-show section mostra erro, vazio e fallback sem dados',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              AdminNoShowSection(
+                cases: const [],
+                decisionFilter: 'pending',
+                error: 'timeout',
+                onFilterChanged: (_) {},
+                onDecide: ({
+                  required pedidoId,
+                  required decision,
+                }) async {},
+              ),
+              AdminNoShowSection(
+                cases: const [
+                  {'pedidoId': ''},
+                ],
+                decisionFilter: 'pending',
+                onFilterChanged: (_) {},
+                onDecide: ({
+                  required pedidoId,
+                  required decision,
+                }) async {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('Falha ao carregar'), findsOneWidget);
+    expect(find.text('Sem casos para este filtro.'), findsOneWidget);
+    expect(find.text('Pedido sem ID'), findsOneWidget);
+    expect(find.text('Titulo: Sem dados'), findsOneWidget);
   });
 
   testWidgets('stories section mostra stories e acao de remocao',
@@ -118,11 +204,43 @@ void main() {
     );
 
     expect(find.text('Moderacao de historias'), findsOneWidget);
-    expect(find.text('Maria'), findsOneWidget);
+    expect(find.text('Prestador: Maria'), findsOneWidget);
+    expect(find.text('Historia story1'), findsOneWidget);
+    expect(find.text('Acao destrutiva'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.tap(find.text('Remover'));
     await tester.pump();
     expect(deleted, 'story1');
+  });
+
+  testWidgets('stories section mostra erro, vazio e fallback sem dados',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              AdminStoriesSection(
+                stories: const [],
+                error: 'permission-denied',
+                onDeleteStory: (_) async {},
+              ),
+              AdminStoriesSection(
+                stories: const [
+                  {'id': ''},
+                ],
+                onDeleteStory: (_) async {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('Falha ao carregar'), findsOneWidget);
+    expect(find.text('Sem historias ativas.'), findsOneWidget);
+    expect(find.text('Historia sem ID'), findsOneWidget);
+    expect(find.text('Prestador: Sem dados'), findsOneWidget);
   });
 
   testWidgets('finance section mostra custo, retencao e anomalias',

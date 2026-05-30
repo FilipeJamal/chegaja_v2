@@ -142,7 +142,7 @@ void main() {
     await tester.tap(find.text('Conteudo'));
     await tester.pumpAndSettle();
     expect(find.text('Moderacao de historias'), findsOneWidget);
-    expect(find.text('Maria'), findsOneWidget);
+    expect(find.text('Prestador: Maria'), findsOneWidget);
 
     await tester.tap(find.text('Financeiro'));
     await tester.pumpAndSettle();
