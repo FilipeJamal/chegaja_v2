@@ -6,15 +6,18 @@ class AdminMetricTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.icon,
+    this.helper,
   });
 
   final String label;
   final String value;
   final IconData? icon;
+  final String? helper;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final helperText = helper?.trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -30,11 +33,27 @@ class AdminMetricTile extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (helperText != null && helperText.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    helperText,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
+          const SizedBox(width: 10),
           Text(
             value,
             style: const TextStyle(fontWeight: FontWeight.w700),

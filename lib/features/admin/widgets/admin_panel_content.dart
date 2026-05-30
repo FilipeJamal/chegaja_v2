@@ -97,6 +97,11 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
         return AdminOverviewSection(
           dashboard: widget.dashboard,
           ops: widget.ops,
+          cost: widget.cost,
+          tickets: widget.tickets,
+          reports: widget.reports,
+          noShowCases: widget.noShowCases,
+          ledgerAnomalies: widget.ledgerAnomalies,
           error: _firstError(['dashboard', 'ops']),
         );
       case _AdminPanelSection.moderation:

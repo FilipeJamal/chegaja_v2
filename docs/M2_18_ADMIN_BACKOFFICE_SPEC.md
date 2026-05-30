@@ -13,7 +13,8 @@ M2.16 - FECHADA no escopo atual de pesquisa manual/discovery
 M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18.1 - FECHADA com spec e auditoria
 M2.18.2 - FECHADA com reorganizacao de navegacao/secoes
-M2.18.3 - PROXIMO passo
+M2.18.3 - FECHADA com dashboard e metricas essenciais
+M2.18.4 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -330,8 +331,8 @@ QA visual admin.
 ```text
 M2.18.1 - FECHADA - Spec e auditoria Admin/backoffice leve
 M2.18.2 - FECHADA - Reorganizar navegacao/secoes do AdminPanel
-M2.18.3 - PROXIMO - Melhorar dashboard e metricas essenciais
-M2.18.4 - Melhorar filas operacionais: reports, suporte, no-show, stories
+M2.18.3 - FECHADA - Melhorar dashboard e metricas essenciais
+M2.18.4 - PROXIMO - Melhorar filas operacionais: reports, suporte, no-show, stories
 M2.18.5 - Logs/auditoria leve e estados operacionais
 M2.18.6 - Testes, E2E, QA visual e documentacao final
 ```
@@ -390,17 +391,62 @@ admin enterprise completo;
 deploy.
 ```
 
+## Implementacao M2.18.3
+
+A M2.18.3 melhorou a secao `Visao geral` sem alterar navegacao, AdminService,
+Functions ou Rules.
+
+Widgets criados:
+
+```text
+AdminHealthSummaryCard - resumo de pendencias operacionais
+AdminMetricGroupCard - grupos compactos de metricas
+AdminDashboardExplainer - nota sobre estimativas operacionais
+```
+
+Grupos criados no dashboard:
+
+```text
+Pendencias operacionais - tickets, reports, no-show e ledger anomalies
+Pedidos - criados, concluidos, taxa simples de conclusao e cancelamentos
+Financeiro operacional - receita liquida, bruta e comissao/plataforma
+Crescimento e retencao - novos utilizadores, ativos, churn e LTV estimados
+```
+
+Decisoes importantes:
+
+```text
+nao criar graficos complexos;
+nao criar analytics avancado;
+nao inventar metricas sem fonte;
+mostrar fallback "-" quando faltam dados;
+explicar que valores podem ser estimativas operacionais;
+usar listas carregadas como aproximacao quando nao houver count dedicado.
+```
+
+Nao entraram:
+
+```text
+novas Functions;
+alteracoes em Rules;
+novos contratos do AdminService;
+KYC;
+pagamentos;
+exportacoes;
+admin enterprise completo.
+```
+
 ## Proximo Passo
 
 ```text
-M2.18.3 - Melhorar dashboard e metricas essenciais
+M2.18.4 - Melhorar filas operacionais: reports, suporte, no-show, stories
 ```
 
 Objetivo recomendado:
 
 ```text
-melhorar clareza das metricas essenciais;
-documentar significado dos numeros principais;
-manter as secoes criadas na M2.18.2;
-nao criar analytics avancado ou graficos complexos ainda.
+melhorar usabilidade das filas operacionais existentes;
+priorizar reports, suporte, no-show e stories;
+manter callables existentes salvo necessidade documentada;
+nao criar admin enterprise ou roles granulares ainda.
 ```
