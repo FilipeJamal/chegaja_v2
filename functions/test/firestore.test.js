@@ -132,6 +132,95 @@ describe("Firestore Security Rules", () => {
                 })
             );
         });
+
+        it("should deny provider creating profile with handle fields directly", async () => {
+            const provider = testEnv.authenticatedContext("provider_handle");
+            await assertFails(
+                provider.firestore().collection("prestadores").doc("provider_handle").set({
+                    nome: "Provider Handle",
+                    handle: "provider_handle",
+                    handleDisplay: "@provider_handle",
+                    handleUpdatedAt: serverTimestamp(),
+                })
+            );
+        });
+
+        it("should deny provider updating handle fields directly", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            const providerDb = provider.firestore();
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context
+                    .firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .set({ nome: "Provider", city: "Lisboa" });
+            });
+
+            await assertFails(
+                providerDb.collection("prestadores").doc("provider1").update({
+                    handle: "provider1",
+                    handleDisplay: "@provider1",
+                    handleUpdatedAt: serverTimestamp(),
+                })
+            );
+
+            await assertSucceeds(
+                providerDb.collection("prestadores").doc("provider1").update({
+                    city: "Porto",
+                })
+            );
+        });
+    });
+
+    describe("Public Handles Collection", () => {
+        async function seedHandle(id = "maria_bolos", data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore().collection("handles").doc(id).set({
+                    uid: "provider1",
+                    role: "prestador",
+                    status: "active",
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    ...data,
+                });
+            });
+        }
+
+        it("should allow public reads of handle reservation docs", async () => {
+            await seedHandle();
+            const unauth = testEnv.unauthenticatedContext();
+
+            await assertSucceeds(
+                unauth.firestore().collection("handles").doc("maria_bolos").get()
+            );
+        });
+
+        it("should deny client-side create update and delete on handles", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            const providerDb = provider.firestore();
+
+            await assertFails(
+                providerDb.collection("handles").doc("maria_bolos").set({
+                    uid: "provider1",
+                    role: "prestador",
+                    status: "active",
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                })
+            );
+
+            await seedHandle();
+
+            await assertFails(
+                providerDb.collection("handles").doc("maria_bolos").update({
+                    status: "blocked",
+                    updatedAt: serverTimestamp(),
+                })
+            );
+            await assertFails(
+                providerDb.collection("handles").doc("maria_bolos").delete()
+            );
+        });
     });
 
     describe("Pedidos Collection", () => {

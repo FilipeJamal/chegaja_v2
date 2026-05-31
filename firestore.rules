@@ -276,6 +276,32 @@ service cloud.firestore {
         && data['createdAt'] == request.time;
     }
 
+    function validPrestadorOwnerCreate(prestadorId) {
+      return isSelf(prestadorId)
+        && !request.resource.data.keys().hasAny([
+          'ratingCount',
+          'ratingSum',
+          'ratingAvg',
+          'handle',
+          'handleDisplay',
+          'handleUpdatedAt',
+        ]);
+    }
+
+    function validPrestadorOwnerUpdate(prestadorId) {
+      return isSelf(prestadorId)
+        && !request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasAny([
+            'ratingCount',
+            'ratingSum',
+            'ratingAvg',
+            'handle',
+            'handleDisplay',
+            'handleUpdatedAt',
+          ]);
+    }
+
     function isValidPedidoEstadoValue(value) {
       return value is string
         && value in [
@@ -898,19 +924,21 @@ service cloud.firestore {
     // -------------------------
     match /prestadores/{prestadorId} {
       allow read: if true; // perfis precisam ser visíveis
-      allow create: if isSelf(prestadorId) || isAdmin();
+      allow create: if isAdmin() || validPrestadorOwnerCreate(prestadorId);
       
       // Owner can update own profile, but cannot self-edit rating aggregates.
       // Rating aggregates are updated by trusted backend/admin only.
-      allow update: if isAdmin()
-        || (
-          isSelf(prestadorId)
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .difference(['ratingCount', 'ratingSum', 'ratingAvg'].toSet()).size()
-            == request.resource.data.diff(resource.data).affectedKeys().size()
-        );
+      allow update: if isAdmin() || validPrestadorOwnerUpdate(prestadorId);
 
       allow delete: if isAdmin() || devMode();
+    }
+
+    // -------------------------
+    // PUBLIC HANDLES
+    // -------------------------
+    match /handles/{handleId} {
+      allow read: if true;
+      allow create, update, delete: if false;
     }
 
     // -------------------------

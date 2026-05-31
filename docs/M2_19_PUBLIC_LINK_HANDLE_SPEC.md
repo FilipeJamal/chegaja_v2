@@ -13,7 +13,8 @@ M2.16 - FECHADA no escopo atual de pesquisa manual/discovery
 M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19.1 - FECHADA com spec e auditoria
-M2.19.2 - PROXIMO passo
+M2.19.2 - FECHADA com modelo, normalizacao e reserva de @handle
+M2.19.3 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -656,11 +657,40 @@ posterior com Hosting/SSR/prerender ou Functions se necessario.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.19.1 | FECHADO | Spec e auditoria de link publico, @handle e partilha social |
-| M2.19.2 | PROXIMO | Modelo, normalizacao e reserva de @handle |
-| M2.19.3 | FUTURO | UI de @handle no perfil do prestador |
+| M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
+| M2.19.3 | PROXIMO | UI de @handle no perfil do prestador |
 | M2.19.4 | FUTURO | Rota publica/deep link por @handle |
 | M2.19.5 | FUTURO | Partilha social, copiar link e QR futuro |
 | M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
+
+## Estado Implementado na M2.19.2
+
+A M2.19.2 criou:
+
+```text
+HandleNormalizer;
+HandleValidator;
+ReservedHandles;
+PublicHandle;
+HandleService;
+handle_checkAvailability;
+handle_reserveProviderHandle;
+Rules para handles/{handleNormalized};
+protecoes de handle/handleDisplay/handleUpdatedAt em prestadores/{uid};
+testes Dart, Functions e Rules.
+```
+
+Decisao sobre troca de handle:
+
+```text
+handle antigo fica released;
+previousOwnerUid aponta para o dono anterior;
+handle antigo continua indisponivel para outros nesta fase;
+redirect/historico publico ficam para fase futura.
+```
+
+M2.19.3 deve criar apenas a UI de escolha/edicao de handle no perfil do
+prestador, usando `HandleService`, sem criar ainda rota publica ou partilha.
 
 ## Riscos
 

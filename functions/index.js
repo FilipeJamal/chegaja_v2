@@ -149,6 +149,136 @@ function safeText(str, max = 120) {
   return `${s.slice(0, Math.max(0, max - 3))}...`;
 }
 
+const RESERVED_HANDLES = new Set([
+  'admin',
+  'administrador',
+  'administrator',
+  'support',
+  'suporte',
+  'help',
+  'ajuda',
+  'chegaja',
+  'chegajaoficial',
+  'chegajaapp',
+  'oficial',
+  'official',
+  'verified',
+  'verificado',
+  'certificado',
+  'pagamento',
+  'pagamentos',
+  'payment',
+  'seguranca',
+  'security',
+  'termos',
+  'terms',
+  'privacidade',
+  'privacy',
+  'login',
+  'logout',
+  'register',
+  'signup',
+  'api',
+  'app',
+  'root',
+  'null',
+  'undefined',
+  'system',
+  'moderator',
+  'moderador',
+  'moderacao',
+  'moderation',
+  'staff',
+  'team',
+]);
+
+const PROHIBITED_HANDLE_PHRASES = [
+  'prostituicao',
+  'servico sexual',
+  'servicos sexuais',
+  'pornografia',
+  'trafico humano',
+  'drogas ilegais',
+  'droga ilegal',
+  'cocaina',
+  'heroina',
+  'crack',
+  'armas ilegais',
+  'arma ilegal',
+  'fraude',
+  'golpe',
+  'burla',
+  'falsificacao de documentos',
+  'documento falso',
+  'exploracao de menores',
+  'abuso infantil',
+  'servico criminoso',
+  'extorsao',
+];
+
+function normalizePublicHandle(raw) {
+  let value = String(raw || '').trim();
+  if (value.startsWith('@')) {
+    value = value.slice(1).trim();
+  }
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function handleValidationMessage(code) {
+  if (code === 'empty') return 'Escolhe um @handle.';
+  if (code === 'too_short') return 'O @handle deve ter pelo menos 3 caracteres.';
+  if (code === 'too_long') return 'O @handle deve ter no maximo 30 caracteres.';
+  if (code === 'invalid_characters') {
+    return 'Usa apenas letras, numeros, ponto, underline ou hifen.';
+  }
+  if (code === 'edge_separator') {
+    return 'O @handle nao pode comecar ou terminar com separador.';
+  }
+  if (code === 'repeated_separator') {
+    return 'O @handle nao pode ter separadores repetidos.';
+  }
+  if (code === 'reserved' || code === 'blocked') {
+    return 'Este nome de perfil nao pode ser usado.';
+  }
+  if (code === 'taken') return 'Este @handle ja esta em uso.';
+  return '';
+}
+
+function isBlockedPublicHandle(normalized) {
+  const safetyText = normalized.replace(/[._-]+/g, ' ');
+  const haystack = ` ${safetyText} `;
+  return PROHIBITED_HANDLE_PHRASES.some((phrase) => {
+    const safePhrase = normalizePublicHandle(phrase).replace(/[._-]+/g, ' ');
+    return haystack.includes(` ${safePhrase} `);
+  });
+}
+
+function validatePublicHandle(raw) {
+  const normalizedHandle = normalizePublicHandle(raw);
+  let reason = 'valid';
+
+  if (!normalizedHandle) reason = 'empty';
+  else if (normalizedHandle.length < 3) reason = 'too_short';
+  else if (normalizedHandle.length > 30) reason = 'too_long';
+  else if (!/^[a-z0-9._-]+$/.test(normalizedHandle)) reason = 'invalid_characters';
+  else if (/^[._-]|[._-]$/.test(normalizedHandle)) reason = 'edge_separator';
+  else if (/[._-]{2,}/.test(normalizedHandle)) reason = 'repeated_separator';
+  else if (RESERVED_HANDLES.has(normalizedHandle)) reason = 'reserved';
+  else if (isBlockedPublicHandle(normalizedHandle)) reason = 'blocked';
+
+  return {
+    normalizedHandle,
+    ok: reason === 'valid',
+    reason,
+    message: handleValidationMessage(reason),
+  };
+}
+
 
 function moneyToCents(value) {
   const num = Number(value);
@@ -1895,6 +2025,126 @@ function serializeAdminAuditLog(doc) {
   };
 }
 
+async function handleCheckAvailabilityCore({ database = db, data = {} }) {
+  const validation = validatePublicHandle(data.handle);
+  if (!validation.ok) {
+    return {
+      normalizedHandle: validation.normalizedHandle,
+      available: false,
+      reason: validation.reason,
+      message: validation.message,
+    };
+  }
+
+  const snap = await database.collection('handles')
+    .doc(validation.normalizedHandle)
+    .get();
+
+  if (snap.exists) {
+    return {
+      normalizedHandle: validation.normalizedHandle,
+      available: false,
+      reason: 'taken',
+      message: handleValidationMessage('taken'),
+    };
+  }
+
+  return {
+    normalizedHandle: validation.normalizedHandle,
+    available: true,
+    reason: 'available',
+    message: '',
+  };
+}
+
+async function handleReserveProviderHandleCore({ database = db, auth, data = {} }) {
+  const uid = requireCallableUid(auth && auth.uid);
+  const validation = validatePublicHandle(data.handle);
+
+  if (!validation.ok) {
+    throw new HttpsError('invalid-argument', validation.message || 'Handle invalido.', {
+      reason: validation.reason,
+      normalizedHandle: validation.normalizedHandle,
+    });
+  }
+
+  const handle = validation.normalizedHandle;
+  const handleDisplay = `@${handle}`;
+  const prestadorRef = database.collection('prestadores').doc(uid);
+  const handleRef = database.collection('handles').doc(handle);
+
+  await database.runTransaction(async (tx) => {
+    const prestadorSnap = await tx.get(prestadorRef);
+    if (!prestadorSnap.exists) {
+      throw new HttpsError('failed-precondition', 'Perfil de prestador obrigatorio.');
+    }
+
+    const prestadorData = prestadorSnap.data() || {};
+    const oldHandle = normalizePublicHandle(prestadorData.handle || '');
+    const handleSnap = await tx.get(handleRef);
+
+    if (handleSnap.exists) {
+      const handleData = handleSnap.data() || {};
+      const ownerUid = String(handleData.uid || '');
+      const status = String(handleData.status || 'active');
+      if (ownerUid !== uid || status === 'blocked') {
+        throw new HttpsError('already-exists', 'Este @handle ja esta em uso.');
+      }
+    }
+
+    if (oldHandle && oldHandle !== handle) {
+      const oldHandleRef = database.collection('handles').doc(oldHandle);
+      tx.set(
+        oldHandleRef,
+        {
+          handle: oldHandle,
+          uid,
+          role: 'prestador',
+          status: 'released',
+          previousOwnerUid: uid,
+          releasedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          source: 'prestador_profile',
+        },
+        { merge: true },
+      );
+    }
+
+    tx.set(
+      handleRef,
+      {
+        handle,
+        uid,
+        role: 'prestador',
+        status: 'active',
+        handleDisplay,
+        source: 'prestador_profile',
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(handleSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+
+    tx.set(
+      prestadorRef,
+      {
+        handle,
+        handleDisplay,
+        handleUpdatedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  });
+
+  return {
+    handle,
+    handleDisplay,
+    uid,
+    status: 'active',
+  };
+}
+
 async function adminListReportsCore({ database = db, auth, data = {} }) {
   ensureAdmin(auth);
 
@@ -2167,6 +2417,27 @@ exports.admin_listReports = onCall(
     region: REGION,
   },
   async (req) => adminListReportsCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
+);
+
+exports.handle_checkAvailability = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => handleCheckAvailabilityCore({
+    database: db,
+    data: req.data || {},
+  })
+);
+
+exports.handle_reserveProviderHandle = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => handleReserveProviderHandleCore({
     database: db,
     auth: req.auth,
     data: req.data || {},
@@ -2835,6 +3106,12 @@ exports.__test__ = {
     calculatePedidoEconomics,
     confirmarValorFinalPedidoCore,
     proporValorFinalPedidoCore,
+  },
+  handles: {
+    normalizePublicHandle,
+    validatePublicHandle,
+    handleCheckAvailabilityCore,
+    handleReserveProviderHandleCore,
   },
   admin: {
     adminListReportsCore,

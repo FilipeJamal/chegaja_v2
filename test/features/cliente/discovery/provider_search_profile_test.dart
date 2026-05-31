@@ -107,6 +107,20 @@ void main() {
       expect(searchable, isNot(contains('99')));
     });
 
+    test('mapeia handle e inclui nos termos pesquisaveis', () {
+      final profile = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_handle',
+        data: {
+          'nome': 'Maria Bolos',
+          'city': 'Lisboa',
+          'handle': 'maria_bolos',
+        },
+      );
+
+      expect(profile.handle, 'maria_bolos');
+      expect(profile.searchText, contains('maria bolos'));
+    });
+
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {
       expect(
         ProviderSearchProfile.fromPrestadorDoc(
