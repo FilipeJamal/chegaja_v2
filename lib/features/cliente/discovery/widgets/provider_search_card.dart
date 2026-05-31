@@ -51,6 +51,18 @@ class ProviderSearchCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
+                  if (_handleLabel(profile).isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x1),
+                    Text(
+                      _handleLabel(profile),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                   if (services.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x1),
                     Text(
@@ -154,6 +166,12 @@ class ProviderSearchCard extends StatelessWidget {
       profile.city,
       profile.country,
     ].where((value) => value.trim().isNotEmpty).join(', ');
+  }
+
+  String _handleLabel(ProviderSearchProfile profile) {
+    final value = profile.handle?.trim();
+    if (value == null || value.isEmpty) return '';
+    return value.startsWith('@') ? value : '@$value';
   }
 }
 

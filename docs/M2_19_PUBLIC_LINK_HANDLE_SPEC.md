@@ -14,7 +14,8 @@ M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19.1 - FECHADA com spec e auditoria
 M2.19.2 - FECHADA com modelo, normalizacao e reserva de @handle
-M2.19.3 - PROXIMO passo
+M2.19.3 - FECHADA com UI de @handle no perfil do prestador
+M2.19.4 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -587,8 +588,8 @@ excluir perfis suspensos/restritos quando houver campo de moderacao publico.
 
 ## Relacao com Perfil do Prestador
 
-`PrestadorPerfilScreen` ainda nao possui UI para escolher/editar handle. A
-M2.19.3 deve adicionar:
+`PrestadorPerfilScreen` possui UI para escolher/editar handle desde M2.19.3.
+A fase adicionou:
 
 ```text
 campo de @handle;
@@ -601,7 +602,8 @@ mensagem clara para troca de handle.
 ```
 
 O fluxo de salvar perfil ja usa `TrustSafetyClassifier` para nome/bio. O handle
-deve ter validacao propria e tambem passar por filtro de termos proibidos.
+tem validacao propria e tambem passa por filtro de termos proibidos pela base da
+M2.19.2.
 
 ## Relacao com Admin
 
@@ -658,8 +660,8 @@ posterior com Hosting/SSR/prerender ou Functions se necessario.
 | --- | --- | --- |
 | M2.19.1 | FECHADO | Spec e auditoria de link publico, @handle e partilha social |
 | M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
-| M2.19.3 | PROXIMO | UI de @handle no perfil do prestador |
-| M2.19.4 | FUTURO | Rota publica/deep link por @handle |
+| M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
+| M2.19.4 | PROXIMO | Rota publica/deep link por @handle |
 | M2.19.5 | FUTURO | Partilha social, copiar link e QR futuro |
 | M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
@@ -689,8 +691,36 @@ handle antigo continua indisponivel para outros nesta fase;
 redirect/historico publico ficam para fase futura.
 ```
 
-M2.19.3 deve criar apenas a UI de escolha/edicao de handle no perfil do
-prestador, usando `HandleService`, sem criar ainda rota publica ou partilha.
+## Estado Implementado na M2.19.3
+
+A M2.19.3 criou:
+
+```text
+PrestadorHandleSection;
+integracao no PrestadorPerfilScreen;
+check availability via HandleService;
+reserva/guardar handle via HandleService;
+preview de link publico marcado como em preparacao;
+display de @handle no PublicProfileScreen;
+display de @handle no ProviderSearchCard;
+testes de widget para a seccao de handle;
+testes atualizados para perfil publico e card de discovery.
+```
+
+A fase manteve fora:
+
+```text
+rota publica /p/{handle};
+resolver handle para uid;
+partilha social;
+copiar link;
+QR Code;
+SEO/metatags;
+deploy.
+```
+
+M2.19.4 deve criar a rota publica/deep link por @handle, resolvendo
+`handles/{handleNormalized}` para `uid` e abrindo o `PublicProfileScreen`.
 
 ## Riscos
 
@@ -763,21 +793,19 @@ dark mode;
 build Web.
 ```
 
-## Decisao Recomendada para M2.19.2
+## Decisao Recomendada para M2.19.4
 
-Implementar apenas a base de modelo, normalizacao e reserva:
+Implementar apenas a rota publica/deep link por @handle:
 
 ```text
-criar normalizador/validador de handle;
-criar lista de reservados;
-usar TrustSafetyClassifier como barreira adicional;
-criar modelo/servico de reserva;
-criar colecao handles/{handleNormalized};
-guardar copia em prestadores/{uid};
-criar Rules e testes, se a fase alterar Firestore;
-nao criar rota publica ainda;
-nao criar UI de partilha ainda.
+criar entrada de rota /p/{handle};
+normalizar handle recebido;
+consultar handles/{handleNormalized};
+validar status active e role prestador;
+abrir PublicProfileScreen por uid;
+mostrar 404 amigavel para handle inexistente;
+nao criar ainda partilha social/QR.
 ```
 
-M2.19.2 deve preparar o dado certo. A UI e a rota publica ficam para fases
-seguintes.
+M2.19.4 deve tornar o link funcional. Partilha social e copiar link ficam para
+M2.19.5.

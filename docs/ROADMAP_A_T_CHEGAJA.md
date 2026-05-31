@@ -209,7 +209,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual; M2.19 proxima |
-| M2.19 | ATIVO | Link publico, @handle e partilha social; M2.19.2 fechada, M2.19.3 proxima |
+| M2.19 | ATIVO | Link publico, @handle e partilha social; M2.19.3 fechada, M2.19.4 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -220,8 +220,10 @@ navegacao/secoes do AdminPanel; M2.18.3 melhorou a Visao geral e as metricas
 essenciais; M2.18.4 melhorou reports, suporte, no-show e stories; M2.18.5 criou
 auditoria leve para acoes admin principais; M2.18.6 fechou QA final e documentacao.
 M2.19 foi iniciada com spec/auditoria de link publico, @handle e partilha
-social. A M2.19.2 criou o modelo, normalizacao e reserva de @handle. O proximo
-passo recomendado e M2.19.3.
+social. A M2.19.2 criou o modelo, normalizacao e reserva de @handle. A M2.19.3
+criou a UI de escolha/edicao no perfil do prestador, com preview de link em
+preparacao, display de @handle no perfil publico e card de discovery. O proximo
+passo recomendado e M2.19.4.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -322,8 +324,8 @@ operacao completa e KYC/admin futuro continuam fora.
 | --- | --- | --- |
 | M2.19.1 | FECHADO | Spec e auditoria de link publico, @handle e partilha social |
 | M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
-| M2.19.3 | PROXIMO | UI de @handle no perfil do prestador |
-| M2.19.4 | FUTURO | Rota publica/deep link por @handle |
+| M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
+| M2.19.4 | PROXIMO | Rota publica/deep link por @handle |
 | M2.19.5 | FUTURO | Partilha social, copiar link e QR futuro |
 | M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.19 |
 
@@ -338,8 +340,10 @@ em rotas SPA. A M2.19.2 criou `HandleNormalizer`, `HandleValidator`,
 `ReservedHandles`, `PublicHandle`, `HandleService`, as callables
 `handle_checkAvailability` e `handle_reserveProviderHandle`, Rules para
 `handles/{handleNormalized}` e protecao de `handle`, `handleDisplay` e
-`handleUpdatedAt` em `prestadores/{uid}`. M2.19.3 deve criar a UI de
-escolha/edicao de @handle no perfil do prestador. Bloco F continua parcial
+`handleUpdatedAt` em `prestadores/{uid}`. A M2.19.3 criou
+`PrestadorHandleSection`, integrou check/reserva de @handle no
+`PrestadorPerfilScreen`, mostrou @handle no `PublicProfileScreen` e no
+`ProviderSearchCard`, sem criar ainda rota publica ou partilha. Bloco F continua parcial
 porque KYC, contacto publico opt-in, dominio publico final e partilha social
 real ainda ficam fora.
 
@@ -560,7 +564,7 @@ M2.19.2 criou a base tecnica de normalizacao, validacao, reserva e Rules de
 Fase operacional:
 
 ```text
-M2.19.3 - UI para escolher/editar @handle no perfil do prestador
+M2.19.4 - Rota publica/deep link por @handle
 ```
 
 Dependencias pausadas:

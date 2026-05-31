@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 ProviderSearchProfile _profile({
   double? ratingAvg = 4.8,
   int? ratingCount = 12,
+  String? handle,
 }) {
   return ProviderSearchProfile(
     id: 'prestador-1',
@@ -23,6 +24,7 @@ ProviderSearchProfile _profile({
     searchTerms: const ['joao bolos', 'bolos personalizados'],
     latitude: null,
     longitude: null,
+    handle: handle,
   );
 }
 
@@ -53,13 +55,20 @@ Future<void> _pumpCard(
 
 void main() {
   testWidgets('mostra dados publicos principais do prestador', (tester) async {
-    await _pumpCard(tester, profile: _profile());
+    await _pumpCard(tester, profile: _profile(handle: 'joao_bolos'));
 
     expect(find.text('Joao Bolos'), findsOneWidget);
+    expect(find.text('@joao_bolos'), findsOneWidget);
     expect(find.text('Bolos personalizados, Sobremesas'), findsOneWidget);
     expect(find.text('Coimbra, Portugal'), findsOneWidget);
     expect(find.text('4,8'), findsOneWidget);
     expect(find.text('12 avaliacoes'), findsOneWidget);
+  });
+
+  testWidgets('nao mostra @handle quando ausente', (tester) async {
+    await _pumpCard(tester, profile: _profile());
+
+    expect(find.text('@joao_bolos'), findsNothing);
   });
 
   testWidgets('nao mostra rating quando os agregados sao invalidos',

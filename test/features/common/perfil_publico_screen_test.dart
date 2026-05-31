@@ -46,6 +46,7 @@ Future<void> _seedPrestador(
     'radiusKm': 12,
     'photoUrl': 'https://example.com/avatar.jpg',
     'servicosNomes': ['Canalizacao', 'Instalacao de torneira'],
+    'handle': 'joao_canalizador',
     'portfolioUrls': [
       'https://example.com/obra-1.jpg',
       'https://example.com/obra-2.jpg',
@@ -65,6 +66,7 @@ void main() {
     await _pumpProfile(tester, db: db);
 
     expect(find.text('Joao Silva'), findsOneWidget);
+    expect(find.text('@joao_canalizador'), findsOneWidget);
     expect(find.text('Canalizador com experiencia em reparos urgentes.'),
         findsOneWidget);
     expect(find.text('Atende em Coimbra, Portugal'), findsWidgets);
@@ -73,6 +75,15 @@ void main() {
     expect(find.text('Canalizacao'), findsOneWidget);
     expect(find.text('Instalacao de torneira'), findsOneWidget);
     expect(find.text('2 imagens'), findsOneWidget);
+  });
+
+  testWidgets('nao mostra @handle quando ausente', (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {'handle': ''});
+
+    await _pumpProfile(tester, db: db);
+
+    expect(find.text('@joao_canalizador'), findsNothing);
   });
 
   testWidgets('perfil sem foto mostra fallback com inicial', (tester) async {

@@ -180,6 +180,7 @@ class _PublicProfileData {
     required this.city,
     required this.state,
     required this.country,
+    required this.handle,
     required this.phone,
     required this.services,
     required this.portfolio,
@@ -195,6 +196,7 @@ class _PublicProfileData {
   final String city;
   final String state;
   final String country;
+  final String handle;
   final String phone;
   final List<String> services;
   final List<String> portfolio;
@@ -238,6 +240,9 @@ class _PublicProfileData {
       city: _firstNonEmpty([data['city'], data['cidade']]),
       state: _firstNonEmpty([data['state'], data['province'], data['region']]),
       country: _firstNonEmpty([data['country'], data['pais']]),
+      handle: isPrestador
+          ? _handleDisplay(data['handleDisplay'], data['handle'])
+          : '',
       phone: _firstNonEmpty([
         data['phoneE164'],
         data['phoneNumber'],
@@ -378,6 +383,18 @@ class _ProfileHeader extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (profile.handle.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    profile.handle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 if (profile.locationLabel.isNotEmpty)
                   _InlineIconLabel(
@@ -397,6 +414,17 @@ class _ProfileHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+String _handleDisplay(Object? display, Object? handle) {
+  final rawDisplay = display?.toString().trim();
+  if (rawDisplay != null && rawDisplay.isNotEmpty) {
+    return rawDisplay.startsWith('@') ? rawDisplay : '@$rawDisplay';
+  }
+
+  final rawHandle = handle?.toString().trim();
+  if (rawHandle == null || rawHandle.isEmpty) return '';
+  return rawHandle.startsWith('@') ? rawHandle : '@$rawHandle';
 }
 
 class _TrustCard extends StatelessWidget {

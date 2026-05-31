@@ -12,11 +12,14 @@ import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
+import 'package:chegaja_v2/core/services/handle_service.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
+import 'package:chegaja_v2/core/models/public_handle.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
+import 'package:chegaja_v2/features/prestador/widgets/prestador_handle_section.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_portfolio_manager_section.dart';
 
 class PrestadorPerfilScreen extends StatefulWidget {
@@ -55,6 +58,8 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
   bool _portfolioUploading = false;
 
   String? _photoUrl;
+  String? _handle;
+  String? _handleDisplay;
   List<String> _portfolioUrls = <String>[];
 
   double _radiusKm = 10;
@@ -129,6 +134,9 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       }
 
       _photoUrl = (data['photoUrl'] as String?) ?? (data['fotoUrl'] as String?);
+      _handle = _emptyStringToNull(data['handle']?.toString());
+      _handleDisplay = _emptyStringToNull(data['handleDisplay']?.toString()) ??
+          (_handle == null ? null : '@$_handle');
 
       final raw = (data['portfolioUrls'] as List?) ?? <dynamic>[];
       _portfolioUrls = _cleanPortfolioUrls(raw.map((e) => e.toString()));
@@ -479,6 +487,21 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
     return classification.decision == TrustSafetyDecision.block;
   }
 
+  Future<HandleAvailability> _checkHandleAvailability(String rawHandle) {
+    return HandleService.instance.checkAvailability(rawHandle);
+  }
+
+  Future<PublicHandle> _reserveProviderHandle(String rawHandle) {
+    return HandleService.instance.reserveProviderHandle(rawHandle);
+  }
+
+  void _onProviderHandleReserved(PublicHandle handle) {
+    setState(() {
+      _handle = handle.handle;
+      _handleDisplay = handle.handleDisplay ?? '@${handle.handle}';
+    });
+  }
+
   Future<void> _pickAndUploadProfilePhoto() async {
     final doc = _docOrNull;
     final uid = _uidOrNull;
@@ -746,6 +769,14 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
             ],
             onEditPressed: _pickAndUploadProfilePhoto,
             editLabel: 'Alterar foto',
+          ),
+          const SizedBox(height: 16),
+          PrestadorHandleSection(
+            currentHandle: _handle,
+            currentHandleDisplay: _handleDisplay,
+            onCheckAvailability: _checkHandleAvailability,
+            onReserveHandle: _reserveProviderHandle,
+            onReserved: _onProviderHandleReserved,
           ),
           const SizedBox(height: 16),
           _field('Nome', _nomeCtrl),
@@ -1061,4 +1092,9 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       onRemoveConfirmed: _removePortfolioImage,
     );
   }
+}
+
+String? _emptyStringToNull(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
