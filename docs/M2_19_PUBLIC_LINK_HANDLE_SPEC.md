@@ -4,7 +4,7 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.19 ativa com link publico por @handle implementado.
+M2.19 fechada no escopo atual de link publico, @handle e partilha social.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -17,7 +17,7 @@ M2.19.2 - FECHADA com modelo, normalizacao e reserva de @handle
 M2.19.3 - FECHADA com UI de @handle no perfil do prestador
 M2.19.4 - FECHADA com rota publica/deep link por @handle
 M2.19.5 - FECHADA com partilha social simples
-M2.19.6 - PROXIMO passo
+M2.19.6 - FECHADA com testes, E2E, QA visual e documentacao final
 ```
 
 Blocos relacionados:
@@ -182,13 +182,15 @@ O `DeepLinkService` atual suporta:
 /chat/{pedidoId};
 chegaja://pedido/{pedidoId};
 chegaja://chat/{pedidoId};
-?pedidoId={pedidoId}.
+?pedidoId={pedidoId};
+/p/{handle};
+chegaja://p/{handle};
+?handle={handle}.
 ```
 
-Nao suporta:
+Continuam fora desta fase:
 
 ```text
-/p/{handle};
 /@{handle};
 /prestador/{handle}.
 ```
@@ -666,7 +668,7 @@ posterior com Hosting/SSR/prerender ou Functions se necessario.
 | M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
 | M2.19.4 | FECHADO | Rota publica/deep link por @handle |
 | M2.19.5 | FECHADO | Partilha social, copiar link e QR futuro |
-| M2.19.6 | PROXIMO | Testes, E2E, QA visual e documentacao final |
+| M2.19.6 | FECHADO | Testes, E2E, QA visual e documentacao final |
 
 ## Estado Implementado na M2.19.2
 
@@ -791,6 +793,44 @@ analytics de partilha;
 SDKs sociais.
 ```
 
+## Estado Implementado na M2.19.6
+
+A M2.19.6 fechou o bloco com:
+
+```text
+docs/M2_19_6_QA_FINAL_LINK_PUBLICO_STATUS.md;
+docs/M2_19_FINAL_REPORT.md;
+testes focados de handle, rota, perfil publico e partilha;
+Functions tests com emulador configurado;
+Flutter completo;
+build Web release;
+E2E dual;
+E2E orcamento;
+QA visual;
+validacao headless de /p/handle-inexistente.
+```
+
+Durante o QA final, a abertura direta de `/p/{handle}` no browser foi corrigida
+para usar `PublicProfileByHandleScreen` logo no `home` inicial quando
+`Uri.base` aponta para rota publica. Isso preserva o `onGenerateRoute`, evita
+duplicar perfil e garante 404 amigavel em refresh direto.
+
+A fase manteve fora:
+
+```text
+QR Code real;
+SEO/metatags dinamicas;
+dominio customizado;
+deploy;
+Firebase Dynamic Links;
+App Links/Universal Links reais;
+analytics de partilha;
+KYC;
+pagamentos;
+Android fisico;
+tester externo.
+```
+
 ## Riscos
 
 ```text
@@ -855,26 +895,64 @@ M2.19.5:
 ```text
 copiar link;
 share WhatsApp;
-Web Share API com fallback;
+Facebook share por URL;
+Instagram como copiar link;
 texto de partilha;
 sem expor dados privados;
 dark mode;
 build Web.
 ```
 
-## Decisao Recomendada para M2.19.4
-
-Implementar apenas a rota publica/deep link por @handle:
+M2.19.6:
 
 ```text
-criar entrada de rota /p/{handle};
-normalizar handle recebido;
-consultar handles/{handleNormalized};
-validar status active e role prestador;
-abrir PublicProfileScreen por uid;
-mostrar 404 amigavel para handle inexistente;
-nao criar ainda partilha social/QR.
+testes focados de handle;
+testes de rota/deep link;
+testes de perfil publico por handle;
+testes de partilha;
+Functions tests;
+Flutter completo;
+build Web;
+E2E dual;
+E2E orcamento;
+QA visual;
+404 amigavel em /p/handle-inexistente.
 ```
 
-M2.19.4 deve tornar o link funcional. Partilha social e copiar link ficam para
-M2.19.5.
+## Decisao Final da M2.19
+
+A M2.19 fica fechada no escopo atual:
+
+```text
+@handle publico;
+reserva/normalizacao de handle;
+UI de @handle no perfil do prestador;
+rota publica /p/{handle};
+perfil publico por handle;
+copiar link;
+partilha WhatsApp/Facebook por URL;
+Instagram tratado como copiar link;
+QR Code documentado como futuro.
+```
+
+Continuam fora:
+
+```text
+QR Code real;
+SEO/metatags dinamicas;
+dominio customizado;
+deploy;
+Firebase Dynamic Links;
+App Links/Universal Links reais;
+analytics de partilha;
+KYC;
+pagamentos;
+Android fisico;
+tester externo.
+```
+
+Proximo bloco recomendado:
+
+```text
+M2.20 - Categorias sensiveis e comprovativos profissionais
+```

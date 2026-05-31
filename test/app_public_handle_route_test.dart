@@ -4,6 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('extrai handle publico de URL absoluta ou rota relativa', () {
+    expect(
+      publicProfileHandleFromRouteName('/p/maria_bolos'),
+      'maria_bolos',
+    );
+    expect(
+      publicProfileHandleFromRouteName(
+        'https://chegaja-ac88d.web.app/p/joao-eletricista',
+      ),
+      'joao-eletricista',
+    );
+  });
+
   test('route factory cria wrapper para /p/{handle}', () {
     final route = buildChegaJaRoute(
       const RouteSettings(name: '/p/maria_bolos'),
@@ -26,6 +39,7 @@ void main() {
   });
 
   test('route factory ignora rotas fora de /p/{handle}', () {
+    expect(publicProfileHandleFromRouteName('/'), isNull);
     expect(
       buildChegaJaRoute(const RouteSettings(name: '/pedido/pedido_1')),
       isNull,

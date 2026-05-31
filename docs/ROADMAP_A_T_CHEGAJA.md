@@ -208,8 +208,8 @@ denuncias, moderacao e ranking continuam fora.
 | --- | --- | --- |
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
-| M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual; M2.19 proxima |
-| M2.19 | ATIVO | Link publico, @handle e partilha social; M2.19.5 fechada, M2.19.6 proxima |
+| M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
+| M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -227,8 +227,10 @@ criou a rota publica `/p/{handle}`, o resolver `handles/{handleNormalized}` para
 uid, o wrapper de perfil por handle, 404 amigavel, rewrite SPA em `firebase.json`
 e ocultou telefone no perfil publico por defeito. A M2.19.5 adicionou copiar
 link, partilha WhatsApp/Facebook por URL, instrucao para Instagram via copiar
-link e manteve QR real/SEO/dominio customizado fora. O proximo passo recomendado
-e M2.19.6.
+link e manteve QR real/SEO/dominio customizado fora. A M2.19.6 validou handle,
+rota publica, 404, partilha, Functions, Flutter completo, build Web, E2E dual,
+E2E orcamento e QA visual. A M2.19 fica fechada no escopo atual. O proximo
+bloco recomendado e M2.20.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -332,9 +334,10 @@ operacao completa e KYC/admin futuro continuam fora.
 | M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
 | M2.19.4 | FECHADO | Rota publica/deep link por @handle |
 | M2.19.5 | FECHADO | Partilha social, copiar link e QR futuro |
-| M2.19.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.19 |
+| M2.19.6 | FECHADO | Testes, E2E, QA visual e documentacao final da M2.19 |
 
-Estado: M2.19 iniciada. A M2.19.1 criou a spec e auditoria para transformar o
+Estado: M2.19 fechada no escopo atual de link publico, @handle e partilha
+social. A M2.19.1 criou a spec e auditoria para transformar o
 perfil do prestador numa identidade publica partilhavel. A decisao recomendada
 e usar `/p/{handle}` como formato de link publico e `handles/{handleNormalized}`
 como fonte de reserva/unicidade, mantendo copia do handle em `prestadores/{uid}`
@@ -353,9 +356,11 @@ criou `/p/{handle}`, `PublicHandleResolver`, `PublicProfileByHandleScreen`, 404
 amigavel, rewrite SPA em `firebase.json` e ocultou telefone no perfil publico
 por defeito. A M2.19.5 criou `PublicProfileLinkService`,
 `PublicProfileShareActions`, copiar link, partilha WhatsApp/Facebook por URL e
-instrucao para Instagram como copiar link. Bloco F continua parcial porque KYC,
-contacto publico opt-in, dominio publico final, QR real e SEO/social preview
-robusto ainda ficam fora.
+instrucao para Instagram como copiar link. A M2.19.6 validou o bloco com testes
+focados, Functions, Flutter completo, build Web, E2E, QA visual e 404 amigavel
+em `/p/handle-inexistente`. Bloco F continua parcial porque KYC, contacto
+publico opt-in, dominio publico final, QR real e SEO/social preview robusto ainda
+ficam fora.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -564,18 +569,16 @@ A M2.15 esta fechada no escopo atual de avaliacoes e reputacao leve. A M2.16
 tambem esta fechada no escopo atual de discovery/pesquisa manual. A M2.17 esta
 fechada no escopo atual de Trust & Safety basico: denuncias, bloqueios, UI,
 fila admin inicial, filtros simples, testes, E2E, build Web e QA visual. A
-M2.18 esta fechada no escopo atual de Admin/backoffice leve. A M2.19 foi
-iniciada com spec/auditoria de link publico, @handle e partilha social. A
-M2.19.1 definiu `/p/{handle}` como formato recomendado e
-`handles/{handleNormalized}` como modelo recomendado de reserva/unicidade. A
-M2.19.2 criou a base tecnica de normalizacao, validacao, reserva e Rules de
-@handle. A M2.19.4 criou a rota publica funcional por handle. A M2.19.5
-adicionou acoes simples de partilha e copia do link publico.
+M2.18 esta fechada no escopo atual de Admin/backoffice leve. A M2.19 esta
+fechada no escopo atual de link publico, @handle e partilha social: reserva de
+handle, UI do prestador, rota `/p/{handle}`, perfil publico por handle, copiar
+link, WhatsApp/Facebook por URL, Instagram como copiar link, testes, E2E, build
+Web e QA visual.
 
 Fase operacional:
 
 ```text
-M2.19.6 - Testes, E2E, QA visual e documentacao final da M2.19
+M2.20 - Categorias sensiveis e comprovativos profissionais
 ```
 
 Dependencias pausadas:

@@ -18,7 +18,16 @@ const String kDefaultRole =
     String.fromEnvironment('DEFAULT_ROLE', defaultValue: '');
 
 Route<dynamic>? buildChegaJaRoute(RouteSettings settings) {
-  final routeName = settings.name;
+  final rawHandle = publicProfileHandleFromRouteName(settings.name);
+  if (rawHandle == null) return null;
+
+  return MaterialPageRoute<void>(
+    settings: settings,
+    builder: (_) => PublicProfileByHandleScreen(rawHandle: rawHandle),
+  );
+}
+
+String? publicProfileHandleFromRouteName(String? routeName) {
   if (routeName == null || routeName.trim().isEmpty) return null;
 
   final uri = Uri.tryParse(routeName);
@@ -29,10 +38,7 @@ Route<dynamic>? buildChegaJaRoute(RouteSettings settings) {
   final rawHandle = uri.pathSegments[1].trim();
   if (rawHandle.isEmpty) return null;
 
-  return MaterialPageRoute<void>(
-    settings: settings,
-    builder: (_) => PublicProfileByHandleScreen(rawHandle: rawHandle),
-  );
+  return rawHandle;
 }
 
 class ChegaJaApp extends StatefulWidget {
@@ -80,19 +86,26 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
         UserCountryService.instance,
       ]),
       builder: (context, _) {
-        final Widget home = _roleModeService.isLoaded
-            ? _homeForRole(context, _roleModeService.currentRole)
-            : FutureBuilder<void>(
-                future: _roleLoadFuture,
-                builder: (context, snapshot) {
-                  if (_roleModeService.isLoaded) {
-                    return _homeForRole(context, _roleModeService.currentRole);
-                  }
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
+        final publicHandle =
+            publicProfileHandleFromRouteName(Uri.base.toString());
+        final Widget home = publicHandle != null
+            ? PublicProfileByHandleScreen(rawHandle: publicHandle)
+            : _roleModeService.isLoaded
+                ? _homeForRole(context, _roleModeService.currentRole)
+                : FutureBuilder<void>(
+                    future: _roleLoadFuture,
+                    builder: (context, snapshot) {
+                      if (_roleModeService.isLoaded) {
+                        return _homeForRole(
+                          context,
+                          _roleModeService.currentRole,
+                        );
+                      }
+                      return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      );
+                    },
                   );
-                },
-              );
 
         return MaterialApp(
           onGenerateTitle: (context) =>
