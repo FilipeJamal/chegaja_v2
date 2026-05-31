@@ -34,7 +34,7 @@ PublicHandle _handle(String value) {
 }
 
 void main() {
-  testWidgets('mostra handle atual, prefixo e preview em preparacao',
+  testWidgets('mostra handle atual, prefixo e link publico real',
       (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -48,6 +48,7 @@ void main() {
             message: '',
           ),
           onReserveHandle: (_) async => _handle('maria_bolos'),
+          onCopyPublicLink: (_) async {},
         ),
       ),
     );
@@ -61,10 +62,9 @@ void main() {
     expect(find.text('O teu @handle atual'), findsOneWidget);
     expect(find.text('@maria_bolos'), findsOneWidget);
     expect(find.text('chegaja-ac88d.web.app/p/maria_bolos'), findsOneWidget);
-    expect(
-      find.text('Este sera o teu link publico quando a partilha for ativada.'),
-      findsOneWidget,
-    );
+    expect(find.text('Este e o teu link publico.'), findsOneWidget);
+    expect(find.text('Link publico em preparacao'), findsNothing);
+    expect(find.text('Copiar link'), findsOneWidget);
   });
 
   testWidgets('valida handle curto, caracteres invalidos e reservado',
@@ -199,6 +199,51 @@ void main() {
     expect(reserved, ['maria_bolos']);
     expect(find.text('@handle guardado com sucesso.'), findsWidgets);
     expect(find.text('@maria_bolos'), findsWidgets);
+  });
+
+  testWidgets('botao copiar link chama callback quando ha handle atual',
+      (tester) async {
+    final copied = <String>[];
+
+    await tester.pumpWidget(
+      _wrap(
+        PrestadorHandleSection(
+          currentHandle: 'maria_bolos',
+          currentHandleDisplay: '@maria_bolos',
+          onCheckAvailability: (_) async => const HandleAvailability(
+            normalizedHandle: 'maria_bolos',
+            available: true,
+            reason: '',
+            message: '',
+          ),
+          onReserveHandle: (_) async => _handle('maria_bolos'),
+          onCopyPublicLink: (url) async => copied.add(url),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Copiar link'));
+    await tester.pumpAndSettle();
+
+    expect(copied, ['https://chegaja-ac88d.web.app/p/maria_bolos']);
+  });
+
+  testWidgets('sem handle atual nao mostra botao copiar', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        PrestadorHandleSection(
+          onCheckAvailability: (_) async => const HandleAvailability(
+            normalizedHandle: 'maria_bolos',
+            available: true,
+            reason: '',
+            message: '',
+          ),
+          onReserveHandle: (_) async => _handle('maria_bolos'),
+        ),
+      ),
+    );
+
+    expect(find.text('Copiar link'), findsNothing);
   });
 
   testWidgets('loading bloqueia duplo clique durante reserva', (tester) async {

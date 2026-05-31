@@ -2,6 +2,8 @@ import 'package:chegaja_v2/core/handles/handle_normalizer.dart';
 import 'package:chegaja_v2/core/handles/handle_validator.dart';
 import 'package:chegaja_v2/core/models/public_handle.dart';
 import 'package:chegaja_v2/core/services/handle_service.dart';
+import 'package:chegaja_v2/core/services/public_profile_link_service.dart';
+import 'package:chegaja_v2/features/common/widgets/public_profile_share_actions.dart';
 import 'package:flutter/material.dart';
 
 typedef HandleAvailabilityCallback = Future<HandleAvailability> Function(
@@ -21,6 +23,9 @@ class PrestadorHandleSection extends StatefulWidget {
     required this.onCheckAvailability,
     required this.onReserveHandle,
     this.onReserved,
+    this.onCopyPublicLink,
+    this.onOpenPublicLinkWhatsApp,
+    this.onOpenPublicLinkFacebook,
   });
 
   final String? currentHandle;
@@ -29,6 +34,9 @@ class PrestadorHandleSection extends StatefulWidget {
   final HandleAvailabilityCallback onCheckAvailability;
   final HandleReserveCallback onReserveHandle;
   final ValueChanged<PublicHandle>? onReserved;
+  final PublicProfileCopyCallback? onCopyPublicLink;
+  final PublicProfileOpenUriCallback? onOpenPublicLinkWhatsApp;
+  final PublicProfileOpenUriCallback? onOpenPublicLinkFacebook;
 
   @override
   State<PrestadorHandleSection> createState() => _PrestadorHandleSectionState();
@@ -179,7 +187,9 @@ class _PrestadorHandleSectionState extends State<PrestadorHandleSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final normalized = _validation.normalizedHandle;
-    final previewHandle = normalized.isNotEmpty ? normalized : _savedHandle;
+    final previewHandle = _validation.isValid && normalized.isNotEmpty
+        ? normalized
+        : _savedHandle;
     final canSubmit = _validation.isValid && !_checking && !_saving;
     final hasCurrentHandle =
         _savedHandleDisplay != null && _savedHandleDisplay!.isNotEmpty;
@@ -231,6 +241,15 @@ class _PrestadorHandleSectionState extends State<PrestadorHandleSection> {
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 12),
+            PublicProfileShareActions(
+              handle: _savedHandle,
+              displayName: null,
+              framed: false,
+              onCopyLink: widget.onCopyPublicLink,
+              onOpenWhatsApp: widget.onOpenPublicLinkWhatsApp,
+              onOpenFacebook: widget.onOpenPublicLinkFacebook,
             ),
           ],
           const SizedBox(height: 16),
@@ -353,7 +372,7 @@ class _PublicLinkPreview extends StatelessWidget {
     final normalized = _emptyToNull(handle);
     final link = normalized == null
         ? 'chegaja-ac88d.web.app/p/o-teu-handle'
-        : 'chegaja-ac88d.web.app/p/$normalized';
+        : PublicProfileLinkService.displayUrlForHandle(normalized);
 
     return Container(
       width: double.infinity,
@@ -367,7 +386,7 @@ class _PublicLinkPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Link publico em preparacao',
+            'Link publico',
             style: theme.textTheme.labelLarge?.copyWith(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.w800,
@@ -383,7 +402,9 @@ class _PublicLinkPreview extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Este sera o teu link publico quando a partilha for ativada.',
+            normalized == null
+                ? 'Escolhe e guarda um @handle para ativar o link publico.'
+                : 'Este e o teu link publico.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

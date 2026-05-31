@@ -16,7 +16,8 @@ M2.19.1 - FECHADA com spec e auditoria
 M2.19.2 - FECHADA com modelo, normalizacao e reserva de @handle
 M2.19.3 - FECHADA com UI de @handle no perfil do prestador
 M2.19.4 - FECHADA com rota publica/deep link por @handle
-M2.19.5 - PROXIMO passo
+M2.19.5 - FECHADA com partilha social simples
+M2.19.6 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -664,8 +665,8 @@ posterior com Hosting/SSR/prerender ou Functions se necessario.
 | M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
 | M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
 | M2.19.4 | FECHADO | Rota publica/deep link por @handle |
-| M2.19.5 | PROXIMO | Partilha social, copiar link e QR futuro |
-| M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
+| M2.19.5 | FECHADO | Partilha social, copiar link e QR futuro |
+| M2.19.6 | PROXIMO | Testes, E2E, QA visual e documentacao final |
 
 ## Estado Implementado na M2.19.2
 
@@ -756,6 +757,38 @@ copiar link;
 QR Code;
 SEO/metatags dinamicas;
 deploy.
+```
+
+## Estado Implementado na M2.19.5
+
+A M2.19.5 criou:
+
+```text
+PublicProfileLinkService;
+PublicProfileShareActions;
+copiar link por Clipboard/callback;
+partilha WhatsApp por https://wa.me/?text=...;
+partilha Facebook por sharer URL;
+instrucao honesta para Instagram via copiar link;
+link publico real no PrestadorHandleSection;
+acoes de partilha no PublicProfileScreen para prestador com handle.
+```
+
+O link publico absoluto fica centralizado em:
+
+```text
+https://chegaja-ac88d.web.app/p/{handle}
+```
+
+A fase manteve fora:
+
+```text
+QR Code real;
+SEO/metatags dinamicas;
+dominio customizado;
+deploy;
+analytics de partilha;
+SDKs sociais.
 ```
 
 ## Riscos

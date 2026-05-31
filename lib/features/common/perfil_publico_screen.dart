@@ -8,6 +8,7 @@ import 'package:chegaja_v2/features/common/trust_safety/block_user_dialog.dart';
 import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
 import 'package:chegaja_v2/features/common/trust_safety/trust_safety_actions.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
+import 'package:chegaja_v2/features/common/widgets/public_profile_share_actions.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 class PublicProfileScreen extends StatelessWidget {
@@ -21,6 +22,9 @@ class PublicProfileScreen extends StatelessWidget {
     this.onReportSubmit,
     this.onBlockUser,
     this.showPublicContact = false,
+    this.onCopyProfileLink,
+    this.onOpenProfileWhatsApp,
+    this.onOpenProfileFacebook,
   });
 
   final String userId;
@@ -31,6 +35,9 @@ class PublicProfileScreen extends StatelessWidget {
   final ReportSubmitCallback? onReportSubmit;
   final BlockUserCallback? onBlockUser;
   final bool showPublicContact;
+  final PublicProfileCopyCallback? onCopyProfileLink;
+  final PublicProfileOpenUriCallback? onOpenProfileWhatsApp;
+  final PublicProfileOpenUriCallback? onOpenProfileFacebook;
 
   bool get _isPrestador => role == 'prestador';
 
@@ -154,6 +161,16 @@ class PublicProfileScreen extends StatelessWidget {
                           onReportSubmit: onReportSubmit,
                         ),
                       ),
+                      if (_isPrestador && profile.handle.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        PublicProfileShareActions(
+                          handle: profile.handle,
+                          displayName: profile.name,
+                          onCopyLink: onCopyProfileLink,
+                          onOpenWhatsApp: onOpenProfileWhatsApp,
+                          onOpenFacebook: onOpenProfileFacebook,
+                        ),
+                      ],
                       if (showPublicContact && profile.phone.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ProfileSection(

@@ -209,7 +209,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.16 | FECHADO | Discovery, pesquisa manual e perfis pesquisaveis |
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual; M2.19 proxima |
-| M2.19 | ATIVO | Link publico, @handle e partilha social; M2.19.4 fechada, M2.19.5 proxima |
+| M2.19 | ATIVO | Link publico, @handle e partilha social; M2.19.5 fechada, M2.19.6 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -225,8 +225,10 @@ criou a UI de escolha/edicao no perfil do prestador, com preview de link em
 preparacao, display de @handle no perfil publico e card de discovery. A M2.19.4
 criou a rota publica `/p/{handle}`, o resolver `handles/{handleNormalized}` para
 uid, o wrapper de perfil por handle, 404 amigavel, rewrite SPA em `firebase.json`
-e ocultou telefone no perfil publico por defeito. O proximo passo recomendado e
-M2.19.5.
+e ocultou telefone no perfil publico por defeito. A M2.19.5 adicionou copiar
+link, partilha WhatsApp/Facebook por URL, instrucao para Instagram via copiar
+link e manteve QR real/SEO/dominio customizado fora. O proximo passo recomendado
+e M2.19.6.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -329,8 +331,8 @@ operacao completa e KYC/admin futuro continuam fora.
 | M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
 | M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
 | M2.19.4 | FECHADO | Rota publica/deep link por @handle |
-| M2.19.5 | PROXIMO | Partilha social, copiar link e QR futuro |
-| M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.19 |
+| M2.19.5 | FECHADO | Partilha social, copiar link e QR futuro |
+| M2.19.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.19 |
 
 Estado: M2.19 iniciada. A M2.19.1 criou a spec e auditoria para transformar o
 perfil do prestador numa identidade publica partilhavel. A decisao recomendada
@@ -349,8 +351,11 @@ em rotas SPA antes da M2.19.4. A M2.19.2 criou `HandleNormalizer`, `HandleValida
 `ProviderSearchCard`, sem criar ainda rota publica ou partilha. A M2.19.4
 criou `/p/{handle}`, `PublicHandleResolver`, `PublicProfileByHandleScreen`, 404
 amigavel, rewrite SPA em `firebase.json` e ocultou telefone no perfil publico
-por defeito. Bloco F continua parcial porque KYC, contacto publico opt-in,
-dominio publico final e partilha social real ainda ficam fora.
+por defeito. A M2.19.5 criou `PublicProfileLinkService`,
+`PublicProfileShareActions`, copiar link, partilha WhatsApp/Facebook por URL e
+instrucao para Instagram como copiar link. Bloco F continua parcial porque KYC,
+contacto publico opt-in, dominio publico final, QR real e SEO/social preview
+robusto ainda ficam fora.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -564,12 +569,13 @@ iniciada com spec/auditoria de link publico, @handle e partilha social. A
 M2.19.1 definiu `/p/{handle}` como formato recomendado e
 `handles/{handleNormalized}` como modelo recomendado de reserva/unicidade. A
 M2.19.2 criou a base tecnica de normalizacao, validacao, reserva e Rules de
-@handle. A M2.19.4 criou a rota publica funcional por handle.
+@handle. A M2.19.4 criou a rota publica funcional por handle. A M2.19.5
+adicionou acoes simples de partilha e copia do link publico.
 
 Fase operacional:
 
 ```text
-M2.19.5 - Partilha social, copiar link e QR futuro
+M2.19.6 - Testes, E2E, QA visual e documentacao final da M2.19
 ```
 
 Dependencias pausadas:

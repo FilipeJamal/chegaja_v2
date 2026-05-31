@@ -12,6 +12,9 @@ Future<void> _pumpProfile(
   String userId = 'prestador1',
   String role = 'prestador',
   ThemeData? theme,
+  Future<void> Function(String url)? onCopyProfileLink,
+  Future<bool> Function(Uri uri)? onOpenWhatsApp,
+  Future<bool> Function(Uri uri)? onOpenFacebook,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -23,6 +26,9 @@ Future<void> _pumpProfile(
         userId: userId,
         role: role,
         firestore: db,
+        onCopyProfileLink: onCopyProfileLink,
+        onOpenProfileWhatsApp: onOpenWhatsApp,
+        onOpenProfileFacebook: onOpenFacebook,
       ),
     ),
   );
@@ -31,6 +37,15 @@ Future<void> _pumpProfile(
 
 Future<void> _scrollProfileDown(WidgetTester tester) async {
   await tester.drag(find.byType(ListView), const Offset(0, -900));
+  await tester.pump();
+}
+
+Future<void> _scrollUntilTextVisible(WidgetTester tester, String text) async {
+  await tester.scrollUntilVisible(
+    find.text(text),
+    120,
+    scrollable: find.byType(Scrollable).first,
+  );
   await tester.pump();
 }
 
@@ -70,10 +85,11 @@ void main() {
     expect(find.text('Canalizador com experiencia em reparos urgentes.'),
         findsOneWidget);
     expect(find.text('Atende em Coimbra, Portugal'), findsWidgets);
-    await _scrollProfileDown(tester);
+    await _scrollUntilTextVisible(tester, 'Raio aproximado: ate 12 km');
     expect(find.text('Raio aproximado: ate 12 km'), findsOneWidget);
     expect(find.text('Canalizacao'), findsOneWidget);
     expect(find.text('Instalacao de torneira'), findsOneWidget);
+    await _scrollUntilTextVisible(tester, '2 imagens');
     expect(find.text('2 imagens'), findsOneWidget);
   });
 
@@ -84,6 +100,62 @@ void main() {
     await _pumpProfile(tester, db: db);
 
     expect(find.text('@joao_canalizador'), findsNothing);
+  });
+
+  testWidgets('prestador com handle mostra acoes de partilha', (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db);
+
+    await _pumpProfile(tester, db: db);
+    await _scrollProfileDown(tester);
+
+    expect(find.text('Partilhar perfil'), findsOneWidget);
+    expect(find.text('Copiar link'), findsOneWidget);
+    expect(find.text('WhatsApp'), findsOneWidget);
+    expect(find.text('Facebook'), findsOneWidget);
+  });
+
+  testWidgets('copiar link do perfil publico chama callback', (tester) async {
+    final db = FakeFirebaseFirestore();
+    final copied = <String>[];
+    await _seedPrestador(db);
+
+    await _pumpProfile(
+      tester,
+      db: db,
+      onCopyProfileLink: (url) async => copied.add(url),
+    );
+    await _scrollUntilTextVisible(tester, 'Copiar link');
+
+    await tester.tap(find.text('Copiar link'));
+    await tester.pumpAndSettle();
+
+    expect(copied, ['https://chegaja-ac88d.web.app/p/joao_canalizador']);
+    expect(find.text('Link copiado.'), findsOneWidget);
+  });
+
+  testWidgets('prestador sem handle nao mostra acoes de partilha',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {'handle': ''});
+
+    await _pumpProfile(tester, db: db);
+
+    expect(find.text('Partilhar perfil'), findsNothing);
+    expect(find.text('Copiar link'), findsNothing);
+  });
+
+  testWidgets('cliente nao mostra acoes de partilha de prestador',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await db.collection('users').doc('cliente1').set({
+      'nome': 'Maria Cliente',
+      'handle': 'maria_cliente',
+    });
+
+    await _pumpProfile(tester, db: db, userId: 'cliente1', role: 'cliente');
+
+    expect(find.text('Partilhar perfil'), findsNothing);
   });
 
   testWidgets('perfil publico nao expoe telefone por defeito', (tester) async {
