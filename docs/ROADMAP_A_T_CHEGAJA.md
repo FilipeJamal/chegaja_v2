@@ -36,11 +36,11 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio, confianca leve e integracao Cliente; faltam KYC, reviews, verificacao oficial e reputacao avancada. |
+| F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio e confianca leve; M2.19 fechou link publico/@handle; faltam KYC, comprovativos profissionais, reviews completas e verificacao oficial. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
-| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; admin enterprise completo ainda falta. |
+| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 iniciou categorias sensiveis/comprovativos; admin enterprise completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
 | M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
@@ -210,6 +210,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
 | M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
+| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.1 fechada, M2.20.2 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -230,7 +231,9 @@ link, partilha WhatsApp/Facebook por URL, instrucao para Instagram via copiar
 link e manteve QR real/SEO/dominio customizado fora. A M2.19.6 validou handle,
 rota publica, 404, partilha, Functions, Flutter completo, build Web, E2E dual,
 E2E orcamento e QA visual. A M2.19 fica fechada no escopo atual. O proximo
-bloco recomendado e M2.20.
+bloco recomendado e M2.20. A M2.20.1 criou a spec/auditoria de categorias
+sensiveis e comprovativos profissionais, separando proibido, sensivel e normal,
+e definindo M2.20.2 como proximo passo para o modelo de dados.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -361,6 +364,28 @@ focados, Functions, Flutter completo, build Web, E2E, QA visual e 404 amigavel
 em `/p/handle-inexistente`. Bloco F continua parcial porque KYC, contacto
 publico opt-in, dominio publico final, QR real e SEO/social preview robusto ainda
 ficam fora.
+
+### M2.20 - Categorias Sensiveis e Comprovativos Profissionais
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.20.1 | FECHADO | Spec e auditoria de categorias sensiveis/comprovativos |
+| M2.20.2 | PROXIMO | Modelo de categoria sensivel e pedido de aprovacao |
+| M2.20.3 | FUTURO | UI do prestador para pedir aprovacao |
+| M2.20.4 | FUTURO | Admin leve para analisar comprovativos |
+| M2.20.5 | FUTURO | Integracao com perfil/discovery/pedido |
+| M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.20 |
+
+Estado: M2.20 iniciada. A M2.20.1 criou a spec e auditoria documental para
+categorias sensiveis e comprovativos profissionais, sem alterar Dart, Rules,
+Storage Rules, Functions ou deploy. A auditoria confirmou que o catalogo
+`servicos` e amplo, que `SensitiveCategories` ja marca `needsReview`, que
+`PrestadorSettingsScreen` grava `servicos`/`servicosNomes`, que
+`NovoPedidoScreen` mostra aviso para categorias sensiveis, e que ainda nao
+existe approval/comprovativo por categoria. A decisao recomendada para M2.20.2
+e criar o modelo de categoria sensivel e pedido de aprovacao antes de UI, upload
+ou admin visual. KYC continua fora: M2.20 trata qualificacao por categoria,
+M2.23 futuro trata identidade/documento/selfie.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -573,12 +598,14 @@ M2.18 esta fechada no escopo atual de Admin/backoffice leve. A M2.19 esta
 fechada no escopo atual de link publico, @handle e partilha social: reserva de
 handle, UI do prestador, rota `/p/{handle}`, perfil publico por handle, copiar
 link, WhatsApp/Facebook por URL, Instagram como copiar link, testes, E2E, build
-Web e QA visual.
+Web e QA visual. A M2.20 foi iniciada com spec/auditoria de categorias
+sensiveis e comprovativos profissionais, sem codigo, Rules, Functions, Storage
+Rules ou deploy.
 
 Fase operacional:
 
 ```text
-M2.20 - Categorias sensiveis e comprovativos profissionais
+M2.20.2 - Modelo de categoria sensivel e pedido de aprovacao
 ```
 
 Dependencias pausadas:
