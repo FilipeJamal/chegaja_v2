@@ -20,6 +20,7 @@ class PublicProfileScreen extends StatelessWidget {
     this.firestore,
     this.onReportSubmit,
     this.onBlockUser,
+    this.showPublicContact = false,
   });
 
   final String userId;
@@ -29,6 +30,7 @@ class PublicProfileScreen extends StatelessWidget {
   final FirebaseFirestore? firestore;
   final ReportSubmitCallback? onReportSubmit;
   final BlockUserCallback? onBlockUser;
+  final bool showPublicContact;
 
   bool get _isPrestador => role == 'prestador';
 
@@ -152,7 +154,7 @@ class PublicProfileScreen extends StatelessWidget {
                           onReportSubmit: onReportSubmit,
                         ),
                       ),
-                      if (profile.phone.isNotEmpty) ...[
+                      if (showPublicContact && profile.phone.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ProfileSection(
                           title: 'Contacto',

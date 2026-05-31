@@ -11,10 +11,29 @@ import 'core/theme/app_theme.dart';
 import 'features/admin/admin_panel_screen.dart';
 import 'features/cliente/cliente_home_screen.dart';
 import 'features/auth/role_selector_screen.dart';
+import 'features/common/public_profile_by_handle_screen.dart';
 import 'features/prestador/prestador_home_screen.dart';
 
 const String kDefaultRole =
     String.fromEnvironment('DEFAULT_ROLE', defaultValue: '');
+
+Route<dynamic>? buildChegaJaRoute(RouteSettings settings) {
+  final routeName = settings.name;
+  if (routeName == null || routeName.trim().isEmpty) return null;
+
+  final uri = Uri.tryParse(routeName);
+  if (uri == null || uri.pathSegments.length < 2) return null;
+
+  if (uri.pathSegments.first.toLowerCase() != 'p') return null;
+
+  final rawHandle = uri.pathSegments[1].trim();
+  if (rawHandle.isEmpty) return null;
+
+  return MaterialPageRoute<void>(
+    settings: settings,
+    builder: (_) => PublicProfileByHandleScreen(rawHandle: rawHandle),
+  );
+}
 
 class ChegaJaApp extends StatefulWidget {
   const ChegaJaApp({
@@ -81,6 +100,7 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
           debugShowCheckedModeBanner: false,
           navigatorKey: AppNavigator.navigatorKey,
           scaffoldMessengerKey: AppNavigator.messengerKey,
+          onGenerateRoute: buildChegaJaRoute,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeModeService.instance.themeMode,

@@ -31,4 +31,35 @@ void main() {
     expect(DeepLinkService.extractPedidoIdForTesting(uri), 'p1');
     expect(DeepLinkService.extractOpenChatForTesting(uri), isTrue);
   });
+
+  test('extracts public profile handle from web and custom scheme paths', () {
+    final webUri = Uri.parse('https://app.chegaja.pt/p/maria_bolos');
+    final atUri = Uri.parse('https://app.chegaja.pt/p/@Maria_Bolos');
+    final schemeUri = Uri.parse('chegaja://p/maria_bolos');
+
+    expect(
+      DeepLinkService.extractPublicProfileHandleForTesting(webUri),
+      'maria_bolos',
+    );
+    expect(
+      DeepLinkService.extractPublicProfileHandleForTesting(atUri),
+      'maria_bolos',
+    );
+    expect(
+      DeepLinkService.extractPublicProfileHandleForTesting(schemeUri),
+      'maria_bolos',
+    );
+  });
+
+  test('public handle parsing does not break pedido or chat links', () {
+    final pedidoUri = Uri.parse('https://app.chegaja.pt/pedido/pedido_456');
+    final chatUri = Uri.parse('https://app.chegaja.pt/chat/pedido_789');
+
+    expect(DeepLinkService.extractPublicProfileHandleForTesting(pedidoUri),
+        isNull);
+    expect(
+        DeepLinkService.extractPublicProfileHandleForTesting(chatUri), isNull);
+    expect(DeepLinkService.extractPedidoIdForTesting(pedidoUri), 'pedido_456');
+    expect(DeepLinkService.extractPedidoIdForTesting(chatUri), 'pedido_789');
+  });
 }

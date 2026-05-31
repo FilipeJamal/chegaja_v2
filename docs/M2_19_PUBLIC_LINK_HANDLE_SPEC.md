@@ -4,7 +4,7 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.19 iniciada com spec e auditoria.
+M2.19 ativa com link publico por @handle implementado.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -15,7 +15,8 @@ M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19.1 - FECHADA com spec e auditoria
 M2.19.2 - FECHADA com modelo, normalizacao e reserva de @handle
 M2.19.3 - FECHADA com UI de @handle no perfil do prestador
-M2.19.4 - PROXIMO passo
+M2.19.4 - FECHADA com rota publica/deep link por @handle
+M2.19.5 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -61,7 +62,7 @@ M2.19.5 - partilha social/copiar link/QR futuro;
 M2.19.6 - QA final e documentacao.
 ```
 
-Ficam fora desta spec:
+Ficaram fora da fase documental M2.19.1:
 
 ```text
 implementacao de UI;
@@ -109,7 +110,7 @@ O discovery ja esta parcialmente preparado para handle porque
 `ProviderSearchProfile` possui `handle` e inclui esse campo nos termos de busca,
 quando existir no documento `prestadores/{uid}`.
 
-Ainda nao existe:
+Na auditoria inicial da M2.19.1 ainda nao existia:
 
 ```text
 rota publica por handle;
@@ -121,10 +122,11 @@ partilha/copia de link;
 fallback 404 para handle inexistente.
 ```
 
-## Risco Atual de Privacidade
+## Privacidade do Perfil Publico
 
-O `PublicProfileScreen` ainda pode mostrar telefone quando o campo existe no
-documento do prestador. A tela usa valores como:
+O `PublicProfileScreen` deixou de mostrar telefone por defeito na M2.19.4. A
+auditoria inicial tinha identificado campos sensiveis possiveis no documento do
+prestador, como:
 
 ```text
 phoneE164;
@@ -133,7 +135,7 @@ phone;
 phoneRaw.
 ```
 
-Para link publico externo, isso precisa de regra mais conservadora:
+Para link publico externo, a regra conservadora aplicada e:
 
 ```text
 telefone nao deve aparecer por defeito;
@@ -144,8 +146,8 @@ reports/moderacao/audit logs nunca aparecem;
 dados internos nao devem viver em documento publico pesquisavel.
 ```
 
-Antes de abrir perfil por link externo em escala, o perfil publico deve garantir
-que so mostra dados publicos intencionais.
+Contacto publico deve continuar como opt-in futuro. O link publico nao deve
+expor contacto por consequencia de existir telefone no documento.
 
 ## Estado Atual de Navegacao e Rotas
 
@@ -160,8 +162,8 @@ firebase.json
 
 O app usa `MaterialApp` com `home`, `Navigator` e `MaterialPageRoute`.
 
-Nao ha `go_router`, tabela de rotas publica nem `onGenerateRoute` para
-resolver `/p/{handle}`.
+Nao ha `go_router`. A M2.19.4 adicionou `onGenerateRoute` minimo para
+resolver `/p/{handle}` sem migrar a navegacao inteira.
 
 O `RoleModeService` usa `Uri.base.queryParameters['role']` para escolher:
 
@@ -190,9 +192,9 @@ Nao suporta:
 /prestador/{handle}.
 ```
 
-O `firebase.json` atual nao possui secao `hosting` nem rewrites para SPA.
-Isso significa que refresh direto em `/p/{handle}` pode falhar em Firebase
-Hosting se a rota nao for reescrita para `index.html`.
+O `firebase.json` recebeu uma configuracao minima de Hosting SPA na M2.19.4,
+com rewrite `** -> /index.html`, para preparar refresh direto em `/p/{handle}`.
+Nao houve deploy nesta fase.
 
 ## Modelo de @handle
 
@@ -661,8 +663,8 @@ posterior com Hosting/SSR/prerender ou Functions se necessario.
 | M2.19.1 | FECHADO | Spec e auditoria de link publico, @handle e partilha social |
 | M2.19.2 | FECHADO | Modelo, normalizacao e reserva de @handle |
 | M2.19.3 | FECHADO | UI de @handle no perfil do prestador |
-| M2.19.4 | PROXIMO | Rota publica/deep link por @handle |
-| M2.19.5 | FUTURO | Partilha social, copiar link e QR futuro |
+| M2.19.4 | FECHADO | Rota publica/deep link por @handle |
+| M2.19.5 | PROXIMO | Partilha social, copiar link e QR futuro |
 | M2.19.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
 ## Estado Implementado na M2.19.2
@@ -719,8 +721,42 @@ SEO/metatags;
 deploy.
 ```
 
-M2.19.4 deve criar a rota publica/deep link por @handle, resolvendo
-`handles/{handleNormalized}` para `uid` e abrindo o `PublicProfileScreen`.
+## Estado Implementado na M2.19.4
+
+A M2.19.4 criou:
+
+```text
+PublicHandleResolver;
+PublicProfileByHandleScreen;
+suporte a /p/{handle} em DeepLinkService;
+onGenerateRoute para /p/{handle};
+navegacao global para perfil publico por handle;
+404 amigavel para handle inexistente;
+estado "perfil nao disponivel" para handle inactive/released/blocked;
+ocultacao de telefone no PublicProfileScreen por defeito;
+rewrite SPA em firebase.json para preparar refresh direto.
+```
+
+O fluxo final e:
+
+```text
+/p/{handle}
+normaliza handle
+consulta handles/{handleNormalized}
+valida status active e role prestador
+obtem uid
+abre PublicProfileScreen(userId: uid, role: prestador)
+```
+
+A fase manteve fora:
+
+```text
+partilha social;
+copiar link;
+QR Code;
+SEO/metatags dinamicas;
+deploy.
+```
 
 ## Riscos
 
@@ -729,8 +765,8 @@ colisao de handles;
 handles ofensivos;
 roubo/impersonation de nome;
 links quebrados;
-refresh direto em Flutter Web sem rewrite;
-exposicao de telefone/email por perfil publico;
+refresh direto em Flutter Web se o hosting nao usar rewrite SPA;
+exposicao de telefone/email se contacto publico opt-in for mal configurado no futuro;
 perfil suspenso ainda acessivel por link;
 dependencia de Hosting rewrites;
 mudanca de handle quebrar links antigos;

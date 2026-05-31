@@ -86,6 +86,22 @@ void main() {
     expect(find.text('@joao_canalizador'), findsNothing);
   });
 
+  testWidgets('perfil publico nao expoe telefone por defeito', (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {
+      'phoneE164': '+351900000000',
+      'phoneNumber': '900000000',
+      'phone': '900 000 000',
+      'phoneRaw': '900000000',
+    });
+
+    await _pumpProfile(tester, db: db);
+    await _scrollProfileDown(tester);
+
+    expect(find.text('Contacto'), findsNothing);
+    expect(find.textContaining('900'), findsNothing);
+  });
+
   testWidgets('perfil sem foto mostra fallback com inicial', (tester) async {
     final db = FakeFirebaseFirestore();
     await _seedPrestador(db, overrides: {'photoUrl': ''});

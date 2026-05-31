@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chegaja_v2/features/common/pedido_detalhe_auto_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
+import 'package:chegaja_v2/features/common/public_profile_by_handle_screen.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 
 /// Navegação global (para deep links / notificações).
@@ -14,8 +15,10 @@ import 'package:chegaja_v2/core/services/auth_service.dart';
 class AppNavigator {
   AppNavigator._();
 
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  static final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<ScaffoldMessengerState> messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   static NavigatorState? get _nav => navigatorKey.currentState;
 
@@ -38,6 +41,19 @@ class AppNavigator {
     );
   }
 
+  /// Abre um perfil publico de prestador a partir de /p/{handle}.
+  static Future<void> openPublicProfileHandle(String handle) async {
+    final nav = _nav;
+    final rawHandle = handle.trim();
+    if (nav == null || rawHandle.isEmpty) return;
+
+    await nav.push(
+      MaterialPageRoute(
+        builder: (_) => PublicProfileByHandleScreen(rawHandle: rawHandle),
+      ),
+    );
+  }
+
   /// Abre o ecrã de chat (thread) de um pedido.
   ///
   /// Se não conseguir determinar a role ou o outro utilizador, cai para o detalhe do pedido.
@@ -51,7 +67,10 @@ class AppNavigator {
         return openPedidoDetalhe(pedidoId);
       }
 
-      final snap = await FirebaseFirestore.instance.collection('pedidos').doc(pedidoId).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('pedidos')
+          .doc(pedidoId)
+          .get();
       final data = snap.data();
       if (data == null) {
         return openPedidoDetalhe(pedidoId);
@@ -78,7 +97,8 @@ class AppNavigator {
         return openPedidoDetalhe(pedidoId);
       }
 
-      final pedidoTitulo = (data['titulo'] ?? data['pedidoTitulo'] ?? '').toString().trim();
+      final pedidoTitulo =
+          (data['titulo'] ?? data['pedidoTitulo'] ?? '').toString().trim();
 
       await nav.push(
         MaterialPageRoute(

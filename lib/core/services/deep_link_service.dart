@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:chegaja_v2/core/handles/handle_validator.dart';
 import 'package:chegaja_v2/core/navigation/app_navigator.dart';
 
 /// Deep links (Android App Links / iOS Universal Links / custom schemes).
@@ -12,6 +13,8 @@ import 'package:chegaja_v2/core/navigation/app_navigator.dart';
 /// - https://teu-dominio/chat/<pedidoId>
 /// - chegaja://pedido/<pedidoId>
 /// - chegaja://chat/<pedidoId>
+/// - https://teu-dominio/p/<handle>
+/// - chegaja://p/<handle>
 /// - ...?pedidoId=<pedidoId>
 class DeepLinkService {
   DeepLinkService._();
@@ -49,6 +52,14 @@ class DeepLinkService {
   }
 
   void _handleUri(Uri uri) {
+    final publicHandle = _extractPublicProfileHandle(uri);
+    if (publicHandle != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        AppNavigator.openPublicProfileHandle(publicHandle);
+      });
+      return;
+    }
+
     final pedidoId = _extractPedidoId(uri);
     final openChat = _extractOpenChat(uri);
 
@@ -72,6 +83,10 @@ class DeepLinkService {
 
   @visibleForTesting
   static bool extractOpenChatForTesting(Uri uri) => _extractOpenChat(uri);
+
+  @visibleForTesting
+  static String? extractPublicProfileHandleForTesting(Uri uri) =>
+      _extractPublicProfileHandle(uri);
 
   static bool _extractOpenChat(Uri uri) {
     // /chat/<pedidoId> ou host chat
@@ -106,6 +121,29 @@ class DeepLinkService {
     }
 
     return null;
+  }
+
+  static String? _extractPublicProfileHandle(Uri uri) {
+    final queryHandle = uri.queryParameters['handle'];
+    if (queryHandle != null && queryHandle.trim().isNotEmpty) {
+      return _normalizePublicHandle(queryHandle);
+    }
+
+    if (uri.pathSegments.length >= 2 &&
+        uri.pathSegments.first.toLowerCase() == 'p') {
+      return _normalizePublicHandle(uri.pathSegments[1]);
+    }
+
+    if (uri.host.toLowerCase() == 'p' && uri.pathSegments.isNotEmpty) {
+      return _normalizePublicHandle(uri.pathSegments.first);
+    }
+
+    return null;
+  }
+
+  static String? _normalizePublicHandle(String rawHandle) {
+    final validation = HandleValidator.validate(rawHandle);
+    return validation.isValid ? validation.normalizedHandle : null;
   }
 
   Future<void> dispose() async {
