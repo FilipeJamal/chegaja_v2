@@ -204,6 +204,219 @@ service cloud.firestore {
         (data[key] is string && data[key].size() <= maxLength);
     }
 
+    function validOptionalList(data, key, maxItems) {
+      return !data.keys().hasAny([key]) ||
+        (data[key] is list && data[key].size() <= maxItems);
+    }
+
+    function validOptionalTimestamp(data, key) {
+      return !data.keys().hasAny([key]) || data[key] is timestamp;
+    }
+
+    function allowedCategoryRiskLevel(value) {
+      return value in ['normal', 'sensitive', 'prohibited'];
+    }
+
+    function validEvidenceTypesList(value, maxItems) {
+      return value is list
+        && value.size() <= maxItems
+        && value.hasOnly([
+          'certificate',
+          'license',
+          'work_experience',
+          'portfolio_reference',
+          'external_profile',
+          'declaration',
+          'other',
+        ]);
+    }
+
+    function allowedSensitiveCategoryRequestStatus(value) {
+      return value in [
+        'draft',
+        'submitted',
+        'pending_review',
+        'approved',
+        'rejected',
+        'needs_more_info',
+        'expired',
+        'revoked',
+      ];
+    }
+
+    function allowedProviderEditableSensitiveRequestStatus(value) {
+      return value in ['draft', 'submitted', 'pending_review'];
+    }
+
+    function allowedProviderCategoryApprovalStatus(value) {
+      return value in [
+        'approved',
+        'rejected',
+        'suspended',
+        'expired',
+        'revoked',
+      ];
+    }
+
+    function validCategoryRequirementData(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'categoryId',
+          'categoryName',
+          'riskLevel',
+          'approvalRequired',
+          'evidenceTypes',
+          'description',
+          'userMessage',
+          'adminNotes',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+        ])
+        && data.keys().hasAll([
+          'categoryId',
+          'categoryName',
+          'riskLevel',
+          'approvalRequired',
+          'evidenceTypes',
+          'isActive',
+        ])
+        && data['categoryId'] is string
+        && data['categoryId'].size() > 0
+        && data['categoryName'] is string
+        && data['categoryName'].size() > 0
+        && allowedCategoryRiskLevel(data['riskLevel'])
+        && data['approvalRequired'] is bool
+        && validEvidenceTypesList(data['evidenceTypes'], 10)
+        && data['isActive'] is bool
+        && validOptionalString(data, 'description', 1000)
+        && validOptionalString(data, 'userMessage', 500)
+        && validOptionalString(data, 'adminNotes', 2000)
+        && validOptionalTimestamp(data, 'createdAt')
+        && validOptionalTimestamp(data, 'updatedAt');
+    }
+
+    function validSensitiveCategoryRequestData(data) {
+      return data is map
+        && data.keys().hasOnly([
+          'providerId',
+          'categoryId',
+          'categoryName',
+          'status',
+          'evidenceTypes',
+          'evidenceText',
+          'portfolioUrls',
+          'documentRefs',
+          'createdAt',
+          'updatedAt',
+          'submittedAt',
+          'reviewedBy',
+          'reviewedAt',
+          'decisionReason',
+          'expiresAt',
+        ])
+        && data.keys().hasAll([
+          'providerId',
+          'categoryId',
+          'categoryName',
+          'status',
+          'evidenceTypes',
+          'portfolioUrls',
+          'documentRefs',
+        ])
+        && data['providerId'] is string
+        && data['providerId'].size() > 0
+        && data['categoryId'] is string
+        && data['categoryId'].size() > 0
+        && data['categoryName'] is string
+        && data['categoryName'].size() > 0
+        && allowedSensitiveCategoryRequestStatus(data['status'])
+        && validEvidenceTypesList(data['evidenceTypes'], 10)
+        && validOptionalString(data, 'evidenceText', 2000)
+        && validOptionalList(data, 'portfolioUrls', 20)
+        && validOptionalList(data, 'documentRefs', 20)
+        && validOptionalTimestamp(data, 'createdAt')
+        && validOptionalTimestamp(data, 'updatedAt')
+        && validOptionalTimestamp(data, 'submittedAt')
+        && validOptionalString(data, 'reviewedBy', 128)
+        && validOptionalTimestamp(data, 'reviewedAt')
+        && validOptionalString(data, 'decisionReason', 1000)
+        && validOptionalTimestamp(data, 'expiresAt');
+    }
+
+    function validProviderSensitiveCategoryRequestCreate() {
+      let data = request.resource.data;
+      return signedIn()
+        && validSensitiveCategoryRequestData(data)
+        && data['providerId'] == uid()
+        && allowedProviderEditableSensitiveRequestStatus(data['status'])
+        && !data.keys().hasAny([
+          'reviewedBy',
+          'reviewedAt',
+          'decisionReason',
+          'expiresAt',
+        ]);
+    }
+
+    function validProviderSensitiveCategoryRequestUpdate() {
+      let data = request.resource.data;
+      let affected = data.diff(resource.data).affectedKeys();
+      return signedIn()
+        && resource.data['providerId'] == uid()
+        && resource.data['status'] in ['draft', 'needs_more_info']
+        && validSensitiveCategoryRequestData(data)
+        && data['providerId'] == resource.data['providerId']
+        && data['categoryId'] == resource.data['categoryId']
+        && affected.hasOnly([
+          'status',
+          'evidenceTypes',
+          'evidenceText',
+          'portfolioUrls',
+          'documentRefs',
+          'submittedAt',
+          'updatedAt',
+        ])
+        && (!affected.hasAny(['status']) ||
+          allowedProviderEditableSensitiveRequestStatus(data['status']));
+    }
+
+    function validProviderCategoryApprovalData(data, providerId, categoryId) {
+      return data is map
+        && data.keys().hasOnly([
+          'providerId',
+          'categoryId',
+          'categoryName',
+          'status',
+          'sourceRequestId',
+          'approvedBy',
+          'approvedAt',
+          'expiresAt',
+          'revokedAt',
+          'decisionReason',
+          'createdAt',
+          'updatedAt',
+        ])
+        && data.keys().hasAll([
+          'providerId',
+          'categoryId',
+          'categoryName',
+          'status',
+        ])
+        && data['providerId'] == providerId
+        && data['categoryId'] == categoryId
+        && data['categoryName'] is string
+        && data['categoryName'].size() > 0
+        && allowedProviderCategoryApprovalStatus(data['status'])
+        && validOptionalString(data, 'sourceRequestId', 128)
+        && validOptionalString(data, 'approvedBy', 128)
+        && validOptionalTimestamp(data, 'approvedAt')
+        && validOptionalTimestamp(data, 'expiresAt')
+        && validOptionalTimestamp(data, 'revokedAt')
+        && validOptionalString(data, 'decisionReason', 1000)
+        && validOptionalTimestamp(data, 'createdAt')
+        && validOptionalTimestamp(data, 'updatedAt');
+    }
+
     function validReportCreate() {
       let data = request.resource.data;
       return signedIn()
@@ -931,6 +1144,17 @@ service cloud.firestore {
       allow update: if isAdmin() || validPrestadorOwnerUpdate(prestadorId);
 
       allow delete: if isAdmin() || devMode();
+
+      match /categoryApprovals/{categoryId} {
+        allow read: if true;
+        allow create, update: if (isAdmin() || devMode())
+          && validProviderCategoryApprovalData(
+            request.resource.data,
+            prestadorId,
+            categoryId,
+          );
+        allow delete: if isAdmin() || devMode();
+      }
     }
 
     // -------------------------
@@ -939,6 +1163,28 @@ service cloud.firestore {
     match /handles/{handleId} {
       allow read: if true;
       allow create, update, delete: if false;
+    }
+
+    // -------------------------
+    // SENSITIVE CATEGORY APPROVALS
+    // -------------------------
+    match /categoryRequirements/{categoryId} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || devMode())
+        && validCategoryRequirementData(request.resource.data)
+        && request.resource.data['categoryId'] == categoryId;
+      allow delete: if isAdmin() || devMode();
+    }
+
+    match /sensitiveCategoryRequests/{requestId} {
+      allow read: if (signedIn() && resource.data['providerId'] == uid())
+        || isAdmin()
+        || devMode();
+      allow create: if validProviderSensitiveCategoryRequestCreate();
+      allow update: if ((isAdmin() || devMode())
+          && validSensitiveCategoryRequestData(request.resource.data))
+        || validProviderSensitiveCategoryRequestUpdate();
+      allow delete: if isAdmin() || devMode();
     }
 
     // -------------------------

@@ -4,7 +4,7 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.20 iniciada com spec e auditoria documental.
+M2.20 ativa com spec/auditoria e modelo tecnico de categorias sensiveis.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -14,7 +14,8 @@ M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19 - FECHADA no escopo atual de link publico, @handle e partilha social
 M2.20.1 - FECHADA com spec e auditoria
-M2.20.2 - PROXIMO passo
+M2.20.2 - FECHADA com modelo, service e Rules
+M2.20.3 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -60,6 +61,61 @@ M2.24 futuro - monetizacao/pagamentos reais.
 
 Nesta M2.20.1 nao houve implementacao de Dart, Rules, Storage Rules, Functions,
 UI, upload ou deploy.
+
+Na M2.20.2 foram criados modelos Dart, service minimo e Firestore Rules para a
+base de `categoryRequirements`, `sensitiveCategoryRequests` e
+`prestadores/{uid}/categoryApprovals/{categoryId}`. Nao houve UI, upload,
+admin visual, Functions, Storage Rules, deploy, KYC ou integracao com
+matching/discovery.
+
+## Atualizacao M2.20.2 - Modelo Tecnico
+
+Arquivos criados:
+
+```text
+lib/core/models/category_approval_types.dart
+lib/core/models/category_requirement.dart
+lib/core/models/sensitive_category_request.dart
+lib/core/models/provider_category_approval.dart
+lib/core/services/category_approval_service.dart
+```
+
+Colecoes decididas:
+
+```text
+categoryRequirements/{categoryId}
+sensitiveCategoryRequests/{requestId}
+prestadores/{uid}/categoryApprovals/{categoryId}
+```
+
+`categoryRequirements` define risco, exigencia de aprovacao e tipos de
+evidencia aceites. `sensitiveCategoryRequests` guarda pedidos do prestador com
+status e evidencias textuais/referencias. `categoryApprovals` guarda aprovacao
+por prestador/categoria e e escrito apenas por admin/dev.
+
+Status principais:
+
+```text
+draft
+submitted
+pending_review
+approved
+rejected
+needs_more_info
+expired
+revoked
+```
+
+Decisoes de seguranca:
+
+```text
+prestador nao cria approval para si;
+prestador nao escreve reviewedBy/reviewedAt/decisionReason;
+prestador so edita pedidos em draft ou needs_more_info;
+documentRefs guardam apenas referencias/metadados;
+upload real e caminho privado de Storage ficam fora desta fase;
+KYC continua separado de comprovativo profissional por categoria.
+```
 
 ## Estado Atual das Categorias e Servicos
 
@@ -533,8 +589,8 @@ documento de identidade, selfie/liveness e comprovativo profissional.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.20.1 | FECHADO | Spec e auditoria de categorias sensiveis/comprovativos |
-| M2.20.2 | PROXIMO | Modelo de categoria sensivel e pedido de aprovacao |
-| M2.20.3 | FUTURO | UI do prestador para pedir aprovacao |
+| M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
+| M2.20.3 | PROXIMO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FUTURO | Admin leve para analisar comprovativos |
 | M2.20.5 | FUTURO | Integracao com perfil/discovery/pedido |
 | M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
@@ -575,13 +631,11 @@ Rules bloqueiam escrita indevida;
 Storage Rules protegem comprovativos privados.
 ```
 
-## Fora do Escopo da M2.20.1
+## Fora do Escopo da M2.20.2
 
 ```text
-implementar modelo;
 criar UI;
 criar upload;
-alterar Firestore Rules;
 alterar Storage Rules;
 alterar Cloud Functions;
 deploy;
@@ -596,20 +650,18 @@ fechar R1;
 fechar M2.6.
 ```
 
-## Decisao Recomendada para M2.20.2
+## Decisao Recomendada para M2.20.3
 
-Criar apenas a base tecnica do modelo:
+Criar a UI do prestador sobre a base tecnica criada na M2.20.2:
 
 ```text
-modelo de categoria sensivel;
-modelo de pedido de aprovacao;
-status/enums;
-service Dart puro;
-Rules/Functions minimas se necessarias para ownership e admin;
-testes unitarios e Rules/Functions;
-sem UI, sem upload e sem admin visual grande ainda.
+mostrar categorias sensiveis selecionadas;
+mostrar estado do pedido por categoria;
+permitir criar/submeter pedido com evidencia textual e portfolio;
+nao implementar upload real ainda, salvo decisao explicita;
+nao criar admin visual nesta subfase;
+nao criar badges publicos nem alterar matching.
 ```
 
-M2.20.2 deve preparar a fundacao de dados. UI do prestador fica para M2.20.3,
-admin de analise fica para M2.20.4 e integracao com discovery/pedido fica para
-M2.20.5.
+M2.20.3 deve usar `CategoryApprovalService` e os modelos existentes. Admin de
+analise fica para M2.20.4 e integracao com discovery/pedido fica para M2.20.5.

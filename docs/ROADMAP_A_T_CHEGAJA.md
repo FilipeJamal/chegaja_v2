@@ -210,7 +210,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
 | M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
-| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.1 fechada, M2.20.2 proxima |
+| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.2 fechada, M2.20.3 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -232,8 +232,12 @@ link e manteve QR real/SEO/dominio customizado fora. A M2.19.6 validou handle,
 rota publica, 404, partilha, Functions, Flutter completo, build Web, E2E dual,
 E2E orcamento e QA visual. A M2.19 fica fechada no escopo atual. O proximo
 bloco recomendado e M2.20. A M2.20.1 criou a spec/auditoria de categorias
-sensiveis e comprovativos profissionais, separando proibido, sensivel e normal,
-e definindo M2.20.2 como proximo passo para o modelo de dados.
+sensiveis e comprovativos profissionais, separando proibido, sensivel e normal.
+A M2.20.2 criou os modelos `CategoryRequirement`,
+`SensitiveCategoryRequest`, `ProviderCategoryApproval`, os enums/status, o
+`CategoryApprovalService` e as Rules minimas para requests/approvals. O proximo
+passo e M2.20.3, com UI do prestador para pedir aprovacao, ainda sem KYC,
+upload real, admin visual ou matching.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -370,22 +374,19 @@ ficam fora.
 | Fase | Estado | Descricao |
 | --- | --- | --- |
 | M2.20.1 | FECHADO | Spec e auditoria de categorias sensiveis/comprovativos |
-| M2.20.2 | PROXIMO | Modelo de categoria sensivel e pedido de aprovacao |
-| M2.20.3 | FUTURO | UI do prestador para pedir aprovacao |
+| M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
+| M2.20.3 | PROXIMO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FUTURO | Admin leve para analisar comprovativos |
 | M2.20.5 | FUTURO | Integracao com perfil/discovery/pedido |
 | M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.20 |
 
-Estado: M2.20 iniciada. A M2.20.1 criou a spec e auditoria documental para
-categorias sensiveis e comprovativos profissionais, sem alterar Dart, Rules,
-Storage Rules, Functions ou deploy. A auditoria confirmou que o catalogo
-`servicos` e amplo, que `SensitiveCategories` ja marca `needsReview`, que
-`PrestadorSettingsScreen` grava `servicos`/`servicosNomes`, que
-`NovoPedidoScreen` mostra aviso para categorias sensiveis, e que ainda nao
-existe approval/comprovativo por categoria. A decisao recomendada para M2.20.2
-e criar o modelo de categoria sensivel e pedido de aprovacao antes de UI, upload
-ou admin visual. KYC continua fora: M2.20 trata qualificacao por categoria,
-M2.23 futuro trata identidade/documento/selfie.
+Estado: M2.20 ativa. A M2.20.1 criou a spec e auditoria documental para
+categorias sensiveis e comprovativos profissionais. A M2.20.2 criou a base
+tecnica: enums/status, `CategoryRequirement`, `SensitiveCategoryRequest`,
+`ProviderCategoryApproval`, `CategoryApprovalService`, `categoryRequirements`,
+`sensitiveCategoryRequests` e `prestadores/{uid}/categoryApprovals/{categoryId}`
+com Rules de ownership/admin. Ainda nao ha UI, upload real, admin visual,
+badges publicos, discovery/matching ou KYC. O proximo passo e M2.20.3.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -599,13 +600,13 @@ fechada no escopo atual de link publico, @handle e partilha social: reserva de
 handle, UI do prestador, rota `/p/{handle}`, perfil publico por handle, copiar
 link, WhatsApp/Facebook por URL, Instagram como copiar link, testes, E2E, build
 Web e QA visual. A M2.20 foi iniciada com spec/auditoria de categorias
-sensiveis e comprovativos profissionais, sem codigo, Rules, Functions, Storage
-Rules ou deploy.
+sensiveis e comprovativos profissionais, e a M2.20.2 criou a base tecnica de
+modelo/service/Rules, sem UI, upload, Functions, Storage Rules ou deploy.
 
 Fase operacional:
 
 ```text
-M2.20.2 - Modelo de categoria sensivel e pedido de aprovacao
+M2.20.3 - UI do prestador para pedir aprovacao em categoria sensivel
 ```
 
 Dependencias pausadas:

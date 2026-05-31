@@ -223,6 +223,312 @@ describe("Firestore Security Rules", () => {
         });
     });
 
+    describe("Sensitive Category Requirements and Requests", () => {
+        function validRequestPayload(overrides = {}) {
+            return {
+                providerId: "provider1",
+                categoryId: "electricity",
+                categoryName: "Eletricidade",
+                status: "pending_review",
+                evidenceTypes: ["certificate", "work_experience"],
+                evidenceText: "Tenho comprovativo profissional.",
+                portfolioUrls: ["https://example.com/work"],
+                documentRefs: [],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                submittedAt: serverTimestamp(),
+                ...overrides,
+            };
+        }
+
+        async function seedSensitiveRequest(id = "request1", data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore()
+                    .collection("sensitiveCategoryRequests")
+                    .doc(id)
+                    .set({
+                        providerId: "provider1",
+                        categoryId: "electricity",
+                        categoryName: "Eletricidade",
+                        status: "draft",
+                        evidenceTypes: ["certificate"],
+                        evidenceText: "Draft",
+                        portfolioUrls: [],
+                        documentRefs: [],
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        ...data,
+                    });
+            });
+        }
+
+        async function seedApproval(data = {}) {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .collection("categoryApprovals")
+                    .doc("electricity")
+                    .set({
+                        providerId: "provider1",
+                        categoryId: "electricity",
+                        categoryName: "Eletricidade",
+                        status: "approved",
+                        sourceRequestId: "request1",
+                        approvedBy: "admin1",
+                        approvedAt: new Date(),
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        ...data,
+                    });
+            });
+        }
+
+        it("should allow public reads and deny user writes on category requirements", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context.firestore()
+                    .collection("categoryRequirements")
+                    .doc("electricity")
+                    .set({
+                        categoryId: "electricity",
+                        categoryName: "Eletricidade",
+                        riskLevel: "sensitive",
+                        approvalRequired: true,
+                        evidenceTypes: ["certificate"],
+                        isActive: true,
+                    });
+            });
+            const unauth = testEnv.unauthenticatedContext();
+            const provider = testEnv.authenticatedContext("provider1");
+            const admin = testEnv.authenticatedContext("admin1", { admin: true });
+
+            await assertSucceeds(
+                unauth.firestore().collection("categoryRequirements").doc("electricity").get()
+            );
+            await assertFails(
+                provider.firestore().collection("categoryRequirements").doc("gas").set({
+                    categoryId: "gas",
+                    categoryName: "Gas",
+                    riskLevel: "sensitive",
+                    approvalRequired: true,
+                    evidenceTypes: ["license"],
+                    isActive: true,
+                })
+            );
+            await assertSucceeds(
+                admin.firestore().collection("categoryRequirements").doc("gas").set({
+                    categoryId: "gas",
+                    categoryName: "Gas",
+                    riskLevel: "sensitive",
+                    approvalRequired: true,
+                    evidenceTypes: ["license"],
+                    isActive: true,
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                })
+            );
+        });
+
+        it("should allow provider to create a valid request for self", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertSucceeds(
+                provider.firestore()
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request1")
+                    .set(validRequestPayload())
+            );
+        });
+
+        it("should deny invalid requester, extra fields and review fields on create", async () => {
+            const unauth = testEnv.unauthenticatedContext();
+            const provider = testEnv.authenticatedContext("provider1");
+            const unauthDb = unauth.firestore();
+            const providerDb = provider.firestore();
+
+            await assertFails(
+                unauthDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request1")
+                    .set(validRequestPayload())
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request2")
+                    .set(validRequestPayload({ providerId: "provider2" }))
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request3")
+                    .set(validRequestPayload({ hackedApproval: true }))
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request4")
+                    .set(validRequestPayload({ reviewedBy: "provider1" }))
+            );
+        });
+
+        it("should deny long evidence text and invalid create status", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            const providerDb = provider.firestore();
+
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_long")
+                    .set(validRequestPayload({ evidenceText: "x".repeat(2001) }))
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_approved")
+                    .set(validRequestPayload({ status: "approved" }))
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_bad_evidence")
+                    .set(validRequestPayload({ evidenceTypes: ["fake_certificate"] }))
+            );
+        });
+
+        it("should allow owner reads, deny outsider reads and allow admin reads", async () => {
+            await seedSensitiveRequest();
+            const provider = testEnv.authenticatedContext("provider1");
+            const outsider = testEnv.authenticatedContext("provider2");
+            const admin = testEnv.authenticatedContext("admin1", { admin: true });
+
+            await assertSucceeds(
+                provider.firestore().collection("sensitiveCategoryRequests").doc("request1").get()
+            );
+            await assertFails(
+                outsider.firestore().collection("sensitiveCategoryRequests").doc("request1").get()
+            );
+            await assertSucceeds(
+                admin.firestore().collection("sensitiveCategoryRequests").doc("request1").get()
+            );
+        });
+
+        it("should allow provider edits only while draft or needs_more_info", async () => {
+            await seedSensitiveRequest("request_draft", { status: "draft" });
+            await seedSensitiveRequest("request_review", { status: "pending_review" });
+            const provider = testEnv.authenticatedContext("provider1");
+            const providerDb = provider.firestore();
+
+            await assertSucceeds(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_draft")
+                    .update({
+                        evidenceText: "Texto atualizado",
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_draft")
+                    .update({
+                        status: "approved",
+                        reviewedBy: "provider1",
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+            await assertFails(
+                providerDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_review")
+                    .update({
+                        evidenceText: "Tentativa tardia",
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+        });
+
+        it("should allow admin to review requests and manage approvals", async () => {
+            await seedSensitiveRequest("request_review", { status: "pending_review" });
+            const provider = testEnv.authenticatedContext("provider1");
+            const admin = testEnv.authenticatedContext("admin1", { admin: true });
+            const providerDb = provider.firestore();
+            const adminDb = admin.firestore();
+
+            await assertSucceeds(
+                adminDb
+                    .collection("sensitiveCategoryRequests")
+                    .doc("request_review")
+                    .update({
+                        status: "approved",
+                        reviewedBy: "admin1",
+                        reviewedAt: serverTimestamp(),
+                        decisionReason: "Comprovativo aceite",
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+            await assertFails(
+                providerDb
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .collection("categoryApprovals")
+                    .doc("electricity")
+                    .set({
+                        providerId: "provider1",
+                        categoryId: "electricity",
+                        categoryName: "Eletricidade",
+                        status: "approved",
+                        sourceRequestId: "request_review",
+                    })
+            );
+            await assertSucceeds(
+                adminDb
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .collection("categoryApprovals")
+                    .doc("electricity")
+                    .set({
+                        providerId: "provider1",
+                        categoryId: "electricity",
+                        categoryName: "Eletricidade",
+                        status: "approved",
+                        sourceRequestId: "request_review",
+                        approvedBy: "admin1",
+                        approvedAt: serverTimestamp(),
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+        });
+
+        it("should allow public reads but no client writes on category approvals", async () => {
+            await seedApproval();
+            const unauth = testEnv.unauthenticatedContext();
+            const provider = testEnv.authenticatedContext("provider1");
+
+            await assertSucceeds(
+                unauth.firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .collection("categoryApprovals")
+                    .doc("electricity")
+                    .get()
+            );
+            await assertFails(
+                provider.firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .collection("categoryApprovals")
+                    .doc("electricity")
+                    .update({
+                        status: "approved",
+                        updatedAt: serverTimestamp(),
+                    })
+            );
+        });
+    });
+
     describe("Pedidos Collection", () => {
         async function seedPedido(id, data) {
             await testEnv.withSecurityRulesDisabled(async (context) => {
