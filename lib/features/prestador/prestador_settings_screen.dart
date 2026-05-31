@@ -5,7 +5,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/models/category_approval_types.dart';
+import 'package:chegaja_v2/core/models/category_requirement.dart';
+import 'package:chegaja_v2/core/models/provider_category_approval.dart';
+import 'package:chegaja_v2/core/models/sensitive_category_request.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/services/category_approval_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/servico_search.dart';
@@ -13,6 +18,8 @@ import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
+import 'package:chegaja_v2/features/prestador/widgets/prestador_sensitive_categories_section.dart';
+import 'package:chegaja_v2/features/prestador/widgets/sensitive_category_request_sheet.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 import 'package:chegaja_v2/core/services/locale_service.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
@@ -49,12 +56,20 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
 
   bool _loading = true;
   bool _saving = false;
+  bool _loadingSensitiveCategories = false;
 
   List<Servico> _todosServicos = [];
   final Set<String> _servicosSelecionados = {};
   String _servicoQuery = '';
   ServicoSearchIndex<Servico>? _servicoSearchIndex;
   String _servicoSearchKey = '';
+  final CategoryApprovalService _categoryApprovalService =
+      CategoryApprovalService();
+  List<CategoryRequirement> _categoryRequirements = const [];
+  List<SensitiveCategoryRequest> _categoryRequests = const [];
+  List<ProviderCategoryApproval> _categoryApprovals = const [];
+  List<String> _portfolioUrls = const [];
+  String? _sensitiveCategoriesError;
 
   double _radiusKm = 10;
 
@@ -126,6 +141,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       String? stateCode;
       double? radius;
       List<dynamic>? servicosIds;
+      List<String> portfolioUrls = const [];
 
       if (docPrestador.exists) {
         final data = docPrestador.data();
@@ -139,6 +155,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           final r = data['radiusKm'];
           if (r is num) radius = r.toDouble();
           servicosIds = data['servicos'] as List<dynamic>?;
+          portfolioUrls = _cleanStringList(data['portfolioUrls']);
         }
       }
 
@@ -151,6 +168,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         _cidadeCtrl.text = city ?? '';
         _profileCountryCode = countryCode;
         _profileStateCode = stateCode;
+        _portfolioUrls = portfolioUrls;
 
         _servicosSelecionados.clear();
         if (servicosIds != null) {
@@ -170,6 +188,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         countryCode: _profileCountryCode,
         stateCode: _profileStateCode,
       );
+      await _carregarCategoriasSensiveis(user.uid, showLoading: false);
 
       if (!mounted) return;
       setState(() {
@@ -418,6 +437,119 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     }
     _ensureServicoSearchIndex(locale);
     return _servicoSearchIndex?.search(query, limit: 80) ?? const [];
+  }
+
+  List<String> _cleanStringList(Object? value) {
+    if (value is! Iterable) return const [];
+    return value
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  List<CategoryRequirement> get _effectiveCategoryRequirements {
+    if (_categoryRequirements.isNotEmpty) {
+      return _categoryRequirements;
+    }
+    return sensitiveRequirementsFromSelectedServices(
+      services: _todosServicos,
+      selectedServiceIds: _servicosSelecionados,
+    );
+  }
+
+  Future<void> _carregarCategoriasSensiveis(
+    String providerId, {
+    bool showLoading = true,
+  }) async {
+    if (showLoading && mounted) {
+      setState(() {
+        _loadingSensitiveCategories = true;
+        _sensitiveCategoriesError = null;
+      });
+    }
+
+    try {
+      final results = await Future.wait([
+        _categoryApprovalService.getActiveCategoryRequirements(),
+        _categoryApprovalService.getProviderCategoryRequests(providerId),
+        _categoryApprovalService.getProviderCategoryApprovals(providerId),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _categoryRequirements = results[0] as List<CategoryRequirement>;
+        _categoryRequests = results[1] as List<SensitiveCategoryRequest>;
+        _categoryApprovals = results[2] as List<ProviderCategoryApproval>;
+        _sensitiveCategoriesError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sensitiveCategoriesError =
+            'Nao foi possivel carregar categorias sensiveis.';
+      });
+    } finally {
+      if (mounted && showLoading) {
+        setState(() => _loadingSensitiveCategories = false);
+      }
+    }
+  }
+
+  Future<void> _abrirPedidoCategoriaSensivel(
+    CategoryRequirement requirement,
+    SensitiveCategoryRequest? request,
+  ) async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      builder: (sheetContext) {
+        return SensitiveCategoryRequestSheet(
+          requirement: requirement,
+          initialRequest: request,
+          portfolioUrls: _portfolioUrls,
+          onSubmit: (input) async {
+            if (request != null &&
+                request.id != null &&
+                request.status ==
+                    SensitiveCategoryRequestStatus.needsMoreInfo) {
+              await _categoryApprovalService.resubmitSensitiveCategoryRequest(
+                requestId: request.id!,
+                evidenceTypes: input.evidenceTypes,
+                evidenceText: input.evidenceText,
+                portfolioUrls: input.portfolioUrls,
+                documentRefs: const [],
+              );
+            } else {
+              await _categoryApprovalService.createSensitiveCategoryRequest(
+                providerId: user.uid,
+                categoryId: requirement.categoryId,
+                categoryName: requirement.categoryName,
+                evidenceTypes: input.evidenceTypes,
+                evidenceText: input.evidenceText,
+                portfolioUrls: input.portfolioUrls,
+                documentRefs: const [],
+              );
+            }
+
+            if (sheetContext.mounted) {
+              Navigator.of(sheetContext).pop();
+            }
+            await _carregarCategoriasSensiveis(user.uid);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Pedido enviado para analise.'),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   String _normalizeServicoMode(String? mode) {
@@ -1193,7 +1325,26 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                           ),
                         const SizedBox(height: 24),
 
-                        // --- Cartão de Suporte ---
+                        // Categorias sensiveis
+                        PrestadorSensitiveCategoriesSection(
+                          requirements: _effectiveCategoryRequirements,
+                          requests: _categoryRequests,
+                          approvals: _categoryApprovals,
+                          loading: _loadingSensitiveCategories,
+                          error: _sensitiveCategoriesError,
+                          onRefresh: () {
+                            final user = AuthService.currentUser;
+                            if (user != null) {
+                              unawaited(
+                                _carregarCategoriasSensiveis(user.uid),
+                              );
+                            }
+                          },
+                          onRequestApproval: _abrirPedidoCategoriaSensivel,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Suporte
                         Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

@@ -4,7 +4,8 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.20 ativa com spec/auditoria e modelo tecnico de categorias sensiveis.
+M2.20 ativa com spec/auditoria, modelo tecnico e UI inicial do prestador para
+categorias sensiveis.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -15,7 +16,8 @@ M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19 - FECHADA no escopo atual de link publico, @handle e partilha social
 M2.20.1 - FECHADA com spec e auditoria
 M2.20.2 - FECHADA com modelo, service e Rules
-M2.20.3 - PROXIMO passo
+M2.20.3 - FECHADA com UI do prestador para pedido de aprovacao
+M2.20.4 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -67,6 +69,56 @@ base de `categoryRequirements`, `sensitiveCategoryRequests` e
 `prestadores/{uid}/categoryApprovals/{categoryId}`. Nao houve UI, upload,
 admin visual, Functions, Storage Rules, deploy, KYC ou integracao com
 matching/discovery.
+
+Na M2.20.3 foi criada a UI do prestador em `PrestadorSettingsScreen` para
+listar categorias sensiveis, ver status de pedido/aprovacao, abrir formulario
+de pedido, enviar evidencia textual e referenciar portfolio publico como
+evidencia informal. Nao houve upload real, admin visual, discovery/matching,
+badges publicos, KYC, Functions, Storage Rules ou deploy.
+
+## Atualizacao M2.20.3 - UI do Prestador
+
+Arquivos criados:
+
+```text
+lib/features/prestador/widgets/prestador_sensitive_categories_section.dart
+lib/features/prestador/widgets/sensitive_category_request_sheet.dart
+lib/features/prestador/widgets/category_approval_status_chip.dart
+```
+
+Arquivos atualizados:
+
+```text
+lib/features/prestador/prestador_settings_screen.dart
+lib/core/services/category_approval_service.dart
+```
+
+Comportamento:
+
+```text
+prestador ve "Categorias sensiveis e comprovativos";
+prestador ve categoria sensivel, requisitos e status;
+prestador abre formulario de pedido;
+prestador seleciona tipo de comprovativo;
+prestador descreve experiencia/comprovativo textual;
+prestador pode referenciar portfolio publico;
+prestador reenvia informacao quando status for needs_more_info;
+upload real continua fora;
+admin visual continua fora.
+```
+
+Fallback:
+
+```text
+se categoryRequirements ainda nao estiver semeada;
+a UI deriva requisitos locais dos servicos selecionados;
+usa SensitiveCategories como base;
+nao cria aprovacao falsa.
+```
+
+Textos seguros continuam obrigatorios. A UI privada pode mostrar "Aprovacao
+ativa" ou "Categoria aprovada" quando houver approval real, mas o perfil publico
+continua sem badge publico nesta fase.
 
 ## Atualizacao M2.20.2 - Modelo Tecnico
 
@@ -590,8 +642,8 @@ documento de identidade, selfie/liveness e comprovativo profissional.
 | --- | --- | --- |
 | M2.20.1 | FECHADO | Spec e auditoria de categorias sensiveis/comprovativos |
 | M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
-| M2.20.3 | PROXIMO | UI do prestador para pedir aprovacao |
-| M2.20.4 | FUTURO | Admin leve para analisar comprovativos |
+| M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
+| M2.20.4 | PROXIMO | Admin leve para analisar comprovativos |
 | M2.20.5 | FUTURO | Integracao com perfil/discovery/pedido |
 | M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
@@ -650,18 +702,18 @@ fechar R1;
 fechar M2.6.
 ```
 
-## Decisao Recomendada para M2.20.3
+## Decisao Recomendada para M2.20.4
 
-Criar a UI do prestador sobre a base tecnica criada na M2.20.2:
+Criar admin leve sobre a base tecnica e a UI do prestador ja criadas:
 
 ```text
-mostrar categorias sensiveis selecionadas;
-mostrar estado do pedido por categoria;
-permitir criar/submeter pedido com evidencia textual e portfolio;
-nao implementar upload real ainda, salvo decisao explicita;
-nao criar admin visual nesta subfase;
-nao criar badges publicos nem alterar matching.
+listar sensitiveCategoryRequests;
+ver evidencia textual e referencias de portfolio;
+aprovar/rejeitar/pedir mais informacao;
+gravar audit log;
+nao criar admin enterprise;
+nao criar KYC nem upload privado real ainda, salvo decisao explicita.
 ```
 
-M2.20.3 deve usar `CategoryApprovalService` e os modelos existentes. Admin de
-analise fica para M2.20.4 e integracao com discovery/pedido fica para M2.20.5.
+M2.20.4 deve usar `CategoryApprovalService`, `AdminPanel` e `adminAuditLogs`
+quando fizer sentido. Integracao com discovery/pedido fica para M2.20.5.

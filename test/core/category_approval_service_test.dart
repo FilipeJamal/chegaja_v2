@@ -84,6 +84,97 @@ void main() {
       expect(requirement?.evidenceTypes, [EvidenceType.license]);
     });
 
+    test('getActiveCategoryRequirements devolve apenas ativos ordenados',
+        () async {
+      final db = FakeFirebaseFirestore();
+      await db.collection('categoryRequirements').doc('gas').set({
+        'categoryId': 'gas',
+        'categoryName': 'Gas',
+        'riskLevel': 'sensitive',
+        'approvalRequired': true,
+        'evidenceTypes': ['license'],
+        'isActive': true,
+      });
+      await db.collection('categoryRequirements').doc('electricity').set({
+        'categoryId': 'electricity',
+        'categoryName': 'Eletricidade',
+        'riskLevel': 'sensitive',
+        'approvalRequired': true,
+        'evidenceTypes': ['work_experience'],
+        'isActive': true,
+      });
+      await db.collection('categoryRequirements').doc('old').set({
+        'categoryId': 'old',
+        'categoryName': 'Antiga',
+        'riskLevel': 'sensitive',
+        'approvalRequired': true,
+        'evidenceTypes': ['other'],
+        'isActive': false,
+      });
+
+      final requirements = await CategoryApprovalService(firestore: db)
+          .getActiveCategoryRequirements();
+
+      expect(requirements.map((item) => item.categoryId), [
+        'electricity',
+        'gas',
+      ]);
+    });
+
+    test('getProviderCategoryApprovals lista approvals do provider', () async {
+      final db = FakeFirebaseFirestore();
+      await db
+          .collection('prestadores')
+          .doc('provider1')
+          .collection('categoryApprovals')
+          .doc('electricity')
+          .set({
+        'providerId': 'provider1',
+        'categoryId': 'electricity',
+        'categoryName': 'Eletricidade',
+        'status': 'approved',
+      });
+
+      final approvals = await CategoryApprovalService(firestore: db)
+          .getProviderCategoryApprovals('provider1');
+
+      expect(approvals, hasLength(1));
+      expect(approvals.single.categoryId, 'electricity');
+    });
+
+    test('resubmitSensitiveCategoryRequest envia needs_more_info para review',
+        () async {
+      final db = FakeFirebaseFirestore();
+      await db.collection('sensitiveCategoryRequests').doc('req1').set({
+        'providerId': 'provider1',
+        'categoryId': 'electricity',
+        'categoryName': 'Eletricidade',
+        'status': 'needs_more_info',
+        'evidenceTypes': ['work_experience'],
+        'portfolioUrls': <String>[],
+        'documentRefs': <String>[],
+      });
+
+      await CategoryApprovalService(firestore: db)
+          .resubmitSensitiveCategoryRequest(
+        requestId: 'req1',
+        evidenceTypes: const [EvidenceType.portfolioReference],
+        evidenceText: 'Atualizei a descricao com mais informacao.',
+        portfolioUrls: const ['https://example.com/obra.jpg'],
+      );
+
+      final snap =
+          await db.collection('sensitiveCategoryRequests').doc('req1').get();
+
+      expect(snap.data()?['status'], 'pending_review');
+      expect(snap.data()?['evidenceTypes'], ['portfolio_reference']);
+      expect(snap.data()?['portfolioUrls'], ['https://example.com/obra.jpg']);
+      expect(
+        snap.data()?['evidenceText'],
+        'Atualizei a descricao com mais informacao.',
+      );
+    });
+
     test('isCategoryApprovedForProvider respeita status e expiracao', () async {
       final db = FakeFirebaseFirestore();
       await db

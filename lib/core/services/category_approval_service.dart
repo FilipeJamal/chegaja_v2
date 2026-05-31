@@ -79,6 +79,29 @@ class CategoryApprovalService {
         .toList(growable: false);
   }
 
+  Future<List<CategoryRequirement>> getActiveCategoryRequirements() async {
+    final snap = await _firestore.collection('categoryRequirements').get();
+    final requirements = snap.docs
+        .map(CategoryRequirement.fromDoc)
+        .where((requirement) => requirement.isActive)
+        .toList(growable: false);
+    requirements.sort((a, b) => a.categoryName.compareTo(b.categoryName));
+    return requirements;
+  }
+
+  Future<List<ProviderCategoryApproval>> getProviderCategoryApprovals(
+    String providerId,
+  ) async {
+    final snap = await _firestore
+        .collection('prestadores')
+        .doc(providerId)
+        .collection('categoryApprovals')
+        .get();
+    return snap.docs
+        .map(ProviderCategoryApproval.fromDoc)
+        .toList(growable: false);
+  }
+
   Stream<List<SensitiveCategoryRequest>> streamProviderCategoryRequests(
     String providerId,
   ) {
@@ -100,6 +123,29 @@ class CategoryApprovalService {
         .get();
     if (!snap.exists) return null;
     return CategoryRequirement.fromDoc(snap);
+  }
+
+  Future<void> resubmitSensitiveCategoryRequest({
+    required String requestId,
+    required List<EvidenceType> evidenceTypes,
+    String? evidenceText,
+    List<String> portfolioUrls = const [],
+    List<String> documentRefs = const [],
+  }) async {
+    await _firestore
+        .collection('sensitiveCategoryRequests')
+        .doc(requestId)
+        .update(<String, dynamic>{
+      'status': sensitiveCategoryRequestStatusToFirestore(
+        SensitiveCategoryRequestStatus.pendingReview,
+      ),
+      'evidenceTypes': evidenceTypesToFirestore(evidenceTypes),
+      if (evidenceText != null) 'evidenceText': evidenceText,
+      'portfolioUrls': portfolioUrls,
+      'documentRefs': documentRefs,
+      'submittedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<bool> isCategoryApprovedForProvider(
