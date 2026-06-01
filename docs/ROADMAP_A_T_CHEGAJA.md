@@ -40,7 +40,7 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
-| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 fechou categorias sensiveis/comprovativos no escopo atual; admin enterprise completo ainda falta. |
+| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 fechou categorias sensiveis/comprovativos no escopo atual; M2.20.7 auditou a reorganizacao profissional do catalogo; admin enterprise completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
 | M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
@@ -211,7 +211,9 @@ denuncias, moderacao e ranking continuam fora.
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
 | M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
 | M2.20 | FECHADO | Categorias sensiveis e comprovativos profissionais fechada no escopo atual |
-| M2.21 | PROXIMO | Conta, definicoes e suporte premium |
+| M2.20.7 | FECHADO | Catalogo profissional, subcategorias e intencao de servico: spec/auditoria |
+| M2.20.8 | PROXIMO | Modelo/taxonomia de catalogo profissional |
+| M2.21 | FUTURO | Conta, definicoes e suporte premium apos fecho do trilho de catalogo |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -244,8 +246,11 @@ callables admin, fila "Comprovativos", decisoes approve/reject/needs_more_info,
 `categoryApprovals` quando aprovado e audit logs leves. A M2.20.5 integrou
 aprovacoes com perfil publico, discovery/card, pedido sensivel e matching
 basico via Rules/servico, sem KYC, upload real, badges fortes ou deploy. A
-M2.20.6 fechou QA final, E2E e documentacao. O proximo bloco recomendado e
-M2.21.
+M2.20.6 fechou QA final, E2E e documentacao. Antes da M2.21, a M2.20.7 foi
+inserida como fase curta de catalogo profissional para auditar categorias,
+subcategorias, aliases, termos populares e intencao de pedido. O proximo passo
+recomendado e M2.20.8 - Modelo/taxonomia de catalogo profissional. M2.21 fica
+futuro ate o fecho do trilho de catalogo.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -405,6 +410,22 @@ categorias com aprovacao no perfil/discovery e endureceu pedidos sensiveis com
 `categoryApprovalRequired`. A M2.20.6 validou o bloco com testes, Functions,
 Flutter completo, build Web, E2E, QA visual e documentacao final. Upload real,
 KYC, badges fortes, ranking avancado, pagamentos e deploy continuam fora.
+
+### M2.20.7 - Catalogo Profissional e Intencao de Servico
+
+| Fase | Estado | Descricao |
+| --- | --- | --- |
+| M2.20.7 | FECHADO | Spec/auditoria de catalogo profissional, subcategorias, aliases e intencao de pedido |
+| M2.20.8 | PROXIMO | Modelo/taxonomia de catalogo profissional |
+| M2.20.9 | FUTURO | UI profissional de escolha de servico |
+| M2.20.10 | FUTURO | QA final do catalogo profissional |
+
+Estado: M2.20.7 fechada como fase documental. A auditoria confirmou que o
+catalogo atual tem boa cobertura, mas mistura servicos canonicos, microtarefas
+e modos de pedido numa lista extensa. A decisao recomendada e reorganizar o
+catalogo em categorias principais, subcategorias, aliases, frases populares e
+intencao de pedido, mantendo a M2.20 de categorias sensiveis intacta. M2.21
+continua futuro ate o catalogo profissional ser estabilizado.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -623,12 +644,14 @@ modelo/service/Rules, a M2.20.3 criou a UI do prestador para pedir aprovacao,
 e a M2.20.4 criou o admin leve de comprovativos com callables, approvals e
 audit logs. A M2.20.5 integrou aprovacoes com perfil/discovery/pedido e matching
 basico. A M2.20.6 fechou o bloco com testes, E2E, QA visual e documentacao
-final, sem upload real, KYC, Storage Rules ou deploy.
+final, sem upload real, KYC, Storage Rules ou deploy. A M2.20.7 auditou o
+catalogo profissional, definiu taxonomia inicial, aliases, termos populares e
+intencao de pedido antes da M2.21.
 
 Fase operacional:
 
 ```text
-M2.21 - Conta, definicoes e suporte premium
+M2.20.8 - Modelo/taxonomia de catalogo profissional
 ```
 
 Dependencias pausadas:
