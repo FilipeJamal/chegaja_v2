@@ -59,6 +59,12 @@ void main() {
             ?.id,
         'martial_arts',
       );
+      expect(
+        ServiceTaxonomyMatcher.matchServiceQuery('consultora de imagem')
+            .bestMatch
+            ?.id,
+        'image_consulting',
+      );
     });
 
     test('query vazia retorna none sem sugestao falsa', () {

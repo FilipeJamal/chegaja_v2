@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/models/category_approval_types.dart';
@@ -63,6 +64,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
 
   List<Servico> _todosServicos = [];
   final Set<String> _servicosSelecionados = {};
+  List<ProviderCustomService> _customServices = const [];
   String _servicoQuery = '';
   ServicoSearchIndex<Servico>? _servicoSearchIndex;
   String _servicoSearchKey = '';
@@ -145,6 +147,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       double? radius;
       List<dynamic>? servicosIds;
       List<String> portfolioUrls = const [];
+      List<ProviderCustomService> customServices = const [];
 
       if (docPrestador.exists) {
         final data = docPrestador.data();
@@ -159,6 +162,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           if (r is num) radius = r.toDouble();
           servicosIds = data['servicos'] as List<dynamic>?;
           portfolioUrls = _cleanStringList(data['portfolioUrls']);
+          customServices = ProviderCustomService.listFrom(
+            data['customServices'],
+          );
         }
       }
 
@@ -172,6 +178,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         _profileCountryCode = countryCode;
         _profileStateCode = stateCode;
         _portfolioUrls = portfolioUrls;
+        _customServices = customServices;
 
         _servicosSelecionados.clear();
         if (servicosIds != null) {
@@ -185,6 +192,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
               }
             }
           }
+        }
+        for (final service in customServices) {
+          _servicosSelecionados.add(service.id);
         }
         for (final servico in servicos) {
           if (!_servicosSelecionados.contains(servico.id)) continue;
@@ -698,14 +708,22 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       final selecionadosTaxonomia = ServiceTaxonomyCatalog.subcategories
           .where((s) => _servicosSelecionados.contains(s.id))
           .toList();
+      final selecionadosPersonalizados = _customServices
+          .where((s) => _servicosSelecionados.contains(s.id))
+          .toList();
       final ids = <String>{
         ...selecionadosLegados.map((s) => s.id),
         ...selecionadosTaxonomia.map((s) => s.id),
+        ...selecionadosPersonalizados.map((s) => s.id),
       }.toList(growable: false);
       final nomes = <String>{
         ...selecionadosLegados.map((s) => s.name),
         ...selecionadosTaxonomia.map((s) => s.label),
+        ...selecionadosPersonalizados.map((s) => s.name),
       }.toList(growable: false);
+      final customServices = selecionadosPersonalizados
+          .map((service) => service.toMap())
+          .toList(growable: false);
 
       await ref.set(
         {
@@ -713,6 +731,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           'servicos': ids,
           // estes nomes são usados para bater com pedido.categoria
           'servicosNomes': nomes,
+          'customServices': customServices,
           'radiusKm': _radiusKm,
           'country': _paisCtrl.text.trim(),
           'countryCode': _selectedCountry?.isoCode,
@@ -1314,6 +1333,22 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                               _servicosSelecionados
                                 ..clear()
                                 ..addAll(value);
+                            });
+                          },
+                          customServices: _customServices,
+                          onCustomServicesChanged: (value) {
+                            setState(() {
+                              _customServices = value;
+                              final customIds =
+                                  value.map((service) => service.id).toSet();
+                              _servicosSelecionados.removeWhere(
+                                (id) =>
+                                    id.startsWith(
+                                      ProviderCustomService.idPrefix,
+                                    ) &&
+                                    !customIds.contains(id),
+                              );
+                              _servicosSelecionados.addAll(customIds);
                             });
                           },
                         ),

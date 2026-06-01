@@ -144,6 +144,31 @@ void main() {
       expect(profile.searchText, contains('gas'));
     });
 
+    test('inclui servicos personalizados e detalhes nos termos pesquisaveis',
+        () {
+      final profile = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_custom',
+        data: {
+          'nome': 'Lia Estilo',
+          'city': 'Lisboa',
+          'servicosNomes': ['Consultora de imagem'],
+          'customServices': [
+            {
+              'id': 'custom_consultora_de_imagem',
+              'name': 'Consultora de imagem',
+              'description':
+                  'Consultoria de imagem pessoal, guarda-roupa e eventos.',
+            },
+          ],
+        },
+      );
+
+      expect(profile.services, contains('Consultora de imagem'));
+      expect(profile.searchText, contains('consultora de imagem'));
+      expect(profile.searchText, contains('guarda roupa'));
+      expect(profile.searchText, contains('eventos'));
+    });
+
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {
       expect(
         ProviderSearchProfile.fromPrestadorDoc(

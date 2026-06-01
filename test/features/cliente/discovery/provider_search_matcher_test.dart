@@ -49,6 +49,30 @@ void main() {
       expect(matchesProviderSearch(noRating, 'bolos'), isTrue);
     });
 
+    test('encontra prestador por servico personalizado salvo pelo prestador',
+        () {
+      final custom = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_consultora_imagem',
+        data: {
+          'nome': 'Lia Estilo',
+          'city': 'Lisboa',
+          'servicos': ['custom_consultora_de_imagem'],
+          'servicosNomes': ['Consultora de imagem'],
+          'customServices': [
+            {
+              'id': 'custom_consultora_de_imagem',
+              'name': 'Consultora de imagem',
+              'description':
+                  'Consultoria de imagem pessoal, guarda-roupa e eventos.',
+            },
+          ],
+        },
+      );
+
+      expect(matchesProviderSearch(custom, 'consultora de imagem'), isTrue);
+      expect(matchesProviderSearch(custom, 'guarda roupa'), isTrue);
+    });
+
     test('pontua nome acima de bio e servico acima de bio', () {
       final byName = scoreProviderSearch(profile, 'joao');
       final byService = scoreProviderSearch(profile, 'canalizacao');

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
+
 import 'provider_search_normalizer.dart';
 
 class ProviderSearchProfile {
@@ -67,7 +69,13 @@ class ProviderSearchProfile {
       data['estado'],
     ]);
     final country = _firstNonEmpty([data['country'], data['pais']]);
-    final services = _stringList(data['servicosNomes']);
+    final customServices = ProviderCustomService.listFrom(
+      data['customServices'],
+    );
+    final services = _uniqueStrings([
+      ..._stringList(data['servicosNomes']),
+      ...customServices.map((service) => service.name),
+    ]);
     final categories = _uniqueStrings([
       ..._stringList(data['categories']),
       ..._stringList(data['servicos']),
@@ -94,6 +102,7 @@ class ProviderSearchProfile {
       country,
       ...services,
       ...categories,
+      ...customServices.map((service) => service.description),
       ...approvedSensitiveCategoryNames,
     ]);
 
