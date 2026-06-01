@@ -103,13 +103,28 @@ void main() {
                 'createdAt': 1710000000000,
               },
             ],
+            sensitiveCategoryRequests: const [
+              {
+                'id': 'req1',
+                'providerId': 'provider1',
+                'categoryId': 'electricity',
+                'categoryName': 'Eletricidade',
+                'status': 'pending_review',
+                'evidenceTypes': ['work_experience'],
+                'evidenceText': 'Tenho experiencia comprovavel.',
+                'portfolioUrls': ['https://example.com/obra.jpg'],
+                'submittedAt': 1710000000000,
+              },
+            ],
             ticketFilter: 'open',
             reportFilter: 'pending_review',
             noShowFilter: 'pending',
+            sensitiveCategoryFilter: 'pending_review',
             sectionErrors: const {},
             onTicketFilterChanged: (_) async {},
             onReportFilterChanged: (_) async {},
             onNoShowFilterChanged: (_) async {},
+            onSensitiveCategoryFilterChanged: (_) async {},
             onChangeTicketStatus: ({
               required ticketId,
               required status,
@@ -121,6 +136,10 @@ void main() {
             }) async {},
             onDecideNoShow: ({
               required pedidoId,
+              required decision,
+            }) async {},
+            onReviewSensitiveCategoryRequest: ({
+              required request,
               required decision,
             }) async {},
             onDeleteStory: (_) async {},
@@ -140,6 +159,11 @@ void main() {
     await tester.tap(find.text('Moderacao'));
     await tester.pumpAndSettle();
     expect(find.text('Moderacao e denuncias'), findsOneWidget);
+
+    await tester.tap(find.text('Comprovativos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Comprovativos profissionais'), findsOneWidget);
+    expect(find.text('Eletricidade'), findsOneWidget);
 
     await tester.tap(find.text('Suporte'));
     await tester.pumpAndSettle();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/services/admin_service.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_panel_content.dart';
+import 'package:chegaja_v2/features/admin/widgets/admin_sensitive_category_decision_sheet.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -19,6 +20,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   String _ticketFilter = 'open';
   String _reportFilter = 'pending_review';
   String _noShowFilter = 'pending';
+  String _sensitiveCategoryFilter = 'pending_review';
 
   Map<String, dynamic> _dashboard = <String, dynamic>{};
   Map<String, dynamic> _ops = <String, dynamic>{};
@@ -29,6 +31,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   List<Map<String, dynamic>> _stories = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _ledgerAnomalies = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _auditLogs = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _sensitiveCategoryRequests =
+      <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -101,6 +105,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           'audit',
           () => AdminService.instance.listAuditLogs(limit: 60),
         ),
+        guarded(
+          'sensitive_categories',
+          () => AdminService.instance.listSensitiveCategoryRequests(
+            status: _sensitiveCategoryFilter,
+            limit: 60,
+          ),
+        ),
       ]);
 
       if (!mounted) return;
@@ -121,6 +132,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             <Map<String, dynamic>>[];
         _auditLogs = (results[8] as List<Map<String, dynamic>>?) ??
             <Map<String, dynamic>>[];
+        _sensitiveCategoryRequests =
+            (results[9] as List<Map<String, dynamic>>?) ??
+                <Map<String, dynamic>>[];
         _sectionErrors = sectionErrors;
         _loading = false;
         _refreshing = false;
@@ -219,6 +233,42 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  Future<void> _openSensitiveCategoryDecision({
+    required Map<String, dynamic> request,
+    required String decision,
+  }) async {
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => AdminSensitiveCategoryDecisionSheet(
+          request: request,
+          decision: decision,
+          onSubmit: (input) async {
+            await AdminService.instance.reviewSensitiveCategoryRequest(
+              requestId: input.requestId,
+              decision: input.decision,
+              decisionReason: input.decisionReason,
+            );
+            if (context.mounted) Navigator.of(context).pop();
+            await _loadAll();
+            if (!mounted) return;
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              const SnackBar(
+                content: Text('Decisao de comprovativo registrada.'),
+              ),
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao decidir comprovativo: $e')),
+      );
+    }
+  }
+
   void _changeTicketFilter(String value) {
     setState(() => _ticketFilter = value);
     _loadAll();
@@ -231,6 +281,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   void _changeNoShowFilter(String value) {
     setState(() => _noShowFilter = value);
+    _loadAll();
+  }
+
+  void _changeSensitiveCategoryFilter(String value) {
+    setState(() => _sensitiveCategoryFilter = value);
     _loadAll();
   }
 
@@ -267,17 +322,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 stories: _stories,
                 ledgerAnomalies: _ledgerAnomalies,
                 auditLogs: _auditLogs,
+                sensitiveCategoryRequests: _sensitiveCategoryRequests,
                 ticketFilter: _ticketFilter,
                 reportFilter: _reportFilter,
                 noShowFilter: _noShowFilter,
+                sensitiveCategoryFilter: _sensitiveCategoryFilter,
                 sectionErrors: _sectionErrors,
                 globalError: _error,
                 onTicketFilterChanged: _changeTicketFilter,
                 onReportFilterChanged: _changeReportFilter,
                 onNoShowFilterChanged: _changeNoShowFilter,
+                onSensitiveCategoryFilterChanged:
+                    _changeSensitiveCategoryFilter,
                 onChangeTicketStatus: _changeTicketStatus,
                 onChangeReportStatus: _changeReportStatus,
                 onDecideNoShow: _decideNoShow,
+                onReviewSensitiveCategoryRequest:
+                    _openSensitiveCategoryDecision,
                 onDeleteStory: _deleteStory,
               ),
             ),

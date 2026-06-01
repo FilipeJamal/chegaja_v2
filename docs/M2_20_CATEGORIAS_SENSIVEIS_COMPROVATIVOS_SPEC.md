@@ -4,8 +4,8 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.20 ativa com spec/auditoria, modelo tecnico e UI inicial do prestador para
-categorias sensiveis.
+M2.20 ativa com spec/auditoria, modelo tecnico, UI do prestador e admin leve
+para categorias sensiveis.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -17,7 +17,8 @@ M2.19 - FECHADA no escopo atual de link publico, @handle e partilha social
 M2.20.1 - FECHADA com spec e auditoria
 M2.20.2 - FECHADA com modelo, service e Rules
 M2.20.3 - FECHADA com UI do prestador para pedido de aprovacao
-M2.20.4 - PROXIMO passo
+M2.20.4 - FECHADA com admin leve para analisar comprovativos
+M2.20.5 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -76,6 +77,13 @@ de pedido, enviar evidencia textual e referenciar portfolio publico como
 evidencia informal. Nao houve upload real, admin visual, discovery/matching,
 badges publicos, KYC, Functions, Storage Rules ou deploy.
 
+Na M2.20.4 foi criada a fila admin leve para analisar pedidos de categorias
+sensiveis: listar requests, ver evidencia textual/referencias de portfolio,
+aprovar, rejeitar, pedir mais informacao, criar `categoryApprovals` quando
+aprovado e registar `adminAuditLogs` pequenos. Nao houve upload real,
+visualizacao de documentos privados, KYC, badges publicos, discovery/matching,
+pagamentos ou deploy.
+
 ## Atualizacao M2.20.3 - UI do Prestador
 
 Arquivos criados:
@@ -119,6 +127,54 @@ nao cria aprovacao falsa.
 Textos seguros continuam obrigatorios. A UI privada pode mostrar "Aprovacao
 ativa" ou "Categoria aprovada" quando houver approval real, mas o perfil publico
 continua sem badge publico nesta fase.
+
+## Atualizacao M2.20.4 - Admin de Comprovativos
+
+Arquivos criados:
+
+```text
+lib/features/admin/widgets/admin_sensitive_category_requests_section.dart
+lib/features/admin/widgets/admin_sensitive_category_decision_sheet.dart
+functions/test/adminSensitiveCategoryRequests.test.js
+test/features/admin/admin_sensitive_category_requests_section_test.dart
+test/features/admin/admin_sensitive_category_decision_sheet_test.dart
+docs/M2_20_4_ADMIN_COMPROVATIVOS_STATUS.md
+```
+
+Arquivos atualizados:
+
+```text
+functions/index.js
+lib/core/services/admin_service.dart
+lib/features/admin/admin_panel_screen.dart
+lib/features/admin/widgets/admin_panel_content.dart
+lib/features/admin/widgets/admin_queue_status_chip.dart
+test/features/admin/admin_panel_navigation_test.dart
+docs/ROADMAP_A_T_CHEGAJA.md
+```
+
+Callables criadas:
+
+```text
+admin_listSensitiveCategoryRequests
+admin_reviewSensitiveCategoryRequest
+```
+
+Comportamento:
+
+```text
+admin lista pedidos de categoria sensivel;
+admin filtra por status/provider/category;
+admin ve evidencia textual e URLs publicas de portfolio;
+admin aprova pedido;
+approval e criado em prestadores/{providerId}/categoryApprovals/{categoryId};
+admin rejeita pedido;
+admin pede mais informacao;
+decisoes geram audit log leve;
+evidenceText completo nao e copiado para audit log;
+upload real continua fora;
+discovery/matching continuam fora.
+```
 
 ## Atualizacao M2.20.2 - Modelo Tecnico
 
@@ -585,21 +641,21 @@ AdminReportsSection;
 AdminAuditLogsSection.
 ```
 
-M2.20 deve adicionar futuramente uma fila leve:
+M2.20 adicionou na M2.20.4 uma fila leve:
 
 ```text
-Categorias sensiveis
+Comprovativos
 ```
 
-Acoes futuras:
+Acoes implementadas:
 
 ```text
 ver pedido de aprovacao;
-ver evidencias;
+ver evidencia textual;
+ver URLs publicas de portfolio;
 aprovar;
 rejeitar;
 pedir mais informacao;
-revogar;
 gravar audit log.
 ```
 
@@ -643,8 +699,8 @@ documento de identidade, selfie/liveness e comprovativo profissional.
 | M2.20.1 | FECHADO | Spec e auditoria de categorias sensiveis/comprovativos |
 | M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
 | M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
-| M2.20.4 | PROXIMO | Admin leve para analisar comprovativos |
-| M2.20.5 | FUTURO | Integracao com perfil/discovery/pedido |
+| M2.20.4 | FECHADO | Admin leve para analisar comprovativos |
+| M2.20.5 | PROXIMO | Integracao com perfil/discovery/pedido |
 | M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
 
 ## Riscos
@@ -656,8 +712,9 @@ prometer "certificado" sem processo real;
 deixar categoria sensivel entrar como normal;
 bloquear categorias legitimas por excesso;
 falta de expiracao/revisao de aprovacao;
-falta de audit log nas decisoes;
-falta de admin adequado;
+upload privado real ainda inexistente;
+enforcement em discovery/matching ainda inexistente;
+badges publicos ainda fora;
 custos de Storage;
 privacidade/GDPR;
 responsabilidade juridica por categorias sensiveis;
@@ -702,18 +759,21 @@ fechar R1;
 fechar M2.6.
 ```
 
-## Decisao Recomendada para M2.20.4
+## Decisao Recomendada para M2.20.5
 
-Criar admin leve sobre a base tecnica e a UI do prestador ja criadas:
+Integrar as aprovacoes com perfil, discovery e pedido sem criar promessas
+publicas falsas:
 
 ```text
-listar sensitiveCategoryRequests;
-ver evidencia textual e referencias de portfolio;
-aprovar/rejeitar/pedir mais informacao;
-gravar audit log;
-nao criar admin enterprise;
-nao criar KYC nem upload privado real ainda, salvo decisao explicita.
+usar ProviderCategoryApproval como fonte de decisao;
+prestador sem approval nao deve aparecer como aprovado naquela categoria;
+perfil publico nao deve mostrar selo positivo sem approval real;
+discovery nao deve sugerir qualificacao sem approval real;
+pedido/matching deve comecar a respeitar categorias sensiveis;
+nao criar KYC;
+nao criar upload privado real ainda;
+nao criar selo "certificado" publico.
 ```
 
-M2.20.4 deve usar `CategoryApprovalService`, `AdminPanel` e `adminAuditLogs`
-quando fizer sentido. Integracao com discovery/pedido fica para M2.20.5.
+M2.20.5 deve usar os approvals aprovados pela M2.20.4 como base. Upload
+privado, KYC e badges publicos continuam fora ate decisao explicita.

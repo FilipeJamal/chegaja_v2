@@ -1865,6 +1865,9 @@ const ADMIN_AUDIT_ACTIONS = new Set([
   'support_ticket.update_status',
   'no_show.set_decision',
   'story.delete',
+  'sensitive_category_request.approve',
+  'sensitive_category_request.reject',
+  'sensitive_category_request.needs_more_info',
 ]);
 
 const ADMIN_AUDIT_TARGET_TYPES = new Set([
@@ -1873,6 +1876,26 @@ const ADMIN_AUDIT_TARGET_TYPES = new Set([
   'pedido',
   'no_show',
   'story',
+  'sensitive_category_request',
+]);
+
+const ADMIN_SENSITIVE_CATEGORY_REQUEST_STATUS_FILTERS = new Set([
+  'all',
+  'pending',
+  'draft',
+  'submitted',
+  'pending_review',
+  'approved',
+  'rejected',
+  'needs_more_info',
+  'expired',
+  'revoked',
+]);
+
+const ADMIN_SENSITIVE_CATEGORY_DECISIONS = new Set([
+  'approved',
+  'rejected',
+  'needs_more_info',
 ]);
 
 function normalizeAdminReportStatus(value, { allowAll = false } = {}) {
@@ -1902,10 +1925,56 @@ function normalizeAdminAuditTargetType(value, { allowEmpty = false } = {}) {
   return targetType;
 }
 
+function normalizeSensitiveCategoryRequestStatus(value, { allowAll = false } = {}) {
+  const fallback = allowAll ? 'pending' : 'pending_review';
+  const status = String(value || fallback).trim().toLowerCase();
+  const allowed = allowAll
+    ? ADMIN_SENSITIVE_CATEGORY_REQUEST_STATUS_FILTERS
+    : new Set([...ADMIN_SENSITIVE_CATEGORY_REQUEST_STATUS_FILTERS].filter((item) => !['all', 'pending'].includes(item)));
+  if (!allowed.has(status)) {
+    throw new HttpsError('invalid-argument', 'status inválido');
+  }
+  return status;
+}
+
+function normalizeSensitiveCategoryDecision(value) {
+  const decision = String(value || '').trim().toLowerCase();
+  if (!ADMIN_SENSITIVE_CATEGORY_DECISIONS.has(decision)) {
+    throw new HttpsError('invalid-argument', 'decision inválida');
+  }
+  return decision;
+}
+
 function auditText(value, max = 160) {
   const text = String(value || '').trim();
   if (text.length <= max) return text;
   return text.slice(0, max);
+}
+
+function stringList(value, maxItems = 20, maxTextLength = 1000) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => auditText(item, maxTextLength))
+    .filter((item) => item.length > 0)
+    .slice(0, maxItems);
+}
+
+function optionalTimestamp(value, fieldName = 'timestamp') {
+  if (value === undefined || value === null || value === '') return null;
+  if (value && typeof value.toMillis === 'function') {
+    return Timestamp.fromMillis(value.toMillis());
+  }
+  if (value instanceof Date) {
+    return Timestamp.fromDate(value);
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Timestamp.fromMillis(Math.round(value));
+  }
+  if (typeof value === 'string') {
+    const millis = Date.parse(value);
+    if (Number.isFinite(millis)) return Timestamp.fromMillis(millis);
+  }
+  throw new HttpsError('invalid-argument', `${fieldName} inválido`);
 }
 
 function sanitizeAuditMetadata(metadata) {
@@ -2022,6 +2091,28 @@ function serializeAdminAuditLog(doc) {
     reason: String(data.reason || ''),
     source: String(data.source || ''),
     createdAt: toMillis(data.createdAt),
+  };
+}
+
+function serializeSensitiveCategoryRequest(doc) {
+  const data = doc.data() || {};
+  return {
+    id: doc.id,
+    providerId: String(data.providerId || ''),
+    categoryId: String(data.categoryId || ''),
+    categoryName: String(data.categoryName || ''),
+    status: String(data.status || 'pending_review'),
+    evidenceTypes: stringList(data.evidenceTypes, 10, 120),
+    evidenceText: auditText(data.evidenceText, 2000),
+    portfolioUrls: stringList(data.portfolioUrls, 20, 1000),
+    documentRefs: stringList(data.documentRefs, 20, 500),
+    createdAt: toMillis(data.createdAt),
+    updatedAt: toMillis(data.updatedAt),
+    submittedAt: toMillis(data.submittedAt),
+    reviewedBy: String(data.reviewedBy || ''),
+    reviewedAt: toMillis(data.reviewedAt),
+    decisionReason: String(data.decisionReason || ''),
+    expiresAt: toMillis(data.expiresAt),
   };
 }
 
@@ -2206,6 +2297,145 @@ async function adminListAuditLogsCore({ database = db, auth, data = {} }) {
     generatedAt: Date.now(),
     total: logs.length,
     logs,
+  };
+}
+
+async function adminListSensitiveCategoryRequestsCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+
+  const statusFilter = normalizeSensitiveCategoryRequestStatus(data.status || 'pending', { allowAll: true });
+  const limitRaw = Number(data.limit || 50);
+  const limit = Math.min(100, Math.max(1, Number.isFinite(limitRaw) ? Math.round(limitRaw) : 50));
+  const providerIdFilter = String(data.providerId || '').trim();
+  const categoryIdFilter = String(data.categoryId || '').trim();
+
+  const rawLimit = Math.max(limit * 4, 200);
+  const snap = await database.collection('sensitiveCategoryRequests')
+    .orderBy('updatedAt', 'desc')
+    .limit(rawLimit)
+    .get();
+
+  const counts = {};
+  const requests = [];
+
+  for (const doc of snap.docs) {
+    const item = serializeSensitiveCategoryRequest(doc);
+    const status = item.status || 'pending_review';
+    counts[status] = (counts[status] || 0) + 1;
+
+    const matchesPending = status === 'submitted' || status === 'pending_review';
+    if (statusFilter === 'pending' && !matchesPending) continue;
+    if (statusFilter !== 'all' && statusFilter !== 'pending' && status !== statusFilter) continue;
+    if (providerIdFilter && item.providerId !== providerIdFilter) continue;
+    if (categoryIdFilter && item.categoryId !== categoryIdFilter) continue;
+
+    requests.push(item);
+    if (requests.length >= limit) break;
+  }
+
+  return {
+    generatedAt: Date.now(),
+    total: requests.length,
+    status: statusFilter,
+    counts,
+    requests,
+  };
+}
+
+async function adminReviewSensitiveCategoryRequestCore({ database = db, auth, data = {} }) {
+  ensureAdmin(auth);
+
+  const requestId = String(data.requestId || '').trim();
+  const decision = normalizeSensitiveCategoryDecision(data.decision);
+  const decisionReasonRaw = String(data.decisionReason || '').trim();
+  const decisionReason = auditText(decisionReasonRaw, 500);
+  const expiresAt = optionalTimestamp(data.expiresAt, 'expiresAt');
+
+  if (!requestId) {
+    throw new HttpsError('invalid-argument', 'requestId obrigatorio');
+  }
+  if ((decision === 'rejected' || decision === 'needs_more_info') && !decisionReason) {
+    throw new HttpsError('invalid-argument', 'Motivo obrigatorio para esta decisao.');
+  }
+
+  const requestRef = database.collection('sensitiveCategoryRequests').doc(requestId);
+  const requestSnap = await requestRef.get();
+  if (!requestSnap.exists) {
+    throw new HttpsError('not-found', 'Pedido de comprovativo nao encontrado.');
+  }
+
+  const request = requestSnap.data() || {};
+  const beforeStatus = String(request.status || 'pending_review').toLowerCase();
+  if (['expired', 'revoked'].includes(beforeStatus)) {
+    throw new HttpsError('failed-precondition', 'Pedido nao pode ser decidido neste estado.');
+  }
+
+  const providerId = String(request.providerId || '').trim();
+  const categoryId = String(request.categoryId || '').trim();
+  const categoryName = String(request.categoryName || '').trim();
+  if (!providerId || !categoryId) {
+    throw new HttpsError('failed-precondition', 'Pedido sem providerId ou categoryId.');
+  }
+
+  const batch = database.batch();
+  const reviewFields = {
+    status: decision,
+    reviewedBy: auth && auth.uid ? String(auth.uid) : '',
+    reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    decisionReason,
+  };
+  batch.set(requestRef, reviewFields, { merge: true });
+
+  if (decision === 'approved') {
+    const approvalRef = database
+      .collection('prestadores')
+      .doc(providerId)
+      .collection('categoryApprovals')
+      .doc(categoryId);
+    const approvalSnap = await approvalRef.get();
+    batch.set(
+      approvalRef,
+      {
+        providerId,
+        categoryId,
+        categoryName,
+        status: 'approved',
+        sourceRequestId: requestId,
+        approvedBy: auth && auth.uid ? String(auth.uid) : '',
+        approvedAt: FieldValue.serverTimestamp(),
+        ...(expiresAt ? { expiresAt } : {}),
+        decisionReason,
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(approvalSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+  }
+
+  writeAdminAuditLog({
+    database,
+    batch,
+    auth,
+    action: `sensitive_category_request.${decision === 'approved' ? 'approve' : decision === 'rejected' ? 'reject' : 'needs_more_info'}`,
+    targetType: 'sensitive_category_request',
+    targetId: requestId,
+    beforeStatus,
+    afterStatus: decision,
+    reason: decisionReason,
+    metadata: {
+      providerId,
+      categoryId,
+      categoryName,
+    },
+  });
+
+  await batch.commit();
+
+  return {
+    ok: true,
+    requestId,
+    status: decision,
   };
 }
 
@@ -2901,6 +3131,28 @@ exports.admin_listAuditLogs = onCall(
   })
 );
 
+exports.admin_listSensitiveCategoryRequests = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => adminListSensitiveCategoryRequestsCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
+);
+
+exports.admin_reviewSensitiveCategoryRequest = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => adminReviewSensitiveCategoryRequestCore({
+    database: db,
+    auth: req.auth,
+    data: req.data || {},
+  })
+);
+
 exports.admin_getLedgerAnomalies = onCall(
   {
     region: REGION,
@@ -3120,6 +3372,8 @@ exports.__test__ = {
     adminSetNoShowDecisionCore,
     adminDeleteStoryCore,
     adminListAuditLogsCore,
+    adminListSensitiveCategoryRequestsCore,
+    adminReviewSensitiveCategoryRequestCore,
     writeAdminAuditLog,
   },
 };

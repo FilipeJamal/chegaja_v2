@@ -6,6 +6,7 @@ import 'package:chegaja_v2/features/admin/widgets/admin_no_show_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_overview_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_reports_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_section_state.dart';
+import 'package:chegaja_v2/features/admin/widgets/admin_sensitive_category_requests_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_stories_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_support_tickets_section.dart';
 
@@ -21,16 +22,20 @@ class AdminPanelContent extends StatefulWidget {
     required this.stories,
     required this.ledgerAnomalies,
     required this.auditLogs,
+    required this.sensitiveCategoryRequests,
     required this.ticketFilter,
     required this.reportFilter,
     required this.noShowFilter,
+    required this.sensitiveCategoryFilter,
     required this.sectionErrors,
     required this.onTicketFilterChanged,
     required this.onReportFilterChanged,
     required this.onNoShowFilterChanged,
+    required this.onSensitiveCategoryFilterChanged,
     required this.onChangeTicketStatus,
     required this.onChangeReportStatus,
     required this.onDecideNoShow,
+    required this.onReviewSensitiveCategoryRequest,
     required this.onDeleteStory,
     this.globalError,
   });
@@ -44,13 +49,16 @@ class AdminPanelContent extends StatefulWidget {
   final List<Map<String, dynamic>> stories;
   final List<Map<String, dynamic>> ledgerAnomalies;
   final List<Map<String, dynamic>> auditLogs;
+  final List<Map<String, dynamic>> sensitiveCategoryRequests;
   final String ticketFilter;
   final String reportFilter;
   final String noShowFilter;
+  final String sensitiveCategoryFilter;
   final Map<String, String> sectionErrors;
   final ValueChanged<String> onTicketFilterChanged;
   final ValueChanged<String> onReportFilterChanged;
   final ValueChanged<String> onNoShowFilterChanged;
+  final ValueChanged<String> onSensitiveCategoryFilterChanged;
   final Future<void> Function({
     required String ticketId,
     required String status,
@@ -64,6 +72,7 @@ class AdminPanelContent extends StatefulWidget {
     required String pedidoId,
     required String decision,
   }) onDecideNoShow;
+  final AdminSensitiveCategoryReviewCallback onReviewSensitiveCategoryRequest;
   final Future<void> Function(String storyId) onDeleteStory;
   final String? globalError;
 
@@ -114,6 +123,14 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
           error: widget.sectionErrors['reports'],
           onFilterChanged: widget.onReportFilterChanged,
           onUpdateStatus: widget.onChangeReportStatus,
+        );
+      case _AdminPanelSection.credentials:
+        return AdminSensitiveCategoryRequestsSection(
+          requests: widget.sensitiveCategoryRequests,
+          statusFilter: widget.sensitiveCategoryFilter,
+          error: widget.sectionErrors['sensitive_categories'],
+          onFilterChanged: widget.onSensitiveCategoryFilterChanged,
+          onReviewRequested: widget.onReviewSensitiveCategoryRequest,
         );
       case _AdminPanelSection.support:
         return AdminSupportTicketsSection(
@@ -189,6 +206,7 @@ class _SectionSelector extends StatelessWidget {
 enum _AdminPanelSection {
   overview('Visao geral'),
   moderation('Moderacao'),
+  credentials('Comprovativos'),
   support('Suporte'),
   noShow('No-show'),
   content('Conteudo'),

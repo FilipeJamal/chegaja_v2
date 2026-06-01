@@ -151,4 +151,37 @@ class AdminService {
     final map = _asMap(res.data);
     return _asListOfMaps(map['logs']);
   }
+
+  Future<List<Map<String, dynamic>>> listSensitiveCategoryRequests({
+    String status = 'pending_review',
+    int limit = 50,
+    String? providerId,
+    String? categoryId,
+  }) async {
+    final res = await _callable('admin_listSensitiveCategoryRequests').call({
+      'status': status,
+      'limit': limit,
+      if (providerId != null && providerId.trim().isNotEmpty)
+        'providerId': providerId.trim(),
+      if (categoryId != null && categoryId.trim().isNotEmpty)
+        'categoryId': categoryId.trim(),
+    });
+    final map = _asMap(res.data);
+    return _asListOfMaps(map['requests']);
+  }
+
+  Future<void> reviewSensitiveCategoryRequest({
+    required String requestId,
+    required String decision,
+    String? decisionReason,
+    DateTime? expiresAt,
+  }) async {
+    await _callable('admin_reviewSensitiveCategoryRequest').call({
+      'requestId': requestId,
+      'decision': decision,
+      if (decisionReason != null && decisionReason.trim().isNotEmpty)
+        'decisionReason': decisionReason.trim(),
+      if (expiresAt != null) 'expiresAt': expiresAt.millisecondsSinceEpoch,
+    });
+  }
 }
