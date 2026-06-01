@@ -714,6 +714,8 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           .toList();
       final selecionadosPersonalizados = _customServices
           .where((s) => servicosSelecionadosValidos.contains(s.id))
+          .map((s) => ProviderCustomService.fromMap(s.toMap()))
+          .whereType<ProviderCustomService>()
           .where((s) => s.trustSafetyDecision != 'block')
           .toList();
       final ids = <String>{

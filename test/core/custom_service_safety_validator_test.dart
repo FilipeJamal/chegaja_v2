@@ -36,6 +36,16 @@ void main() {
       expect(byAlias.decision, TrustSafetyDecision.block);
     });
 
+    test('bloqueia prostituta sem guardar como servico custom', () {
+      final result = CustomServiceSafetyValidator.validate(
+        title: 'prostituta',
+        description: 'trabalho com o corpo',
+      );
+
+      expect(result.decision, TrustSafetyDecision.block);
+      expect(result.messageForUser, isNot(contains('prostituta')));
+    });
+
     test('needsReview nao bloqueia servico sensivel legitimo', () {
       final result = CustomServiceSafetyValidator.validate(
         title: 'Cuidados infantis ao domicilio',

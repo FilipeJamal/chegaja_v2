@@ -102,14 +102,29 @@ class ProviderCustomService {
     if (title.isEmpty) return null;
     final rawId = value['id']?.toString().trim() ?? '';
     final aliases = _cleanAliases(_stringList(value['aliases']));
+    final description = _cleanText(
+      value['description']?.toString() ?? '',
+      maxDescriptionLength,
+    );
     final normalizedTerms = _stringList(value['normalizedSearchTerms']);
+    final safety = CustomServiceSafetyValidator.validate(
+      title: title,
+      description: description,
+      aliases: aliases,
+    );
+    final storedDecision =
+        value['trustSafetyDecision']?.toString().trim().isNotEmpty == true
+            ? value['trustSafetyDecision'].toString().trim()
+            : TrustSafetyDecision.allow.name;
+    final decision = _mostSevereDecision(storedDecision, safety.decision.name);
+    final reasonCodes = <String>{
+      ..._stringList(value['trustSafetyReasonCodes']),
+      ...safety.reasonCodes,
+    }.toList(growable: false);
     return ProviderCustomService(
       id: rawId.startsWith(idPrefix) ? rawId : idForName(title),
       title: title,
-      description: _cleanText(
-        value['description']?.toString() ?? '',
-        maxDescriptionLength,
-      ),
+      description: description,
       aliases: aliases,
       normalizedTitle:
           (value['normalizedTitle']?.toString().trim().isNotEmpty ?? false)
@@ -130,11 +145,8 @@ class ProviderCustomService {
           value['taxonomySubcategoryId']?.toString().trim().isNotEmpty == true
               ? value['taxonomySubcategoryId'].toString().trim()
               : 'other_service',
-      trustSafetyDecision:
-          value['trustSafetyDecision']?.toString().trim().isNotEmpty == true
-              ? value['trustSafetyDecision'].toString().trim()
-              : TrustSafetyDecision.allow.name,
-      trustSafetyReasonCodes: _stringList(value['trustSafetyReasonCodes']),
+      trustSafetyDecision: decision,
+      trustSafetyReasonCodes: reasonCodes,
       createdAt: _dateFrom(value['createdAt']),
       updatedAt: _dateFrom(value['updatedAt']),
       isActive: value['isActive'] != false,
@@ -280,6 +292,24 @@ class ProviderCustomService {
     if (value is DateTime) return value;
     if (value is String) return DateTime.tryParse(value);
     return null;
+  }
+
+  static String _mostSevereDecision(String left, String right) {
+    return _decisionRank(left) >= _decisionRank(right) ? left : right;
+  }
+
+  static int _decisionRank(String decision) {
+    switch (decision) {
+      case 'block':
+        return 3;
+      case 'needsReview':
+        return 2;
+      case 'warn':
+        return 1;
+      case 'allow':
+      default:
+        return 0;
+    }
   }
 
   static bool _sameList(List<String> a, List<String> b) {

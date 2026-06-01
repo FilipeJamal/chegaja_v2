@@ -69,6 +69,24 @@ void main() {
 
       expect(elegiveis, ['ativo']);
     });
+
+    test('filtra categorias proibidas vindas de dados antigos', () {
+      final data = {
+        'servicos': ['custom_prostituta', 'plumbing'],
+        'servicosNomes': ['prostituta', 'Canalizador'],
+        'customServices': [
+          {
+            'id': 'custom_prostituta',
+            'title': 'prostituta',
+            'description': 'trabalho com o corpo',
+            'trustSafetyDecision': 'allow',
+          },
+        ],
+      };
+
+      expect(prestadorSafeServiceIdsFromData(data), {'plumbing'});
+      expect(prestadorSafeServiceNamesFromData(data), ['Canalizador']);
+    });
   });
 
   group('PrestadorAvailabilityPanel', () {

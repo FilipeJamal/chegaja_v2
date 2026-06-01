@@ -33,6 +33,18 @@ void main() {
       expect(result.messageForUser, isNot(contains('prostituicao')));
     });
 
+    test('prostituta e bloqueado como servico sexual proibido', () {
+      final result = TrustSafetyClassifier.classifyText(
+        'prostituta para atendimento privado',
+      );
+
+      expect(result.decision, TrustSafetyDecision.block);
+      expect(result.reasonCodes, contains(ReportReasonCode.sexualContent));
+      expect(result.messageForUser,
+          'Este tipo de servico nao e permitido no ChegaJa.');
+      expect(result.messageForUser, isNot(contains('prostituta')));
+    });
+
     test('drogas ilegais, trafico humano e armas ilegais sao criticos', () {
       for (final text in const [
         'Venda de drogas ilegais',

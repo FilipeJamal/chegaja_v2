@@ -280,6 +280,48 @@ void main() {
     expect(find.textContaining('sexuais'), findsNothing);
   });
 
+  testWidgets('PrestadorServiceTaxonomySelector bloqueia prostituta', (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+    var customServices = <ProviderCustomService>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+              customServices: customServices,
+              onCustomServicesChanged: (value) => customServices = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('prestador_service_taxonomy_query_field')),
+      'prostituta',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('custom_service_description_field')),
+      'trabalho com o corpo',
+    );
+    final addButton = find.byKey(const Key('add_custom_service_button'));
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+
+    expect(customServices, isEmpty);
+    expect(selected, isEmpty);
+    expect(find.textContaining('permitido no ChegaJ'), findsOneWidget);
+    expect(find.textContaining('prostituta'), findsNothing);
+  });
+
   testWidgets('PrestadorServiceTaxonomySelector mostra servicos personalizados',
       (
     WidgetTester tester,

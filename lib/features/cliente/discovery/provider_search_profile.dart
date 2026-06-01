@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
+import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
 
 import 'provider_search_normalizer.dart';
 
@@ -72,17 +73,19 @@ class ProviderSearchProfile {
     final customServices = ProviderCustomService.listFrom(
       data['customServices'],
     );
-    final customServiceNames = _stringList(data['customServiceNames']);
+    final customServiceNames = _safeServiceTexts(
+      _stringList(data['customServiceNames']),
+    );
     final customServiceSearchTerms =
-        _stringList(data['customServiceSearchTerms']);
+        _safeServiceTexts(_stringList(data['customServiceSearchTerms']));
     final services = _uniqueStrings([
-      ..._stringList(data['servicosNomes']),
+      ..._safeServiceTexts(_stringList(data['servicosNomes'])),
       ...customServiceNames,
       ...customServices.map((service) => service.name),
     ]);
     final categories = _uniqueStrings([
       ..._stringList(data['categories']),
-      ..._stringList(data['servicos']),
+      ..._safeServiceIds(_stringList(data['servicos']), customServices),
     ]);
     final portfolioPreviewUrls = _uniqueValidUrls([
       ..._stringList(data['portfolioUrls']),
@@ -204,6 +207,27 @@ List<String> _uniqueStrings(Iterable<String> values) {
   }
 
   return List.unmodifiable(result);
+}
+
+List<String> _safeServiceTexts(Iterable<String> values) {
+  return _uniqueStrings(
+    values.where((value) {
+      return !CustomServiceSafetyValidator.validate(title: value).isBlocked;
+    }),
+  );
+}
+
+List<String> _safeServiceIds(
+  Iterable<String> values,
+  List<ProviderCustomService> customServices,
+) {
+  final safeCustomIds = customServices.map((service) => service.id).toSet();
+  return _uniqueStrings(
+    values.where((value) {
+      if (!value.startsWith(ProviderCustomService.idPrefix)) return true;
+      return safeCustomIds.contains(value);
+    }),
+  );
 }
 
 List<String> _uniqueValidUrls(Iterable<String> values) {

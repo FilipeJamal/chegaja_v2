@@ -176,6 +176,33 @@ void main() {
       expect(profile.searchText, contains('moda'));
     });
 
+    test('filtra servicos personalizados proibidos vindos de dados antigos',
+        () {
+      final profile = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_custom_bloqueado',
+        data: {
+          'nome': 'Perfil antigo',
+          'city': 'Lisboa',
+          'servicos': ['custom_prostituta', 'plumbing'],
+          'servicosNomes': ['prostituta', 'Canalizacao'],
+          'customServiceNames': ['prostituta'],
+          'customServiceSearchTerms': ['prostituta'],
+          'customServices': [
+            {
+              'id': 'custom_prostituta',
+              'title': 'prostituta',
+              'description': 'trabalho com o corpo',
+              'trustSafetyDecision': 'allow',
+            },
+          ],
+        },
+      );
+
+      expect(profile.services, ['Canalizacao']);
+      expect(profile.categories, ['plumbing']);
+      expect(profile.searchText, isNot(contains('prostituta')));
+    });
+
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {
       expect(
         ProviderSearchProfile.fromPrestadorDoc(

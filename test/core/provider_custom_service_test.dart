@@ -73,5 +73,26 @@ void main() {
       expect(service.description.length, 280);
       expect(service.aliases, hasLength(10));
     });
+
+    test('filtra custom service proibido antigo mesmo sem decision bloqueada',
+        () {
+      final services = ProviderCustomService.listFrom([
+        {
+          'id': 'custom_prostituta',
+          'title': 'prostituta',
+          'description': 'trabalho com o corpo',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_consultoria_de_imagem',
+          'title': 'Consultoria de imagem',
+          'description': 'Guarda-roupa e estilo pessoal.',
+        },
+      ]);
+
+      expect(services.map((service) => service.id), [
+        'custom_consultoria_de_imagem',
+      ]);
+    });
   });
 }
