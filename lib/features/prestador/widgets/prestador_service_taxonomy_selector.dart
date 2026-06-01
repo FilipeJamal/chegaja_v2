@@ -51,6 +51,9 @@ class _PrestadorServiceTaxonomySelectorState
           ...match.suggestions.where((item) => item.id != match.bestMatch!.id),
         ].toList(growable: false);
       }
+      if (match.suggestions.isEmpty) {
+        return [ServiceTaxonomyCatalog.otherSubcategory];
+      }
       return match.suggestions;
     }
 
@@ -170,6 +173,9 @@ class _ProviderSubcategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final category = ServiceTaxonomyCatalog.findCategoryById(
+      subcategory.parentCategoryId,
+    );
     final aliases = subcategory.aliases.take(5).join(', ');
     final examples = subcategory.examples.take(2).join(' · ');
 
@@ -206,6 +212,16 @@ class _ProviderSubcategoryTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+                    if (category != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Categoria: ${category.label}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       subcategory.description,
@@ -228,6 +244,16 @@ class _ProviderSubcategoryTile extends StatelessWidget {
                         examples,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                    if (subcategory.id == 'other_service') ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Se nao aparecer como categoria principal, seleciona esta opcao e descreve esse servico no perfil.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

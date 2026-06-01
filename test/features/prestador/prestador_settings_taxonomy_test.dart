@@ -71,4 +71,70 @@ void main() {
     expect(find.textContaining('verificado'), findsNothing);
     expect(find.textContaining('garantido'), findsNothing);
   });
+
+  testWidgets('PrestadorServiceTaxonomySelector encontra artes marciais', (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('prestador_service_taxonomy_query_field')),
+      'professor de karate',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Artes marciais'), findsOneWidget);
+    expect(find.textContaining('Educacao'), findsWidgets);
+
+    await tester.tap(find.text('Artes marciais').first);
+    await tester.pumpAndSettle();
+
+    expect(selected, contains('martial_arts'));
+  });
+
+  testWidgets('PrestadorServiceTaxonomySelector oferece Outros sem match', (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('prestador_service_taxonomy_query_field')),
+      'servico muito especifico que nao existe',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Outro servico'), findsOneWidget);
+    expect(find.textContaining('descreve esse servico'), findsOneWidget);
+
+    await tester.tap(find.text('Outro servico').first);
+    await tester.pumpAndSettle();
+
+    expect(selected, contains('other_service'));
+  });
 }

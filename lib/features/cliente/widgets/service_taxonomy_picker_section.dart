@@ -136,13 +136,22 @@ class _ServiceTaxonomyPickerSectionState
             : ServiceTaxonomyCatalog.findCategoryById(_selectedCategoryId!);
     final currentSelection = widget.value ?? _localSelection;
     final selectedSubcategory = currentSelection?.subcategory;
+    final queryText = _queryController.text.trim();
     final match = _match;
-    final suggestions = match.hasMatch
+    var suggestions = match.hasMatch
         ? <ServiceTaxonomySubcategory>[
             match.bestMatch!,
             ...match.suggestions.where((s) => s.id != match.bestMatch!.id),
           ].take(4).toList(growable: false)
         : match.suggestions.take(4).toList(growable: false);
+    if (queryText.isNotEmpty && !match.hasMatch && match.suggestions.isEmpty) {
+      suggestions = [ServiceTaxonomyCatalog.otherSubcategory];
+    }
+    final showOtherFallback = queryText.isNotEmpty &&
+        suggestions.any(
+          (suggestion) =>
+              suggestion.id == ServiceTaxonomyCatalog.otherSubcategory.id,
+        );
 
     return Container(
       width: double.infinity,
@@ -191,11 +200,22 @@ class _ServiceTaxonomyPickerSectionState
           if (suggestions.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              'Sugestoes',
+              showOtherFallback
+                  ? 'Nao encontramos uma categoria certa'
+                  : 'Sugestoes',
               style: theme.textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
+            if (showOtherFallback) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Escolhe Outro servico e usa a descricao para descrever melhor o que precisas.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,

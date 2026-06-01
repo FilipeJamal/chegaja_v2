@@ -111,7 +111,7 @@ class ServiceTaxonomyCatalog {
           examples: ['preciso ver fuga de gas'],
           allowedIntents: [ServiceIntent.scheduled, ServiceIntent.quote],
           defaultIntent: ServiceIntent.scheduled,
-          legacyServicoIds: const [],
+          legacyServicoIds: [],
           legacyNames: ['Gas', 'Esquentador'],
           sensitiveRequirementId: 'gas',
           riskLevel: CategoryRiskLevel.sensitive,
@@ -700,6 +700,39 @@ class ServiceTaxonomyCatalog {
           legacyNames: ['Aulas de programacao'],
           sortOrder: 50,
         ),
+        ServiceTaxonomySubcategory(
+          id: 'martial_arts',
+          parentCategoryId: 'education',
+          label: 'Artes marciais',
+          description:
+              'Aulas de karate, judo, defesa pessoal e modalidades semelhantes.',
+          aliases: [
+            'karate',
+            'professor de karate',
+            'artes marciais',
+            'judo',
+            'taekwondo',
+            'jiu jitsu',
+            'boxe',
+            'capoeira',
+            'defesa pessoal',
+          ],
+          commonPhrases: [
+            'aulas de karate',
+            'professor de karate',
+            'aprender defesa pessoal',
+            'aulas artes marciais',
+          ],
+          examples: [
+            'quero aulas de karate',
+            'professor de artes marciais para crianca',
+          ],
+          allowedIntents: [ServiceIntent.scheduled, ServiceIntent.quote],
+          defaultIntent: ServiceIntent.scheduled,
+          legacyServicoIds: [],
+          legacyNames: ['Aulas de karate', 'Artes marciais'],
+          sortOrder: 60,
+        ),
       ],
     ),
     ServiceTaxonomyCategory(
@@ -984,6 +1017,10 @@ class ServiceTaxonomyCatalog {
       if (subcategory.id == normalized) return subcategory;
     }
     return null;
+  }
+
+  static ServiceTaxonomySubcategory get otherSubcategory {
+    return findSubcategoryById('other_service')!;
   }
 
   static ServiceTaxonomySubcategory? mapLegacyServicoToSubcategory(

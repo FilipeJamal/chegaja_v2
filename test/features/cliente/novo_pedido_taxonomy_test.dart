@@ -104,4 +104,39 @@ void main() {
     expect(selected?.intent, ServiceIntent.quote);
     expect(selected?.legacyMode, 'POR_PROPOSTA');
   });
+
+  testWidgets('ServiceTaxonomyPickerSection oferece Outros quando nao encontra',
+      (
+    WidgetTester tester,
+  ) async {
+    ServiceTaxonomySelection? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ServiceTaxonomyPickerSection(
+              value: selected,
+              onChanged: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('service_taxonomy_query_field')),
+      'servico muito especifico que nao existe',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Outro servico'), findsWidgets);
+    expect(find.textContaining('descrever melhor'), findsOneWidget);
+
+    await tester.tap(find.text('Outro servico').first);
+    await tester.pumpAndSettle();
+
+    expect(selected?.subcategory.id, 'other_service');
+    expect(selected?.category.id, 'other');
+  });
 }

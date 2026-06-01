@@ -53,6 +53,12 @@ void main() {
             ?.id,
         'school_tutoring',
       );
+      expect(
+        ServiceTaxonomyMatcher.matchServiceQuery('professor de karate')
+            .bestMatch
+            ?.id,
+        'martial_arts',
+      );
     });
 
     test('query vazia retorna none sem sugestao falsa', () {
