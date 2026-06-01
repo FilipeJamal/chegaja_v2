@@ -21,6 +21,7 @@ import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
 import 'package:chegaja_v2/core/trust_safety/sensitive_categories.dart';
 import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
@@ -572,6 +573,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       final descricao = _descricaoController.text.trim().isEmpty
           ? null
           : _descricaoController.text.trim();
+      final customService = _taxonomySelection?.customService;
       final agendadoPara = isAgendado ? _agendadoPara : null;
       final enderecoTexto = _enderecoTextoController.text.trim().isEmpty
           ? null
@@ -600,6 +602,10 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           enderecoTexto: enderecoTexto,
           tipoPreco: tipoPreco,
           tipoPagamento: tipoPagamento,
+          isCustomService: customService != null,
+          customServiceName: customService?.title,
+          customServiceDescription: customService?.description,
+          customServiceSearchTerms: customService?.normalizedSearchTerms,
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -627,6 +633,10 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           enderecoTexto: enderecoTexto,
           tipoPreco: tipoPreco,
           tipoPagamento: tipoPagamento,
+          isCustomService: customService != null,
+          customServiceName: customService?.title,
+          customServiceDescription: customService?.description,
+          customServiceSearchTerms: customService?.normalizedSearchTerms,
           categoryApprovalRequired: _selectedCategoryApprovalRequired,
           categoryRequirementId: _selectedSensitiveCategoryId,
           categoryRequirementName: _categoriaNome,
@@ -683,6 +693,24 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   }
 
   bool _handleTrustSafetyBeforeSubmit() {
+    final customService = _taxonomySelection?.customService;
+    if (customService != null) {
+      final customSafety = CustomServiceSafetyValidator.validate(
+        title: customService.title,
+        description: customService.description,
+        aliases: customService.aliases,
+        query: _taxonomySelection?.query ?? '',
+      );
+      if (customSafety.decision != TrustSafetyDecision.allow) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(customSafety.messageForUser)),
+        );
+        if (customSafety.decision == TrustSafetyDecision.block) {
+          return true;
+        }
+      }
+    }
+
     final classification = TrustSafetyClassifier.classifyFields([
       _tituloController.text,
       _descricaoController.text,
@@ -963,6 +991,14 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       ),
                       const SizedBox(height: 24),
 
+                      const Text(
+                        '1. Serviço',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       if (loading)
                         const Center(
                           child: Padding(
@@ -978,6 +1014,14 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                         ),
                       const SizedBox(height: 16),
 
+                      const Text(
+                        '2. Quando e como?',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       if (!isEditing) ...[
                         const Text(
                           'Encontrar prestador',
@@ -1148,6 +1192,15 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       ],
 
                       // Título
+                      const Text(
+                        '3. Detalhes',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
                       Text(
                         l10n.orderTitleLabel,
                         style: const TextStyle(fontWeight: FontWeight.w600),

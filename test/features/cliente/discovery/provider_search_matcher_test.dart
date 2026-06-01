@@ -61,9 +61,10 @@ void main() {
           'customServices': [
             {
               'id': 'custom_consultora_de_imagem',
-              'name': 'Consultora de imagem',
+              'title': 'Consultora de imagem',
               'description':
                   'Consultoria de imagem pessoal, guarda-roupa e eventos.',
+              'aliases': ['moda', 'roupa'],
             },
           ],
         },
@@ -71,6 +72,8 @@ void main() {
 
       expect(matchesProviderSearch(custom, 'consultora de imagem'), isTrue);
       expect(matchesProviderSearch(custom, 'guarda roupa'), isTrue);
+      expect(matchesProviderSearch(custom, 'moda'), isTrue);
+      expect(matchesProviderSearch(custom, 'outro'), isFalse);
     });
 
     test('pontua nome acima de bio e servico acima de bio', () {

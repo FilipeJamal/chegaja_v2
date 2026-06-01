@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy_normalizer.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/pedido_historico_item.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
@@ -203,6 +204,12 @@ class PedidoService {
             .where((e) => e.isNotEmpty)
             .toSet() ??
         <String>{};
+    final customServiceSearchTerms =
+        (data?['customServiceSearchTerms'] as List?)
+                ?.map((e) => ServiceTaxonomyNormalizer.normalize(e.toString()))
+                .where((e) => e.isNotEmpty)
+                .toSet() ??
+            <String>{};
 
     final servicoId = pedido.servicoId.trim();
     final servicoNome = (pedido.servicoNome ?? pedido.categoria ?? '').trim();
@@ -213,8 +220,25 @@ class PedidoService {
                 .toSet() ??
             <String>{};
 
-    final matches = (servicoId.isNotEmpty && ids.contains(servicoId)) ||
-        (servicoNome.isNotEmpty && nomes.contains(servicoNome));
+    final genericOther = _isGenericOtherService(
+      servicoId: servicoId,
+      servicoNome: servicoNome,
+    );
+    final pedidoCustomTerms = _pedidoCustomSearchTerms(pedido);
+    final matchesByCustomTerms = pedidoCustomTerms.isNotEmpty &&
+        customServiceSearchTerms.any(
+          (providerTerm) => pedidoCustomTerms.any(
+            (pedidoTerm) =>
+                providerTerm == pedidoTerm ||
+                providerTerm.contains(pedidoTerm) ||
+                pedidoTerm.contains(providerTerm),
+          ),
+        );
+
+    final matches = (!genericOther &&
+            ((servicoId.isNotEmpty && ids.contains(servicoId)) ||
+                (servicoNome.isNotEmpty && nomes.contains(servicoNome)))) ||
+        matchesByCustomTerms;
 
     if (!matches) {
       final label = servicoNome.isNotEmpty
@@ -235,6 +259,30 @@ class PedidoService {
         );
       }
     }
+  }
+
+  bool _isGenericOtherService({
+    required String servicoId,
+    required String servicoNome,
+  }) {
+    final normalizedName = ServiceTaxonomyNormalizer.normalize(servicoNome);
+    return servicoId == 'other_service' &&
+        (normalizedName.isEmpty || normalizedName == 'outro servico');
+  }
+
+  Set<String> _pedidoCustomSearchTerms(Pedido pedido) {
+    final values = <String>[
+      pedido.customServiceName ?? '',
+      pedido.customServiceDescription ?? '',
+      ...pedido.customServiceSearchTerms,
+    ];
+    if (pedido.isCustomService) {
+      values.add(pedido.servicoNome ?? '');
+    }
+    return values
+        .map(ServiceTaxonomyNormalizer.normalize)
+        .where((term) => term.isNotEmpty && term != 'outro servico')
+        .toSet();
   }
 
   /// 1) PRESTADOR → envia FAIXA de preço (mín/máx) + mensagem

@@ -28,6 +28,10 @@ class Pedido {
   final String? categoryRequirementId;
   final String? categoryRequirementName;
   final String? categoryRiskLevel;
+  final bool isCustomService;
+  final String? customServiceName;
+  final String? customServiceDescription;
+  final List<String> customServiceSearchTerms;
 
   // Dados básicos
   final String titulo;
@@ -157,6 +161,10 @@ class Pedido {
     this.categoryRequirementId,
     this.categoryRequirementName,
     this.categoryRiskLevel,
+    this.isCustomService = false,
+    this.customServiceName,
+    this.customServiceDescription,
+    this.customServiceSearchTerms = const [],
     required this.titulo,
     required this.descricao,
     required this.modo,
@@ -203,6 +211,10 @@ class Pedido {
       categoryRequirementId: null,
       categoryRequirementName: null,
       categoryRiskLevel: null,
+      isCustomService: false,
+      customServiceName: null,
+      customServiceDescription: null,
+      customServiceSearchTerms: const [],
       titulo: '',
       descricao: '',
       modo: 'IMEDIATO',
@@ -291,6 +303,10 @@ class Pedido {
       categoryRequirementId: data['categoryRequirementId'] as String?,
       categoryRequirementName: data['categoryRequirementName'] as String?,
       categoryRiskLevel: data['categoryRiskLevel'] as String?,
+      isCustomService: data['isCustomService'] == true,
+      customServiceName: data['customServiceName'] as String?,
+      customServiceDescription: data['customServiceDescription'] as String?,
+      customServiceSearchTerms: _toStringList(data['customServiceSearchTerms']),
       titulo: data['titulo'] as String? ?? '',
       descricao: data['descricao'] as String? ?? '',
       modo: data['modo'] as String? ?? 'IMEDIATO',
@@ -365,6 +381,10 @@ class Pedido {
       categoryRequirementId: data['categoryRequirementId'] as String?,
       categoryRequirementName: data['categoryRequirementName'] as String?,
       categoryRiskLevel: data['categoryRiskLevel'] as String?,
+      isCustomService: data['isCustomService'] == true,
+      customServiceName: data['customServiceName'] as String?,
+      customServiceDescription: data['customServiceDescription'] as String?,
+      customServiceSearchTerms: _toStringList(data['customServiceSearchTerms']),
       titulo: data['titulo'] as String? ?? '',
       descricao: data['descricao'] as String? ?? '',
       modo: data['modo'] as String? ?? 'IMEDIATO',
@@ -440,6 +460,15 @@ class Pedido {
         if (categoryRiskLevel != null && categoryRiskLevel!.trim().isNotEmpty)
           'categoryRiskLevel': categoryRiskLevel!.trim(),
       },
+      if (isCustomService) ...{
+        'isCustomService': true,
+        if (customServiceName != null && customServiceName!.trim().isNotEmpty)
+          'customServiceName': customServiceName!.trim(),
+        if (customServiceDescription != null &&
+            customServiceDescription!.trim().isNotEmpty)
+          'customServiceDescription': customServiceDescription!.trim(),
+        'customServiceSearchTerms': customServiceSearchTerms,
+      },
       'titulo': titulo,
       'descricao': descricao,
       'modo': modo,
@@ -514,6 +543,10 @@ class Pedido {
     String? categoryRequirementId,
     String? categoryRequirementName,
     String? categoryRiskLevel,
+    bool? isCustomService,
+    String? customServiceName,
+    String? customServiceDescription,
+    List<String>? customServiceSearchTerms,
     String? titulo,
     String? descricao,
     String? modo,
@@ -559,6 +592,12 @@ class Pedido {
       categoryRequirementName:
           categoryRequirementName ?? this.categoryRequirementName,
       categoryRiskLevel: categoryRiskLevel ?? this.categoryRiskLevel,
+      isCustomService: isCustomService ?? this.isCustomService,
+      customServiceName: customServiceName ?? this.customServiceName,
+      customServiceDescription:
+          customServiceDescription ?? this.customServiceDescription,
+      customServiceSearchTerms:
+          customServiceSearchTerms ?? this.customServiceSearchTerms,
       titulo: titulo ?? this.titulo,
       descricao: descricao ?? this.descricao,
       modo: modo ?? this.modo,

@@ -391,6 +391,7 @@ Recomendacao futura:
 - M2.20.7 - Catalogo profissional e intencao de servico: spec/auditoria. FECHADA.
 - M2.20.8 - Modelo/taxonomia de catalogo profissional. FECHADA.
 - M2.20.9 - UI profissional de escolha de servico. FECHADA.
+- M2.20.9.1 - Servico personalizado, Outro profissional e bloqueio de servicos proibidos. FECHADA.
 - M2.20.10 - QA final do catalogo profissional. PROXIMO.
 - M2.21 - Conta, definicoes e suporte premium.
 
@@ -440,6 +441,29 @@ A M2.20.9 aplicou a taxonomia profissional nas telas principais:
   approval quando aplicavel.
 
 O proximo passo passa a ser:
+
+```text
+M2.20.10 - QA final do catalogo profissional
+```
+
+## Estado apos M2.20.9.1
+
+A M2.20.9.1 refinou a opcao "Outro servico" para deixar de ser generica:
+
+- Prestador descreve servicos personalizados com nome, descricao e aliases.
+- Cliente descreve pedidos personalizados antes de criar pedido fora do catalogo.
+- `CustomServiceSafetyValidator` valida nome, descricao, aliases e query
+  original com `TrustSafetyClassifier`.
+- Servicos proibidos sao bloqueados antes de gravar e usam a mensagem segura:
+  "Este tipo de serviço não é permitido no ChegaJá."
+- Servicos personalizados permitidos entram em campos pesquisaveis do perfil e
+  do pedido, sem virarem categoria oficial global.
+- Discovery/search usa `customServices`, `customServiceNames` e
+  `customServiceSearchTerms`.
+- `other_service` generico nao cria match amplo indevido.
+- Firestore Rules e Cloud Functions nao foram alteradas.
+
+O proximo passo continua a ser:
 
 ```text
 M2.20.10 - QA final do catalogo profissional

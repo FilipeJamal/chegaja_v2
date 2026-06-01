@@ -152,6 +152,59 @@ void main() {
       );
     });
 
+    test('pedido custom nao faz match amplo com outro servico generico',
+        () async {
+      final db = FakeFirebaseFirestore();
+      final service = PedidoService(firestore: db, trackAnalytics: false);
+
+      await db.collection('prestadores').doc('prest_outro').set({
+        'servicos': ['other_service'],
+        'servicosNomes': ['Outro servico'],
+      });
+
+      final pedido = _buildPedido(
+        id: 'pedido_custom',
+        servicoId: 'custom_consultoria_de_imagem',
+        servicoNome: 'Consultoria de imagem',
+      );
+      await _seedPedido(db, pedido);
+
+      expect(
+        service.aceitarPedidoAberto(
+          pedido: pedido,
+          prestadorId: 'prest_outro',
+        ),
+        throwsException,
+      );
+    });
+
+    test('pedido custom faz match por termos personalizados compativeis',
+        () async {
+      final db = FakeFirebaseFirestore();
+      final service = PedidoService(firestore: db, trackAnalytics: false);
+
+      await db.collection('prestadores').doc('prest_custom').set({
+        'servicos': ['custom_consultoria_de_imagem'],
+        'servicosNomes': ['Consultoria de imagem'],
+        'customServiceSearchTerms': ['consultoria de imagem', 'moda'],
+      });
+
+      final pedido = _buildPedido(
+        id: 'pedido_custom_match',
+        servicoId: 'custom_consultoria_de_imagem',
+        servicoNome: 'Consultoria de imagem',
+      );
+      await _seedPedido(db, pedido);
+
+      await service.aceitarPedidoAberto(
+        pedido: pedido,
+        prestadorId: 'prest_custom',
+      );
+
+      final snap = await db.collection('pedidos').doc('pedido_custom_match').get();
+      expect(snap.data()!['prestadorId'], 'prest_custom');
+    });
+
     test('enviarPropostaFaixa exige aprovacao em categoria sensivel', () async {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);

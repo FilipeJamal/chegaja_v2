@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_matcher.dart';
+import 'package:chegaja_v2/core/models/provider_custom_service.dart';
+import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
+import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
 
 class PrestadorServiceTaxonomySelector extends StatefulWidget {
   const PrestadorServiceTaxonomySelector({
@@ -30,15 +32,21 @@ class _PrestadorServiceTaxonomySelectorState
   final TextEditingController _customNameController = TextEditingController();
   final TextEditingController _customDescriptionController =
       TextEditingController();
+  final TextEditingController _customAliasesController =
+      TextEditingController();
   final FocusNode _customNameFocus = FocusNode();
   String _selectedCategoryId = ServiceTaxonomyCatalog.categories.first.id;
   String _lastCustomQuery = '';
+  String? _customServiceMessage;
+  bool _customServiceMessageIsError = false;
+  bool _customServiceFormOpen = false;
 
   @override
   void dispose() {
     _queryController.dispose();
     _customNameController.dispose();
     _customDescriptionController.dispose();
+    _customAliasesController.dispose();
     _customNameFocus.dispose();
     super.dispose();
   }
@@ -53,6 +61,8 @@ class _PrestadorServiceTaxonomySelectorState
 
   bool _isCustomFallbackQuery(String query) {
     if (query.trim().isEmpty) return false;
+    final safety = CustomServiceSafetyValidator.validate(title: query);
+    if (safety.decision == TrustSafetyDecision.block) return true;
     final match = ServiceTaxonomyMatcher.matchServiceQuery(query);
     return !match.hasMatch && match.suggestions.isEmpty;
   }
@@ -72,11 +82,40 @@ class _PrestadorServiceTaxonomySelectorState
 
   void _addCustomService() {
     final name = _customNameController.text.trim();
-    if (name.length < 2) return;
+    final description = _customDescriptionController.text.trim();
+    if (name.length < 3 || description.length < 3) {
+      setState(() {
+        _customServiceMessage =
+            'Indica o nome e uma descricao curta do servico.';
+        _customServiceMessageIsError = true;
+        _customServiceFormOpen = true;
+      });
+      return;
+    }
+
+    final safety = CustomServiceSafetyValidator.validate(
+      title: name,
+      description: description,
+      aliases: _customAliasesController.text.split(RegExp(r'[,;\n]')),
+      query: _queryController.text,
+    );
+    if (safety.decision == TrustSafetyDecision.block) {
+      setState(() {
+        _queryController.clear();
+        _customNameController.clear();
+        _customAliasesController.clear();
+        _lastCustomQuery = '';
+        _customServiceMessage = safety.messageForUser;
+        _customServiceMessageIsError = true;
+        _customServiceFormOpen = true;
+      });
+      return;
+    }
 
     final service = ProviderCustomService.fromInput(
-      name: name,
-      description: _customDescriptionController.text,
+      title: name,
+      description: description,
+      aliasesText: _customAliasesController.text,
     );
     final nextCustomServices = [
       ...widget.customServices.where((item) => item.id != service.id),
@@ -91,7 +130,12 @@ class _PrestadorServiceTaxonomySelectorState
       _queryController.clear();
       _customNameController.clear();
       _customDescriptionController.clear();
+      _customAliasesController.clear();
       _lastCustomQuery = '';
+      _customServiceMessage =
+          safety.messageForUser.isEmpty ? null : safety.messageForUser;
+      _customServiceMessageIsError = false;
+      _customServiceFormOpen = safety.messageForUser.isNotEmpty;
     });
   }
 
@@ -105,6 +149,7 @@ class _PrestadorServiceTaxonomySelectorState
 
   void _focusCustomServiceName() {
     _syncCustomName(_queryController.text);
+    setState(() => _customServiceFormOpen = true);
     _customNameFocus.requestFocus();
   }
 
@@ -142,7 +187,8 @@ class _PrestadorServiceTaxonomySelectorState
         .toList(growable: false);
     final query = _queryController.text.trim();
     final visibleSubcategories = _visibleSubcategories();
-    final showCustomServiceForm = _isCustomFallbackQuery(query);
+    final showCustomServiceForm =
+        _customServiceFormOpen || _isCustomFallbackQuery(query);
 
     return Container(
       width: double.infinity,
@@ -186,6 +232,7 @@ class _PrestadorServiceTaxonomySelectorState
                         setState(() {
                           _queryController.clear();
                           _lastCustomQuery = '';
+                          _customServiceFormOpen = false;
                         });
                       },
                       icon: const Icon(Icons.clear),
@@ -194,6 +241,7 @@ class _PrestadorServiceTaxonomySelectorState
             onChanged: (value) {
               setState(() {
                 _syncCustomName(value);
+                _customServiceFormOpen = _isCustomFallbackQuery(value);
               });
             },
           ),
@@ -239,7 +287,10 @@ class _PrestadorServiceTaxonomySelectorState
             _CustomServiceForm(
               nameController: _customNameController,
               descriptionController: _customDescriptionController,
+              aliasesController: _customAliasesController,
               nameFocusNode: _customNameFocus,
+              message: _customServiceMessage,
+              messageIsError: _customServiceMessageIsError,
               onSubmit: _addCustomService,
             ),
           ],
@@ -389,13 +440,19 @@ class _CustomServiceForm extends StatelessWidget {
   const _CustomServiceForm({
     required this.nameController,
     required this.descriptionController,
+    required this.aliasesController,
     required this.nameFocusNode,
+    required this.message,
+    required this.messageIsError,
     required this.onSubmit,
   });
 
   final TextEditingController nameController;
   final TextEditingController descriptionController;
+  final TextEditingController aliasesController;
   final FocusNode nameFocusNode;
+  final String? message;
+  final bool messageIsError;
   final VoidCallback onSubmit;
 
   @override
@@ -415,14 +472,14 @@ class _CustomServiceForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Adicionar servico personalizado',
+            'Descreve o teu serviço',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Guarda o nome real do servico para aparecer na pesquisa dos clientes. Usa detalhes curtos e profissionais.',
+            'Este serviço ficará associado ao teu perfil. Usa um nome real, uma descrição curta e palavras que clientes podem usar para procurar.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
@@ -435,8 +492,9 @@ class _CustomServiceForm extends StatelessWidget {
             maxLength: ProviderCustomService.maxNameLength,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              labelText: 'Nome do servico',
-              hintText: 'Ex.: Consultora de imagem',
+              labelText: 'Nome do serviço',
+              hintText:
+                  'Ex.: Consultoria de imagem, reparação de máquinas, personal stylist',
               counterText: '',
             ),
           ),
@@ -449,12 +507,34 @@ class _CustomServiceForm extends StatelessWidget {
             maxLines: 4,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              labelText: 'Detalhes do servico',
-              hintText:
-                  'Ex.: estilo pessoal, guarda-roupa, imagem profissional...',
+              labelText: 'Descrição curta',
+              hintText: 'Explica em poucas palavras o que fazes.',
               counterText: '',
             ),
           ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('custom_service_aliases_field'),
+            controller: aliasesController,
+            maxLength: ProviderCustomService.maxAliasLength *
+                ProviderCustomService.maxAliases,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Como os clientes costumam procurar?',
+              hintText: 'Ex.: roupa, estilo, imagem, moda, guarda-roupa',
+              counterText: '',
+            ),
+          ),
+          if (message != null && message!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              message!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: messageIsError ? colorScheme.error : colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
@@ -462,7 +542,7 @@ class _CustomServiceForm extends StatelessWidget {
               key: const Key('add_custom_service_button'),
               onPressed: onSubmit,
               icon: const Icon(Icons.add),
-              label: const Text('Adicionar servico'),
+              label: const Text('Adicionar serviço personalizado'),
             ),
           ),
         ],

@@ -1,45 +1,77 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
+import 'package:chegaja_v2/core/models/provider_custom_service.dart';
 
 void main() {
   group('ProviderCustomService', () {
     test('cria id estavel a partir do nome escrito pelo prestador', () {
       final service = ProviderCustomService.fromInput(
-        name: ' Consultora de Imagem ',
+        title: ' Consultora de Imagem ',
         description: ' Ajuda em estilo pessoal. ',
+        aliasesText: ' moda, guarda-roupa, estilo ',
       );
 
       expect(service.id, 'custom_consultora_de_imagem');
+      expect(service.title, 'Consultora de Imagem');
       expect(service.name, 'Consultora de Imagem');
       expect(service.description, 'Ajuda em estilo pessoal.');
+      expect(service.aliases, ['moda', 'guarda-roupa', 'estilo']);
+      expect(service.normalizedTitle, 'consultora de imagem');
+      expect(
+        service.normalizedSearchTerms,
+        containsAll(['consultora de imagem', 'moda', 'guarda roupa']),
+      );
     });
 
     test('serializa e parseia campos publicos seguros', () {
       const service = ProviderCustomService(
         id: 'custom_consultora_de_imagem',
-        name: 'Consultora de imagem',
+        title: 'Consultora de imagem',
         description: 'Guarda-roupa, estilo pessoal e eventos.',
+        aliases: ['moda', 'roupa'],
+        normalizedTitle: 'consultora de imagem',
+        normalizedSearchTerms: [
+          'consultora de imagem',
+          'guarda roupa estilo pessoal e eventos',
+          'moda',
+          'roupa',
+        ],
       );
 
       expect(service.toMap(), {
         'id': 'custom_consultora_de_imagem',
+        'title': 'Consultora de imagem',
         'name': 'Consultora de imagem',
         'description': 'Guarda-roupa, estilo pessoal e eventos.',
+        'aliases': ['moda', 'roupa'],
+        'normalizedTitle': 'consultora de imagem',
+        'normalizedSearchTerms': [
+          'consultora de imagem',
+          'guarda roupa estilo pessoal e eventos',
+          'moda',
+          'roupa',
+        ],
+        'parentCategoryId': 'other',
+        'taxonomySubcategoryId': 'other_service',
+        'trustSafetyDecision': 'allow',
+        'trustSafetyReasonCodes': <String>[],
+        'isActive': true,
       });
       expect(ProviderCustomService.fromMap(service.toMap()), service);
     });
 
-    test('ignora entradas invalidas e texto demasiado longo', () {
+    test('ignora entradas invalidas e limita texto/listas', () {
       expect(ProviderCustomService.fromMap({'name': ''}), isNull);
 
       final service = ProviderCustomService.fromInput(
-        name: 'A' * 120,
+        title: 'A' * 120,
         description: 'B' * 400,
+        aliasesText: List.generate(12, (index) => 'alias$index').join(','),
       );
 
       expect(service.name.length, 80);
       expect(service.description.length, 280);
+      expect(service.aliases, hasLength(10));
     });
   });
 }

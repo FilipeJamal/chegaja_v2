@@ -710,6 +710,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           .toList();
       final selecionadosPersonalizados = _customServices
           .where((s) => _servicosSelecionados.contains(s.id))
+          .where((s) => s.trustSafetyDecision != 'block')
           .toList();
       final ids = <String>{
         ...selecionadosLegados.map((s) => s.id),
@@ -724,6 +725,10 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       final customServices = selecionadosPersonalizados
           .map((service) => service.toMap())
           .toList(growable: false);
+      final customServiceSearchTerms = <String>{
+        for (final service in selecionadosPersonalizados)
+          ...service.normalizedSearchTerms,
+      }.toList(growable: false);
 
       await ref.set(
         {
@@ -732,6 +737,11 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           // estes nomes são usados para bater com pedido.categoria
           'servicosNomes': nomes,
           'customServices': customServices,
+          'customServiceNames':
+              selecionadosPersonalizados.map((service) => service.name).toList(),
+          'customServiceSearchTerms': customServiceSearchTerms,
+          if (selecionadosPersonalizados.isNotEmpty)
+            'customServiceUpdatedAt': FieldValue.serverTimestamp(),
           'radiusKm': _radiusKm,
           'country': _paisCtrl.text.trim(),
           'countryCode': _selectedCountry?.isoCode,

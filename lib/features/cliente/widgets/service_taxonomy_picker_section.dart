@@ -4,6 +4,9 @@ import 'package:chegaja_v2/core/catalog/service_intent.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_matcher.dart';
+import 'package:chegaja_v2/core/models/provider_custom_service.dart';
+import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
+import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
 
 class ServiceTaxonomySelection {
   const ServiceTaxonomySelection({
@@ -11,15 +14,18 @@ class ServiceTaxonomySelection {
     required this.subcategory,
     required this.intent,
     this.query = '',
+    this.customService,
   });
 
   final ServiceTaxonomyCategory category;
   final ServiceTaxonomySubcategory subcategory;
   final ServiceIntent intent;
   final String query;
+  final ProviderCustomService? customService;
 
-  String get servicoId => subcategory.id;
-  String get servicoNome => subcategory.label;
+  bool get isCustomService => customService != null;
+  String get servicoId => customService?.id ?? subcategory.id;
+  String get servicoNome => customService?.title ?? subcategory.label;
   String get legacyMode => intent.legacyMode;
   bool get requiresApproval => subcategory.requiresApproval;
   String? get sensitiveRequirementId {
@@ -32,12 +38,14 @@ class ServiceTaxonomySelection {
     ServiceTaxonomySubcategory? subcategory,
     ServiceIntent? intent,
     String? query,
+    ProviderCustomService? customService,
   }) {
     return ServiceTaxonomySelection(
       category: category ?? this.category,
       subcategory: subcategory ?? this.subcategory,
       intent: intent ?? this.intent,
       query: query ?? this.query,
+      customService: customService ?? this.customService,
     );
   }
 }
@@ -62,13 +70,30 @@ class ServiceTaxonomyPickerSection extends StatefulWidget {
 class _ServiceTaxonomyPickerSectionState
     extends State<ServiceTaxonomyPickerSection> {
   late final TextEditingController _queryController;
+  late final TextEditingController _customNameController;
+  late final TextEditingController _customDescriptionController;
+  late final TextEditingController _customAliasesController;
+  late final FocusNode _customNameFocus;
   String? _selectedCategoryId;
   ServiceTaxonomySelection? _localSelection;
+  String? _customServiceMessage;
+  bool _customServiceMessageIsError = false;
+  bool _customServiceFormOpen = false;
 
   @override
   void initState() {
     super.initState();
     _queryController = TextEditingController(text: widget.value?.query ?? '');
+    _customNameController = TextEditingController(
+      text: widget.value?.customService?.title ?? '',
+    );
+    _customDescriptionController = TextEditingController(
+      text: widget.value?.customService?.description ?? '',
+    );
+    _customAliasesController = TextEditingController(
+      text: widget.value?.customService?.aliases.join(', ') ?? '',
+    );
+    _customNameFocus = FocusNode();
     _selectedCategoryId = widget.value?.category.id;
   }
 
@@ -83,11 +108,33 @@ class _ServiceTaxonomyPickerSectionState
   @override
   void dispose() {
     _queryController.dispose();
+    _customNameController.dispose();
+    _customDescriptionController.dispose();
+    _customAliasesController.dispose();
+    _customNameFocus.dispose();
     super.dispose();
   }
 
   ServiceTaxonomyMatch get _match {
     return ServiceTaxonomyMatcher.matchServiceQuery(_queryController.text);
+  }
+
+  bool _isCustomFallbackQuery(String query) {
+    if (query.trim().isEmpty) return false;
+    final safety = CustomServiceSafetyValidator.validate(title: query);
+    if (safety.decision == TrustSafetyDecision.block) return true;
+    final match = ServiceTaxonomyMatcher.matchServiceQuery(query);
+    return !match.hasMatch && match.suggestions.isEmpty;
+  }
+
+  void _syncCustomNameFromQuery(String query) {
+    final normalized = query.trim();
+    if (!_isCustomFallbackQuery(normalized)) return;
+    if (_customNameController.text.trim().isNotEmpty) return;
+    _customNameController.text = normalized;
+    _customNameController.selection = TextSelection.collapsed(
+      offset: _customNameController.text.length,
+    );
   }
 
   ServiceTaxonomyCategory? _categoryForSubcategory(
@@ -100,6 +147,10 @@ class _ServiceTaxonomyPickerSectionState
   void _selectSubcategory(ServiceTaxonomySubcategory subcategory) {
     final category = _categoryForSubcategory(subcategory);
     if (category == null) return;
+    if (subcategory.id == ServiceTaxonomyCatalog.otherSubcategory.id) {
+      _openCustomServiceForm(category);
+      return;
+    }
     final current = widget.value ?? _localSelection;
     final intent = current?.subcategory.id == subcategory.id
         ? current!.intent
@@ -112,6 +163,84 @@ class _ServiceTaxonomyPickerSectionState
     );
     setState(() => _selectedCategoryId = category.id);
     _localSelection = selection;
+    widget.onChanged(selection);
+  }
+
+  void _openCustomServiceForm(ServiceTaxonomyCategory category) {
+    final query = _queryController.text.trim();
+    if (_customNameController.text.trim().isEmpty && query.isNotEmpty) {
+      _customNameController.text = query;
+      _customNameController.selection = TextSelection.collapsed(
+        offset: _customNameController.text.length,
+      );
+    }
+    setState(() {
+      _selectedCategoryId = category.id;
+      _localSelection = null;
+      _customServiceMessage = null;
+      _customServiceMessageIsError = false;
+      _customServiceFormOpen = true;
+    });
+    _customNameFocus.requestFocus();
+  }
+
+  void _addCustomService() {
+    final category = ServiceTaxonomyCatalog.findCategoryById('other') ??
+        _categoryForSubcategory(ServiceTaxonomyCatalog.otherSubcategory);
+    if (category == null) return;
+
+    final title = _customNameController.text.trim();
+    final description = _customDescriptionController.text.trim();
+    if (title.length < 3 || description.length < 3) {
+      setState(() {
+        _customServiceMessage =
+            'Indica o nome e uma descrição curta do serviço.';
+        _customServiceMessageIsError = true;
+      });
+      return;
+    }
+
+    final aliases = _customAliasesController.text.split(RegExp(r'[,;\n]'));
+    final safety = CustomServiceSafetyValidator.validate(
+      title: title,
+      description: description,
+      aliases: aliases,
+      query: _queryController.text,
+    );
+    if (safety.decision == TrustSafetyDecision.block) {
+      setState(() {
+        _queryController.clear();
+        _customNameController.clear();
+        _customAliasesController.clear();
+        _customServiceFormOpen = true;
+        _customServiceMessage = safety.messageForUser;
+        _customServiceMessageIsError = true;
+      });
+      return;
+    }
+
+    final customService = ProviderCustomService.fromInput(
+      title: title,
+      description: description,
+      aliasesText: _customAliasesController.text,
+      parentCategoryId: category.id,
+      taxonomySubcategoryId: ServiceTaxonomyCatalog.otherSubcategory.id,
+    );
+    final selection = ServiceTaxonomySelection(
+      category: category,
+      subcategory: ServiceTaxonomyCatalog.otherSubcategory,
+      intent: ServiceTaxonomyCatalog.otherSubcategory.defaultIntent,
+      query: _queryController.text.trim(),
+      customService: customService,
+    );
+    setState(() {
+      _selectedCategoryId = category.id;
+      _localSelection = selection;
+      _customServiceMessage =
+          safety.messageForUser.isEmpty ? null : safety.messageForUser;
+      _customServiceMessageIsError = false;
+      _customServiceFormOpen = safety.messageForUser.isNotEmpty;
+    });
     widget.onChanged(selection);
   }
 
@@ -152,6 +281,7 @@ class _ServiceTaxonomyPickerSectionState
           (suggestion) =>
               suggestion.id == ServiceTaxonomyCatalog.otherSubcategory.id,
         );
+    final showCustomServiceForm = showOtherFallback || _customServiceFormOpen;
 
     return Container(
       width: double.infinity,
@@ -190,12 +320,20 @@ class _ServiceTaxonomyPickerSectionState
                   : IconButton(
                       tooltip: 'Limpar pesquisa',
                       onPressed: () {
-                        setState(_queryController.clear);
+                        setState(() {
+                          _queryController.clear();
+                          _customServiceFormOpen = false;
+                        });
                       },
                       icon: const Icon(Icons.clear),
                     ),
             ),
-            onChanged: (_) => setState(() {}),
+            onChanged: (value) {
+              setState(() {
+                _syncCustomNameFromQuery(value);
+                _customServiceFormOpen = _isCustomFallbackQuery(value);
+              });
+            },
           ),
           if (suggestions.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -231,6 +369,18 @@ class _ServiceTaxonomyPickerSectionState
             ),
           ],
           const SizedBox(height: 18),
+          if (showCustomServiceForm) ...[
+            _CustomServiceRequestForm(
+              nameController: _customNameController,
+              descriptionController: _customDescriptionController,
+              aliasesController: _customAliasesController,
+              nameFocusNode: _customNameFocus,
+              message: _customServiceMessage,
+              messageIsError: _customServiceMessageIsError,
+              onSubmit: _addCustomService,
+            ),
+            const SizedBox(height: 18),
+          ],
           Text(
             'Escolhe uma categoria',
             style: theme.textTheme.labelLarge?.copyWith(
@@ -308,6 +458,114 @@ class _ServiceTaxonomyPickerSectionState
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomServiceRequestForm extends StatelessWidget {
+  const _CustomServiceRequestForm({
+    required this.nameController,
+    required this.descriptionController,
+    required this.aliasesController,
+    required this.nameFocusNode,
+    required this.message,
+    required this.messageIsError,
+    required this.onSubmit,
+  });
+
+  final TextEditingController nameController;
+  final TextEditingController descriptionController;
+  final TextEditingController aliasesController;
+  final FocusNode nameFocusNode;
+  final String? message;
+  final bool messageIsError;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.35)),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Descreve o serviço que precisas',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('client_custom_service_name_field'),
+            controller: nameController,
+            focusNode: nameFocusNode,
+            maxLength: ProviderCustomService.maxNameLength,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Nome do serviço',
+              hintText:
+                  'Ex.: ajuda com guarda-roupa, conserto de máquina, serviço diferente',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('client_custom_service_description_field'),
+            controller: descriptionController,
+            maxLength: ProviderCustomService.maxDescriptionLength,
+            minLines: 2,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Descrição do que precisas',
+              hintText: 'Explica o problema ou o trabalho que queres.',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('client_custom_service_aliases_field'),
+            controller: aliasesController,
+            maxLength: ProviderCustomService.maxAliasLength *
+                ProviderCustomService.maxAliases,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Palavras relacionadas',
+              hintText: 'Ex.: roupa, estilo, imagem, moda, guarda-roupa',
+              counterText: '',
+            ),
+          ),
+          if (message != null && message!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              message!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: messageIsError ? colorScheme.error : colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              key: const Key('client_custom_service_add_button'),
+              onPressed: onSubmit,
+              icon: const Icon(Icons.check),
+              label: const Text('Usar serviço personalizado'),
+            ),
+          ),
         ],
       ),
     );

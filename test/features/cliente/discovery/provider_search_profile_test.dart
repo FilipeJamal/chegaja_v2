@@ -155,9 +155,15 @@ void main() {
           'customServices': [
             {
               'id': 'custom_consultora_de_imagem',
-              'name': 'Consultora de imagem',
+              'title': 'Consultora de imagem',
               'description':
                   'Consultoria de imagem pessoal, guarda-roupa e eventos.',
+              'aliases': ['moda', 'roupa'],
+              'normalizedSearchTerms': [
+                'consultora de imagem',
+                'moda',
+                'roupa',
+              ],
             },
           ],
         },
@@ -167,6 +173,7 @@ void main() {
       expect(profile.searchText, contains('consultora de imagem'));
       expect(profile.searchText, contains('guarda roupa'));
       expect(profile.searchText, contains('eventos'));
+      expect(profile.searchText, contains('moda'));
     });
 
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {

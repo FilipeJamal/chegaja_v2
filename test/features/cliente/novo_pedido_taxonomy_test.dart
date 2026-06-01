@@ -23,6 +23,9 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.text('1. Serviço'), findsOneWidget);
+    expect(find.text('2. Quando e como?'), findsOneWidget);
+    expect(find.text('3. Detalhes'), findsOneWidget);
     expect(find.text('Que servico precisas?'), findsOneWidget);
     expect(find.text('Escolhe uma categoria'), findsOneWidget);
     expect(find.text('Casa e reparacoes'), findsOneWidget);
@@ -131,12 +134,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Outro servico'), findsWidgets);
-    expect(find.textContaining('descrever melhor'), findsOneWidget);
+    expect(find.text('Descreve o serviço que precisas'), findsOneWidget);
+    expect(find.text('Nome do serviço'), findsOneWidget);
+    expect(find.text('Palavras relacionadas'), findsOneWidget);
 
-    await tester.tap(find.text('Outro servico').first);
+    await tester.enterText(
+      find.byKey(const Key('client_custom_service_name_field')),
+      'servico muito especifico que nao existe',
+    );
+    await tester.enterText(
+      find.byKey(const Key('client_custom_service_description_field')),
+      'Preciso de ajuda com uma tarefa fora do catalogo.',
+    );
+    await tester.tap(find.byKey(const Key('client_custom_service_add_button')));
     await tester.pumpAndSettle();
 
     expect(selected?.subcategory.id, 'other_service');
     expect(selected?.category.id, 'other');
+    expect(
+      selected?.customService?.title,
+      'servico muito especifico que nao existe',
+    );
+    expect(
+      selected?.servicoId,
+      'custom_servico_muito_especifico_que_nao_existe',
+    );
+    expect(selected?.servicoNome, 'servico muito especifico que nao existe');
+  });
+
+  testWidgets('ServiceTaxonomyPickerSection bloqueia Outro proibido', (
+    WidgetTester tester,
+  ) async {
+    ServiceTaxonomySelection? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ServiceTaxonomyPickerSection(
+              value: selected,
+              onChanged: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('service_taxonomy_query_field')),
+      'servicos sexuais',
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('client_custom_service_description_field')),
+      'Atendimento privado',
+    );
+    await tester.tap(find.byKey(const Key('client_custom_service_add_button')));
+    await tester.pumpAndSettle();
+
+    expect(selected, isNull);
+    expect(
+      find.text('Este tipo de serviço não é permitido no ChegaJá.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('sexuais'), findsNothing);
   });
 }

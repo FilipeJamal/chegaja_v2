@@ -32,6 +32,10 @@ class PedidosRepo {
     String? categoryRequirementId,
     String? categoryRequirementName,
     String? categoryRiskLevel,
+    bool isCustomService = false,
+    String? customServiceName,
+    String? customServiceDescription,
+    List<String>? customServiceSearchTerms,
   }) async {
     final categoriaFinal =
         (servicoNome != null && servicoNome.trim().isNotEmpty)
@@ -83,6 +87,19 @@ class PedidosRepo {
         if (categoryRiskLevel != null && categoryRiskLevel.trim().isNotEmpty)
           'categoryRiskLevel': categoryRiskLevel.trim(),
       },
+      if (isCustomService) ...{
+        'isCustomService': true,
+        if (customServiceName != null && customServiceName.trim().isNotEmpty)
+          'customServiceName': customServiceName.trim(),
+        if (customServiceDescription != null &&
+            customServiceDescription.trim().isNotEmpty)
+          'customServiceDescription': customServiceDescription.trim(),
+        'customServiceSearchTerms': (customServiceSearchTerms ?? const [])
+            .map((term) => term.trim())
+            .where((term) => term.isNotEmpty)
+            .toSet()
+            .toList(growable: false),
+      },
       'statusProposta': 'nenhuma',
       'statusConfirmacaoValor': 'nenhum',
     });
@@ -114,6 +131,10 @@ class PedidosRepo {
     String? tipoPreco,
     String? tipoPagamento,
     List<String>? anexos,
+    bool? isCustomService,
+    String? customServiceName,
+    String? customServiceDescription,
+    List<String>? customServiceSearchTerms,
   }) async {
     final categoriaFinal =
         (servicoNome != null && servicoNome.trim().isNotEmpty)
@@ -150,6 +171,23 @@ class PedidosRepo {
 
     if (tipoPreco != null) data['tipoPreco'] = tipoPreco;
     if (tipoPagamento != null) data['tipoPagamento'] = tipoPagamento;
+    if (isCustomService != null) {
+      data['isCustomService'] = isCustomService;
+      if (isCustomService) {
+        data['customServiceName'] = customServiceName?.trim();
+        data['customServiceDescription'] = customServiceDescription?.trim();
+        data['customServiceSearchTerms'] =
+            (customServiceSearchTerms ?? const [])
+                .map((term) => term.trim())
+                .where((term) => term.isNotEmpty)
+                .toSet()
+                .toList(growable: false);
+      } else {
+        data['customServiceName'] = FieldValue.delete();
+        data['customServiceDescription'] = FieldValue.delete();
+        data['customServiceSearchTerms'] = FieldValue.delete();
+      }
+    }
     final ref = _db.collection('pedidos').doc(pedidoId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);

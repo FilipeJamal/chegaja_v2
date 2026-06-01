@@ -72,8 +72,12 @@ class ProviderSearchProfile {
     final customServices = ProviderCustomService.listFrom(
       data['customServices'],
     );
+    final customServiceNames = _stringList(data['customServiceNames']);
+    final customServiceSearchTerms =
+        _stringList(data['customServiceSearchTerms']);
     final services = _uniqueStrings([
       ..._stringList(data['servicosNomes']),
+      ...customServiceNames,
       ...customServices.map((service) => service.name),
     ]);
     final categories = _uniqueStrings([
@@ -103,6 +107,9 @@ class ProviderSearchProfile {
       ...services,
       ...categories,
       ...customServices.map((service) => service.description),
+      ...customServices.expand((service) => service.aliases),
+      ...customServices.expand((service) => service.normalizedSearchTerms),
+      ...customServiceSearchTerms,
       ...approvedSensitiveCategoryNames,
     ]);
 

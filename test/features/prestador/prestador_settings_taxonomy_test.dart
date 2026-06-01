@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
+import 'package:chegaja_v2/core/models/provider_custom_service.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_service_taxonomy_selector.dart';
 
 void main() {
@@ -169,16 +169,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Outro servico'), findsOneWidget);
-    expect(find.text('Adicionar servico personalizado'), findsOneWidget);
+    expect(find.text('Descreve o teu serviço'), findsOneWidget);
+    expect(find.text('Como os clientes costumam procurar?'), findsOneWidget);
     expect(find.text('zzzxqo qqqyyy'), findsWidgets);
     expect(
-      find.textContaining('Guarda o nome real do servico'),
+      find.textContaining('Este serviço ficará associado ao teu perfil'),
       findsOneWidget,
     );
 
     await tester.enterText(
       find.byKey(const Key('custom_service_description_field')),
       'Leitura simbolica, orientacao espiritual e mapas pessoais.',
+    );
+    await tester.enterText(
+      find.byKey(const Key('custom_service_aliases_field')),
+      'mapas, orientacao espiritual',
     );
     final addButton = find.byKey(const Key('add_custom_service_button'));
     await tester.ensureVisible(addButton);
@@ -189,8 +194,54 @@ void main() {
     expect(customServices.single.id, 'custom_zzzxqo_qqqyyy');
     expect(customServices.single.name, 'zzzxqo qqqyyy');
     expect(customServices.single.description, contains('mapas pessoais'));
+    expect(customServices.single.aliases, contains('mapas'));
     expect(selected, contains('custom_zzzxqo_qqqyyy'));
     expect(find.text('zzzxqo qqqyyy'), findsNothing);
+  });
+
+  testWidgets('PrestadorServiceTaxonomySelector bloqueia servico proibido', (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+    var customServices = <ProviderCustomService>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+              customServices: customServices,
+              onCustomServicesChanged: (value) => customServices = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('prestador_service_taxonomy_query_field')),
+      'servicos sexuais',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('custom_service_description_field')),
+      'Atendimento privado',
+    );
+    final addButton = find.byKey(const Key('add_custom_service_button'));
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+
+    expect(customServices, isEmpty);
+    expect(selected, isEmpty);
+    expect(
+      find.text('Este tipo de serviço não é permitido no ChegaJá.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('sexuais'), findsNothing);
   });
 
   testWidgets('PrestadorServiceTaxonomySelector mostra servicos personalizados',
@@ -201,7 +252,7 @@ void main() {
     var customServices = const [
       ProviderCustomService(
         id: 'custom_consultora_de_imagem',
-        name: 'Consultora de imagem',
+        title: 'Consultora de imagem',
         description: 'Estilo pessoal e guarda-roupa.',
       ),
     ];
