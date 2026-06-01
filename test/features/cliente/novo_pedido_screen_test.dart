@@ -52,5 +52,44 @@ void main() {
       find.text('Vamos procurar um prestador automaticamente.'),
       findsOneWidget,
     );
+    expect(
+      find.text('Este servico exige prestador com aprovacao na categoria.'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('NovoPedidoScreen avisa quando categoria exige aprovacao', (
+    WidgetTester tester,
+  ) async {
+    final servico = const Servico(
+      id: 'electricity',
+      name: 'Eletricidade',
+      mode: 'IMEDIATO',
+      keywords: ['eletricista'],
+      iconKey: null,
+      isActive: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: NovoPedidoScreen(
+          modo: 'IMEDIATO',
+          servicoInicial: servico,
+          servicosLoader: () async => [servico],
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Este servico exige prestador com aprovacao na categoria.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('certificado'), findsNothing);
+    expect(find.textContaining('verificado'), findsNothing);
+    expect(find.textContaining('garantido'), findsNothing);
   });
 }

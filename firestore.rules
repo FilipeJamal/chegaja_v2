@@ -82,7 +82,6 @@ service cloud.firestore {
       let servicosNomes = (p is map && p.keys().hasAny(['servicosNomes']) && p['servicosNomes'] is list)
         ? p['servicosNomes']
         : [];
-
       let servicoId = (pedidoData is map && pedidoData.keys().hasAny(['servicoId']))
         ? pedidoData['servicoId']
         : null;
@@ -94,6 +93,20 @@ service cloud.firestore {
 
       return (servicoId is string && servicos.hasAny([servicoId]))
         || (categoria is string && servicosNomes.hasAny([categoria]));
+    }
+
+    function prestadorApprovedForSensitivePedido(pedidoData) {
+      let p = prestadorData();
+      let approvedSensitiveCategoryIds = (p is map && p.keys().hasAny(['approvedSensitiveCategoryIds']) && p['approvedSensitiveCategoryIds'] is list)
+        ? p['approvedSensitiveCategoryIds']
+        : [];
+      let servicoId = (pedidoData is map && pedidoData.keys().hasAny(['servicoId']))
+        ? pedidoData['servicoId']
+        : null;
+      return !(pedidoData is map
+          && pedidoData.keys().hasAny(['categoryApprovalRequired'])
+          && pedidoData['categoryApprovalRequired'] == true)
+        || (servicoId is string && approvedSensitiveCategoryIds.hasAny([servicoId]));
     }
 
     function pedidoEstado(data) {
@@ -498,6 +511,9 @@ service cloud.firestore {
           'handle',
           'handleDisplay',
           'handleUpdatedAt',
+          'approvedSensitiveCategoryIds',
+          'approvedSensitiveCategoryNames',
+          'categoryApprovalsUpdatedAt',
         ]);
     }
 
@@ -512,6 +528,9 @@ service cloud.firestore {
             'handle',
             'handleDisplay',
             'handleUpdatedAt',
+            'approvedSensitiveCategoryIds',
+            'approvedSensitiveCategoryNames',
+            'categoryApprovalsUpdatedAt',
           ]);
     }
 
@@ -780,6 +799,7 @@ service cloud.firestore {
       return isPrestador()
         && pedidoAberto(resource.data)
         && prestadorMatchesPedido(resource.data)
+        && prestadorApprovedForSensitivePedido(resource.data)
         && hasValidPedidoEstado(request.resource.data)
         && pedidoEstado(request.resource.data) == 'aceito'
         && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()

@@ -2388,6 +2388,7 @@ async function adminReviewSensitiveCategoryRequestCore({ database = db, auth, da
   batch.set(requestRef, reviewFields, { merge: true });
 
   if (decision === 'approved') {
+    const providerRef = database.collection('prestadores').doc(providerId);
     const approvalRef = database
       .collection('prestadores')
       .doc(providerId)
@@ -2408,6 +2409,19 @@ async function adminReviewSensitiveCategoryRequestCore({ database = db, auth, da
         decisionReason,
         updatedAt: FieldValue.serverTimestamp(),
         ...(approvalSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+
+    batch.set(
+      providerRef,
+      {
+        approvedSensitiveCategoryIds: FieldValue.arrayUnion(categoryId),
+        ...(categoryName
+          ? { approvedSensitiveCategoryNames: FieldValue.arrayUnion(categoryName) }
+          : {}),
+        categoryApprovalsUpdatedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
     );

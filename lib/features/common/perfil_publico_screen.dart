@@ -145,6 +145,18 @@ class PublicProfileScreen extends StatelessWidget {
                         icon: Icons.handyman_outlined,
                         child: _ServicesWrap(services: profile.services),
                       ),
+                      if (_isPrestador &&
+                          profile
+                              .approvedSensitiveCategoryNames.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _ProfileSection(
+                          title: 'Categorias com aprovacao',
+                          icon: Icons.task_alt_outlined,
+                          child: _ApprovedCategoriesWrap(
+                            categories: profile.approvedSensitiveCategoryNames,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       _ProfileSection(
                         title: l10n.profilePortfolioTitle,
@@ -202,6 +214,7 @@ class _PublicProfileData {
     required this.handle,
     required this.phone,
     required this.services,
+    required this.approvedSensitiveCategoryNames,
     required this.portfolio,
     required this.radiusKm,
     required this.ratingAvg,
@@ -218,6 +231,7 @@ class _PublicProfileData {
   final String handle;
   final String phone;
   final List<String> services;
+  final List<String> approvedSensitiveCategoryNames;
   final List<String> portfolio;
   final double? radiusKm;
   final double? ratingAvg;
@@ -269,6 +283,8 @@ class _PublicProfileData {
         data['phoneRaw'],
       ]),
       services: _stringList(data['servicosNomes']),
+      approvedSensitiveCategoryNames:
+          _stringList(data['approvedSensitiveCategoryNames']),
       portfolio: portfolio,
       radiusKm: _numToDouble(data['radiusKm']),
       ratingAvg: _numToDouble(data['ratingAvg']),
@@ -776,6 +792,57 @@ class _ServicesWrap extends StatelessWidget {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class _ApprovedCategoriesWrap extends StatelessWidget {
+  const _ApprovedCategoriesWrap({required this.categories});
+
+  final List<String> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Estas categorias foram analisadas pelo ChegaJa com base nas informacoes enviadas pelo prestador.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Chip(
+              label: const Text('Aprovacao ativa'),
+              backgroundColor: colorScheme.primaryContainer,
+              side:
+                  BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+              labelStyle: textTheme.labelMedium?.copyWith(
+                color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            for (final category in categories)
+              Chip(
+                label: Text(category),
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                side: BorderSide(color: colorScheme.outline),
+                labelStyle: textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

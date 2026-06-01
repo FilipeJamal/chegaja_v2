@@ -20,6 +20,8 @@ class ProviderSearchProfile {
     required this.latitude,
     required this.longitude,
     this.handle,
+    this.approvedSensitiveCategoryIds = const <String>[],
+    this.approvedSensitiveCategoryNames = const <String>[],
   });
 
   final String id;
@@ -38,6 +40,8 @@ class ProviderSearchProfile {
   final double? latitude;
   final double? longitude;
   final String? handle;
+  final List<String> approvedSensitiveCategoryIds;
+  final List<String> approvedSensitiveCategoryNames;
 
   factory ProviderSearchProfile.fromPrestadorDoc({
     required String id,
@@ -76,6 +80,10 @@ class ProviderSearchProfile {
     final ratingCount = _numToInt(data['ratingCount']);
     final coords = _extractLatLng(data);
     final handle = _emptyToNull(data['handle']?.toString());
+    final approvedSensitiveCategoryIds =
+        _stringList(data['approvedSensitiveCategoryIds']);
+    final approvedSensitiveCategoryNames =
+        _stringList(data['approvedSensitiveCategoryNames']);
 
     final searchTerms = ProviderSearchNormalizer.normalizeTerms([
       displayName,
@@ -86,6 +94,7 @@ class ProviderSearchProfile {
       country,
       ...services,
       ...categories,
+      ...approvedSensitiveCategoryNames,
     ]);
 
     return ProviderSearchProfile(
@@ -105,6 +114,8 @@ class ProviderSearchProfile {
       latitude: coords?.lat,
       longitude: coords?.lng,
       handle: handle,
+      approvedSensitiveCategoryIds: approvedSensitiveCategoryIds,
+      approvedSensitiveCategoryNames: approvedSensitiveCategoryNames,
     );
   }
 
@@ -113,6 +124,10 @@ class ProviderSearchProfile {
     final count = ratingCount;
     return avg != null && count != null && count > 0 && avg >= 1 && avg <= 5;
   }
+
+  bool get hasApprovedSensitiveCategories =>
+      approvedSensitiveCategoryNames.isNotEmpty ||
+      approvedSensitiveCategoryIds.isNotEmpty;
 
   bool get isSearchableLocal {
     if (id.trim().isEmpty || displayName.trim().isEmpty) return false;

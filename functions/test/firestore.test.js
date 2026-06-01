@@ -170,6 +170,44 @@ describe("Firestore Security Rules", () => {
                 })
             );
         });
+
+        it("should deny provider creating profile with approval summary fields directly", async () => {
+            const provider = testEnv.authenticatedContext("provider_summary");
+            await assertFails(
+                provider.firestore().collection("prestadores").doc("provider_summary").set({
+                    nome: "Provider Summary",
+                    approvedSensitiveCategoryIds: ["electricity"],
+                    approvedSensitiveCategoryNames: ["Eletricidade"],
+                    categoryApprovalsUpdatedAt: serverTimestamp(),
+                })
+            );
+        });
+
+        it("should deny provider updating approval summary fields directly", async () => {
+            const provider = testEnv.authenticatedContext("provider1");
+            const providerDb = provider.firestore();
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                await context
+                    .firestore()
+                    .collection("prestadores")
+                    .doc("provider1")
+                    .set({ nome: "Provider", city: "Lisboa" });
+            });
+
+            await assertFails(
+                providerDb.collection("prestadores").doc("provider1").update({
+                    approvedSensitiveCategoryIds: ["electricity"],
+                    approvedSensitiveCategoryNames: ["Eletricidade"],
+                    categoryApprovalsUpdatedAt: serverTimestamp(),
+                })
+            );
+
+            await assertSucceeds(
+                providerDb.collection("prestadores").doc("provider1").update({
+                    city: "Porto",
+                })
+            );
+        });
     });
 
     describe("Public Handles Collection", () => {
@@ -905,6 +943,72 @@ describe("Firestore Security Rules", () => {
             const provider = testEnv.authenticatedContext("provider1");
             await assertSucceeds(
                 provider.firestore().collection("pedidos").doc("order_accept_ok").update({
+                    status: "aceito",
+                    estado: "aceito",
+                    prestadorId: "provider1",
+                })
+            );
+        });
+
+        it("should deny provider accepting sensitive order without category approval", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                const adminDb = context.firestore();
+                await adminDb.collection("prestadores").doc("provider1").set({
+                    servicos: ["electricity"],
+                    servicosNomes: ["Eletricidade"],
+                });
+                await adminDb.collection("pedidos").doc("order_sensitive_denied").set({
+                    clienteId: "client1",
+                    status: "criado",
+                    estado: "criado",
+                    prestadorId: null,
+                    servicoId: "electricity",
+                    servicoNome: "Eletricidade",
+                    categoryApprovalRequired: true,
+                    categoryRequirementId: "electricity",
+                    categoryRequirementName: "Eletricidade",
+                    categoryRiskLevel: "sensitive",
+                    createdAt: new Date(),
+                });
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertFails(
+                provider.firestore().collection("pedidos").doc("order_sensitive_denied").update({
+                    status: "aceito",
+                    estado: "aceito",
+                    prestadorId: "provider1",
+                })
+            );
+        });
+
+        it("should allow provider with category approval summary to accept sensitive order", async () => {
+            await testEnv.withSecurityRulesDisabled(async (context) => {
+                const adminDb = context.firestore();
+                await adminDb.collection("prestadores").doc("provider1").set({
+                    servicos: ["electricity"],
+                    servicosNomes: ["Eletricidade"],
+                    approvedSensitiveCategoryIds: ["electricity"],
+                    approvedSensitiveCategoryNames: ["Eletricidade"],
+                });
+                await adminDb.collection("pedidos").doc("order_sensitive_ok").set({
+                    clienteId: "client1",
+                    status: "criado",
+                    estado: "criado",
+                    prestadorId: null,
+                    servicoId: "electricity",
+                    servicoNome: "Eletricidade",
+                    categoryApprovalRequired: true,
+                    categoryRequirementId: "electricity",
+                    categoryRequirementName: "Eletricidade",
+                    categoryRiskLevel: "sensitive",
+                    createdAt: new Date(),
+                });
+            });
+
+            const provider = testEnv.authenticatedContext("provider1");
+            await assertSucceeds(
+                provider.firestore().collection("pedidos").doc("order_sensitive_ok").update({
                     status: "aceito",
                     estado: "aceito",
                     prestadorId: "provider1",

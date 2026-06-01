@@ -17,6 +17,8 @@ Pedido _buildPedido({
   double? valorMaxEstimadoPrestador,
   String statusProposta = 'nenhuma',
   String statusConfirmacaoValor = 'nenhum',
+  bool categoryApprovalRequired = false,
+  String? categoryRequirementId,
 }) {
   return Pedido(
     id: id,
@@ -24,6 +26,10 @@ Pedido _buildPedido({
     prestadorId: prestadorId,
     servicoId: servicoId,
     servicoNome: servicoNome,
+    categoryApprovalRequired: categoryApprovalRequired,
+    categoryRequirementId: categoryRequirementId,
+    categoryRequirementName: servicoNome,
+    categoryRiskLevel: categoryApprovalRequired ? 'sensitive' : null,
     titulo: 'Trocar disjuntor',
     descricao: 'Quadro a desligar.',
     modo: 'IMEDIATO',
@@ -143,6 +149,41 @@ void main() {
           prestadorId: 'prest_2',
         ),
         throwsException,
+      );
+    });
+
+    test('enviarPropostaFaixa exige aprovacao em categoria sensivel', () async {
+      final db = FakeFirebaseFirestore();
+      final service = PedidoService(firestore: db, trackAnalytics: false);
+
+      await db.collection('prestadores').doc('prest_1').set({
+        'servicos': ['electricity'],
+        'servicosNomes': ['Eletricidade'],
+      });
+
+      final pedido = _buildPedido(
+        id: 'pedido_sensivel',
+        servicoId: 'electricity',
+        servicoNome: 'Eletricidade',
+        categoryApprovalRequired: true,
+        categoryRequirementId: 'electricity',
+      );
+      await _seedPedido(db, pedido);
+
+      expect(
+        service.enviarPropostaFaixa(
+          pedido: pedido,
+          prestadorId: 'prest_1',
+          valorMin: 20,
+          valorMax: 35,
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('exige prestador com aprovacao'),
+          ),
+        ),
       );
     });
 

@@ -210,7 +210,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
 | M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
-| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.4 fechada, M2.20.5 proxima |
+| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.5 fechada, M2.20.6 proxima |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -240,8 +240,10 @@ criou a UI do prestador para ver categorias sensiveis, abrir pedido de
 aprovacao, enviar evidencia textual, referenciar portfolio publico e acompanhar
 status, ainda sem KYC, upload real, admin visual ou matching. A M2.20.4 criou
 callables admin, fila "Comprovativos", decisoes approve/reject/needs_more_info,
-`categoryApprovals` quando aprovado e audit logs leves. O proximo passo e
-M2.20.5.
+`categoryApprovals` quando aprovado e audit logs leves. A M2.20.5 integrou
+aprovacoes com perfil publico, discovery/card, pedido sensivel e matching
+basico via Rules/servico, sem KYC, upload real, badges fortes ou deploy. O
+proximo passo e M2.20.6.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -381,8 +383,8 @@ ficam fora.
 | M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
 | M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FECHADO | Admin leve para analisar comprovativos |
-| M2.20.5 | PROXIMO | Integracao com perfil/discovery/pedido |
-| M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final da M2.20 |
+| M2.20.5 | FECHADO | Integracao com perfil/discovery/pedido |
+| M2.20.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.20 |
 
 Estado: M2.20 ativa. A M2.20.1 criou a spec e auditoria documental para
 categorias sensiveis e comprovativos profissionais. A M2.20.2 criou a base
@@ -395,7 +397,10 @@ e reenvio quando o status for `needs_more_info`. A M2.20.4 criou a fila admin
 `Comprovativos`, as callables `admin_listSensitiveCategoryRequests` e
 `admin_reviewSensitiveCategoryRequest`, criou approval quando aprovado e gravou
 audit log leve sem copiar evidencia completa. Ainda nao ha upload real, badges
-publicos, discovery/matching ou KYC. O proximo passo e M2.20.5.
+fortes, ranking avancado, upload privado ou KYC. A M2.20.5 criou resumo publico
+seguro de aprovacoes no prestador, protegeu esses campos em Rules, exibiu
+categorias com aprovacao no perfil/discovery e endureceu pedidos sensiveis com
+`categoryApprovalRequired`. O proximo passo e M2.20.6.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -612,13 +617,13 @@ Web e QA visual. A M2.20 foi iniciada com spec/auditoria de categorias
 sensiveis e comprovativos profissionais, a M2.20.2 criou a base tecnica de
 modelo/service/Rules, a M2.20.3 criou a UI do prestador para pedir aprovacao,
 e a M2.20.4 criou o admin leve de comprovativos com callables, approvals e
-audit logs. Ainda sem upload real, discovery/matching, KYC, Storage Rules ou
-deploy.
+audit logs. A M2.20.5 integrou aprovacoes com perfil/discovery/pedido e matching
+basico, sem upload real, KYC, Storage Rules ou deploy.
 
 Fase operacional:
 
 ```text
-M2.20.5 - Integracao com perfil/discovery/pedido
+M2.20.6 - Testes, E2E, QA visual e documentacao final
 ```
 
 Dependencias pausadas:

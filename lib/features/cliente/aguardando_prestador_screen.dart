@@ -69,9 +69,15 @@ class _AguardandoPrestadorScreenState extends State<AguardandoPrestadorScreen> {
         clienteId: pedido.clienteId,
         titulo: pedido.titulo,
         descricao: pedido.descricao,
+        servicoId: pedido.servicoId,
+        servicoNome: pedido.servicoNome,
         modo: pedido.modo,
         agendadoPara: pedido.agendadoPara,
         categoria: pedido.categoria,
+        categoryApprovalRequired: pedido.categoryApprovalRequired,
+        categoryRequirementId: pedido.categoryRequirementId,
+        categoryRequirementName: pedido.categoryRequirementName,
+        categoryRiskLevel: pedido.categoryRiskLevel,
       );
 
       if (!mounted) return;

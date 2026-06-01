@@ -7,6 +7,7 @@ ProviderSearchProfile _profile({
   double? ratingAvg = 4.8,
   int? ratingCount = 12,
   String? handle,
+  List<String> approvedNames = const <String>[],
 }) {
   return ProviderSearchProfile(
     id: 'prestador-1',
@@ -25,6 +26,7 @@ ProviderSearchProfile _profile({
     latitude: null,
     longitude: null,
     handle: handle,
+    approvedSensitiveCategoryNames: approvedNames,
   );
 }
 
@@ -69,6 +71,27 @@ void main() {
     await _pumpCard(tester, profile: _profile());
 
     expect(find.text('@joao_bolos'), findsNothing);
+  });
+
+  testWidgets('mostra aprovacao de categoria com linguagem segura',
+      (tester) async {
+    await _pumpCard(
+      tester,
+      profile: _profile(approvedNames: const ['Eletricidade']),
+    );
+
+    expect(find.text('Categoria aprovada'), findsOneWidget);
+    expect(find.text('Eletricidade'), findsOneWidget);
+    expect(find.textContaining('certificado'), findsNothing);
+    expect(find.textContaining('verificado'), findsNothing);
+    expect(find.textContaining('garantido'), findsNothing);
+    expect(find.textContaining('pagamento seguro'), findsNothing);
+  });
+
+  testWidgets('nao mostra chip de aprovacao quando ausente', (tester) async {
+    await _pumpCard(tester, profile: _profile());
+
+    expect(find.text('Categoria aprovada'), findsNothing);
   });
 
   testWidgets('nao mostra rating quando os agregados sao invalidos',

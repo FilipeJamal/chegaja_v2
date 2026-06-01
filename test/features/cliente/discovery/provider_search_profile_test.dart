@@ -17,6 +17,8 @@ void main() {
           'servicosNomes': ['Canaliza\u00e7\u00e3o', 'Instala\u00e7\u00e3o'],
           'categories': ['Casa', 'Canalizacao'],
           'servicos': ['svc_canalizacao'],
+          'approvedSensitiveCategoryIds': ['electricity'],
+          'approvedSensitiveCategoryNames': ['Eletricidade'],
           'portfolioUrls': [
             'https://example.com/obra-1.jpg',
             '',
@@ -40,6 +42,9 @@ void main() {
       expect(
           profile.services, ['Canaliza\u00e7\u00e3o', 'Instala\u00e7\u00e3o']);
       expect(profile.categories, ['Casa', 'Canalizacao', 'svc_canalizacao']);
+      expect(profile.approvedSensitiveCategoryIds, ['electricity']);
+      expect(profile.approvedSensitiveCategoryNames, ['Eletricidade']);
+      expect(profile.hasApprovedSensitiveCategories, isTrue);
       expect(profile.portfolioPreviewUrls, [
         'https://example.com/obra-1.jpg',
         'https://example.com/obra-2.jpg',
@@ -119,6 +124,24 @@ void main() {
 
       expect(profile.handle, 'maria_bolos');
       expect(profile.searchText, contains('maria bolos'));
+    });
+
+    test('mapeia aprovacoes de categoria e inclui nos termos pesquisaveis', () {
+      final profile = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_aprovado',
+        data: {
+          'nome': 'Ema Eletrica',
+          'city': 'Porto',
+          'approvedSensitiveCategoryIds': ['electricity', 'gas'],
+          'approvedSensitiveCategoryNames': ['Eletricidade', 'Gas'],
+        },
+      );
+
+      expect(profile.approvedSensitiveCategoryIds, ['electricity', 'gas']);
+      expect(profile.approvedSensitiveCategoryNames, ['Eletricidade', 'Gas']);
+      expect(profile.hasApprovedSensitiveCategories, isTrue);
+      expect(profile.searchText, contains('eletricidade'));
+      expect(profile.searchText, contains('gas'));
     });
 
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {

@@ -17,6 +17,7 @@ import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/trust_safety/sensitive_categories.dart';
 import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
@@ -355,6 +356,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         builder: (_) => SelecionarPrestadorScreen(
           servicoId: servicoId,
           servicoNome: servicoNome,
+          categoryApprovalRequired: _selectedCategoryApprovalRequired,
           latitude: _latitude,
           longitude: _longitude,
         ),
@@ -539,6 +541,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
           enderecoTexto: enderecoTexto,
           tipoPreco: tipoPreco,
           tipoPagamento: tipoPagamento,
+          categoryApprovalRequired: _selectedCategoryApprovalRequired,
+          categoryRequirementId: _selectedSensitiveCategoryId,
+          categoryRequirementName: _categoriaNome,
+          categoryRiskLevel:
+              _selectedCategoryApprovalRequired ? 'sensitive' : null,
         );
 
         if (!mounted) return;
@@ -605,6 +612,29 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     );
 
     return classification.decision == TrustSafetyDecision.block;
+  }
+
+  bool get _selectedCategoryApprovalRequired {
+    final serviceId = (_servicoIdSelecionado ?? '').trim();
+    if (serviceId.isNotEmpty &&
+        SensitiveCategories.values
+            .any((category) => category.id == serviceId)) {
+      return true;
+    }
+    final serviceName = (_categoriaNome ?? '').trim();
+    return SensitiveCategories.match(serviceName).isNotEmpty;
+  }
+
+  String? get _selectedSensitiveCategoryId {
+    final serviceId = (_servicoIdSelecionado ?? '').trim();
+    if (serviceId.isNotEmpty &&
+        SensitiveCategories.values
+            .any((category) => category.id == serviceId)) {
+      return serviceId;
+    }
+    final matches = SensitiveCategories.match(_categoriaNome ?? '');
+    if (matches.isNotEmpty) return matches.first.id;
+    return serviceId.isNotEmpty ? serviceId : null;
   }
 
   String _exemploTitulo(
@@ -948,6 +978,12 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                             return null;
                           },
                         ),
+                      if (_selectedCategoryApprovalRequired) ...[
+                        const SizedBox(height: 10),
+                        _CategoryApprovalRequiredNotice(
+                          categoryName: _categoriaNome,
+                        ),
+                      ],
                       const SizedBox(height: 16),
 
                       if (!isEditing) ...[
@@ -1439,6 +1475,65 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                 child: CircularProgressIndicator(),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryApprovalRequiredNotice extends StatelessWidget {
+  const _CategoryApprovalRequiredNotice({this.categoryName});
+
+  final String? categoryName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final category = (categoryName ?? '').trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.secondary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.task_alt_outlined,
+            color: colorScheme.onSecondaryContainer,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Este servico exige prestador com aprovacao na categoria.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (category.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    category,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );

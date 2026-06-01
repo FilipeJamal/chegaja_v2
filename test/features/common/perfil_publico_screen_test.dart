@@ -174,6 +174,44 @@ void main() {
     expect(find.textContaining('900'), findsNothing);
   });
 
+  testWidgets('perfil publico mostra categorias com aprovacao segura',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {
+      'approvedSensitiveCategoryIds': ['electricity'],
+      'approvedSensitiveCategoryNames': ['Eletricidade'],
+    });
+
+    await _pumpProfile(tester, db: db);
+    await _scrollUntilTextVisible(tester, 'Categorias com aprovacao');
+
+    expect(find.text('Categorias com aprovacao'), findsOneWidget);
+    expect(find.text('Aprovacao ativa'), findsOneWidget);
+    expect(find.text('Eletricidade'), findsOneWidget);
+    expect(
+      find.text(
+        'Estas categorias foram analisadas pelo ChegaJa com base nas informacoes enviadas pelo prestador.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('certificado'), findsNothing);
+    expect(find.textContaining('verificado'), findsNothing);
+    expect(find.textContaining('garantido'), findsNothing);
+    expect(find.textContaining('pagamento seguro'), findsNothing);
+  });
+
+  testWidgets('perfil publico sem aprovacao nao mostra seccao de categorias',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db);
+
+    await _pumpProfile(tester, db: db);
+    await _scrollProfileDown(tester);
+
+    expect(find.text('Categorias com aprovacao'), findsNothing);
+    expect(find.text('Aprovacao ativa'), findsNothing);
+  });
+
   testWidgets('perfil sem foto mostra fallback com inicial', (tester) async {
     final db = FakeFirebaseFirestore();
     await _seedPrestador(db, overrides: {'photoUrl': ''});

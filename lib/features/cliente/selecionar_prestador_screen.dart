@@ -36,6 +36,7 @@ enum _OrdenacaoPrestador { balanceado, proximidade, avaliacao }
 class SelecionarPrestadorScreen extends StatefulWidget {
   final String? servicoId;
   final String? servicoNome;
+  final bool categoryApprovalRequired;
   final double? latitude;
   final double? longitude;
 
@@ -43,6 +44,7 @@ class SelecionarPrestadorScreen extends StatefulWidget {
     super.key,
     this.servicoId,
     this.servicoNome,
+    this.categoryApprovalRequired = false,
     this.latitude,
     this.longitude,
   });
@@ -109,7 +111,12 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
           ? categoriaId
           : (categoriaNome.isNotEmpty ? categoriaNome : '');
       if (filtro.isNotEmpty) {
-        query = query.where('categories', arrayContains: filtro);
+        query = widget.categoryApprovalRequired && categoriaId.isNotEmpty
+            ? query.where(
+                'approvedSensitiveCategoryIds',
+                arrayContains: categoriaId,
+              )
+            : query.where('categories', arrayContains: filtro);
       }
 
       final snapshot = await query.limit(50).get();
@@ -151,6 +158,8 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
     final city = (data['city'] ?? data['cidade'])?.toString();
     final state = (data['state'] ?? data['estado'])?.toString();
     final country = (data['country'] ?? data['pais'])?.toString();
+    final approvedSensitiveCategoryNames =
+        _stringList(data['approvedSensitiveCategoryNames']);
 
     final distanciaKm = _calcularDistanciaKm(data);
 
@@ -164,7 +173,18 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
       city: city,
       state: state,
       country: country,
+      approvedSensitiveCategoryNames: approvedSensitiveCategoryNames,
     );
+  }
+
+  List<String> _stringList(Object? value) {
+    if (value is Iterable) {
+      return value
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+    return const <String>[];
   }
 
   double? _calcularDistanciaKm(Map<String, dynamic> data) {
@@ -323,7 +343,13 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                 : (_erro != null)
                     ? const Center(child: Text('Erro ao carregar prestadores'))
                     : _visiveis.isEmpty
-                        ? const Center(child: Text('Sem prestadores'))
+                        ? Center(
+                            child: Text(
+                              widget.categoryApprovalRequired
+                                  ? 'Ainda nao ha prestadores aprovados para esta categoria.'
+                                  : 'Sem prestadores',
+                            ),
+                          )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                             itemCount: _visiveis.length,
@@ -470,6 +496,36 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
                                                   ),
                                                 ),
                                               ],
+                                              if (item
+                                                  .approvedSensitiveCategoryNames
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 6),
+                                                Wrap(
+                                                  spacing: 6,
+                                                  runSpacing: 6,
+                                                  children: [
+                                                    Chip(
+                                                      visualDensity:
+                                                          VisualDensity.compact,
+                                                      label: const Text(
+                                                        'Aprovacao ativa',
+                                                      ),
+                                                      backgroundColor:
+                                                          colorScheme
+                                                              .primaryContainer,
+                                                    ),
+                                                    for (final category in item
+                                                        .approvedSensitiveCategoryNames
+                                                        .take(2))
+                                                      Chip(
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                        label: Text(category),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ],
                                             ],
                                           ),
                                         ),
@@ -538,6 +594,7 @@ class _PrestadorItem {
   final String? city;
   final String? state;
   final String? country;
+  final List<String> approvedSensitiveCategoryNames;
 
   const _PrestadorItem({
     required this.id,
@@ -549,5 +606,6 @@ class _PrestadorItem {
     required this.city,
     required this.state,
     required this.country,
+    required this.approvedSensitiveCategoryNames,
   });
 }

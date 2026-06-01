@@ -28,6 +28,10 @@ class PedidosRepo {
     String? tipoPreco,
     String? tipoPagamento,
     List<String>? anexos,
+    bool categoryApprovalRequired = false,
+    String? categoryRequirementId,
+    String? categoryRequirementName,
+    String? categoryRiskLevel,
   }) async {
     final categoriaFinal =
         (servicoNome != null && servicoNome.trim().isNotEmpty)
@@ -68,6 +72,17 @@ class PedidosRepo {
       if (geo != null) 'geo': geo,
       'enderecoTexto': enderecoTexto,
       if (anexos != null) 'anexos': anexos,
+      if (categoryApprovalRequired) ...{
+        'categoryApprovalRequired': true,
+        if (categoryRequirementId != null &&
+            categoryRequirementId.trim().isNotEmpty)
+          'categoryRequirementId': categoryRequirementId.trim(),
+        if (categoryRequirementName != null &&
+            categoryRequirementName.trim().isNotEmpty)
+          'categoryRequirementName': categoryRequirementName.trim(),
+        if (categoryRiskLevel != null && categoryRiskLevel.trim().isNotEmpty)
+          'categoryRiskLevel': categoryRiskLevel.trim(),
+      },
       'statusProposta': 'nenhuma',
       'statusConfirmacaoValor': 'nenhum',
     });

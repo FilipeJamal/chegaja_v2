@@ -74,6 +74,10 @@ class ProviderSearchCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (profile.hasApprovedSensitiveCategories) ...[
+                    const SizedBox(height: AppSpacing.x2),
+                    _ApprovedCategorySummary(profile: profile),
+                  ],
                   if (location.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x1),
                     Row(
@@ -172,6 +176,51 @@ class ProviderSearchCard extends StatelessWidget {
     final value = profile.handle?.trim();
     if (value == null || value.isEmpty) return '';
     return value.startsWith('@') ? value : '@$value';
+  }
+}
+
+class _ApprovedCategorySummary extends StatelessWidget {
+  const _ApprovedCategorySummary({required this.profile});
+
+  final ProviderSearchProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final names = profile.approvedSensitiveCategoryNames.take(2).toList();
+
+    return Wrap(
+      spacing: AppSpacing.x1,
+      runSpacing: AppSpacing.x1,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Text(
+            'Categoria aprovada',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        for (final name in names)
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+      ],
+    );
   }
 }
 

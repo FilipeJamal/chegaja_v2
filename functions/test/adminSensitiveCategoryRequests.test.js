@@ -149,6 +149,15 @@ describe("Admin sensitive category request Functions", () => {
         assert.strictEqual(approval.data().approvedBy, "admin1");
         assert.ok(approval.data().approvedAt);
 
+        const provider = await db.collection("prestadores").doc("provider1").get();
+        assert.strictEqual(provider.exists, true);
+        assert.deepStrictEqual(provider.data().approvedSensitiveCategoryIds, ["electricity"]);
+        assert.deepStrictEqual(provider.data().approvedSensitiveCategoryNames, ["Eletricidade"]);
+        assert.ok(provider.data().categoryApprovalsUpdatedAt);
+        assert.strictEqual(provider.data().evidenceText, undefined);
+        assert.strictEqual(provider.data().documentRefs, undefined);
+        assert.strictEqual(provider.data().portfolioUrls, undefined);
+
         const logs = await db.collection("adminAuditLogs").get();
         assert.strictEqual(logs.docs.length, 1);
         const log = logs.docs[0].data();
@@ -201,6 +210,13 @@ describe("Admin sensitive category request Functions", () => {
             .collection("categoryApprovals")
             .get();
         assert.strictEqual(approvals.empty, true);
+
+        const provider = await db.collection("prestadores").doc("provider1").get();
+        if (provider.exists) {
+            assert.strictEqual(provider.data().approvedSensitiveCategoryIds, undefined);
+            assert.strictEqual(provider.data().approvedSensitiveCategoryNames, undefined);
+            assert.strictEqual(provider.data().categoryApprovalsUpdatedAt, undefined);
+        }
 
         const logs = await db.collection("adminAuditLogs").get();
         const actions = logs.docs.map((doc) => doc.data().action).sort();

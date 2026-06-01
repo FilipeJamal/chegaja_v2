@@ -4,8 +4,8 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.20 ativa com spec/auditoria, modelo tecnico, UI do prestador e admin leve
-para categorias sensiveis.
+M2.20 ativa com spec/auditoria, modelo tecnico, UI do prestador, admin leve e
+integracao inicial de aprovacoes em perfil/discovery/pedido.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -18,7 +18,8 @@ M2.20.1 - FECHADA com spec e auditoria
 M2.20.2 - FECHADA com modelo, service e Rules
 M2.20.3 - FECHADA com UI do prestador para pedido de aprovacao
 M2.20.4 - FECHADA com admin leve para analisar comprovativos
-M2.20.5 - PROXIMO passo
+M2.20.5 - FECHADA com integracao em perfil/discovery/pedido
+M2.20.6 - PROXIMO passo
 ```
 
 Blocos relacionados:
@@ -84,6 +85,17 @@ aprovado e registar `adminAuditLogs` pequenos. Nao houve upload real,
 visualizacao de documentos privados, KYC, badges publicos, discovery/matching,
 pagamentos ou deploy.
 
+Na M2.20.5 as aprovacoes admin passaram a publicar resumo publico seguro em
+`prestadores/{uid}` (`approvedSensitiveCategoryIds`,
+`approvedSensitiveCategoryNames`, `categoryApprovalsUpdatedAt`), protegido por
+Rules contra escrita client-side. O perfil publico e o discovery mostram
+categorias com aprovacao usando linguagem conservadora, e pedidos sensiveis
+criados pelo cliente passam a gravar `categoryApprovalRequired` e metadados
+auxiliares. O aceite direto respeita aprovacao nas Rules e as
+propostas/orcamentos passam pela mesma regra no `PedidoService`.
+Nao houve upload real, KYC, Storage Rules, badges "certificado/verificado",
+ranking avancado, pagamentos ou deploy.
+
 ## Atualizacao M2.20.3 - UI do Prestador
 
 Arquivos criados:
@@ -124,9 +136,10 @@ usa SensitiveCategories como base;
 nao cria aprovacao falsa.
 ```
 
-Textos seguros continuam obrigatorios. A UI privada pode mostrar "Aprovacao
-ativa" ou "Categoria aprovada" quando houver approval real, mas o perfil publico
-continua sem badge publico nesta fase.
+Textos seguros continuam obrigatorios. A UI privada e o perfil publico podem
+mostrar "Aprovacao ativa", "Categoria aprovada" ou "Categorias com aprovacao"
+quando houver approval real, mas continuam proibidos "certificado",
+"verificado", "garantido" e "aprovado oficialmente".
 
 ## Atualizacao M2.20.4 - Admin de Comprovativos
 
@@ -661,20 +674,69 @@ gravar audit log.
 
 Nao criar admin enterprise nem roles granulares nesta fase.
 
-## Impacto em Discovery, Perfil e Pedidos
+## Atualizacao M2.20.5 - Perfil, Discovery e Pedido
 
-Decisao recomendada inicial:
+Arquivos principais atualizados:
 
 ```text
-prestador sem aprovacao pode selecionar categoria sensivel, mas ela fica marcada como "em analise" ou "requer aprovacao";
-prestador nao deve aparecer como aprovado naquela categoria sem approval real;
-perfil publico nao deve mostrar badge positivo sem approval;
-discovery pode continuar mostrando servicos, mas sem afirmar qualificacao;
-matching/pedido em categoria sensivel deve ser endurecido em fase futura, depois de modelo e admin existirem.
+functions/index.js
+firestore.rules
+lib/core/models/pedido.dart
+lib/core/repositories/pedido_repo.dart
+lib/core/services/pedido_service.dart
+lib/features/common/perfil_publico_screen.dart
+lib/features/cliente/discovery/provider_search_profile.dart
+lib/features/cliente/discovery/widgets/provider_search_card.dart
+lib/features/cliente/novo_pedido_screen.dart
+lib/features/cliente/selecionar_prestador_screen.dart
+lib/features/prestador/prestador_home_screen.dart
 ```
 
-Antes de producao publica em escala, categorias sensiveis devem ter enforcement
-server-side em Functions/Rules quando aplicavel.
+Comportamento:
+
+```text
+admin approve atualiza resumo publico minimo no prestador;
+resumo publico nao inclui evidencia completa nem documentos;
+prestador nao consegue escrever campos de resumo diretamente;
+perfil publico mostra categorias com aprovacao quando existe resumo real;
+discovery/card mapeia e mostra aprovacao com linguagem segura;
+pedido sensivel mostra aviso ao cliente;
+pedido sensivel grava categoryApprovalRequired e metadados auxiliares;
+aceite direto exige approvedSensitiveCategoryIds nas Rules quando o pedido exige
+aprovacao;
+propostas/orcamentos exigem approvedSensitiveCategoryIds no `PedidoService`.
+```
+
+Limites:
+
+```text
+sem upload real;
+sem KYC;
+sem documentos privados;
+sem badge "certificado";
+sem ranking avancado;
+sem deploy.
+```
+
+## Impacto em Discovery, Perfil e Pedidos
+
+Decisao implementada na M2.20.5:
+
+```text
+prestador sem aprovacao nao aparece como aprovado naquela categoria;
+perfil publico so mostra categoria aprovada com approval real;
+discovery mostra apenas indicacao discreta baseada no resumo publico seguro;
+pedido sensivel grava categoryApprovalRequired;
+aceite direto exige approvedSensitiveCategoryIds nas Rules quando
+categoryApprovalRequired == true;
+propostas/orcamentos exigem approvedSensitiveCategoryIds no `PedidoService`.
+```
+
+Enforcement server-side inicial foi adicionado nas Rules para aceite direto de
+pedidos marcados com `categoryApprovalRequired == true`; propostas/orcamentos
+ficam protegidos pelo `PedidoService` para evitar ultrapassar o limite de
+expressoes das Firestore Rules. Expiracao, revogacao e politica completa de
+revisao ficam para fase futura.
 
 ## Relacao com KYC
 
@@ -700,8 +762,8 @@ documento de identidade, selfie/liveness e comprovativo profissional.
 | M2.20.2 | FECHADO | Modelo de categoria sensivel e pedido de aprovacao |
 | M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FECHADO | Admin leve para analisar comprovativos |
-| M2.20.5 | PROXIMO | Integracao com perfil/discovery/pedido |
-| M2.20.6 | FUTURO | Testes, E2E, QA visual e documentacao final |
+| M2.20.5 | FECHADO | Integracao com perfil/discovery/pedido |
+| M2.20.6 | PROXIMO | Testes, E2E, QA visual e documentacao final |
 
 ## Riscos
 
@@ -713,12 +775,13 @@ deixar categoria sensivel entrar como normal;
 bloquear categorias legitimas por excesso;
 falta de expiracao/revisao de aprovacao;
 upload privado real ainda inexistente;
-enforcement em discovery/matching ainda inexistente;
-badges publicos ainda fora;
+seed/configuracao operacional de categoryRequirements ainda pendente;
+badges fortes continuam fora;
 custos de Storage;
 privacidade/GDPR;
 responsabilidade juridica por categorias sensiveis;
-server-side enforcement ainda inexistente;
+server-side enforcement cobre apenas pedidos marcados como categoryApprovalRequired;
+Rules protegem aceite direto e `PedidoService` protege propostas/orcamentos;
 modelos duplicados entre prestadores, requests e catalogo.
 ```
 
@@ -735,7 +798,7 @@ audit log e criado;
 documento privado nao e publico;
 perfil nao mostra badge sem aprovacao;
 discovery nao mostra estado falso;
-pedido em categoria sensivel respeita regra futura;
+pedido em categoria sensivel respeita aprovacao;
 Rules bloqueiam escrita indevida;
 Storage Rules protegem comprovativos privados.
 ```
@@ -759,21 +822,21 @@ fechar R1;
 fechar M2.6.
 ```
 
-## Decisao Recomendada para M2.20.5
+## Decisao Recomendada para M2.20.6
 
-Integrar as aprovacoes com perfil, discovery e pedido sem criar promessas
-publicas falsas:
+Fechar a M2.20 com validacao final sem criar feature nova:
 
 ```text
-usar ProviderCategoryApproval como fonte de decisao;
-prestador sem approval nao deve aparecer como aprovado naquela categoria;
-perfil publico nao deve mostrar selo positivo sem approval real;
-discovery nao deve sugerir qualificacao sem approval real;
-pedido/matching deve comecar a respeitar categorias sensiveis;
+testes Functions/Rules;
+testes Flutter completos;
+E2E principal;
+QA visual;
+documentacao final;
 nao criar KYC;
-nao criar upload privado real ainda;
-nao criar selo "certificado" publico.
+nao criar upload privado real;
+nao criar selo "certificado" publico;
+nao fazer deploy.
 ```
 
-M2.20.5 deve usar os approvals aprovados pela M2.20.4 como base. Upload
-privado, KYC e badges publicos continuam fora ate decisao explicita.
+M2.20.6 deve validar o bloco no escopo atual e apontar o proximo bloco sem
+iniciar trabalho novo.

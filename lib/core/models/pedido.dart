@@ -24,6 +24,10 @@ class Pedido {
   // Serviço / categoria
   final String servicoId;
   final String? servicoNome; // opcional, só para mostrar na UI
+  final bool categoryApprovalRequired;
+  final String? categoryRequirementId;
+  final String? categoryRequirementName;
+  final String? categoryRiskLevel;
 
   // Dados básicos
   final String titulo;
@@ -149,6 +153,10 @@ class Pedido {
     required this.prestadorId,
     required this.servicoId,
     this.servicoNome,
+    this.categoryApprovalRequired = false,
+    this.categoryRequirementId,
+    this.categoryRequirementName,
+    this.categoryRiskLevel,
     required this.titulo,
     required this.descricao,
     required this.modo,
@@ -191,6 +199,10 @@ class Pedido {
       prestadorId: null,
       servicoId: '',
       servicoNome: null,
+      categoryApprovalRequired: false,
+      categoryRequirementId: null,
+      categoryRequirementName: null,
+      categoryRiskLevel: null,
       titulo: '',
       descricao: '',
       modo: 'IMEDIATO',
@@ -272,9 +284,13 @@ class Pedido {
       // 1) servicoNome (novo)
       // 2) categoria (antigo)
       // 3) servicoId (fallback para não ficar "Categoria não definida")
-      servicoNome:
-          (data['servicoNome'] ?? data['categoria'] ?? data['servicoId'])
-              as String?,
+      servicoNome: (data['servicoNome'] ??
+          data['categoria'] ??
+          data['servicoId']) as String?,
+      categoryApprovalRequired: data['categoryApprovalRequired'] == true,
+      categoryRequirementId: data['categoryRequirementId'] as String?,
+      categoryRequirementName: data['categoryRequirementName'] as String?,
+      categoryRiskLevel: data['categoryRiskLevel'] as String?,
       titulo: data['titulo'] as String? ?? '',
       descricao: data['descricao'] as String? ?? '',
       modo: data['modo'] as String? ?? 'IMEDIATO',
@@ -284,12 +300,9 @@ class Pedido {
       tipoPagamento: data['tipoPagamento'] as String? ?? 'dinheiro',
 
       // Proposta de faixa de preço
-      valorMinEstimadoPrestador:
-          _toDouble(data['valorMinEstimadoPrestador']),
-      valorMaxEstimadoPrestador:
-          _toDouble(data['valorMaxEstimadoPrestador']),
-      mensagemPropostaPrestador:
-          data['mensagemPropostaPrestador'] as String?,
+      valorMinEstimadoPrestador: _toDouble(data['valorMinEstimadoPrestador']),
+      valorMaxEstimadoPrestador: _toDouble(data['valorMaxEstimadoPrestador']),
+      mensagemPropostaPrestador: data['mensagemPropostaPrestador'] as String?,
 
       statusProposta: data['statusProposta'] as String? ?? 'nenhuma',
       propostaExpiresAt: _tsToDate(data['propostaExpiresAt']),
@@ -326,8 +339,9 @@ class Pedido {
 
       anexos: _toStringList(data['anexos']),
       historico: (data['historico'] as List?)
-              ?.map((e) =>
-                  PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),)
+              ?.map(
+                (e) => PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );
@@ -344,9 +358,13 @@ class Pedido {
       clienteId: _stringOrEmpty(rawClienteId),
       prestadorId: data['prestadorId'] as String?,
       servicoId: data['servicoId'] as String? ?? '',
-      servicoNome:
-          (data['servicoNome'] ?? data['categoria'] ?? data['servicoId'])
-              as String?,
+      servicoNome: (data['servicoNome'] ??
+          data['categoria'] ??
+          data['servicoId']) as String?,
+      categoryApprovalRequired: data['categoryApprovalRequired'] == true,
+      categoryRequirementId: data['categoryRequirementId'] as String?,
+      categoryRequirementName: data['categoryRequirementName'] as String?,
+      categoryRiskLevel: data['categoryRiskLevel'] as String?,
       titulo: data['titulo'] as String? ?? '',
       descricao: data['descricao'] as String? ?? '',
       modo: data['modo'] as String? ?? 'IMEDIATO',
@@ -355,12 +373,9 @@ class Pedido {
       tipoPagamento: data['tipoPagamento'] as String? ?? 'dinheiro',
 
       // Proposta de faixa de preço
-      valorMinEstimadoPrestador:
-          _toDouble(data['valorMinEstimadoPrestador']),
-      valorMaxEstimadoPrestador:
-          _toDouble(data['valorMaxEstimadoPrestador']),
-      mensagemPropostaPrestador:
-          data['mensagemPropostaPrestador'] as String?,
+      valorMinEstimadoPrestador: _toDouble(data['valorMinEstimadoPrestador']),
+      valorMaxEstimadoPrestador: _toDouble(data['valorMaxEstimadoPrestador']),
+      mensagemPropostaPrestador: data['mensagemPropostaPrestador'] as String?,
 
       statusProposta: data['statusProposta'] as String? ?? 'nenhuma',
       propostaExpiresAt: _tsToDate(data['propostaExpiresAt']),
@@ -396,8 +411,9 @@ class Pedido {
 
       anexos: _toStringList(data['anexos']),
       historico: (data['historico'] as List?)
-              ?.map((e) =>
-                  PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),)
+              ?.map(
+                (e) => PedidoHistoricoItem.fromMap(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
     );
@@ -413,6 +429,17 @@ class Pedido {
       'servicoId': servicoId,
       'servicoNome': servicoNome,
       'categoria': servicoNome, // compatibilidade antiga
+      if (categoryApprovalRequired) ...{
+        'categoryApprovalRequired': true,
+        if (categoryRequirementId != null &&
+            categoryRequirementId!.trim().isNotEmpty)
+          'categoryRequirementId': categoryRequirementId!.trim(),
+        if (categoryRequirementName != null &&
+            categoryRequirementName!.trim().isNotEmpty)
+          'categoryRequirementName': categoryRequirementName!.trim(),
+        if (categoryRiskLevel != null && categoryRiskLevel!.trim().isNotEmpty)
+          'categoryRiskLevel': categoryRiskLevel!.trim(),
+      },
       'titulo': titulo,
       'descricao': descricao,
       'modo': modo,
@@ -468,9 +495,8 @@ class Pedido {
       'criadoEm': Timestamp.fromDate(createdAt),
 
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
-      'concluidoEm':
-          updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
-      
+      'concluidoEm': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+
       'anexos': anexos,
       'historico': historico.map((e) => e.toMap()).toList(),
     };
@@ -484,6 +510,10 @@ class Pedido {
     String? prestadorId,
     String? servicoId,
     String? servicoNome,
+    bool? categoryApprovalRequired,
+    String? categoryRequirementId,
+    String? categoryRequirementName,
+    String? categoryRiskLevel,
     String? titulo,
     String? descricao,
     String? modo,
@@ -522,6 +552,13 @@ class Pedido {
       prestadorId: prestadorId ?? this.prestadorId,
       servicoId: servicoId ?? this.servicoId,
       servicoNome: servicoNome ?? this.servicoNome,
+      categoryApprovalRequired:
+          categoryApprovalRequired ?? this.categoryApprovalRequired,
+      categoryRequirementId:
+          categoryRequirementId ?? this.categoryRequirementId,
+      categoryRequirementName:
+          categoryRequirementName ?? this.categoryRequirementName,
+      categoryRiskLevel: categoryRiskLevel ?? this.categoryRiskLevel,
       titulo: titulo ?? this.titulo,
       descricao: descricao ?? this.descricao,
       modo: modo ?? this.modo,
@@ -541,8 +578,7 @@ class Pedido {
       precoFinal: precoFinal ?? this.precoFinal,
       statusConfirmacaoValor:
           statusConfirmacaoValor ?? this.statusConfirmacaoValor,
-      commissionPlatform:
-          commissionPlatform ?? this.commissionPlatform,
+      commissionPlatform: commissionPlatform ?? this.commissionPlatform,
       earningsProvider: earningsProvider ?? this.earningsProvider,
       earningsTotal: earningsTotal ?? this.earningsTotal,
       latitude: latitude ?? this.latitude,
@@ -607,6 +643,5 @@ class Pedido {
           : null);
 
   /// Total cobrado ao cliente (se não houver no doc, usa o preço base).
-  double? get earningsTotalEfetivo =>
-      earningsTotal ?? _valorBaseComissao;
+  double? get earningsTotalEfetivo => earningsTotal ?? _valorBaseComissao;
 }

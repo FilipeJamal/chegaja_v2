@@ -912,6 +912,12 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
             final lat = (lastLoc?['lat'] as num?)?.toDouble();
             final lng = (lastLoc?['lng'] as num?)?.toDouble();
             final isOnline = (sdata['isOnline'] as bool?) ?? false;
+            final approvedSensitiveCategoryIds =
+                (sdata['approvedSensitiveCategoryIds'] as List?)
+                        ?.map((e) => e.toString().trim())
+                        .where((e) => e.isNotEmpty)
+                        .toSet() ??
+                    <String>{};
 
             if (!isOnline) {
               _resetDisponiveis();
@@ -927,9 +933,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
             }
 
             bool matchesService(Pedido p) {
-              if (servicos.contains(p.servicoId)) return true;
-              final nome = p.servicoNome ?? p.categoria;
-              return nome != null && servicosNomes.contains(nome);
+              final serviceMatches = servicos.contains(p.servicoId) ||
+                  ((p.servicoNome ?? p.categoria) != null &&
+                      servicosNomes.contains(p.servicoNome ?? p.categoria));
+              if (!serviceMatches) return false;
+              if (!p.categoryApprovalRequired) return true;
+              final requiredCategory =
+                  (p.categoryRequirementId ?? p.servicoId).trim();
+              return requiredCategory.isNotEmpty &&
+                  approvedSensitiveCategoryIds.contains(requiredCategory);
             }
 
             bool matchesDistance(Pedido p) {

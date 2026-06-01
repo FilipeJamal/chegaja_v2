@@ -206,6 +206,12 @@ class PedidoService {
 
     final servicoId = pedido.servicoId.trim();
     final servicoNome = (pedido.servicoNome ?? pedido.categoria ?? '').trim();
+    final approvedSensitiveCategoryIds =
+        (data?['approvedSensitiveCategoryIds'] as List?)
+                ?.map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty)
+                .toSet() ??
+            <String>{};
 
     final matches = (servicoId.isNotEmpty && ids.contains(servicoId)) ||
         (servicoNome.isNotEmpty && nomes.contains(servicoNome));
@@ -217,6 +223,17 @@ class PedidoService {
       throw Exception(
         'Nao podes aceitar este pedido: o teu perfil nao esta inscrito no servico "$label".',
       );
+    }
+
+    if (pedido.categoryApprovalRequired) {
+      final requiredCategory =
+          (pedido.categoryRequirementId ?? pedido.servicoId).trim();
+      if (requiredCategory.isEmpty ||
+          !approvedSensitiveCategoryIds.contains(requiredCategory)) {
+        throw Exception(
+          'Este servico exige prestador com aprovacao na categoria.',
+        );
+      }
     }
   }
 
