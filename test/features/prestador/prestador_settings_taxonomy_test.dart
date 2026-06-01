@@ -199,6 +199,42 @@ void main() {
     expect(find.text('zzzxqo qqqyyy'), findsNothing);
   });
 
+  testWidgets('PrestadorServiceTaxonomySelector abre formulario ao tocar Outro',
+      (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+    var customServices = <ProviderCustomService>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+              customServices: customServices,
+              onCustomServicesChanged: (value) => customServices = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Outros'));
+    await tester.pumpAndSettle();
+    final otherTile =
+        find.byKey(const Key('prestador_subcategory_other_service'));
+    await tester.ensureVisible(otherTile);
+    await tester.tap(otherTile);
+    await tester.pumpAndSettle();
+
+    expect(selected, isNot(contains('other_service')));
+    expect(find.text('Descreve o teu serviço'), findsOneWidget);
+    expect(find.byKey(const Key('custom_service_name_field')), findsOneWidget);
+    expect(find.text('Adicionar serviço personalizado'), findsOneWidget);
+  });
+
   testWidgets('PrestadorServiceTaxonomySelector bloqueia servico proibido', (
     WidgetTester tester,
   ) async {

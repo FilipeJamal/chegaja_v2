@@ -685,7 +685,11 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     if (user == null) return;
     final l10n = AppLocalizations.of(context)!;
 
-    if (_servicosSelecionados.isEmpty) {
+    final servicosSelecionadosValidos = _servicosSelecionados
+        .where((id) => id != ServiceTaxonomyCatalog.otherSubcategory.id)
+        .toSet();
+
+    if (servicosSelecionadosValidos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.providerServicesSelectAtLeastOne),
@@ -703,13 +707,13 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           FirebaseFirestore.instance.collection('prestadores').doc(user.uid);
 
       final selecionadosLegados = _todosServicos
-          .where((s) => _servicosSelecionados.contains(s.id))
+          .where((s) => servicosSelecionadosValidos.contains(s.id))
           .toList();
       final selecionadosTaxonomia = ServiceTaxonomyCatalog.subcategories
-          .where((s) => _servicosSelecionados.contains(s.id))
+          .where((s) => servicosSelecionadosValidos.contains(s.id))
           .toList();
       final selecionadosPersonalizados = _customServices
-          .where((s) => _servicosSelecionados.contains(s.id))
+          .where((s) => servicosSelecionadosValidos.contains(s.id))
           .where((s) => s.trustSafetyDecision != 'block')
           .toList();
       final ids = <String>{
@@ -737,8 +741,9 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           // estes nomes são usados para bater com pedido.categoria
           'servicosNomes': nomes,
           'customServices': customServices,
-          'customServiceNames':
-              selecionadosPersonalizados.map((service) => service.name).toList(),
+          'customServiceNames': selecionadosPersonalizados
+              .map((service) => service.name)
+              .toList(),
           'customServiceSearchTerms': customServiceSearchTerms,
           if (selecionadosPersonalizados.isNotEmpty)
             'customServiceUpdatedAt': FieldValue.serverTimestamp(),
@@ -1342,7 +1347,14 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                             setState(() {
                               _servicosSelecionados
                                 ..clear()
-                                ..addAll(value);
+                                ..addAll(
+                                  value.where(
+                                    (id) =>
+                                        id !=
+                                        ServiceTaxonomyCatalog
+                                            .otherSubcategory.id,
+                                  ),
+                                );
                             });
                           },
                           customServices: _customServices,

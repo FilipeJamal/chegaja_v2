@@ -52,6 +52,10 @@ class _PrestadorServiceTaxonomySelectorState
   }
 
   void _toggle(ServiceTaxonomySubcategory subcategory) {
+    if (subcategory.id == ServiceTaxonomyCatalog.otherSubcategory.id) {
+      _focusCustomServiceName();
+      return;
+    }
     final next = {...widget.selectedSubcategoryIds};
     if (!next.add(subcategory.id)) {
       next.remove(subcategory.id);
@@ -149,7 +153,18 @@ class _PrestadorServiceTaxonomySelectorState
 
   void _focusCustomServiceName() {
     _syncCustomName(_queryController.text);
-    setState(() => _customServiceFormOpen = true);
+    final nextSelected = {...widget.selectedSubcategoryIds}
+      ..remove(ServiceTaxonomyCatalog.otherSubcategory.id);
+    if (nextSelected.length != widget.selectedSubcategoryIds.length) {
+      widget.onChanged(nextSelected);
+    }
+    setState(() {
+      _selectedCategoryId =
+          ServiceTaxonomyCatalog.otherSubcategory.parentCategoryId;
+      _customServiceMessage = null;
+      _customServiceMessageIsError = false;
+      _customServiceFormOpen = true;
+    });
     _customNameFocus.requestFocus();
   }
 
@@ -187,8 +202,12 @@ class _PrestadorServiceTaxonomySelectorState
         .toList(growable: false);
     final query = _queryController.text.trim();
     final visibleSubcategories = _visibleSubcategories();
-    final showCustomServiceForm =
-        _customServiceFormOpen || _isCustomFallbackQuery(query);
+    final genericOtherSelected = widget.selectedSubcategoryIds.contains(
+      ServiceTaxonomyCatalog.otherSubcategory.id,
+    );
+    final showCustomServiceForm = _customServiceFormOpen ||
+        _isCustomFallbackQuery(query) ||
+        genericOtherSelected;
 
     return Container(
       width: double.infinity,
@@ -274,13 +293,13 @@ class _PrestadorServiceTaxonomySelectorState
             for (final subcategory in visibleSubcategories)
               _ProviderSubcategoryTile(
                 subcategory: subcategory,
-                selected: widget.selectedSubcategoryIds.contains(
-                  subcategory.id,
-                ),
-                onTap:
-                    showCustomServiceForm && subcategory.id == 'other_service'
-                        ? _focusCustomServiceName
-                        : () => _toggle(subcategory),
+                selected:
+                    subcategory.id == ServiceTaxonomyCatalog.otherSubcategory.id
+                        ? false
+                        : widget.selectedSubcategoryIds.contains(
+                            subcategory.id,
+                          ),
+                onTap: () => _toggle(subcategory),
               ),
           if (showCustomServiceForm) ...[
             const SizedBox(height: 8),
@@ -340,6 +359,7 @@ class _ProviderSubcategoryTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
+        key: Key('prestador_subcategory_${subcategory.id}'),
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Container(
