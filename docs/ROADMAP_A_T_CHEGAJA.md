@@ -36,11 +36,11 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | C | PARCIAL | Valores, ganhos, comissao e financeiro interno | Comissao 15/85, valor final e Functions autoritativas estao feitos. Falta pagamento real. |
 | D | PARCIAL | Mapa, localizacao, raio e ETA | Existe base de localizacao/raio e prestador online. Falta produto final de mapa/ETA mais completo. |
 | E | PARCIAL | Notificacoes e deep links | FCM/Functions existem, mas Android fisico real ainda falta validar. |
-| F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio e confianca leve; M2.19 fechou link publico/@handle; faltam KYC, comprovativos profissionais, reviews completas e verificacao oficial. |
+| F | PARCIAL | Perfil, portfolio e identidade do prestador | M2.14 fechada no escopo de perfil publico, portfolio e confianca leve; M2.19 fechou link publico/@handle; M2.20 fechou comprovativos profissionais por categoria no escopo atual; faltam KYC, upload real e verificacao oficial. |
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
-| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 iniciou categorias sensiveis/comprovativos; admin enterprise completo ainda falta. |
+| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 fechou categorias sensiveis/comprovativos no escopo atual; admin enterprise completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
 | M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
@@ -210,7 +210,8 @@ denuncias, moderacao e ranking continuam fora.
 | M2.17 | FECHADO | Trust & Safety basico: denuncia, bloqueio, moderacao leve, fila admin inicial, filtros e QA final |
 | M2.18 | FECHADO | Admin/backoffice leve para operacao interna fechado no escopo atual |
 | M2.19 | FECHADO | Link publico, @handle e partilha social fechado no escopo atual; M2.20 proxima |
-| M2.20 | ATIVO | Categorias sensiveis e comprovativos profissionais; M2.20.5 fechada, M2.20.6 proxima |
+| M2.20 | FECHADO | Categorias sensiveis e comprovativos profissionais fechada no escopo atual |
+| M2.21 | PROXIMO | Conta, definicoes e suporte premium |
 
 Estado: M2.16 fechada no escopo atual. M2.17 tambem esta fechada no escopo
 atual de Trust & Safety basico, com spec/auditoria, modelo tecnico minimo, UI
@@ -242,8 +243,9 @@ status, ainda sem KYC, upload real, admin visual ou matching. A M2.20.4 criou
 callables admin, fila "Comprovativos", decisoes approve/reject/needs_more_info,
 `categoryApprovals` quando aprovado e audit logs leves. A M2.20.5 integrou
 aprovacoes com perfil publico, discovery/card, pedido sensivel e matching
-basico via Rules/servico, sem KYC, upload real, badges fortes ou deploy. O
-proximo passo e M2.20.6.
+basico via Rules/servico, sem KYC, upload real, badges fortes ou deploy. A
+M2.20.6 fechou QA final, E2E e documentacao. O proximo bloco recomendado e
+M2.21.
 
 ### M2.16 - Pesquisa Manual e Discovery de Prestadores
 
@@ -384,9 +386,9 @@ ficam fora.
 | M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FECHADO | Admin leve para analisar comprovativos |
 | M2.20.5 | FECHADO | Integracao com perfil/discovery/pedido |
-| M2.20.6 | PROXIMO | Testes, E2E, QA visual e documentacao final da M2.20 |
+| M2.20.6 | FECHADO | Testes, E2E, QA visual e documentacao final da M2.20 |
 
-Estado: M2.20 ativa. A M2.20.1 criou a spec e auditoria documental para
+Estado: M2.20 fechada no escopo atual. A M2.20.1 criou a spec e auditoria documental para
 categorias sensiveis e comprovativos profissionais. A M2.20.2 criou a base
 tecnica: enums/status, `CategoryRequirement`, `SensitiveCategoryRequest`,
 `ProviderCategoryApproval`, `CategoryApprovalService`, `categoryRequirements`,
@@ -400,7 +402,9 @@ audit log leve sem copiar evidencia completa. Ainda nao ha upload real, badges
 fortes, ranking avancado, upload privado ou KYC. A M2.20.5 criou resumo publico
 seguro de aprovacoes no prestador, protegeu esses campos em Rules, exibiu
 categorias com aprovacao no perfil/discovery e endureceu pedidos sensiveis com
-`categoryApprovalRequired`. O proximo passo e M2.20.6.
+`categoryApprovalRequired`. A M2.20.6 validou o bloco com testes, Functions,
+Flutter completo, build Web, E2E, QA visual e documentacao final. Upload real,
+KYC, badges fortes, ranking avancado, pagamentos e deploy continuam fora.
 
 ## Bloco I - Pagamentos Reais e Monetizacao
 
@@ -618,12 +622,13 @@ sensiveis e comprovativos profissionais, a M2.20.2 criou a base tecnica de
 modelo/service/Rules, a M2.20.3 criou a UI do prestador para pedir aprovacao,
 e a M2.20.4 criou o admin leve de comprovativos com callables, approvals e
 audit logs. A M2.20.5 integrou aprovacoes com perfil/discovery/pedido e matching
-basico, sem upload real, KYC, Storage Rules ou deploy.
+basico. A M2.20.6 fechou o bloco com testes, E2E, QA visual e documentacao
+final, sem upload real, KYC, Storage Rules ou deploy.
 
 Fase operacional:
 
 ```text
-M2.20.6 - Testes, E2E, QA visual e documentacao final
+M2.21 - Conta, definicoes e suporte premium
 ```
 
 Dependencias pausadas:

@@ -4,8 +4,8 @@ Data: 2026-05-31
 
 ## Estado
 
-M2.20 ativa com spec/auditoria, modelo tecnico, UI do prestador, admin leve e
-integracao inicial de aprovacoes em perfil/discovery/pedido.
+M2.20 fechada no escopo atual de categorias sensiveis e comprovativos
+profissionais.
 
 ```text
 M2.14 - FECHADA no escopo atual de perfil, portfolio e confianca leve
@@ -14,12 +14,13 @@ M2.16 - FECHADA no escopo atual de pesquisa manual/discovery
 M2.17 - FECHADA no escopo atual de Trust & Safety basico
 M2.18 - FECHADA no escopo atual de Admin/backoffice leve
 M2.19 - FECHADA no escopo atual de link publico, @handle e partilha social
+M2.20 - FECHADA no escopo atual de categorias sensiveis e comprovativos profissionais
 M2.20.1 - FECHADA com spec e auditoria
 M2.20.2 - FECHADA com modelo, service e Rules
 M2.20.3 - FECHADA com UI do prestador para pedido de aprovacao
 M2.20.4 - FECHADA com admin leve para analisar comprovativos
 M2.20.5 - FECHADA com integracao em perfil/discovery/pedido
-M2.20.6 - PROXIMO passo
+M2.20.6 - FECHADA com QA final, E2E e documentacao
 ```
 
 Blocos relacionados:
@@ -95,6 +96,11 @@ auxiliares. O aceite direto respeita aprovacao nas Rules e as
 propostas/orcamentos passam pela mesma regra no `PedidoService`.
 Nao houve upload real, KYC, Storage Rules, badges "certificado/verificado",
 ranking avancado, pagamentos ou deploy.
+
+Na M2.20.6 o bloco foi fechado com documentacao final, testes focados,
+Functions/Rules, Flutter completo, build Web, E2E e QA visual. A decisao final
+mantem fora upload real, documentos privados, KYC, selfie/liveness, badges
+"certificado/verificado", ranking avancado, pagamentos e deploy.
 
 ## Atualizacao M2.20.3 - UI do Prestador
 
@@ -763,7 +769,7 @@ documento de identidade, selfie/liveness e comprovativo profissional.
 | M2.20.3 | FECHADO | UI do prestador para pedir aprovacao |
 | M2.20.4 | FECHADO | Admin leve para analisar comprovativos |
 | M2.20.5 | FECHADO | Integracao com perfil/discovery/pedido |
-| M2.20.6 | PROXIMO | Testes, E2E, QA visual e documentacao final |
+| M2.20.6 | FECHADO | Testes, E2E, QA visual e documentacao final |
 
 ## Riscos
 
@@ -822,21 +828,13 @@ fechar R1;
 fechar M2.6.
 ```
 
-## Decisao Recomendada para M2.20.6
+## Proximo Bloco Recomendado
 
-Fechar a M2.20 com validacao final sem criar feature nova:
+Depois da M2.20, o proximo bloco recomendado e:
 
 ```text
-testes Functions/Rules;
-testes Flutter completos;
-E2E principal;
-QA visual;
-documentacao final;
-nao criar KYC;
-nao criar upload privado real;
-nao criar selo "certificado" publico;
-nao fazer deploy.
+M2.21 - Conta, definicoes e suporte premium
 ```
 
-M2.20.6 deve validar o bloco no escopo atual e apontar o proximo bloco sem
-iniciar trabalho novo.
+M2.21 nao foi iniciada nesta fase. M2.20 fica fechada no escopo atual de
+categorias sensiveis e comprovativos profissionais.
