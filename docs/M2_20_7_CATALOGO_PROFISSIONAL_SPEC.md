@@ -388,9 +388,9 @@ Recomendacao futura:
 
 ## Subfases recomendadas
 
-- M2.20.7 - Catalogo profissional e intencao de servico: spec/auditoria.
-- M2.20.8 - Modelo/taxonomia de catalogo profissional.
-- M2.20.9 - UI profissional de escolha de servico.
+- M2.20.7 - Catalogo profissional e intencao de servico: spec/auditoria. FECHADA.
+- M2.20.8 - Modelo/taxonomia de catalogo profissional. FECHADA.
+- M2.20.9 - UI profissional de escolha de servico. PROXIMO.
 - M2.20.10 - QA final do catalogo profissional.
 - M2.21 - Conta, definicoes e suporte premium.
 
@@ -412,3 +412,16 @@ Recomendacao futura:
 
 A M2.20.8 deve criar a base tecnica de taxonomia, mantendo compatibilidade com o
 catalogo atual e sem refatorar a UI inteira no mesmo passo.
+
+## Estado apos M2.20.8
+
+A M2.20.8 criou `ServiceIntent`, `ServiceTaxonomyCategory`,
+`ServiceTaxonomySubcategory`, catalogo canonico inicial, normalizador textual,
+matcher deterministico e compatibilidade com o catalogo antigo por
+`legacyServicoIds`/`legacyNames`.
+
+O proximo passo passa a ser:
+
+```text
+M2.20.9 - UI profissional de escolha de servico
+```
