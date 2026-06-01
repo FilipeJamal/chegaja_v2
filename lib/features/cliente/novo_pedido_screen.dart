@@ -11,6 +11,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:chegaja_v2/core/catalog/service_intent.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy_matcher.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
@@ -23,6 +27,7 @@ import 'package:chegaja_v2/features/cliente/aguardando_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
+import 'package:chegaja_v2/features/cliente/widgets/service_taxonomy_picker_section.dart';
 
 class NovoPedidoScreen extends StatefulWidget {
   /// Entrada do pedido: 'IMEDIATO', 'AGENDADO' ou 'ORCAMENTO' (atalho para preço por orçamento).
@@ -73,6 +78,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
 
   String? _categoriaNome;
   String? _servicoIdSelecionado;
+  ServiceTaxonomySelection? _taxonomySelection;
+  String? _taxonomyErrorText;
 
   DateTime? _agendadoPara;
   bool _salvando = false;
@@ -91,6 +98,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
 
   bool get isEditing => widget.pedidoInicial != null;
   bool get _modoManual => _modoLocalizacao == _LocalizacaoModo.manual;
+  bool get _isQuoteRequest =>
+      _entradaOrcamento || _taxonomySelection?.intent == ServiceIntent.quote;
 
   @override
   void initState() {
@@ -104,6 +113,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       _descricaoController.text = p.descricao;
       _categoriaNome = p.categoria;
       _servicoIdSelecionado = p.servicoId.isNotEmpty ? p.servicoId : null;
+      _taxonomySelection = _selectionFromServiceFields(
+        servicoId: p.servicoId,
+        servicoNome: p.servicoNome ?? p.categoria,
+        mode: p.tipoPreco == 'por_orcamento' ? 'ORCAMENTO' : p.modo,
+      );
       _agendadoPara = p.agendadoPara;
       _tipoPrecoSelecionado = p.tipoPreco;
       _tipoPagamentoSelecionado = p.tipoPagamento;
@@ -123,6 +137,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       if (widget.servicoInicial != null) {
         _categoriaNome = widget.servicoInicial!.name;
         _servicoIdSelecionado = widget.servicoInicial!.id;
+        _taxonomySelection = _selectionFromServico(widget.servicoInicial!);
       }
 
       // Modo real (gravado no Firestore)
@@ -162,6 +177,74 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     _enderecoTextoController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  ServiceTaxonomySelection? _selectionFromServico(Servico servico) {
+    final subcategory =
+        ServiceTaxonomyCatalog.findSubcategoryById(servico.id) ??
+            ServiceTaxonomyCatalog.mapLegacyServicoToSubcategory(servico);
+    if (subcategory == null) return null;
+    return _selectionForSubcategory(
+      subcategory,
+      ServiceIntentX.fromLegacyMode(
+        _entradaOrcamento ? 'ORCAMENTO' : servico.mode,
+      ),
+    );
+  }
+
+  ServiceTaxonomySelection? _selectionFromServiceFields({
+    required String? servicoId,
+    required String? servicoNome,
+    required String? mode,
+  }) {
+    final subcategory = (servicoId == null || servicoId.trim().isEmpty)
+        ? null
+        : ServiceTaxonomyCatalog.findSubcategoryById(servicoId);
+    final matched = subcategory ??
+        ServiceTaxonomyMatcher.matchServiceQuery(servicoNome ?? '').bestMatch;
+    if (matched == null) return null;
+    return _selectionForSubcategory(
+      matched,
+      ServiceIntentX.fromLegacyMode(mode),
+    );
+  }
+
+  ServiceTaxonomySelection? _selectionForSubcategory(
+    ServiceTaxonomySubcategory subcategory,
+    ServiceIntent intent,
+  ) {
+    final category =
+        ServiceTaxonomyCatalog.findCategoryById(subcategory.parentCategoryId);
+    if (category == null) return null;
+    final safeIntent = subcategory.allowedIntents.contains(intent)
+        ? intent
+        : subcategory.defaultIntent;
+    return ServiceTaxonomySelection(
+      category: category,
+      subcategory: subcategory,
+      intent: safeIntent,
+    );
+  }
+
+  void _onTaxonomySelectionChanged(ServiceTaxonomySelection selection) {
+    setState(() {
+      _taxonomySelection = selection;
+      _taxonomyErrorText = null;
+      _categoriaNome = selection.servicoNome;
+      _servicoIdSelecionado = selection.servicoId;
+      _prestadorSelecionado = null;
+      _modo =
+          selection.intent == ServiceIntent.scheduled ? 'AGENDADO' : 'IMEDIATO';
+      if (_modo != 'AGENDADO') {
+        _agendadoPara = null;
+      }
+      if (selection.intent == ServiceIntent.quote) {
+        _tipoPrecoSelecionado = 'por_orcamento';
+      } else if (!_entradaOrcamento &&
+          _tipoPrecoSelecionado == 'por_orcamento') {
+        _tipoPrecoSelecionado = 'a_combinar';
+      }
+    });
   }
 
   Future<void> _selecionarDataHora() async {
@@ -457,6 +540,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     }
 
     if (_categoriaNome == null || _categoriaNome!.trim().isEmpty) {
+      setState(() => _taxonomyErrorText = l10n.categoryRequiredError);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.categoryRequiredError)),
       );
@@ -466,6 +550,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         curve: Curves.easeOut,
       );
       return;
+    } else if (_taxonomyErrorText != null) {
+      setState(() => _taxonomyErrorText = null);
     }
 
     if (_handleTrustSafetyBeforeSubmit()) return;
@@ -493,7 +579,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
 
       // Modelo de preço / pagamento
       String tipoPreco = _tipoPrecoSelecionado;
-      if (_entradaOrcamento) {
+      if (_isQuoteRequest) {
         tipoPreco = 'por_orcamento';
       }
       final String tipoPagamento = _tipoPagamentoSelecionado;
@@ -615,6 +701,9 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   }
 
   bool get _selectedCategoryApprovalRequired {
+    final taxonomySubcategory = _taxonomySelection?.subcategory;
+    if (taxonomySubcategory?.requiresApproval == true) return true;
+
     final serviceId = (_servicoIdSelecionado ?? '').trim();
     if (serviceId.isNotEmpty &&
         SensitiveCategories.values
@@ -626,6 +715,12 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   }
 
   String? get _selectedSensitiveCategoryId {
+    final taxonomySubcategory = _taxonomySelection?.subcategory;
+    if (taxonomySubcategory?.requiresApproval == true) {
+      return taxonomySubcategory!.sensitiveRequirementId ??
+          taxonomySubcategory.id;
+    }
+
     final serviceId = (_servicoIdSelecionado ?? '').trim();
     if (serviceId.isNotEmpty &&
         SensitiveCategories.values
@@ -660,7 +755,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     if (modo == 'AGENDADO') {
       return l10n.orderTitleHintScheduled;
     }
-    if (_entradaOrcamento) {
+    if (_isQuoteRequest) {
       return l10n.orderTitleHintQuote;
     }
 
@@ -683,7 +778,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     if (modo == 'AGENDADO') {
       return l10n.orderDescriptionHintScheduled;
     }
-    if (_entradaOrcamento) {
+    if (_isQuoteRequest) {
       return l10n.orderDescriptionHintQuote;
     }
 
@@ -691,7 +786,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   }
 
   Widget _buildModeloPrecoSection(AppLocalizations l10n) {
-    final isPorProposta = _entradaOrcamento;
+    final isPorProposta = _isQuoteRequest;
 
     if (isPorProposta) {
       _tipoPrecoSelecionado = 'por_orcamento';
@@ -798,7 +893,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
 
     final isImediato = _modo == 'IMEDIATO';
     final isAgendado = _modo == 'AGENDADO';
-    final isProposta = _entradaOrcamento;
+    final isProposta = _isQuoteRequest;
     final isManual = _modoManual;
 
     String tituloTopo;
@@ -837,25 +932,6 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                   snapshot.connectionState == ConnectionState.waiting &&
                       servicos.isEmpty;
 
-              final nomes = servicos.map((s) => s.name).toList();
-              final servicosFiltrados = [...servicos];
-
-              if (_categoriaNome != null &&
-                  _categoriaNome!.isNotEmpty &&
-                  !nomes.contains(_categoriaNome)) {
-                servicosFiltrados.insert(
-                  0,
-                  Servico(
-                    id: '_custom_${_categoriaNome!}',
-                    name: _categoriaNome!,
-                    mode: _modo,
-                    keywords: const [],
-                    iconKey: null,
-                    isActive: true,
-                  ),
-                );
-              }
-
               return SingleChildScrollView(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(24),
@@ -887,50 +963,6 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      if (_entradaOrcamento) ...[
-                        Text(
-                          l10n.whenServiceNeededLabel,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 10,
-                          children: [
-                            ChoiceChip(
-                              label: Text(l10n.serviceTabImmediate),
-                              selected: _modo == 'IMEDIATO',
-                              onSelected: (v) {
-                                if (!v) return;
-                                setState(() {
-                                  _modo = 'IMEDIATO';
-                                  _agendadoPara = null;
-                                });
-                              },
-                            ),
-                            ChoiceChip(
-                              label: Text(l10n.serviceTabScheduled),
-                              selected: _modo == 'AGENDADO',
-                              onSelected: (v) {
-                                if (!v) return;
-                                setState(() {
-                                  _modo = 'AGENDADO';
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Categoria
-                      Text(
-                        l10n.categoryLabel,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
                       if (loading)
                         const Center(
                           child: Padding(
@@ -939,51 +971,11 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                           ),
                         )
                       else
-                        _CompatDropdownButtonFormField<String>(
-                          value: _servicoIdSelecionado,
-                          items: servicosFiltrados
-                              .map(
-                                (s) => DropdownMenuItem<String>(
-                                  value: s.id,
-                                  child: Text(s.name),
-                                ),
-                              )
-                              .toList(),
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(16)),
-                            ),
-                            hintText: l10n.categoryHint,
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _servicoIdSelecionado = value;
-                              _prestadorSelecionado = null;
-                              if (value == null) {
-                                _categoriaNome = null;
-                                return;
-                              }
-                              final s = servicosFiltrados.firstWhere(
-                                (x) => x.id == value,
-                                orElse: () => servicosFiltrados.first,
-                              );
-                              _categoriaNome = s.name;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return l10n.categoryRequiredError;
-                            }
-                            return null;
-                          },
+                        ServiceTaxonomyPickerSection(
+                          value: _taxonomySelection,
+                          errorText: _taxonomyErrorText,
+                          onChanged: _onTaxonomySelectionChanged,
                         ),
-                      if (_selectedCategoryApprovalRequired) ...[
-                        const SizedBox(height: 10),
-                        _CategoryApprovalRequiredNotice(
-                          categoryName: _categoriaNome,
-                        ),
-                      ],
                       const SizedBox(height: 16),
 
                       if (!isEditing) ...[
@@ -1004,29 +996,39 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                             children: [
                               SizedBox(
                                 width: double.infinity,
-                                child: SegmentedButton<_BuscaPrestadorModo>(
-                                  segments: const [
-                                    ButtonSegment(
-                                      value: _BuscaPrestadorModo.automatico,
-                                      label: Text('Automatico'),
-                                      icon: Icon(Icons.auto_awesome),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _ProviderModeButton(
+                                        label: 'Automatico',
+                                        icon: Icons.auto_awesome,
+                                        selected: _buscaPrestadorModo ==
+                                            _BuscaPrestadorModo.automatico,
+                                        onPressed: () {
+                                          setState(() {
+                                            _buscaPrestadorModo =
+                                                _BuscaPrestadorModo.automatico;
+                                            _prestadorSelecionado = null;
+                                          });
+                                        },
+                                      ),
                                     ),
-                                    ButtonSegment(
-                                      value: _BuscaPrestadorModo.manual,
-                                      label: Text('Manual'),
-                                      icon: Icon(Icons.search),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _ProviderModeButton(
+                                        label: 'Manual',
+                                        icon: Icons.search,
+                                        selected: _buscaPrestadorModo ==
+                                            _BuscaPrestadorModo.manual,
+                                        onPressed: () {
+                                          setState(() {
+                                            _buscaPrestadorModo =
+                                                _BuscaPrestadorModo.manual;
+                                          });
+                                        },
+                                      ),
                                     ),
                                   ],
-                                  selected: {_buscaPrestadorModo},
-                                  onSelectionChanged: (selection) {
-                                    setState(() {
-                                      _buscaPrestadorModo = selection.first;
-                                      if (_buscaPrestadorModo ==
-                                          _BuscaPrestadorModo.automatico) {
-                                        _prestadorSelecionado = null;
-                                      }
-                                    });
-                                  },
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -1477,6 +1479,53 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _ProviderModeButton extends StatelessWidget {
+  const _ProviderModeButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(selected ? Icons.check : icon, size: 18),
+        const SizedBox(width: 8),
+        Flexible(child: Text(label)),
+      ],
+    );
+
+    if (selected) {
+      return FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primaryContainer,
+          foregroundColor: colorScheme.onPrimaryContainer,
+        ),
+        onPressed: onPressed,
+        child: child,
+      );
+    }
+
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colorScheme.onSurface,
+      ),
+      onPressed: onPressed,
+      child: child,
     );
   }
 }

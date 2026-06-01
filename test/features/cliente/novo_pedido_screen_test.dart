@@ -39,12 +39,16 @@ void main() {
       findsOneWidget,
     );
 
+    await tester.ensureVisible(find.text('Manual').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Manual').first);
     await tester.pumpAndSettle();
 
     expect(find.text('Nenhum prestador selecionado.'), findsOneWidget);
     expect(find.text('Pesquisar prestadores'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Automatico').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Automatico').first);
     await tester.pumpAndSettle();
 

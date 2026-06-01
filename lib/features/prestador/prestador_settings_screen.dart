@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/models/category_approval_types.dart';
 import 'package:chegaja_v2/core/models/category_requirement.dart';
 import 'package:chegaja_v2/core/models/provider_category_approval.dart';
@@ -18,6 +20,7 @@ import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
+import 'package:chegaja_v2/features/prestador/widgets/prestador_service_taxonomy_selector.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_sensitive_categories_section.dart';
 import 'package:chegaja_v2/features/prestador/widgets/sensitive_category_request_sheet.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
@@ -175,7 +178,20 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           for (final id in servicosIds) {
             if (id is String) {
               _servicosSelecionados.add(id);
+              final taxonomySubcategory =
+                  ServiceTaxonomyCatalog.findSubcategoryById(id);
+              if (taxonomySubcategory != null) {
+                _servicosSelecionados.add(taxonomySubcategory.id);
+              }
             }
+          }
+        }
+        for (final servico in servicos) {
+          if (!_servicosSelecionados.contains(servico.id)) continue;
+          final taxonomySubcategory =
+              ServiceTaxonomyCatalog.mapLegacyServicoToSubcategory(servico);
+          if (taxonomySubcategory != null) {
+            _servicosSelecionados.add(taxonomySubcategory.id);
           }
         }
 
@@ -452,10 +468,39 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     if (_categoryRequirements.isNotEmpty) {
       return _categoryRequirements;
     }
-    return sensitiveRequirementsFromSelectedServices(
+    final byId = <String, CategoryRequirement>{};
+    for (final requirement in sensitiveRequirementsFromSelectedServices(
       services: _todosServicos,
       selectedServiceIds: _servicosSelecionados,
-    );
+    )) {
+      byId[requirement.categoryId] = requirement;
+    }
+    for (final requirement in _taxonomyRequirementsFromSelection()) {
+      byId[requirement.categoryId] = requirement;
+    }
+    final requirements = byId.values.toList(growable: false)
+      ..sort((a, b) => a.categoryName.compareTo(b.categoryName));
+    return requirements;
+  }
+
+  List<CategoryRequirement> _taxonomyRequirementsFromSelection() {
+    final requirements = <String, CategoryRequirement>{};
+    for (final subcategory in ServiceTaxonomyCatalog.subcategories) {
+      if (!_servicosSelecionados.contains(subcategory.id)) continue;
+      if (!subcategory.requiresApproval) continue;
+      final requirementId =
+          subcategory.sensitiveRequirementId ?? subcategory.id;
+      requirements[requirementId] = CategoryRequirement(
+        categoryId: requirementId,
+        categoryName: subcategory.label,
+        riskLevel: CategoryRiskLevel.sensitive,
+        approvalRequired: true,
+        userMessage:
+            'Esta categoria precisa de analise antes de ficar aprovada no ChegaJa.',
+        isActive: true,
+      );
+    }
+    return requirements.values.toList(growable: false);
   }
 
   Future<void> _carregarCategoriasSensiveis(
@@ -647,11 +692,20 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       final ref =
           FirebaseFirestore.instance.collection('prestadores').doc(user.uid);
 
-      final selecionados = _todosServicos
+      final selecionadosLegados = _todosServicos
           .where((s) => _servicosSelecionados.contains(s.id))
           .toList();
-      final ids = selecionados.map((s) => s.id).toList();
-      final nomes = selecionados.map((s) => s.name).toList();
+      final selecionadosTaxonomia = ServiceTaxonomyCatalog.subcategories
+          .where((s) => _servicosSelecionados.contains(s.id))
+          .toList();
+      final ids = <String>{
+        ...selecionadosLegados.map((s) => s.id),
+        ...selecionadosTaxonomia.map((s) => s.id),
+      }.toList(growable: false);
+      final nomes = <String>{
+        ...selecionadosLegados.map((s) => s.name),
+        ...selecionadosTaxonomia.map((s) => s.label),
+      }.toList(growable: false);
 
       await ref.set(
         {
@@ -1086,11 +1140,8 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     final colorScheme = theme.colorScheme;
     final primary = colorScheme.primary;
     final hasStates = _statesForCountry.isNotEmpty;
-    final locale = Localizations.localeOf(context);
     final stateLabel = _stateLabelForCountry(_selectedCountry);
     final cities = hasStates ? _citiesForState : _citiesForCountry;
-    final hasQuery = _servicoQuery.trim().isNotEmpty;
-    final servicosVisiveis = _filterServicos(locale);
 
     return Scaffold(
       appBar: AppBar(
@@ -1256,73 +1307,16 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        if (_todosServicos.isEmpty)
-                          Text(
-                            l10n.servicesCatalogEmpty,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          )
-                        else
-                          Column(
-                            children: [
-                              TextField(
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.search),
-                                  hintText: l10n.searchServicesHint,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  suffixIcon: hasQuery
-                                      ? IconButton(
-                                          onPressed: () {
-                                            setState(() => _servicoQuery = '');
-                                          },
-                                          icon: const Icon(Icons.clear),
-                                        )
-                                      : null,
-                                ),
-                                onChanged: (value) {
-                                  setState(() => _servicoQuery = value);
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              if (!hasQuery && servicosVisiveis.isEmpty)
-                                Text(
-                                  l10n.servicesSearchPrompt,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                )
-                              else if (servicosVisiveis.isEmpty)
-                                Text(
-                                  l10n.servicesSearchNoResults,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                )
-                              else ...[
-                                if (!hasQuery)
-                                  Text(
-                                    l10n.servicesSelectedTitle,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: _buildServicoSections(
-                                    servicosVisiveis,
-                                    locale,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
+                        PrestadorServiceTaxonomySelector(
+                          selectedSubcategoryIds: _servicosSelecionados,
+                          onChanged: (value) {
+                            setState(() {
+                              _servicosSelecionados
+                                ..clear()
+                                ..addAll(value);
+                            });
+                          },
+                        ),
                         const SizedBox(height: 24),
 
                         // Categorias sensiveis

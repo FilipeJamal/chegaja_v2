@@ -1147,7 +1147,7 @@ async function isManualProviderMode(page) {
 }
 
 async function clickManualSegmentDom(page) {
-  return await page.evaluate(() => {
+  const point = await page.evaluate(() => {
     const textOf = (el) => ((el.innerText || el.textContent || '') + '').replace(/\s+/g, ' ').trim();
     const candidates = [];
     const selectors = ['button', '[role="button"]', 'flt-semantics', 'div', 'span'];
@@ -1158,24 +1158,35 @@ async function clickManualSegmentDom(page) {
         const rect = el.getBoundingClientRect();
         if (rect.width < 24 || rect.height < 18) continue;
         if (rect.top < 0 || rect.top > window.innerHeight - 20) continue;
-        candidates.push({ el, top: rect.top, area: rect.width * rect.height });
+        candidates.push({
+          x: Math.round(rect.left + rect.width / 2),
+          y: Math.round(rect.top + rect.height / 2),
+          top: rect.top,
+          area: rect.width * rect.height,
+        });
       }
     }
-    if (!candidates.length) return false;
+    if (!candidates.length) return null;
     candidates.sort((a, b) => {
       if (a.top !== b.top) return a.top - b.top;
       return b.area - a.area;
     });
-    const target = candidates[0].el;
-    target.click();
-    return true;
+    return candidates[0];
   });
+  if (!point) return false;
+  await page.mouse.click(point.x, point.y).catch(() => {});
+  return true;
 }
 
 async function switchToManualProviderMode(page) {
   if (await isManualProviderMode(page)) return true;
 
   for (let i = 0; i < 8; i++) {
+    await page.getByText(/^Manual$/i).first().scrollIntoViewIfNeeded({ timeout: 1000 }).catch(() => {});
+    await clickManualSegmentDom(page).catch(() => false);
+    await sleep(350);
+    if (await isManualProviderMode(page)) return true;
+
     await waitAndClick(page, /Manual/i, 1800);
     if (await isManualProviderMode(page)) return true;
 
@@ -1603,7 +1614,12 @@ async function createOrder(
   }
 
   const title = `${titlePrefix}-${Date.now().toString().slice(-6)}`;
-  const titleInput = client.locator('input:not([readonly]):visible').first();
+  const bodyBeforeTitle = await currentBodyText(client);
+  const visibleInputs = client.locator('input:not([readonly]):visible');
+  const inputCount = await visibleInputs.count().catch(() => 0);
+  const titleInputIndex =
+    /Que servi.o precisas|Escolhe uma categoria/i.test(bodyBeforeTitle) && inputCount > 1 ? 1 : 0;
+  const titleInput = visibleInputs.nth(titleInputIndex);
   await fillField(titleInput, client, title);
 
   const desc = client.locator('textarea:not([readonly]):visible').first();

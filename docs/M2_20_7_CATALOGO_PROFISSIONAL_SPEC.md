@@ -390,8 +390,8 @@ Recomendacao futura:
 
 - M2.20.7 - Catalogo profissional e intencao de servico: spec/auditoria. FECHADA.
 - M2.20.8 - Modelo/taxonomia de catalogo profissional. FECHADA.
-- M2.20.9 - UI profissional de escolha de servico. PROXIMO.
-- M2.20.10 - QA final do catalogo profissional.
+- M2.20.9 - UI profissional de escolha de servico. FECHADA.
+- M2.20.10 - QA final do catalogo profissional. PROXIMO.
 - M2.21 - Conta, definicoes e suporte premium.
 
 ## Testes futuros necessarios
@@ -424,4 +424,23 @@ O proximo passo passa a ser:
 
 ```text
 M2.20.9 - UI profissional de escolha de servico
+```
+
+## Estado apos M2.20.9
+
+A M2.20.9 aplicou a taxonomia profissional nas telas principais:
+
+- `NovoPedidoScreen` passou a apresentar pesquisa por linguagem simples,
+  categorias principais, subcategorias canonicas e intencao de pedido.
+- `PrestadorSettingsScreen` passou a organizar os servicos por categoria e
+  subcategoria profissional.
+- A compatibilidade com `servicoId`, `servicoNome`, `categoria`, `modo`,
+  `servicos` e `servicosNomes` foi preservada.
+- Categorias sensiveis continuam a mostrar aviso seguro e a gravar campos de
+  approval quando aplicavel.
+
+O proximo passo passa a ser:
+
+```text
+M2.20.10 - QA final do catalogo profissional
 ```
