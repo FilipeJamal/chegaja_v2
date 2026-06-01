@@ -461,6 +461,12 @@ A M2.20.9.1 refinou a opcao "Outro servico" para deixar de ser generica:
 - Discovery/search usa `customServices`, `customServiceNames` e
   `customServiceSearchTerms`.
 - `other_service` generico nao cria match amplo indevido.
+- Hotfix critico reforcou o bloqueio robusto de termos obscenos/proibidos:
+  `puta`, `prostituta`, `vadia`, variacoes e obfuscacoes simples nao entram,
+  nao aparecem, nao pesquisam e nao fazem matching.
+- A protecao usa `ServiceSafetyGuard` com tokenizacao, phrase matching, stem
+  seguro `prostitu...` e falsos positivos testados para `computador`,
+  `reputacao online` e `disputa contratual`.
 - Firestore Rules e Cloud Functions nao foram alteradas.
 
 O proximo passo continua a ser:

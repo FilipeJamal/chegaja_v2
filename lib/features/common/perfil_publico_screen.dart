@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/core/models/moderation_types.dart';
+import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 import 'package:chegaja_v2/features/common/trust_safety/block_user_dialog.dart';
 import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
 import 'package:chegaja_v2/features/common/trust_safety/trust_safety_actions.dart';
@@ -282,7 +283,13 @@ class _PublicProfileData {
         data['phone'],
         data['phoneRaw'],
       ]),
-      services: _stringList(data['servicosNomes']),
+      services: ServiceSafetyGuard.sanitizeProviderServices(
+        servicos: data['servicos'],
+        servicosNomes: data['servicosNomes'],
+        customServices: data['customServices'],
+        customServiceNames: data['customServiceNames'],
+        customServiceSearchTerms: data['customServiceSearchTerms'],
+      ).serviceNames,
       approvedSensitiveCategoryNames:
           _stringList(data['approvedSensitiveCategoryNames']),
       portfolio: portfolio,

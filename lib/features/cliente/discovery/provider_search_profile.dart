@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
-import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
+import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 
 import 'provider_search_normalizer.dart';
 
@@ -70,22 +69,23 @@ class ProviderSearchProfile {
       data['estado'],
     ]);
     final country = _firstNonEmpty([data['country'], data['pais']]);
-    final customServices = ProviderCustomService.listFrom(
-      data['customServices'],
+    final sanitizedServices = ServiceSafetyGuard.sanitizeProviderServices(
+      servicos: data['servicos'],
+      servicosNomes: data['servicosNomes'],
+      customServices: data['customServices'],
+      customServiceNames: data['customServiceNames'],
+      customServiceSearchTerms: data['customServiceSearchTerms'],
     );
-    final customServiceNames = _safeServiceTexts(
-      _stringList(data['customServiceNames']),
-    );
-    final customServiceSearchTerms =
-        _safeServiceTexts(_stringList(data['customServiceSearchTerms']));
+    final customServices = sanitizedServices.customServices;
+    final customServiceSearchTerms = sanitizedServices.customServiceSearchTerms;
     final services = _uniqueStrings([
-      ..._safeServiceTexts(_stringList(data['servicosNomes'])),
-      ...customServiceNames,
-      ...customServices.map((service) => service.name),
+      ...sanitizedServices.serviceNames,
     ]);
     final categories = _uniqueStrings([
-      ..._stringList(data['categories']),
-      ..._safeServiceIds(_stringList(data['servicos']), customServices),
+      ...ServiceSafetyGuard.filterAllowedSearchTerms(
+        _stringList(data['categories']),
+      ),
+      ...sanitizedServices.serviceIds,
     ]);
     final portfolioPreviewUrls = _uniqueValidUrls([
       ..._stringList(data['portfolioUrls']),
@@ -207,27 +207,6 @@ List<String> _uniqueStrings(Iterable<String> values) {
   }
 
   return List.unmodifiable(result);
-}
-
-List<String> _safeServiceTexts(Iterable<String> values) {
-  return _uniqueStrings(
-    values.where((value) {
-      return !CustomServiceSafetyValidator.validate(title: value).isBlocked;
-    }),
-  );
-}
-
-List<String> _safeServiceIds(
-  Iterable<String> values,
-  List<ProviderCustomService> customServices,
-) {
-  final safeCustomIds = customServices.map((service) => service.id).toSet();
-  return _uniqueStrings(
-    values.where((value) {
-      if (!value.startsWith(ProviderCustomService.idPrefix)) return true;
-      return safeCustomIds.contains(value);
-    }),
-  );
 }
 
 List<String> _uniqueValidUrls(Iterable<String> values) {

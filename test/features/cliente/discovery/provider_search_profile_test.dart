@@ -183,10 +183,11 @@ void main() {
         data: {
           'nome': 'Perfil antigo',
           'city': 'Lisboa',
-          'servicos': ['custom_prostituta', 'plumbing'],
-          'servicosNomes': ['prostituta', 'Canalizacao'],
-          'customServiceNames': ['prostituta'],
-          'customServiceSearchTerms': ['prostituta'],
+          'servicos': ['custom_prostituta', 'custom_puta', 'plumbing'],
+          'servicosNomes': ['prostituta', 'puta', 'vadia', 'Canalizacao'],
+          'categories': ['puta', 'Casa'],
+          'customServiceNames': ['prostituta', 'p.u.t.a'],
+          'customServiceSearchTerms': ['prostituta', 'vadia'],
           'customServices': [
             {
               'id': 'custom_prostituta',
@@ -194,13 +195,20 @@ void main() {
               'description': 'trabalho com o corpo',
               'trustSafetyDecision': 'allow',
             },
+            {
+              'id': 'custom_puta',
+              'title': 'p-u-t-a',
+              'trustSafetyDecision': 'allow',
+            },
           ],
         },
       );
 
       expect(profile.services, ['Canalizacao']);
-      expect(profile.categories, ['plumbing']);
+      expect(profile.categories, ['Casa', 'plumbing']);
       expect(profile.searchText, isNot(contains('prostituta')));
+      expect(profile.searchText, isNot(contains('puta')));
+      expect(profile.searchText, isNot(contains('vadia')));
     });
 
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {

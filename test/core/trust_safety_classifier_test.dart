@@ -45,6 +45,38 @@ void main() {
       expect(result.messageForUser, isNot(contains('prostituta')));
     });
 
+    test('bloqueia obscenidade por token e obfuscacao sem expor termo', () {
+      for (final text in const [
+        'puta',
+        'p.u.t.a',
+        'p-u-t-a',
+        'p u t a',
+        'p*uta',
+        'vadia',
+        'pr0stituta',
+      ]) {
+        final result = TrustSafetyClassifier.classifyText(text);
+
+        expect(result.decision, TrustSafetyDecision.block, reason: text);
+        expect(result.reasonCodes, contains(ReportReasonCode.sexualContent));
+        expect(result.messageForUser, isNot(contains(text)));
+      }
+    });
+
+    test('nao bloqueia palavras legitimas que contem sequencias parecidas', () {
+      for (final text in const [
+        'computador',
+        'repara\u00e7\u00e3o de computadores',
+        'reputa\u00e7\u00e3o online',
+        'disputa contratual',
+        'consultoria de imagem',
+      ]) {
+        final result = TrustSafetyClassifier.classifyText(text);
+
+        expect(result.decision, TrustSafetyDecision.allow, reason: text);
+      }
+    });
+
     test('drogas ilegais, trafico humano e armas ilegais sao criticos', () {
       for (final text in const [
         'Venda de drogas ilegais',

@@ -87,10 +87,37 @@ void main() {
     expect(find.text('Atende em Coimbra, Portugal'), findsWidgets);
     await _scrollUntilTextVisible(tester, 'Raio aproximado: ate 12 km');
     expect(find.text('Raio aproximado: ate 12 km'), findsOneWidget);
+    await _scrollUntilTextVisible(tester, 'Canalizacao');
     expect(find.text('Canalizacao'), findsOneWidget);
     expect(find.text('Instalacao de torneira'), findsOneWidget);
     await _scrollUntilTextVisible(tester, '2 imagens');
     expect(find.text('2 imagens'), findsOneWidget);
+  });
+
+  testWidgets('perfil publico filtra servicos proibidos persistidos',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    await _seedPrestador(db, overrides: {
+      'servicos': ['custom_puta', 'custom_vadia', 'plumbing'],
+      'servicosNomes': ['puta', 'prostituta', 'vadia', 'Canalizacao'],
+      'customServiceNames': ['p.u.t.a'],
+      'customServiceSearchTerms': ['prostituta'],
+      'customServices': [
+        {
+          'id': 'custom_puta',
+          'title': 'puta',
+          'trustSafetyDecision': 'allow',
+        },
+      ],
+    });
+
+    await _pumpProfile(tester, db: db);
+
+    await _scrollUntilTextVisible(tester, 'Canalizacao');
+    expect(find.text('Canalizacao'), findsOneWidget);
+    expect(find.text('puta'), findsNothing);
+    expect(find.text('prostituta'), findsNothing);
+    expect(find.text('vadia'), findsNothing);
   });
 
   testWidgets('nao mostra @handle quando ausente', (tester) async {

@@ -94,5 +94,37 @@ void main() {
         'custom_consultoria_de_imagem',
       ]);
     });
+
+    test('filtra obscenidade em titulo, alias e termos normalizados antigos',
+        () {
+      final services = ProviderCustomService.listFrom([
+        {
+          'id': 'custom_puta',
+          'title': 'puta',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_alias_vadia',
+          'title': 'Servico qualquer',
+          'aliases': ['vadia'],
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_term_obfuscado',
+          'title': 'Servico qualquer',
+          'normalizedSearchTerms': ['p.u.t.a'],
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_computador',
+          'title': 'Reparacao de computadores',
+          'aliases': ['computador'],
+        },
+      ]);
+
+      expect(services.map((service) => service.id), [
+        'custom_computador',
+      ]);
+    });
   });
 }

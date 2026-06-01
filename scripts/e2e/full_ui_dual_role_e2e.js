@@ -1679,6 +1679,13 @@ async function openOrderDetailByTitle(page, title, { provider = false } = {}) {
     await closeAllOverlays(page);
 
     const bodyAtLoopStart = await currentBodyText(page);
+    if (
+      !provider &&
+      /Cancelar pedido|A encontrar prestador|A encontrar um prestador|Minimizar e continuar/i.test(bodyAtLoopStart)
+    ) {
+      return true;
+    }
+
     if (/Novo pedido|Pedir servi/i.test(bodyAtLoopStart)) {
       log(`openOrderDetailByTitle is still on order form for title="${title}"; going back first`);
       const wentBack =

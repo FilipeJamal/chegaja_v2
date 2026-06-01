@@ -68,6 +68,41 @@ contorno. Em bloqueio, os campos com o texto proibido sao limpos da UI.
 `needsReview` e `warn` continuam a ser avisos: nao bloqueiam automaticamente e
 mantem a separacao da M2.20 entre servico sensivel e servico proibido.
 
+## Hotfix critico - bloqueio robusto de termos obscenos/proibidos
+
+Problema observado no browser: termos obscenos/proibidos persistidos, como
+`prostituta`, `puta` e `vadia`, ainda podiam aparecer como chip na Home do
+Prestador em "Categorias de atuacao".
+
+Causa provavel: a defesa anterior bloqueava alguns fluxos novos, mas ainda
+havia dados antigos em `servicosNomes`/`customServices` e superficies de
+renderizacao/search que confiavam nesses campos sem sanitizacao central.
+
+Correcao aplicada:
+
+- `ProhibitedTerms` foi ampliado em grupos estruturados:
+  `sexualServicesTerms`, `prostitutionTerms`, `obsceneServiceTerms`,
+  `illegalDrugTerms`, `weaponsTerms`, `fraudTerms`,
+  `documentForgeryTerms`, `violenceCriminalTerms`, `childSafetyTerms` e
+  `platformAbuseTerms`.
+- Foi criado `ServiceSafetyGuard` para classificar, filtrar e sanitizar nomes,
+  termos de pesquisa e `ProviderCustomService`.
+- O matching deixou de ser substring simples: usa normalizacao, tokens exatos,
+  frases por sequencia de tokens, stem seguro `prostitu...`, leet simples e
+  obfuscacoes como `p.u.t.a`, `p-u-t-a`, `p u t a` e `p*uta`.
+- Falsos positivos como `computador`, `reputacao online` e
+  `disputa contratual` continuam permitidos.
+- `PrestadorSettingsScreen` sanitiza dados ao carregar e antes de guardar.
+- Home Prestador, Perfil Publico e Discovery filtram defensivamente antes de
+  renderizar ou pesquisar dados persistidos.
+- `ProviderSearchMatcher` retorna zero para query proibida.
+- Pedido personalizado do Cliente continua protegido pelo
+  `TrustSafetyClassifier`/`CustomServiceSafetyValidator`.
+
+Risco remanescente: este hotfix e client-side com filtragem defensiva. Antes de
+abrir producao publica ampla, continua recomendado adicionar validacao
+server-side/callable para impedir escrita maliciosa direta fora do app.
+
 ## Discovery e matching
 
 - `ProviderSearchProfile` inclui `customServiceNames`,
@@ -92,6 +127,8 @@ Cloud Functions nao foram alteradas.
 ## Ficheiros principais
 
 - `lib/core/models/provider_custom_service.dart`
+- `lib/core/trust_safety/prohibited_terms.dart`
+- `lib/core/trust_safety/service_safety_guard.dart`
 - `lib/core/trust_safety/custom_service_safety_validator.dart`
 - `lib/features/prestador/widgets/prestador_service_taxonomy_selector.dart`
 - `lib/features/prestador/prestador_settings_screen.dart`
@@ -101,28 +138,21 @@ Cloud Functions nao foram alteradas.
 - `lib/core/services/pedido_service.dart`
 - `lib/core/repositories/pedido_repo.dart`
 - `lib/core/models/pedido.dart`
+- `scripts/e2e/full_ui_dual_role_e2e.js`
 
 ## Validacoes executadas
 
 - `git status --short --branch` - executado no inicio.
 - `git diff --check` - passou; apenas avisos CRLF.
 - `npm.cmd run test:scripts` - passou.
-- `flutter test --no-pub test/core/provider_custom_service_test.dart` - passou.
-- `flutter test --no-pub test/core/custom_service_safety_validator_test.dart` - passou.
-- `flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart` - passou.
-- `flutter test --no-pub test/features/cliente/novo_pedido_taxonomy_test.dart` - passou.
-- `flutter test --no-pub test/features/cliente/discovery/provider_search_profile_test.dart` - passou.
-- `flutter test --no-pub test/features/cliente/discovery/provider_search_matcher_test.dart` - passou.
-- `flutter test --no-pub test/features/cliente/discovery/provider_search_screen_test.dart` - passou.
-- `flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart` - passou.
-- `flutter test --no-pub test/features/prestador/prestador_settings_sensitive_categories_test.dart` - passou.
-- `flutter test --no-pub test/core/pedido_service_test.dart` - passou.
-- `flutter test --no-pub` - passou, 454/454.
+- `flutter test --no-pub test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/features/prestador/widgets/prestador_home_components_test.dart test/features/common/perfil_publico_screen_test.dart` - passou.
+- `flutter test --no-pub test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/prestador/prestador_settings_taxonomy_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart` - passou.
+- `flutter test --no-pub` - passou, 475/475.
 - `flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release` - passou. O build avisou apenas sobre incompatibilidades wasm em `dart_webrtc`.
-- `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` - passou, `FULL MULTI-SCENARIO FLOW OK`.
+- `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` - passou, `FULL MULTI-SCENARIO FLOW OK`. O selector do E2E foi ajustado para reconhecer a tela real de pedido pendente com `Cancelar pedido`.
 - `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento` - passou, `ORCAMENTO MIN-MAX FLOW OK`.
-- `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22091-visual-qa --wait-ms=12000` - passou, 8 screenshots.
-- Browser do Codex abriu `http://127.0.0.1:5174/?role=cliente` e confirmou o app carregado.
+- `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22091-safety-hotfix-visual-qa --wait-ms=12000` - passou, 8 screenshots.
+- Browser do Codex abriu `http://127.0.0.1:5174/?role=prestador`, contaminou dados no emulador com `puta`, `prostituta` e `vadia`, e confirmou que a Home Prestador nao mostra esses termos, mostra estado seguro e tem `consoleErrors = 0`.
 
 ## Fora do escopo
 

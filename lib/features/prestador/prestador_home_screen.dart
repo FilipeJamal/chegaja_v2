@@ -10,13 +10,12 @@ import 'package:intl/intl.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
-import 'package:chegaja_v2/core/models/provider_custom_service.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_service.dart';
-import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
+import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
@@ -57,38 +56,24 @@ const bool _disablePrestadorHomeMessageStreamsForEmulatorTests =
 
 @visibleForTesting
 Set<String> prestadorSafeServiceIdsFromData(Map<String, dynamic> data) {
-  final customServices = ProviderCustomService.listFrom(data['customServices']);
-  final safeCustomIds = customServices.map((service) => service.id).toSet();
-  final rawIds = (data['servicos'] as List?)?.whereType<String>() ?? const [];
-
-  return rawIds.where((id) {
-    if (!id.startsWith(ProviderCustomService.idPrefix)) return true;
-    return safeCustomIds.contains(id);
-  }).toSet();
+  return ServiceSafetyGuard.sanitizeProviderServices(
+    servicos: data['servicos'],
+    servicosNomes: data['servicosNomes'],
+    customServices: data['customServices'],
+    customServiceNames: data['customServiceNames'],
+    customServiceSearchTerms: data['customServiceSearchTerms'],
+  ).serviceIds;
 }
 
 @visibleForTesting
 List<String> prestadorSafeServiceNamesFromData(Map<String, dynamic> data) {
-  final customServices = ProviderCustomService.listFrom(data['customServices']);
-  final rawNames =
-      (data['servicosNomes'] as List?)?.whereType<String>() ?? const [];
-  final seen = <String>{};
-  final safeNames = <String>[];
-
-  for (final name in [
-    ...rawNames,
-    ...customServices.map((service) => service.name),
-  ]) {
-    final normalized = name.trim();
-    if (normalized.isEmpty || seen.contains(normalized)) continue;
-    if (CustomServiceSafetyValidator.validate(title: normalized).isBlocked) {
-      continue;
-    }
-    seen.add(normalized);
-    safeNames.add(normalized);
-  }
-
-  return List.unmodifiable(safeNames);
+  return ServiceSafetyGuard.sanitizeProviderServices(
+    servicos: data['servicos'],
+    servicosNomes: data['servicosNomes'],
+    customServices: data['customServices'],
+    customServiceNames: data['customServiceNames'],
+    customServiceSearchTerms: data['customServiceSearchTerms'],
+  ).serviceNames;
 }
 
 String _labelTipoPreco(String tipo) {

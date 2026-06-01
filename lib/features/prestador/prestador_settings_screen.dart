@@ -20,6 +20,7 @@ import 'package:chegaja_v2/core/services/servico_search.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
+import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_service_taxonomy_selector.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_sensitive_categories_section.dart';
@@ -148,6 +149,7 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       List<dynamic>? servicosIds;
       List<String> portfolioUrls = const [];
       List<ProviderCustomService> customServices = const [];
+      var removedUnsafePersistedService = false;
 
       if (docPrestador.exists) {
         final data = docPrestador.data();
@@ -160,11 +162,17 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
           stateCode = (data['stateCode'] ?? data['provinceCode'])?.toString();
           final r = data['radiusKm'];
           if (r is num) radius = r.toDouble();
-          servicosIds = data['servicos'] as List<dynamic>?;
           portfolioUrls = _cleanStringList(data['portfolioUrls']);
-          customServices = ProviderCustomService.listFrom(
-            data['customServices'],
+          final sanitizedServices = ServiceSafetyGuard.sanitizeProviderServices(
+            servicos: data['servicos'],
+            servicosNomes: data['servicosNomes'],
+            customServices: data['customServices'],
+            customServiceNames: data['customServiceNames'],
+            customServiceSearchTerms: data['customServiceSearchTerms'],
           );
+          servicosIds = sanitizedServices.serviceIds.toList();
+          customServices = sanitizedServices.customServices;
+          removedUnsafePersistedService = sanitizedServices.removedAny;
         }
       }
 
@@ -217,6 +225,15 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       await _carregarCategoriasSensiveis(user.uid, showLoading: false);
 
       if (!mounted) return;
+      if (removedUnsafePersistedService) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Encontramos um servico que nao pode ser usado e ele sera removido ao guardar.',
+            ),
+          ),
+        );
+      }
       setState(() {
         _loading = false;
       });
@@ -735,19 +752,39 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         for (final service in selecionadosPersonalizados)
           ...service.normalizedSearchTerms,
       }.toList(growable: false);
+      final sanitizedServices = ServiceSafetyGuard.sanitizeProviderServices(
+        servicos: ids,
+        servicosNomes: nomes,
+        customServices: customServices,
+        customServiceNames:
+            selecionadosPersonalizados.map((service) => service.name).toList(),
+        customServiceSearchTerms: customServiceSearchTerms,
+      );
+
+      if (sanitizedServices.serviceIds.isEmpty) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.providerServicesSelectAtLeastOne),
+          ),
+        );
+        return;
+      }
 
       await ref.set(
         {
           'userId': user.uid,
-          'servicos': ids,
+          'servicos': sanitizedServices.serviceIds.toList(growable: false),
           // estes nomes são usados para bater com pedido.categoria
-          'servicosNomes': nomes,
-          'customServices': customServices,
-          'customServiceNames': selecionadosPersonalizados
-              .map((service) => service.name)
-              .toList(),
-          'customServiceSearchTerms': customServiceSearchTerms,
-          if (selecionadosPersonalizados.isNotEmpty)
+          'servicosNomes': sanitizedServices.serviceNames,
+          'customServices': sanitizedServices.customServices
+              .map((service) => service.toMap())
+              .toList(growable: false),
+          'customServiceNames': sanitizedServices.customServiceNames,
+          'customServiceSearchTerms':
+              sanitizedServices.customServiceSearchTerms,
+          if (sanitizedServices.customServices.isNotEmpty)
             'customServiceUpdatedAt': FieldValue.serverTimestamp(),
           'radiusKm': _radiusKm,
           'country': _paisCtrl.text.trim(),
@@ -770,7 +807,11 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.serviceAreaSaved),
+          content: Text(
+            sanitizedServices.removedAny
+                ? 'Alguns servicos nao puderam ser guardados porque nao sao permitidos no ChegaJa.'
+                : l10n.serviceAreaSaved,
+          ),
         ),
       );
 

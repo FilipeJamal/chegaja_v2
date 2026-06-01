@@ -35,6 +35,30 @@ void main() {
       expect(matchesProviderSearch(profile, 'j'), isFalse);
     });
 
+    test('query proibida nao retorna prestador nem por dados contaminados', () {
+      final contaminated = ProviderSearchProfile.fromPrestadorDoc(
+        id: 'prestador_contaminado',
+        data: {
+          'nome': 'Perfil antigo',
+          'city': 'Lisboa',
+          'servicosNomes': ['puta', 'prostituta', 'vadia'],
+          'customServiceSearchTerms': ['p.u.t.a'],
+        },
+      );
+
+      for (final query in const ['puta', 'prostituta', 'vadia', 'p-u-t-a']) {
+        expect(matchesProviderSearch(profile, query), isFalse, reason: query);
+        expect(
+          matchesProviderSearch(contaminated, query),
+          isFalse,
+          reason: query,
+        );
+      }
+      expect(contaminated.searchText, isNot(contains('puta')));
+      expect(contaminated.searchText, isNot(contains('prostituta')));
+      expect(contaminated.searchText, isNot(contains('vadia')));
+    });
+
     test('nao depende de rating para match textual', () {
       final noRating = ProviderSearchProfile.fromPrestadorDoc(
         id: 'prestador_2',

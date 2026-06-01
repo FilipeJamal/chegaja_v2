@@ -1,3 +1,5 @@
+import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
+
 import 'provider_search_normalizer.dart';
 import 'provider_search_profile.dart';
 
@@ -6,6 +8,8 @@ bool matchesProviderSearch(ProviderSearchProfile profile, String query) {
 }
 
 int scoreProviderSearch(ProviderSearchProfile profile, String query) {
+  if (ServiceSafetyGuard.isServiceTextBlocked(query)) return 0;
+
   final normalizedQuery = ProviderSearchNormalizer.normalize(query);
   if (normalizedQuery.length < 2) return 0;
 

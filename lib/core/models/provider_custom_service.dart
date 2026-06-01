@@ -110,7 +110,10 @@ class ProviderCustomService {
     final safety = CustomServiceSafetyValidator.validate(
       title: title,
       description: description,
-      aliases: aliases,
+      aliases: [
+        ...aliases,
+        ...normalizedTerms,
+      ],
     );
     final storedDecision =
         value['trustSafetyDecision']?.toString().trim().isNotEmpty == true

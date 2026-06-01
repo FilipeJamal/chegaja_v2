@@ -72,13 +72,20 @@ void main() {
 
     test('filtra categorias proibidas vindas de dados antigos', () {
       final data = {
-        'servicos': ['custom_prostituta', 'plumbing'],
-        'servicosNomes': ['prostituta', 'Canalizador'],
+        'servicos': ['custom_prostituta', 'custom_puta', 'plumbing'],
+        'servicosNomes': ['prostituta', 'puta', 'vadia', 'Canalizador'],
+        'customServiceNames': ['p.u.t.a'],
+        'customServiceSearchTerms': ['prostituta', 'canalizacao'],
         'customServices': [
           {
             'id': 'custom_prostituta',
             'title': 'prostituta',
             'description': 'trabalho com o corpo',
+            'trustSafetyDecision': 'allow',
+          },
+          {
+            'id': 'custom_puta',
+            'title': 'p-u-t-a',
             'trustSafetyDecision': 'allow',
           },
         ],
@@ -178,6 +185,23 @@ void main() {
 
       await tester.tap(find.text('Editar categorias'));
       expect(tapped, isTrue);
+    });
+
+    testWidgets('estado seguro nao renderiza chips proibidos', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          PrestadorCategoriesPanel(
+            categories: const <String>[],
+            loading: false,
+            onEdit: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('puta'), findsNothing);
+      expect(find.text('prostituta'), findsNothing);
+      expect(find.text('vadia'), findsNothing);
+      expect(find.text('Selecionar categorias'), findsOneWidget);
     });
 
     testWidgets('orienta configuracao quando nao ha categorias',
