@@ -7,8 +7,8 @@ Estado: FECHADA no escopo atual.
 Commit de referencia da fase anterior:
 
 ```text
-b1c72ba6e57c8835beb83973aa0933c006c5d94e
-Corrigir bloqueio robusto de servicos proibidos
+b721abfb06fe5f2e862af4562655a66c79c5c561
+Criar politica global de admissao de servicos
 ```
 
 ## Objetivo
@@ -122,16 +122,16 @@ ficheiros artificiais apenas para satisfazer nomes.
 | `git diff --check` | Passou sem saida. |
 | `npm.cmd run test:scripts` | Passou. |
 | `flutter test --no-pub test/core/service_intent_test.dart test/core/service_taxonomy_test.dart test/core/service_taxonomy_normalizer_test.dart test/core/service_taxonomy_matcher_test.dart` | Passou, 16 testes. |
-| `flutter test --no-pub test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart` | Passou, 30 testes apos hotfix M2.20.9.2. |
-| `flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart` | Passou, 8 testes. |
-| `flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart test/features/prestador/prestador_settings_sensitive_categories_test.dart test/features/prestador/widgets/prestador_home_components_test.dart` | Passou, 23 testes. |
-| `flutter test --no-pub test/features/prestador/widgets/prestador_home_components_test.dart test/features/prestador/prestador_settings_taxonomy_test.dart test/features/common/perfil_publico_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart` | Passou, 98 testes apos hotfix M2.20.9.2. |
+| `flutter test --no-pub test/core/service_admission_guard_test.dart test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart` | Passou, 38 testes. |
+| `flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart` | Passou, 10 testes. |
+| `flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart test/features/prestador/prestador_settings_sensitive_categories_test.dart test/features/prestador/widgets/prestador_home_components_test.dart` | Passou, 25 testes. |
+| `flutter test --no-pub test/features/common/perfil_publico_screen_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart` | Passou, 69 testes. |
 | `flutter test --no-pub` | Passou, 491/491 testes. |
 | `flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release` | Passou. Apenas avisos wasm conhecidos de `dart_webrtc`. |
-| `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` | Primeiras tentativas falharam por ambiente: app nao servida e depois emuladores desligados. A execucao valida com servidor estatico + Auth/Firestore/Storage Emulators passou com `FULL MULTI-SCENARIO FLOW OK`. |
+| `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` | Passou com `FULL MULTI-SCENARIO FLOW OK`. Screenshots em `%TEMP%\chegaja-e2e-full-ui\2026-06-05T18-50-47-911Z`. |
 | `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento` | Passou com `ORCAMENTO MIN-MAX FLOW OK`. |
-| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-service-admission-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
-| Browser QA com dados contaminados no emulador | 19 documentos `prestadores` contaminados localmente com `burlador`, `burlas`, `servico especial`, `trabalho secreto`, `assassino`, `prostituta`, `puta`, `vadia`, `pedofilia`, `vender droga`, `documento falso`, `s i c a r i o`, `b u r l a` e `d0cumento falso`; Home Prestador abriu em `http://127.0.0.1:5174/?role=prestador`; `forbiddenVisible = []`; `consoleErrors = 0`; estado seguro exibido. |
+| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22010-visual-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
+| Browser QA com dados contaminados no emulador | 25 documentos `prestadores` contaminados localmente com `burlas`, `burlador`, `assassino`, `assassino de aluguel`, `pedofilia`, `vender droga`, `documento falso`, `prostituta`, `puta`, `vadia`, `servico especial`, `trabalho secreto`, `contactos especiais`, `b u r l a`, `bur1a`, `s i c a r i o`, `ped0filia` e `d0cumento falso`; Home Prestador, Area de atuacao, Discovery e Perfil Publico foram verificados; `aggregateForbiddenVisible = []`; `consoleErrors = 0`; Home mostrou estado seguro para selecionar categorias e Perfil Publico mostrou "Servicos ainda nao definidos". |
 
 ## Rules, Storage Rules e Functions
 

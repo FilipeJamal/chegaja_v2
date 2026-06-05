@@ -486,6 +486,9 @@ A M2.20.10 fechou o trilho de catalogo profissional no escopo atual:
   proibidos/ilicitos foram revalidados.
 - Testes focados, Flutter completo, build Web, E2E dual, E2E orcamento, QA
   visual e verificacao browser com dados contaminados passaram.
+- A execucao final partiu do commit
+  `b721abfb06fe5f2e862af4562655a66c79c5c561`, que fechou a politica global de
+  admissao de servicos.
 - Firestore Rules, Storage Rules e Cloud Functions nao foram alteradas nesta
   fase.
 - Validacao server-side/callable para escrita direta maliciosa continua

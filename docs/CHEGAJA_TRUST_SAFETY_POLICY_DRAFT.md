@@ -61,6 +61,15 @@ servico ilicito/proibido -> bloqueio imediato
 servico vago/desconhecido -> analise antes de ficar publico
 ```
 
+A politica global de admissao de servicos usa estas decisoes internas:
+
+```text
+allow - servico legitimo, claro e pesquisavel
+sensitiveReview - servico legitimo, mas sensivel/regulado conforme M2.20
+block - servico ilicito, proibido, fraudulento, sexual proibido ou perigoso
+unknownReview - servico vago/desconhecido; nao publica automaticamente
+```
+
 Categorias que devem bloquear:
 
 ```text
@@ -75,6 +84,34 @@ falsificacao de documentos
 terrorismo e extremismo violento
 procedimentos medicos ilegais ou clandestinos
 lavagem de dinheiro, contrabando, extorsao, sequestro, suborno e corrupcao
+```
+
+Exemplos de `block`:
+
+```text
+burlador
+burlas
+assassino
+assassino de aluguel
+pedofilia
+trafico humano
+vender droga
+arma ilegal
+documento falso
+cartao clonado
+terrorismo
+lavagem de dinheiro
+```
+
+Exemplos que nao devem ser falso positivo:
+
+```text
+computador
+reputacao online
+disputa contratual
+consultoria de imagem
+trafego pago
+fisioterapia
 ```
 
 A mensagem publica deve ser generica:
@@ -94,6 +131,9 @@ Este servico precisa de analise antes de ficar disponivel.
 
 Esses servicos nao devem aparecer no perfil publico, search ou matching ate
 revisao humana/futura aprovacao.
+
+Antes de producao publica ampla, esta politica deve ter enforcement
+server-side/callable para impedir escrita direta maliciosa fora da UI.
 
 ## Categorias Sensíveis
 

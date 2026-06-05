@@ -18,8 +18,8 @@ M2.20.10 - FECHADA - QA final do catalogo profissional
 Commit de referencia antes do QA final:
 
 ```text
-b1c72ba6e57c8835beb83973aa0933c006c5d94e
-Corrigir bloqueio robusto de servicos proibidos
+b721abfb06fe5f2e862af4562655a66c79c5c561
+Criar politica global de admissao de servicos
 ```
 
 ## Problema original
@@ -217,7 +217,7 @@ git status --short --branch
 git diff --check
 npm.cmd run test:scripts
 flutter test --no-pub test/core/service_intent_test.dart test/core/service_taxonomy_test.dart test/core/service_taxonomy_normalizer_test.dart test/core/service_taxonomy_matcher_test.dart
-flutter test --no-pub test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart
+flutter test --no-pub test/core/service_admission_guard_test.dart test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart
 flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart
 flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart test/features/prestador/prestador_settings_sensitive_categories_test.dart test/features/prestador/widgets/prestador_home_components_test.dart
 flutter test --no-pub test/features/common/perfil_publico_screen_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart
@@ -225,22 +225,23 @@ flutter test --no-pub
 flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release
 TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual
 TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento
-npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-service-admission-qa --wait-ms=12000
+npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22010-visual-qa --wait-ms=12000
 ```
 
 Resultados:
 
-- testes focados passaram, incluindo 59/59 no nucleo da politica de admissao e
-  UI direta, e 138/138 no pacote alargado
-  Prestador/Cliente/Perfil/Discovery/PedidoService;
+- testes focados passaram: 16/16 em taxonomia, 38/38 em Trust & Safety/custom,
+  10/10 em Cliente, 25/25 em Prestador e 69/69 em
+  Perfil/Discovery/PedidoService;
 - `flutter test --no-pub` passou com 491/491;
 - build Web release passou, com aviso wasm conhecido em `dart_webrtc`;
 - E2E dual passou com `FULL MULTI-SCENARIO FLOW OK`;
 - E2E orcamento passou com `ORCAMENTO MIN-MAX FLOW OK`;
 - QA visual passou e gerou 8 screenshots;
 - Browser QA com dados contaminados confirmou `forbiddenVisible = []` e
-  `consoleErrors = 0` apos contaminar 19 documentos `prestadores` no emulador,
+  `consoleErrors = 0` apos contaminar 25 documentos `prestadores` no emulador,
   incluindo `burlador`, `burlas`, servicos vagos e termos ilicitos antigos.
+  Home Prestador, Area de atuacao, Discovery e Perfil Publico foram verificados.
 
 ## Rules, Functions e deploy
 

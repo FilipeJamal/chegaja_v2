@@ -686,7 +686,10 @@ no Cliente e organizou a selecao do Prestador por taxonomia. A M2.20.9.1 fechou
 "Outro servico" como servico personalizado seguro para Cliente/Prestador, com
 bloqueio Trust & Safety antes de gravar, filtragem defensiva de dados antigos e
 termos custom em search/matching, ainda sem mexer em Rules, Functions ou
-deploy.
+deploy. A M2.20.9.2 fechou a politica global de admissao de servicos com
+`allow`, `sensitiveReview`, `block` e `unknownReview`. A M2.20.10 fechou o QA
+final do catalogo profissional com testes focados, Flutter completo, build Web,
+E2E dual/orcamento, QA visual e verificacao browser com dados contaminados.
 
 Fase operacional recomendada:
 
@@ -699,4 +702,6 @@ Dependencias pausadas:
 ```text
 R - Beta externa/tester real: pausado por falta de tester humano
 M - Android release/dispositivo fisico: pausado por falta de Android fisico real
+R1 - pendente
+M2.6 - pendente
 ```
