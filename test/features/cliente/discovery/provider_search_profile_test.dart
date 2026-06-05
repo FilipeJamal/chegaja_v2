@@ -183,11 +183,29 @@ void main() {
         data: {
           'nome': 'Perfil antigo',
           'city': 'Lisboa',
-          'servicos': ['custom_prostituta', 'custom_puta', 'plumbing'],
-          'servicosNomes': ['prostituta', 'puta', 'vadia', 'Canalizacao'],
-          'categories': ['puta', 'Casa'],
-          'customServiceNames': ['prostituta', 'p.u.t.a'],
-          'customServiceSearchTerms': ['prostituta', 'vadia'],
+          'servicos': [
+            'custom_prostituta',
+            'custom_puta',
+            'custom_assassino',
+            'plumbing',
+          ],
+          'servicosNomes': [
+            'prostituta',
+            'puta',
+            'vadia',
+            'assassino',
+            'pedofilia',
+            'vender droga',
+            'documento falso',
+            'Canalizacao',
+          ],
+          'categories': ['puta', 'assassino', 'Casa'],
+          'customServiceNames': ['prostituta', 'p.u.t.a', 'documento falso'],
+          'customServiceSearchTerms': [
+            'prostituta',
+            'vadia',
+            'vender droga',
+          ],
           'customServices': [
             {
               'id': 'custom_prostituta',
@@ -200,6 +218,11 @@ void main() {
               'title': 'p-u-t-a',
               'trustSafetyDecision': 'allow',
             },
+            {
+              'id': 'custom_assassino',
+              'title': 'assassino',
+              'trustSafetyDecision': 'allow',
+            },
           ],
         },
       );
@@ -209,6 +232,10 @@ void main() {
       expect(profile.searchText, isNot(contains('prostituta')));
       expect(profile.searchText, isNot(contains('puta')));
       expect(profile.searchText, isNot(contains('vadia')));
+      expect(profile.searchText, isNot(contains('assassino')));
+      expect(profile.searchText, isNot(contains('pedofilia')));
+      expect(profile.searchText, isNot(contains('vender droga')));
+      expect(profile.searchText, isNot(contains('documento falso')));
     });
 
     test('valida rating apenas com ratingAvg e ratingCount seguros', () {

@@ -39,6 +39,10 @@ O foco foi confirmar que:
 - M2.20.9.1 tornou "Outro servico" profissional, pesquisavel e protegido por
   Trust & Safety.
 - O hotfix critico bloqueou e filtrou termos obscenos/proibidos persistidos.
+- A M2.20.9.2 ampliou o bloqueio para servicos ilicitos globais, incluindo
+  violencia criminal, exploracao de menores, trafico humano, drogas, armas,
+  fraude, falsificacao, terrorismo, procedimentos medicos ilegais e outros
+  servicos criminosos.
 - M2.20.10 confirmou o fecho do trilho por testes, build, E2E e QA visual.
 
 ## Hotfix critico revalidado
@@ -55,8 +59,11 @@ Servico proibido persistido: filtrar antes de aparecer, pesquisar ou fazer match
 Cobertura confirmada:
 
 - `puta`, `prostituta`, `vadia` e obfuscacoes simples bloqueiam.
+- `assassino`, `pedofilia`, `vender droga`, `documento falso`,
+  `hackear conta`, `lavagem de dinheiro` e equivalentes ilicitos bloqueiam.
 - `computador`, `reparacao de computadores`, `reputacao online` e
-  `disputa contratual` continuam permitidos.
+  `disputa contratual`, `trafego pago`, `fisioterapia` e `bolo de aniversario`
+  continuam permitidos.
 - `ServiceSafetyGuard` filtra `servicosNomes`, `customServiceNames`,
   `customServiceSearchTerms` e `customServices`.
 - `ProviderSearchMatcher` retorna zero para query proibida.
@@ -109,16 +116,16 @@ ficheiros artificiais apenas para satisfazer nomes.
 | `git diff --check` | Passou sem saida. |
 | `npm.cmd run test:scripts` | Passou. |
 | `flutter test --no-pub test/core/service_intent_test.dart test/core/service_taxonomy_test.dart test/core/service_taxonomy_normalizer_test.dart test/core/service_taxonomy_matcher_test.dart` | Passou, 16 testes. |
-| `flutter test --no-pub test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart` | Passou, 26 testes. |
+| `flutter test --no-pub test/core/service_safety_guard_test.dart test/core/trust_safety_classifier_test.dart test/core/provider_custom_service_test.dart test/core/custom_service_safety_validator_test.dart` | Passou, 30 testes apos hotfix M2.20.9.2. |
 | `flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart` | Passou, 8 testes. |
 | `flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart test/features/prestador/prestador_settings_sensitive_categories_test.dart test/features/prestador/widgets/prestador_home_components_test.dart` | Passou, 23 testes. |
-| `flutter test --no-pub test/features/common/perfil_publico_screen_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart` | Passou, 69 testes. |
-| `flutter test --no-pub` | Passou, 475/475 testes. |
+| `flutter test --no-pub test/features/prestador/widgets/prestador_home_components_test.dart test/features/prestador/prestador_settings_taxonomy_test.dart test/features/common/perfil_publico_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart` | Passou, 98 testes apos hotfix M2.20.9.2. |
+| `flutter test --no-pub` | Passou, 481/481 testes. |
 | `flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release` | Passou. Apenas avisos wasm conhecidos de `dart_webrtc`. |
 | `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` | Primeiras tentativas falharam por ambiente: app nao servida e depois emuladores desligados. A execucao valida com servidor estatico + Auth/Firestore/Storage Emulators passou com `FULL MULTI-SCENARIO FLOW OK`. |
 | `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento` | Passou com `ORCAMENTO MIN-MAX FLOW OK`. |
-| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22010-visual-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
-| Browser QA com dados contaminados no emulador | 7 documentos `prestadores` contaminados localmente com `puta`, `prostituta`, `vadia`, `p.u.t.a` e `p-u-t-a`; Home Prestador abriu em `http://127.0.0.1:5174/?role=prestador`; `forbiddenVisible = []`; `consoleErrors = 0`. |
+| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-illicit-services-visual-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
+| Browser QA com dados contaminados no emulador | 13 documentos `prestadores` contaminados localmente com `assassino`, `prostituta`, `puta`, `vadia`, `pedofilia`, `vender droga`, `documento falso`, `s i c a r i o` e `d0cumento falso`; Home Prestador abriu em `http://127.0.0.1:5174/?role=prestador`; `forbiddenVisible = []`; `consoleErrors = 0`; estado seguro exibido. |
 
 ## Rules, Storage Rules e Functions
 

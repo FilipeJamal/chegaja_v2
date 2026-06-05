@@ -126,5 +126,41 @@ void main() {
         'custom_computador',
       ]);
     });
+
+    test('filtra servicos ilicitos antigos em titulo, alias e termos', () {
+      final services = ProviderCustomService.listFrom([
+        {
+          'id': 'custom_assassino',
+          'title': 'assassino',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_alias_pedofilia',
+          'title': 'Servico qualquer',
+          'aliases': ['pedofilia'],
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_term_droga',
+          'title': 'Servico qualquer',
+          'normalizedSearchTerms': ['vender droga'],
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_documento_falso',
+          'title': 'documento falso',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_consultoria_imagem',
+          'title': 'Consultoria de imagem',
+          'aliases': ['moda'],
+        },
+      ]);
+
+      expect(services.map((service) => service.id), [
+        'custom_consultoria_imagem',
+      ]);
+    });
   });
 }

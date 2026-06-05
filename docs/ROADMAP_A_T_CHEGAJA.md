@@ -40,7 +40,7 @@ fecham R, M, KYC, pagamentos, Play Store ou beta externa.
 | G | FECHADO | Chat e mensagens | Chat Cliente/Prestador passou nos E2E; mensagens foram redesenhadas e validadas. |
 | H | PARCIAL | Avaliacoes, reputacao e confianca | M2.15 fechada no escopo atual: Rules/agregados protegidos, UI pos-servico validada e reputacao leve no perfil publico; faltam reviews publicas, moderacao, denuncias e ranking. |
 | I | FUTURO | Pagamentos reais e monetizacao | Falta Stripe/MB WAY/outros, pagamentos reais, planos PRO, comissoes reais e faturacao. |
-| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 fechou categorias sensiveis/comprovativos no escopo atual; M2.20.7 auditou a reorganizacao profissional do catalogo; M2.20.8 criou a base tecnica de taxonomia/aliases; M2.20.9 aplicou a UI profissional no Cliente/Prestador; M2.20.9.1 fechou servico personalizado seguro para "Outro servico"; M2.20.10 fechou o QA final do catalogo profissional; admin enterprise completo ainda falta. |
+| J | PARCIAL | Admin, catalogo e gestao interna | Catalogo de servicos existe e foi expandido visualmente. M2.18 fechou Admin/backoffice leve; M2.20 fechou categorias sensiveis/comprovativos no escopo atual; M2.20.7 auditou a reorganizacao profissional do catalogo; M2.20.8 criou a base tecnica de taxonomia/aliases; M2.20.9 aplicou a UI profissional no Cliente/Prestador; M2.20.9.1 fechou servico personalizado seguro para "Outro servico"; M2.20.9.2 fechou bloqueio global de servicos ilicitos; M2.20.10 fechou o QA final do catalogo profissional; admin enterprise completo ainda falta. |
 | K | FECHADO | Seguranca, Rules e producao Firebase | Firestore/Storage Rules endurecidas, Functions autoritativas, deploy real e smoke real ja foram feitos. |
 | L | FECHADO | Operacoes, CI e manutencao | Runbook, cleanup auditavel, health check, CI sem deploy, QA e docs operacionais ja existem. |
 | M | PAUSADO | Android release e dispositivo fisico | APK/AAB passam e Android em emulador passa, mas o bloco fica pausado ate existir dispositivo Android fisico real. |
@@ -215,6 +215,7 @@ denuncias, moderacao e ranking continuam fora.
 | M2.20.8 | FECHADO | Modelo/taxonomia de catalogo profissional |
 | M2.20.9 | FECHADO | UI profissional de escolha de servico |
 | M2.20.9.1 | FECHADO | Servico personalizado, Outro profissional e bloqueio robusto de servicos proibidos |
+| M2.20.9.2 | FECHADO | Bloqueio global de servicos ilicitos |
 | M2.20.10 | FECHADO | QA final do catalogo profissional |
 | M2.21 | FUTURO | Conta, definicoes e suporte premium apos fecho do trilho de catalogo |
 
@@ -262,7 +263,10 @@ Prestador descrevem servicos personalizados, `TrustSafetyClassifier` bloqueia
 servicos proibidos antes de gravar, e o hotfix critico filtra tambem dados
 persistidos/obfuscados antes de renderizar, pesquisar ou fazer matching.
 Discovery/matching considera termos custom permitidos sem transformar esses
-servicos em categoria oficial. A M2.20.10 fechou o QA final do catalogo
+servicos em categoria oficial. A M2.20.9.2 ampliou a politica para bloqueio
+global de servicos ilicitos, cobrindo violencia criminal, exploracao de menores,
+trafico humano, drogas, armas, fraude, falsificacao, terrorismo, procedimentos
+medicos ilegais e outros crimes. A M2.20.10 fechou o QA final do catalogo
 profissional com testes focados, Flutter completo, build Web, E2E dual, E2E
 orcamento, QA visual e verificacao browser com dados contaminados. M2.21 fica
 futuro e passa a ser o proximo bloco recomendado.
@@ -434,6 +438,7 @@ KYC, badges fortes, ranking avancado, pagamentos e deploy continuam fora.
 | M2.20.8 | FECHADO | Modelo/taxonomia de catalogo profissional |
 | M2.20.9 | FECHADO | UI profissional de escolha de servico |
 | M2.20.9.1 | FECHADO | Servico personalizado, Outro profissional e bloqueio robusto de servicos proibidos |
+| M2.20.9.2 | FECHADO | Bloqueio global de servicos ilicitos |
 | M2.20.10 | FECHADO | QA final do catalogo profissional |
 
 Estado: M2.20.7 fechada como fase documental. A auditoria confirmou que o
@@ -448,8 +453,9 @@ no Cliente e no Prestador, mantendo compatibilidade com campos legados e com as
 categorias sensiveis da M2.20. A M2.20.9.1 fechou o refinamento de "Outro
 servico": servicos personalizados agora exigem nome/descricao/aliases, bloqueiam
 servicos proibidos antes de gravar, filtram dados antigos antes de aparecer e
-entram em search/matching por termos custom permitidos. A M2.20.10 fechou o QA
-final do catalogo profissional e estabilizou o trilho M2.20.7 -> M2.20.10 no
+entram em search/matching por termos custom permitidos. A M2.20.9.2 reforcou o
+bloqueio global de servicos ilicitos tambem nesse trilho. A M2.20.10 fechou o
+QA final do catalogo profissional e estabilizou o trilho M2.20.7 -> M2.20.10 no
 escopo atual. M2.21 continua futuro e passa a ser o proximo bloco recomendado.
 
 ## Bloco I - Pagamentos Reais e Monetizacao

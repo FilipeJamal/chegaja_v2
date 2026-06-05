@@ -410,6 +410,54 @@ void main() {
     expect(find.textContaining('p-u-t-a'), findsNothing);
   });
 
+  testWidgets('PrestadorServiceTaxonomySelector bloqueia servicos ilicitos', (
+    WidgetTester tester,
+  ) async {
+    for (final term in const [
+      'assassino',
+      'pedofilia',
+      'vender droga',
+      'documento falso',
+    ]) {
+      var selected = <String>{};
+      var customServices = <ProviderCustomService>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PrestadorServiceTaxonomySelector(
+                selectedSubcategoryIds: selected,
+                onChanged: (value) => selected = value,
+                customServices: customServices,
+                onCustomServicesChanged: (value) => customServices = value,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('prestador_service_taxonomy_query_field')),
+        term,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('custom_service_description_field')),
+        'Descricao profissional qualquer.',
+      );
+      final addButton = find.byKey(const Key('add_custom_service_button'));
+      await tester.ensureVisible(addButton);
+      await tester.tap(addButton);
+      await tester.pumpAndSettle();
+
+      expect(customServices, isEmpty, reason: term);
+      expect(selected, isEmpty, reason: term);
+      expect(find.textContaining('permitido no ChegaJ'), findsOneWidget);
+      expect(find.textContaining(term), findsNothing);
+    }
+  });
+
   testWidgets('PrestadorServiceTaxonomySelector mostra servicos personalizados',
       (
     WidgetTester tester,

@@ -73,12 +73,17 @@ class ProhibitedTerms {
     'drogas',
     'droga ilegal',
     'drogas ilegais',
+    'comprar droga',
     'vender droga',
     'trafico',
     'trafico de drogas',
+    'trafico de droga',
     'cocaina',
     'heroina',
     'crack',
+    'metanfetamina',
+    'ecstasy',
+    'fabricar droga',
   ];
 
   static const List<String> weaponsTerms = [
@@ -86,13 +91,26 @@ class ProhibitedTerms {
     'armas ilegais',
     'venda de armas',
     'pistola ilegal',
+    'arma de fogo ilegal',
+    'municoes',
+    'municao',
+    'explosivos',
+    'bomba caseira',
+    'fabricar bomba',
   ];
 
   static const List<String> fraudTerms = [
     'fraude',
     'golpe',
     'burla',
+    'esquema fraudulento',
+    'cartao clonado',
+    'clonar cartao',
     'phishing',
+    'roubar senha',
+    'hackear conta',
+    'invadir conta',
+    'roubo de identidade',
   ];
 
   static const List<String> documentForgeryTerms = [
@@ -100,11 +118,26 @@ class ProhibitedTerms {
     'documento falso',
     'documentos falsos',
     'passaporte falso',
+    'bilhete falso',
+    'bi falso',
+    'carta de conducao falsa',
+    'diploma falso',
+    'certificado falso',
   ];
 
   static const List<String> violenceCriminalTerms = [
+    'assassino',
+    'assassino de aluguel',
+    'assassino a soldo',
+    'matador',
+    'matador de aluguel',
+    'sicario',
+    'pistoleiro',
     'matar alguem',
+    'servico para matar',
+    'encomenda de morte',
     'agressao encomendada',
+    'espancamento pago',
     'violencia encomendada',
     'servico criminoso',
     'atividade criminosa',
@@ -114,8 +147,56 @@ class ProhibitedTerms {
 
   static const List<String> childSafetyTerms = [
     'exploracao de menores',
+    'exploracao de menor',
+    'exploracao sexual infantil',
     'abuso infantil',
     'menores sexual',
+    'pedofilia',
+    'pedofilo',
+    'venda de criancas',
+    'comprar crianca',
+    'aliciar menor',
+    'material de abuso infantil',
+  ];
+
+  static const List<String> humanTraffickingTerms = [
+    'trafico humano',
+    'venda de pessoas',
+    'contrabando humano',
+    'exploracao de pessoas',
+    'trabalho forcado',
+  ];
+
+  static const List<String> terrorismTerms = [
+    'ato terrorista',
+    'atentado',
+    'bomba terrorista',
+    'recrutamento terrorista',
+    'organizacao terrorista',
+    'incitar violencia',
+  ];
+
+  static const List<String> illegalMedicalTerms = [
+    'cirurgia clandestina',
+    'procedimento medico ilegal',
+    'receita falsa',
+    'vender medicamento controlado',
+    'medicamento sem receita',
+    'tratamento clandestino',
+  ];
+
+  static const List<String> otherIllegalServiceTerms = [
+    'jogo ilegal',
+    'lavagem de dinheiro',
+    'contrabando',
+    'mercadoria roubada',
+    'roubo sob encomenda',
+    'furto sob encomenda',
+    'extorsao',
+    'chantagem',
+    'sequestro',
+    'suborno',
+    'corrupcao',
   ];
 
   static const List<String> platformAbuseTerms = [
@@ -179,15 +260,52 @@ class ProhibitedTerms {
     final maxStart = tokens.length - phraseTokens.length;
     for (var start = 0; start <= maxStart; start += 1) {
       var matched = true;
+      var tokenIndex = start;
       for (var offset = 0; offset < phraseTokens.length; offset += 1) {
-        if (tokens[start + offset] != phraseTokens[offset]) {
+        final consumed = _matchPhraseTokenAt(
+          tokens,
+          tokenIndex,
+          phraseTokens[offset],
+        );
+        if (consumed == 0) {
           matched = false;
           break;
         }
+        tokenIndex += consumed;
       }
       if (matched) return true;
     }
     return false;
+  }
+
+  static int _matchPhraseTokenAt(
+    List<String> tokens,
+    int start,
+    String phraseToken,
+  ) {
+    if (start >= tokens.length) return 0;
+    if (tokens[start] == phraseToken) return 1;
+    if (!_obfuscatableTokens.contains(phraseToken)) return 0;
+
+    final maxWindow = phraseToken.length.clamp(2, 16);
+    final compact = StringBuffer();
+    var hasShortToken = false;
+
+    for (var index = start;
+        index < tokens.length && index < start + maxWindow;
+        index += 1) {
+      final token = tokens[index];
+      if (token.length > phraseToken.length) return 0;
+      if (token.length <= 2) hasShortToken = true;
+      compact.write(token);
+
+      final candidate = compact.toString();
+      if (candidate.length > phraseToken.length) return 0;
+      if (hasShortToken && candidate == phraseToken) {
+        return index - start + 1;
+      }
+    }
+    return 0;
   }
 
   static bool _containsObfuscatedToken(List<String> tokens, String target) {
@@ -226,11 +344,29 @@ class ProhibitedTerms {
 
   static const Set<String> _safePrefixTerms = {
     'prostitu',
+    'pedofil',
+    'assass',
+    'sicari',
+    'terror',
+    'falsific',
+    'trafic',
+    'explosiv',
   };
 
   static const Set<String> _obfuscatableTokens = {
+    'arma',
+    'armas',
+    'assassino',
+    'assassinos',
+    'droga',
+    'drogas',
+    'documento',
+    'falso',
+    'falsos',
     'puta',
     'putas',
+    'sicario',
+    'sicarios',
     'vadia',
     'vadias',
     'escort',
@@ -279,10 +415,7 @@ class ProhibitedTerms {
     ),
     ProhibitedTerm(
       id: 'human_trafficking',
-      phrases: [
-        'trafico humano',
-        'trabalho forcado',
-      ],
+      phrases: humanTraffickingTerms,
       reasonCode: ReportReasonCode.illegalService,
       severity: ReportSeverity.critical,
       decision: TrustSafetyDecision.block,
@@ -319,6 +452,27 @@ class ProhibitedTerms {
       id: 'criminal_violence',
       phrases: violenceCriminalTerms,
       reasonCode: ReportReasonCode.violence,
+      severity: ReportSeverity.critical,
+      decision: TrustSafetyDecision.block,
+    ),
+    ProhibitedTerm(
+      id: 'terrorism_extremism',
+      phrases: terrorismTerms,
+      reasonCode: ReportReasonCode.violence,
+      severity: ReportSeverity.critical,
+      decision: TrustSafetyDecision.block,
+    ),
+    ProhibitedTerm(
+      id: 'illegal_medical',
+      phrases: illegalMedicalTerms,
+      reasonCode: ReportReasonCode.unsafeService,
+      severity: ReportSeverity.critical,
+      decision: TrustSafetyDecision.block,
+    ),
+    ProhibitedTerm(
+      id: 'other_illegal_services',
+      phrases: otherIllegalServiceTerms,
+      reasonCode: ReportReasonCode.illegalService,
       severity: ReportSeverity.critical,
       decision: TrustSafetyDecision.block,
     ),

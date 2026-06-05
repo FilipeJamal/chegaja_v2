@@ -102,6 +102,31 @@ void main() {
       expect(fraud.reasonCodes, contains(ReportReasonCode.fraud));
     });
 
+    test('servicos ilicitos globais sao bloqueados como criticos', () {
+      const cases = <String, ReportReasonCode>{
+        'assassino de aluguel': ReportReasonCode.violence,
+        'pedofilia': ReportReasonCode.childSafety,
+        'vender droga': ReportReasonCode.drugs,
+        'documento falso': ReportReasonCode.fraud,
+        'hackear conta': ReportReasonCode.fraud,
+        'recrutamento terrorista': ReportReasonCode.violence,
+        'lavagem de dinheiro': ReportReasonCode.illegalService,
+      };
+
+      for (final entry in cases.entries) {
+        final result = TrustSafetyClassifier.classifyText(entry.key);
+
+        expect(result.decision, TrustSafetyDecision.block, reason: entry.key);
+        expect(
+          result.severity,
+          anyOf(ReportSeverity.high, ReportSeverity.critical),
+          reason: entry.key,
+        );
+        expect(result.reasonCodes, contains(entry.value), reason: entry.key);
+        expect(result.messageForUser, isNot(contains(entry.key)));
+      }
+    });
+
     test('categorias sensiveis precisam de analise, nao bloqueio automatico',
         () {
       final result = TrustSafetyClassifier.classifyText(

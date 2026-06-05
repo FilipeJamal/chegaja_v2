@@ -49,6 +49,42 @@ spam
 tentativa de contornar pagamentos/comissao quando houver pagamentos reais
 ```
 
+## Servicos Ilicitos
+
+Em servicos personalizados, pedidos livres, aliases, pesquisa, matching e perfil
+publico, a regra de produto e:
+
+```text
+servico legitimo -> permitido
+servico sensivel/regulado -> analise ou aprovacao conforme M2.20
+servico ilicito/proibido -> bloqueio imediato
+```
+
+Categorias que devem bloquear:
+
+```text
+servicos sexuais/prostituicao
+violencia criminal ou servico sob encomenda
+exploracao de menores e abuso infantil
+trafico humano
+drogas ilegais
+armas, municoes e explosivos ilegais
+fraude, golpe, burla e cybercrime
+falsificacao de documentos
+terrorismo e extremismo violento
+procedimentos medicos ilegais ou clandestinos
+lavagem de dinheiro, contrabando, extorsao, sequestro, suborno e corrupcao
+```
+
+A mensagem publica deve ser generica:
+
+```text
+Este tipo de servico nao e permitido no ChegaJa.
+```
+
+Nao mostrar ao utilizador o termo detectado, categoria interna, reasonCode,
+lista de termos ou qualquer sugestao de contorno.
+
 ## Categorias Sensíveis
 
 Algumas categorias podem exigir aprovacao futura antes de publicacao:

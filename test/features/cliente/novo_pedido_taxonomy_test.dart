@@ -238,4 +238,49 @@ void main() {
       expect(find.textContaining(term), findsNothing);
     }
   });
+
+  testWidgets(
+      'ServiceTaxonomyPickerSection bloqueia servicos ilicitos em Outro', (
+    WidgetTester tester,
+  ) async {
+    for (final term in const [
+      'assassino',
+      'pedofilia',
+      'vender droga',
+      'documento falso',
+    ]) {
+      ServiceTaxonomySelection? selected;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: ServiceTaxonomyPickerSection(
+                value: selected,
+                onChanged: (value) => selected = value,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('service_taxonomy_query_field')),
+        term,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('client_custom_service_description_field')),
+        'Descricao do pedido.',
+      );
+      await tester.tap(
+        find.byKey(const Key('client_custom_service_add_button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(selected, isNull, reason: term);
+      expect(find.textContaining('permitido no ChegaJ'), findsOneWidget);
+      expect(find.textContaining(term), findsNothing);
+    }
+  });
 }

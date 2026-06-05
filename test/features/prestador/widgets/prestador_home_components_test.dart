@@ -72,10 +72,29 @@ void main() {
 
     test('filtra categorias proibidas vindas de dados antigos', () {
       final data = {
-        'servicos': ['custom_prostituta', 'custom_puta', 'plumbing'],
-        'servicosNomes': ['prostituta', 'puta', 'vadia', 'Canalizador'],
-        'customServiceNames': ['p.u.t.a'],
-        'customServiceSearchTerms': ['prostituta', 'canalizacao'],
+        'servicos': [
+          'custom_prostituta',
+          'custom_puta',
+          'custom_assassino',
+          'custom_documento_falso',
+          'plumbing',
+        ],
+        'servicosNomes': [
+          'prostituta',
+          'puta',
+          'vadia',
+          'assassino',
+          'pedofilia',
+          'vender droga',
+          'documento falso',
+          'Canalizador',
+        ],
+        'customServiceNames': ['p.u.t.a', 'assassino de aluguel'],
+        'customServiceSearchTerms': [
+          'prostituta',
+          'vender droga',
+          'canalizacao',
+        ],
         'customServices': [
           {
             'id': 'custom_prostituta',
@@ -86,6 +105,16 @@ void main() {
           {
             'id': 'custom_puta',
             'title': 'p-u-t-a',
+            'trustSafetyDecision': 'allow',
+          },
+          {
+            'id': 'custom_assassino',
+            'title': 'assassino',
+            'trustSafetyDecision': 'allow',
+          },
+          {
+            'id': 'custom_documento_falso',
+            'title': 'documento falso',
             'trustSafetyDecision': 'allow',
           },
         ],
@@ -201,6 +230,10 @@ void main() {
       expect(find.text('puta'), findsNothing);
       expect(find.text('prostituta'), findsNothing);
       expect(find.text('vadia'), findsNothing);
+      expect(find.text('assassino'), findsNothing);
+      expect(find.text('pedofilia'), findsNothing);
+      expect(find.text('vender droga'), findsNothing);
+      expect(find.text('documento falso'), findsNothing);
       expect(find.text('Selecionar categorias'), findsOneWidget);
     });
 

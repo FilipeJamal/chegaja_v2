@@ -41,12 +41,26 @@ void main() {
         data: {
           'nome': 'Perfil antigo',
           'city': 'Lisboa',
-          'servicosNomes': ['puta', 'prostituta', 'vadia'],
-          'customServiceSearchTerms': ['p.u.t.a'],
+          'servicosNomes': [
+            'puta',
+            'prostituta',
+            'vadia',
+            'assassino',
+            'documento falso',
+          ],
+          'customServiceSearchTerms': ['p.u.t.a', 'vender droga'],
         },
       );
 
-      for (final query in const ['puta', 'prostituta', 'vadia', 'p-u-t-a']) {
+      for (final query in const [
+        'puta',
+        'prostituta',
+        'vadia',
+        'p-u-t-a',
+        'assassino',
+        'documento falso',
+        'vender droga',
+      ]) {
         expect(matchesProviderSearch(profile, query), isFalse, reason: query);
         expect(
           matchesProviderSearch(contaminated, query),
@@ -57,6 +71,8 @@ void main() {
       expect(contaminated.searchText, isNot(contains('puta')));
       expect(contaminated.searchText, isNot(contains('prostituta')));
       expect(contaminated.searchText, isNot(contains('vadia')));
+      expect(contaminated.searchText, isNot(contains('assassino')));
+      expect(contaminated.searchText, isNot(contains('documento falso')));
     });
 
     test('nao depende de rating para match textual', () {

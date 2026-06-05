@@ -103,6 +103,70 @@ Risco remanescente: este hotfix e client-side com filtragem defensiva. Antes de
 abrir producao publica ampla, continua recomendado adicionar validacao
 server-side/callable para impedir escrita maliciosa direta fora do app.
 
+## Hotfix M2.20.9.2 - Bloqueio global de servicos ilicitos
+
+Depois do bloqueio de prostituicao/obscenidade, foi identificado que a politica
+precisava ser mais ampla: "Outro servico" tambem nao pode aceitar servicos
+ilicitos/criminosos de outros grupos.
+
+Politica final:
+
+```text
+Servico novo legitimo -> aceita.
+Servico sensivel -> analise/aprovacao conforme M2.20.
+Servico ilicito -> bloqueia imediatamente.
+```
+
+`ProhibitedTerms` foi ampliado para cobrir violencia criminal, exploracao de
+menores, trafico humano, drogas ilegais, armas/explosivos, fraude/cybercrime,
+falsificacao de documentos, terrorismo, procedimentos medicos ilegais e outros
+servicos ilicitos.
+
+Exemplos bloqueados:
+
+```text
+assassino
+assassino de aluguel
+pedofilia
+venda de criancas
+trafico humano
+vender droga
+arma ilegal
+documento falso
+cartao clonado
+hackear conta
+terrorismo
+lavagem de dinheiro
+contrabando
+```
+
+Falsos positivos protegidos:
+
+```text
+computador
+reputacao online
+disputa contratual
+consultoria de imagem
+trafego pago
+matematica
+matar baratas
+farmacia
+fisioterapia
+bolo de aniversario
+fotografia de eventos
+```
+
+O matching continua sem substring simples: usa tokens, frases, stems seguros,
+leet simples e obfuscacoes comuns. Home Prestador, Perfil Publico, Discovery,
+ProviderSearchProfile, ProviderSearchMatcher e pedidos custom continuam a
+filtrar dados antigos antes de renderizar, pesquisar ou fazer matching.
+
+Documento detalhado:
+
+```text
+docs/M2_20_9_2_BLOQUEIO_GLOBAL_SERVICOS_ILICITOS_STATUS.md
+```
+
 ## Discovery e matching
 
 - `ProviderSearchProfile` inclui `customServiceNames`,
@@ -139,6 +203,7 @@ Cloud Functions nao foram alteradas.
 - `lib/core/repositories/pedido_repo.dart`
 - `lib/core/models/pedido.dart`
 - `scripts/e2e/full_ui_dual_role_e2e.js`
+- `docs/M2_20_9_2_BLOQUEIO_GLOBAL_SERVICOS_ILICITOS_STATUS.md`
 
 ## Validacoes executadas
 
@@ -171,4 +236,6 @@ Cloud Functions nao foram alteradas.
 
 ## Proximo passo
 
-M2.20.10 - QA final do catalogo profissional.
+M2.20.9.2 entrou depois como hotfix critico de bloqueio global de servicos
+ilicitos. A M2.20.10 permanece fechada como QA final do catalogo profissional no
+escopo atual.

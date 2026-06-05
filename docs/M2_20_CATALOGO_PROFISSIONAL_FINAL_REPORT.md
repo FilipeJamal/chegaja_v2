@@ -11,6 +11,7 @@ M2.20.7  - FECHADA - Spec/auditoria de catalogo profissional
 M2.20.8  - FECHADA - Modelo/taxonomia de catalogo profissional
 M2.20.9  - FECHADA - UI profissional de escolha de servico
 M2.20.9.1 - FECHADA - Outro servico custom e bloqueio robusto de proibidos
+M2.20.9.2 - FECHADA - Bloqueio global de servicos ilicitos
 M2.20.10 - FECHADA - QA final do catalogo profissional
 ```
 
@@ -151,6 +152,19 @@ drogas
 trafico
 armas ilegais
 falsificacao de documentos
+assassino
+assassino de aluguel
+pedofilia
+venda de criancas
+trafico humano
+vender droga
+arma ilegal
+documento falso
+cartao clonado
+hackear conta
+terrorismo
+lavagem de dinheiro
+contrabando
 ```
 
 Exemplos permitidos:
@@ -161,6 +175,13 @@ reparacao de computadores
 reputacao online
 disputa contratual
 consultoria de imagem
+trafego pago
+matematica
+matar baratas
+farmacia
+fisioterapia
+bolo de aniversario
+fotografia de eventos
 ```
 
 ### Search e matching
@@ -188,19 +209,20 @@ flutter test --no-pub
 flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release
 TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual
 TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento
-npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22010-visual-qa --wait-ms=12000
+npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-illicit-services-visual-qa --wait-ms=12000
 ```
 
 Resultados:
 
-- testes focados passaram;
-- `flutter test --no-pub` passou com 475/475;
+- testes focados passaram, incluindo 30/30 no nucleo Trust & Safety e 98/98
+  nas superficies Prestador/Cliente/Perfil/Discovery/PedidoService;
+- `flutter test --no-pub` passou com 481/481;
 - build Web release passou, com aviso wasm conhecido em `dart_webrtc`;
 - E2E dual passou com `FULL MULTI-SCENARIO FLOW OK`;
 - E2E orcamento passou com `ORCAMENTO MIN-MAX FLOW OK`;
 - QA visual passou e gerou 8 screenshots;
 - Browser QA com dados contaminados confirmou `forbiddenVisible = []` e
-  `consoleErrors = 0`.
+  `consoleErrors = 0` apos contaminar 13 documentos `prestadores` no emulador.
 
 ## Rules, Functions e deploy
 

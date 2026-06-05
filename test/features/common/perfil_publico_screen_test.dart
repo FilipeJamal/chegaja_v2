@@ -98,14 +98,34 @@ void main() {
       (tester) async {
     final db = FakeFirebaseFirestore();
     await _seedPrestador(db, overrides: {
-      'servicos': ['custom_puta', 'custom_vadia', 'plumbing'],
-      'servicosNomes': ['puta', 'prostituta', 'vadia', 'Canalizacao'],
-      'customServiceNames': ['p.u.t.a'],
-      'customServiceSearchTerms': ['prostituta'],
+      'servicos': [
+        'custom_puta',
+        'custom_vadia',
+        'custom_assassino',
+        'custom_documento_falso',
+        'plumbing',
+      ],
+      'servicosNomes': [
+        'puta',
+        'prostituta',
+        'vadia',
+        'assassino',
+        'pedofilia',
+        'vender droga',
+        'documento falso',
+        'Canalizacao',
+      ],
+      'customServiceNames': ['p.u.t.a', 'assassino'],
+      'customServiceSearchTerms': ['prostituta', 'vender droga'],
       'customServices': [
         {
           'id': 'custom_puta',
           'title': 'puta',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_assassino',
+          'title': 'assassino',
           'trustSafetyDecision': 'allow',
         },
       ],
@@ -118,6 +138,10 @@ void main() {
     expect(find.text('puta'), findsNothing);
     expect(find.text('prostituta'), findsNothing);
     expect(find.text('vadia'), findsNothing);
+    expect(find.text('assassino'), findsNothing);
+    expect(find.text('pedofilia'), findsNothing);
+    expect(find.text('vender droga'), findsNothing);
+    expect(find.text('documento falso'), findsNothing);
   });
 
   testWidgets('nao mostra @handle quando ausente', (tester) async {
