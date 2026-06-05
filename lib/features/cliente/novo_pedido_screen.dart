@@ -701,13 +701,16 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         aliases: customService.aliases,
         query: _taxonomySelection?.query ?? '',
       );
+      if (!customSafety.shouldSave) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(customSafety.messageForUser)),
+        );
+        return true;
+      }
       if (customSafety.decision != TrustSafetyDecision.allow) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(customSafety.messageForUser)),
         );
-        if (customSafety.decision == TrustSafetyDecision.block) {
-          return true;
-        }
       }
     }
 
@@ -1327,7 +1330,8 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                                         return await _buscarEnderecos(query);
                                       } catch (e) {
                                         debugPrint(
-                                            'Error searching address: $e');
+                                          'Error searching address: $e',
+                                        );
                                         return const [];
                                       }
                                     },

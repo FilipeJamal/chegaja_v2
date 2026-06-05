@@ -58,6 +58,7 @@ publico, a regra de produto e:
 servico legitimo -> permitido
 servico sensivel/regulado -> analise ou aprovacao conforme M2.20
 servico ilicito/proibido -> bloqueio imediato
+servico vago/desconhecido -> analise antes de ficar publico
 ```
 
 Categorias que devem bloquear:
@@ -84,6 +85,15 @@ Este tipo de servico nao e permitido no ChegaJa.
 
 Nao mostrar ao utilizador o termo detectado, categoria interna, reasonCode,
 lista de termos ou qualquer sugestao de contorno.
+
+Para servicos vagos/desconhecidos, a mensagem publica deve ser:
+
+```text
+Este servico precisa de analise antes de ficar disponivel.
+```
+
+Esses servicos nao devem aparecer no perfil publico, search ou matching ate
+revisao humana/futura aprovacao.
 
 ## Categorias Sensíveis
 

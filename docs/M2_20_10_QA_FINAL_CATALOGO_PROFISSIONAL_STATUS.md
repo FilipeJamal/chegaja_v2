@@ -39,10 +39,12 @@ O foco foi confirmar que:
 - M2.20.9.1 tornou "Outro servico" profissional, pesquisavel e protegido por
   Trust & Safety.
 - O hotfix critico bloqueou e filtrou termos obscenos/proibidos persistidos.
-- A M2.20.9.2 ampliou o bloqueio para servicos ilicitos globais, incluindo
-  violencia criminal, exploracao de menores, trafico humano, drogas, armas,
-  fraude, falsificacao, terrorismo, procedimentos medicos ilegais e outros
-  servicos criminosos.
+- A M2.20.9.2 ampliou o bloqueio para uma politica global de admissao de
+  servicos, com `allow`, `sensitiveReview`, `block` e `unknownReview`, incluindo
+  fraude/burla, violencia criminal, exploracao de menores, trafico humano,
+  drogas, armas, falsificacao, terrorismo, procedimentos medicos ilegais,
+  servicos criminosos e servicos vagos que exigem analise antes de ficarem
+  publicos.
 - M2.20.10 confirmou o fecho do trilho por testes, build, E2E e QA visual.
 
 ## Hotfix critico revalidado
@@ -60,7 +62,11 @@ Cobertura confirmada:
 
 - `puta`, `prostituta`, `vadia` e obfuscacoes simples bloqueiam.
 - `assassino`, `pedofilia`, `vender droga`, `documento falso`,
-  `hackear conta`, `lavagem de dinheiro` e equivalentes ilicitos bloqueiam.
+  `hackear conta`, `lavagem de dinheiro`, `burlas`, `burlador` e equivalentes
+  ilicitos bloqueiam.
+- `servico especial`, `trabalho secreto`, `contactos especiais` e textos vagos
+  equivalentes entram em `unknownReview` e nao aparecem, nao indexam e nao
+  fazem matching como servico publico.
 - `computador`, `reparacao de computadores`, `reputacao online` e
   `disputa contratual`, `trafego pago`, `fisioterapia` e `bolo de aniversario`
   continuam permitidos.
@@ -120,12 +126,12 @@ ficheiros artificiais apenas para satisfazer nomes.
 | `flutter test --no-pub test/features/cliente/novo_pedido_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart` | Passou, 8 testes. |
 | `flutter test --no-pub test/features/prestador/prestador_settings_taxonomy_test.dart test/features/prestador/prestador_settings_sensitive_categories_test.dart test/features/prestador/widgets/prestador_home_components_test.dart` | Passou, 23 testes. |
 | `flutter test --no-pub test/features/prestador/widgets/prestador_home_components_test.dart test/features/prestador/prestador_settings_taxonomy_test.dart test/features/common/perfil_publico_screen_test.dart test/features/cliente/novo_pedido_taxonomy_test.dart test/features/cliente/discovery/provider_search_profile_test.dart test/features/cliente/discovery/provider_search_matcher_test.dart test/features/cliente/discovery/provider_search_screen_test.dart test/core/pedido_service_test.dart` | Passou, 98 testes apos hotfix M2.20.9.2. |
-| `flutter test --no-pub` | Passou, 481/481 testes. |
+| `flutter test --no-pub` | Passou, 491/491 testes. |
 | `flutter build web --release --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true --pwa-strategy=none -o build/web_manual_release` | Passou. Apenas avisos wasm conhecidos de `dart_webrtc`. |
 | `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:dual` | Primeiras tentativas falharam por ambiente: app nao servida e depois emuladores desligados. A execucao valida com servidor estatico + Auth/Firestore/Storage Emulators passou com `FULL MULTI-SCENARIO FLOW OK`. |
 | `TARGET_URL=http://127.0.0.1:5174 npm.cmd run e2e:ui:orcamento` | Passou com `ORCAMENTO MIN-MAX FLOW OK`. |
-| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-illicit-services-visual-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
-| Browser QA com dados contaminados no emulador | 13 documentos `prestadores` contaminados localmente com `assassino`, `prostituta`, `puta`, `vadia`, `pedofilia`, `vender droga`, `documento falso`, `s i c a r i o` e `d0cumento falso`; Home Prestador abriu em `http://127.0.0.1:5174/?role=prestador`; `forbiddenVisible = []`; `consoleErrors = 0`; estado seguro exibido. |
+| `npm.cmd run qa:visual:m2-10-6 -- --base-url=http://127.0.0.1:5174 --out-dir=%TEMP%\chegaja-m22092-service-admission-qa --wait-ms=12000` | Passou, 8 screenshots gerados. |
+| Browser QA com dados contaminados no emulador | 19 documentos `prestadores` contaminados localmente com `burlador`, `burlas`, `servico especial`, `trabalho secreto`, `assassino`, `prostituta`, `puta`, `vadia`, `pedofilia`, `vender droga`, `documento falso`, `s i c a r i o`, `b u r l a` e `d0cumento falso`; Home Prestador abriu em `http://127.0.0.1:5174/?role=prestador`; `forbiddenVisible = []`; `consoleErrors = 0`; estado seguro exibido. |
 
 ## Rules, Storage Rules e Functions
 

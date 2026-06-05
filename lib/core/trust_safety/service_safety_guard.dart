@@ -1,5 +1,6 @@
 import 'package:chegaja_v2/core/models/provider_custom_service.dart';
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
+import 'package:chegaja_v2/core/trust_safety/service_admission_guard.dart';
 import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 
 class ServiceSafetySanitizationResult {
@@ -27,6 +28,10 @@ class ServiceSafetyGuard {
     return TrustSafetyClassifier.classifyText(text);
   }
 
+  static ServiceAdmissionResult classifyServiceAdmission(String text) {
+    return ServiceAdmissionGuard.classify(title: text);
+  }
+
   static bool isServiceTextBlocked(String text) {
     final normalized = text.trim();
     if (normalized.isEmpty) return false;
@@ -34,15 +39,21 @@ class ServiceSafetyGuard {
         TrustSafetyDecision.block;
   }
 
+  static bool shouldRenderServiceTextPublicly(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty) return false;
+    return ServiceAdmissionGuard.shouldRenderServiceTextPublicly(normalized);
+  }
+
   static List<String> filterAllowedServiceNames(Iterable<String> values) {
     return _uniqueStrings(
-      values.where((value) => !isServiceTextBlocked(value)),
+      values.where(shouldRenderServiceTextPublicly),
     );
   }
 
   static List<String> filterAllowedSearchTerms(Iterable<String> values) {
     return _uniqueStrings(
-      values.where((value) => !isServiceTextBlocked(value)),
+      values.where(shouldRenderServiceTextPublicly),
     );
   }
 
@@ -69,10 +80,9 @@ class ServiceSafetyGuard {
     final rawServiceNames = _stringList(servicosNomes);
     final rawCustomServiceNames = _stringList(customServiceNames);
     final rawCustomServiceSearchTerms = _stringList(customServiceSearchTerms);
-    final parsedCustomServices =
-        filterAllowedCustomServices(ProviderCustomService.listFrom(
-      customServices,
-    ));
+    final parsedCustomServices = filterAllowedCustomServices(
+      ProviderCustomService.listFrom(customServices),
+    );
     final safeCustomIds =
         parsedCustomServices.map((service) => service.id).toSet();
 
@@ -129,6 +139,12 @@ class ServiceSafetyGuard {
   }
 
   static bool _isCustomServiceBlocked(ProviderCustomService service) {
+    final admission = ServiceAdmissionGuard.classify(
+      title: service.title,
+      description: service.description,
+      aliases: service.aliases,
+      normalizedSearchTerms: service.normalizedSearchTerms,
+    );
     final fields = <String>[
       service.title,
       service.description,
@@ -137,7 +153,8 @@ class ServiceSafetyGuard {
       ...service.normalizedSearchTerms,
     ];
     return fields.any(isServiceTextBlocked) ||
-        service.trustSafetyDecision == TrustSafetyDecision.block.name;
+        service.trustSafetyDecision == TrustSafetyDecision.block.name ||
+        !admission.shouldRenderPublicly;
   }
 
   static List<String> _stringList(Object? value) {

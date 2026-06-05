@@ -41,6 +41,13 @@ void main() {
 
     test('bloqueia grupos globais de servicos ilicitos', () {
       const blockedTexts = [
+        'burlas',
+        'burlador',
+        'burl\u00e3o',
+        'fraudador',
+        'golpista',
+        'scammer',
+        'vigarista',
         'assassino',
         'assassino de aluguel',
         'matador de aluguel',
@@ -109,8 +116,14 @@ void main() {
 
     test('bloqueia obfuscacao simples de servicos ilicitos globais', () {
       const blockedTexts = [
+        'b.u.r.l.a',
+        'b-u-r-l-a',
+        'b u r l a',
+        'bur1a',
         's i c a r i o',
         'a.s.s.a.s.s.i.n.o',
+        'assass1no',
+        'ped0filia',
         'd.r.o.g.a',
         'd0cumento falso',
         'a.r.m.a ilegal',
@@ -162,6 +175,8 @@ void main() {
           'prostituta',
           'Consultoria de imagem',
           'vadia',
+          'servi\u00e7o especial',
+          'contactos especiais',
         ]),
         ['Canalizador', 'Consultoria de imagem'],
       );
@@ -172,6 +187,7 @@ void main() {
           'p.u.t.a',
           'moda',
           'pr0stituta',
+          'trabalho secreto',
         ]),
         ['canalizacao', 'moda'],
       );
@@ -195,12 +211,18 @@ void main() {
         title: 'Servico qualquer',
         aliases: ['p-u-t-a'],
       );
+      const unknownTitle = ProviderCustomService(
+        id: 'custom_unknown',
+        title: 'servico especial',
+        description: 'coisa discreta',
+      );
 
       expect(
         ServiceSafetyGuard.filterAllowedCustomServices([
           clean,
           blockedTitle,
           blockedAlias,
+          unknownTitle,
         ]),
         [clean],
       );
@@ -210,8 +232,17 @@ void main() {
       final result = ServiceSafetyGuard.sanitizeProviderServices(
         servicos: ['custom_puta', 'plumbing'],
         servicosNomes: ['puta', 'Canalizador', 'vadia'],
-        customServiceNames: ['p.u.t.a', 'Consultoria de imagem'],
-        customServiceSearchTerms: ['canalizacao', 'prostituta', 'moda'],
+        customServiceNames: [
+          'p.u.t.a',
+          'Consultoria de imagem',
+          'servico especial',
+        ],
+        customServiceSearchTerms: [
+          'canalizacao',
+          'prostituta',
+          'moda',
+          'trabalho secreto',
+        ],
         customServices: const [
           {
             'id': 'custom_puta',

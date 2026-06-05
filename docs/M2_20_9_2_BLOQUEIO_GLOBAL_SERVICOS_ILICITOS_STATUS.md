@@ -4,6 +4,15 @@ Data: 2026-06-05
 
 Estado: FECHADA no escopo atual.
 
+Complemento posterior no mesmo hotfix:
+
+```text
+docs/M2_20_9_2_POLITICA_ADMISSAO_SERVICOS_STATUS.md
+```
+
+Esse complemento criou `ServiceAdmissionGuard` para adicionar a decisao
+`unknownReview` e bloquear falsos negativos como `burlas` e `burlador`.
+
 ## Problema
 
 O hotfix anterior de M2.20.9.1 bloqueava prostituicao, servicos sexuais,

@@ -5,7 +5,6 @@ import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_matcher.dart';
 import 'package:chegaja_v2/core/models/provider_custom_service.dart';
-import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
 
 class ServiceTaxonomySelection {
@@ -122,7 +121,7 @@ class _ServiceTaxonomyPickerSectionState
   bool _isCustomFallbackQuery(String query) {
     if (query.trim().isEmpty) return false;
     final safety = CustomServiceSafetyValidator.validate(title: query);
-    if (safety.decision == TrustSafetyDecision.block) return true;
+    if (!safety.shouldSave) return true;
     final match = ServiceTaxonomyMatcher.matchServiceQuery(query);
     return !match.hasMatch && match.suggestions.isEmpty;
   }
@@ -141,7 +140,8 @@ class _ServiceTaxonomyPickerSectionState
     ServiceTaxonomySubcategory subcategory,
   ) {
     return ServiceTaxonomyCatalog.findCategoryById(
-        subcategory.parentCategoryId);
+      subcategory.parentCategoryId,
+    );
   }
 
   void _selectSubcategory(ServiceTaxonomySubcategory subcategory) {
@@ -207,7 +207,7 @@ class _ServiceTaxonomyPickerSectionState
       aliases: aliases,
       query: _queryController.text,
     );
-    if (safety.decision == TrustSafetyDecision.block) {
+    if (!safety.shouldSave) {
       setState(() {
         _queryController.clear();
         _customNameController.clear();

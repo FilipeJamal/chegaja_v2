@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
 import 'package:chegaja_v2/core/trust_safety/custom_service_safety_validator.dart';
+import 'package:chegaja_v2/core/trust_safety/service_admission_guard.dart';
 
 void main() {
   group('CustomServiceSafetyValidator', () {
@@ -46,6 +47,20 @@ void main() {
       expect(result.messageForUser, isNot(contains('prostituta')));
     });
 
+    test('bloqueia burla e burlador como fraude', () {
+      for (final title in const ['burlas', 'burlador', 'b.u.r.l.a']) {
+        final result = CustomServiceSafetyValidator.validate(
+          title: title,
+          description: 'Texto antigo contaminado',
+        );
+
+        expect(result.decision, TrustSafetyDecision.block, reason: title);
+        expect(result.admissionDecision, ServiceAdmissionDecision.block);
+        expect(result.shouldSave, isFalse);
+        expect(result.messageForUser, isNot(contains(title)));
+      }
+    });
+
     test('needsReview nao bloqueia servico sensivel legitimo', () {
       final result = CustomServiceSafetyValidator.validate(
         title: 'Cuidados infantis ao domicilio',
@@ -78,6 +93,21 @@ void main() {
       expect(
         result.normalizedSearchTerms,
         containsAll(['consultoria de imagem', 'estilo pessoal', 'moda']),
+      );
+    });
+
+    test('unknownReview impede publicacao automatica de servico vago', () {
+      final result = CustomServiceSafetyValidator.validate(
+        title: 'servico especial',
+        description: 'qualquer coisa discreta',
+      );
+
+      expect(result.decision, TrustSafetyDecision.allow);
+      expect(result.admissionDecision, ServiceAdmissionDecision.unknownReview);
+      expect(result.shouldSave, isFalse);
+      expect(
+        result.messageForUser,
+        'Este servi\u00e7o precisa de an\u00e1lise antes de ficar dispon\u00edvel.',
       );
     });
   });

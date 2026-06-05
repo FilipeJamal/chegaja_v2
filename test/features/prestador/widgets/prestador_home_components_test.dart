@@ -75,6 +75,8 @@ void main() {
         'servicos': [
           'custom_prostituta',
           'custom_puta',
+          'custom_burlador',
+          'custom_unknown',
           'custom_assassino',
           'custom_documento_falso',
           'plumbing',
@@ -83,16 +85,26 @@ void main() {
           'prostituta',
           'puta',
           'vadia',
+          'burlador',
+          'burlas',
+          'servico especial',
           'assassino',
           'pedofilia',
           'vender droga',
           'documento falso',
           'Canalizador',
         ],
-        'customServiceNames': ['p.u.t.a', 'assassino de aluguel'],
+        'customServiceNames': [
+          'p.u.t.a',
+          'burlador',
+          'assassino de aluguel',
+          'contactos especiais',
+        ],
         'customServiceSearchTerms': [
           'prostituta',
+          'b u r l a',
           'vender droga',
+          'trabalho secreto',
           'canalizacao',
         ],
         'customServices': [
@@ -110,6 +122,17 @@ void main() {
           {
             'id': 'custom_assassino',
             'title': 'assassino',
+            'trustSafetyDecision': 'allow',
+          },
+          {
+            'id': 'custom_burlador',
+            'title': 'burlador',
+            'trustSafetyDecision': 'allow',
+          },
+          {
+            'id': 'custom_unknown',
+            'title': 'servico especial',
+            'description': 'coisa discreta',
             'trustSafetyDecision': 'allow',
           },
           {

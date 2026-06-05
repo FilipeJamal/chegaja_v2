@@ -414,6 +414,8 @@ void main() {
     WidgetTester tester,
   ) async {
     for (final term in const [
+      'burlador',
+      'burlas',
       'assassino',
       'pedofilia',
       'vender droga',
@@ -456,6 +458,48 @@ void main() {
       expect(find.textContaining('permitido no ChegaJ'), findsOneWidget);
       expect(find.textContaining(term), findsNothing);
     }
+  });
+
+  testWidgets(
+      'PrestadorServiceTaxonomySelector manda servico vago para analise', (
+    WidgetTester tester,
+  ) async {
+    var selected = <String>{};
+    var customServices = <ProviderCustomService>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PrestadorServiceTaxonomySelector(
+              selectedSubcategoryIds: selected,
+              onChanged: (value) => selected = value,
+              customServices: customServices,
+              onCustomServicesChanged: (value) => customServices = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('prestador_service_taxonomy_query_field')),
+      'servico especial',
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('custom_service_description_field')),
+      'coisa discreta',
+    );
+    final addButton = find.byKey(const Key('add_custom_service_button'));
+    await tester.ensureVisible(addButton);
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+
+    expect(customServices, isEmpty);
+    expect(selected, isEmpty);
+    expect(find.textContaining('precisa de an'), findsOneWidget);
+    expect(find.textContaining('servico especial'), findsNothing);
   });
 
   testWidgets('PrestadorServiceTaxonomySelector mostra servicos personalizados',

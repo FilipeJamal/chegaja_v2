@@ -1,5 +1,6 @@
 import 'package:chegaja_v2/core/catalog/service_taxonomy_normalizer.dart';
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
+import 'package:chegaja_v2/core/trust_safety/service_admission_guard.dart';
 import 'package:chegaja_v2/core/trust_safety/trust_safety_classifier.dart';
 
 const customServiceBlockedMessage =
@@ -11,16 +12,24 @@ const customServiceNeedsReviewMessage =
 class CustomServiceSafetyResult {
   const CustomServiceSafetyResult({
     required this.classification,
+    required this.admission,
     required this.normalizedSearchTerms,
   });
 
   final TrustSafetyClassification classification;
+  final ServiceAdmissionResult admission;
   final List<String> normalizedSearchTerms;
 
   TrustSafetyDecision get decision => classification.decision;
-  bool get isBlocked => decision == TrustSafetyDecision.block;
+  ServiceAdmissionDecision get admissionDecision => admission.decision;
+  bool get shouldSave => admission.shouldSave;
+  bool get shouldRenderPublicly => admission.shouldRenderPublicly;
+  bool get shouldIndexForSearch => admission.shouldIndexForSearch;
+  bool get shouldMatch => admission.shouldMatch;
+  bool get isBlocked => !shouldSave;
 
   String get messageForUser {
+    if (admission.userMessage.isNotEmpty) return admission.userMessage;
     switch (decision) {
       case TrustSafetyDecision.block:
         return customServiceBlockedMessage;
@@ -53,6 +62,13 @@ class CustomServiceSafetyValidator {
       ...aliases,
     ];
     final normalizedTerms = _normalizedTerms(rawFields);
+    final admission = ServiceAdmissionGuard.classify(
+      title: title,
+      description: description,
+      aliases: aliases,
+      queryOriginal: query,
+      normalizedSearchTerms: normalizedTerms,
+    );
 
     final classifications = <TrustSafetyClassification>[
       for (final field in rawFields)
@@ -67,6 +83,7 @@ class CustomServiceSafetyValidator {
 
     return CustomServiceSafetyResult(
       classification: classification,
+      admission: admission,
       normalizedSearchTerms: normalizedTerms,
     );
   }

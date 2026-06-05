@@ -392,7 +392,7 @@ Recomendacao futura:
 - M2.20.8 - Modelo/taxonomia de catalogo profissional. FECHADA.
 - M2.20.9 - UI profissional de escolha de servico. FECHADA.
 - M2.20.9.1 - Servico personalizado, Outro profissional e bloqueio de servicos proibidos. FECHADA.
-- M2.20.9.2 - Bloqueio global de servicos ilicitos. FECHADA.
+- M2.20.9.2 - Politica global de admissao e bloqueio de servicos ilicitos. FECHADA.
 - M2.20.10 - QA final do catalogo profissional. FECHADA.
 - M2.21 - Conta, definicoes e suporte premium. FUTURO.
 
@@ -482,8 +482,8 @@ A M2.20.10 fechou o trilho de catalogo profissional no escopo atual:
 
 - M2.20.7, M2.20.8, M2.20.9, M2.20.9.1, M2.20.9.2 e M2.20.10 estao fechadas.
 - A taxonomia profissional, a UI Cliente/Prestador, "Outro servico" custom,
-  search/matching e os hotfixes de servicos proibidos/ilicitos foram
-  revalidados.
+  search/matching, a politica global de admissao e os hotfixes de servicos
+  proibidos/ilicitos foram revalidados.
 - Testes focados, Flutter completo, build Web, E2E dual, E2E orcamento, QA
   visual e verificacao browser com dados contaminados passaram.
 - Firestore Rules, Storage Rules e Cloud Functions nao foram alteradas nesta

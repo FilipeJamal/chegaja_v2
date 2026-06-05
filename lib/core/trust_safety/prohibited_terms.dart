@@ -100,9 +100,18 @@ class ProhibitedTerms {
   ];
 
   static const List<String> fraudTerms = [
-    'fraude',
-    'golpe',
     'burla',
+    'burlas',
+    'burlador',
+    'burlao',
+    'fraude',
+    'fraudador',
+    'golpe',
+    'golpista',
+    'scam',
+    'scammer',
+    'vigarista',
+    'burla online',
     'esquema fraudulento',
     'cartao clonado',
     'clonar cartao',
@@ -215,6 +224,11 @@ class ProhibitedTerms {
     final leetNormalized = _normalizeLeet(normalized);
     if (leetNormalized != normalized) {
       contexts.add(_TextMatchContext(leetNormalized));
+    }
+    final alternateLeetNormalized = _normalizeAlternateLeet(normalized);
+    if (alternateLeetNormalized != normalized &&
+        alternateLeetNormalized != leetNormalized) {
+      contexts.add(_TextMatchContext(alternateLeetNormalized));
     }
 
     final matches = <ProhibitedTermMatch>[];
@@ -342,6 +356,16 @@ class ProhibitedTerms {
         .replaceAll('7', 't');
   }
 
+  static String _normalizeAlternateLeet(String value) {
+    return value
+        .replaceAll('0', 'o')
+        .replaceAll('1', 'l')
+        .replaceAll('3', 'e')
+        .replaceAll('4', 'a')
+        .replaceAll('5', 's')
+        .replaceAll('7', 't');
+  }
+
   static const Set<String> _safePrefixTerms = {
     'prostitu',
     'pedofil',
@@ -358,6 +382,8 @@ class ProhibitedTerms {
     'armas',
     'assassino',
     'assassinos',
+    'burla',
+    'burlas',
     'droga',
     'drogas',
     'documento',

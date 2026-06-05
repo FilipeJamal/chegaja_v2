@@ -45,10 +45,17 @@ void main() {
             'puta',
             'prostituta',
             'vadia',
+            'burlador',
+            'servico especial',
             'assassino',
             'documento falso',
           ],
-          'customServiceSearchTerms': ['p.u.t.a', 'vender droga'],
+          'customServiceSearchTerms': [
+            'p.u.t.a',
+            'b u r l a',
+            'vender droga',
+            'trabalho secreto',
+          ],
         },
       );
 
@@ -57,9 +64,12 @@ void main() {
         'prostituta',
         'vadia',
         'p-u-t-a',
+        'burlador',
+        'burlas',
         'assassino',
         'documento falso',
         'vender droga',
+        'servico especial',
       ]) {
         expect(matchesProviderSearch(profile, query), isFalse, reason: query);
         expect(
@@ -71,6 +81,8 @@ void main() {
       expect(contaminated.searchText, isNot(contains('puta')));
       expect(contaminated.searchText, isNot(contains('prostituta')));
       expect(contaminated.searchText, isNot(contains('vadia')));
+      expect(contaminated.searchText, isNot(contains('burlador')));
+      expect(contaminated.searchText, isNot(contains('servico especial')));
       expect(contaminated.searchText, isNot(contains('assassino')));
       expect(contaminated.searchText, isNot(contains('documento falso')));
     });

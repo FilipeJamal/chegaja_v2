@@ -244,6 +244,8 @@ void main() {
     WidgetTester tester,
   ) async {
     for (final term in const [
+      'burlador',
+      'burlas',
       'assassino',
       'pedofilia',
       'vender droga',
@@ -282,5 +284,42 @@ void main() {
       expect(find.textContaining('permitido no ChegaJ'), findsOneWidget);
       expect(find.textContaining(term), findsNothing);
     }
+  });
+
+  testWidgets('ServiceTaxonomyPickerSection manda servico vago para analise', (
+    WidgetTester tester,
+  ) async {
+    ServiceTaxonomySelection? selected;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ServiceTaxonomyPickerSection(
+              value: selected,
+              onChanged: (value) => selected = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('service_taxonomy_query_field')),
+      'servico especial',
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('client_custom_service_description_field')),
+      'coisa discreta',
+    );
+    await tester.tap(
+      find.byKey(const Key('client_custom_service_add_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selected, isNull);
+    expect(find.textContaining('precisa de an'), findsOneWidget);
+    expect(find.textContaining('servico especial'), findsNothing);
   });
 }

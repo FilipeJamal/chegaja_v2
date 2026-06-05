@@ -167,6 +167,31 @@ Documento detalhado:
 docs/M2_20_9_2_BLOQUEIO_GLOBAL_SERVICOS_ILICITOS_STATUS.md
 ```
 
+## Complemento M2.20.9.2 - Politica global de admissao
+
+Depois do bloqueio global, foi observado que `burlas` e `burlador` ainda
+podiam passar como servico personalizado. A correcao complementar criou
+`ServiceAdmissionGuard` para decidir a admissibilidade de qualquer servico
+custom:
+
+```text
+allow
+sensitiveReview
+block
+unknownReview
+```
+
+Com isso, servicos ilicitos como burla/fraude bloqueiam, servicos sensiveis
+seguem para analise/aprovacao conforme M2.20, e textos vagos como `servico
+especial` ou `trabalho secreto` nao ficam publicos, nao sao indexados e nao
+fazem matching.
+
+Documento detalhado:
+
+```text
+docs/M2_20_9_2_POLITICA_ADMISSAO_SERVICOS_STATUS.md
+```
+
 ## Discovery e matching
 
 - `ProviderSearchProfile` inclui `customServiceNames`,

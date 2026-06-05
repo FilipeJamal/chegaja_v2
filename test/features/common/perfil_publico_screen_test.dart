@@ -101,6 +101,8 @@ void main() {
       'servicos': [
         'custom_puta',
         'custom_vadia',
+        'custom_burlador',
+        'custom_unknown',
         'custom_assassino',
         'custom_documento_falso',
         'plumbing',
@@ -109,14 +111,22 @@ void main() {
         'puta',
         'prostituta',
         'vadia',
+        'burlador',
+        'burlas',
+        'servico especial',
         'assassino',
         'pedofilia',
         'vender droga',
         'documento falso',
         'Canalizacao',
       ],
-      'customServiceNames': ['p.u.t.a', 'assassino'],
-      'customServiceSearchTerms': ['prostituta', 'vender droga'],
+      'customServiceNames': ['p.u.t.a', 'burlador', 'assassino'],
+      'customServiceSearchTerms': [
+        'prostituta',
+        'b u r l a',
+        'vender droga',
+        'trabalho secreto',
+      ],
       'customServices': [
         {
           'id': 'custom_puta',
@@ -126,6 +136,17 @@ void main() {
         {
           'id': 'custom_assassino',
           'title': 'assassino',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_burlador',
+          'title': 'burlador',
+          'trustSafetyDecision': 'allow',
+        },
+        {
+          'id': 'custom_unknown',
+          'title': 'servico especial',
+          'description': 'coisa discreta',
           'trustSafetyDecision': 'allow',
         },
       ],
@@ -138,6 +159,9 @@ void main() {
     expect(find.text('puta'), findsNothing);
     expect(find.text('prostituta'), findsNothing);
     expect(find.text('vadia'), findsNothing);
+    expect(find.text('burlador'), findsNothing);
+    expect(find.text('burlas'), findsNothing);
+    expect(find.text('servico especial'), findsNothing);
     expect(find.text('assassino'), findsNothing);
     expect(find.text('pedofilia'), findsNothing);
     expect(find.text('vender droga'), findsNothing);

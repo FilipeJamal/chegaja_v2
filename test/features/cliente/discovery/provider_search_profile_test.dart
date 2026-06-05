@@ -193,18 +193,29 @@ void main() {
             'prostituta',
             'puta',
             'vadia',
+            'burlador',
+            'burlas',
+            'servico especial',
             'assassino',
             'pedofilia',
             'vender droga',
             'documento falso',
             'Canalizacao',
           ],
-          'categories': ['puta', 'assassino', 'Casa'],
-          'customServiceNames': ['prostituta', 'p.u.t.a', 'documento falso'],
+          'categories': ['puta', 'burlador', 'assassino', 'Casa'],
+          'customServiceNames': [
+            'prostituta',
+            'p.u.t.a',
+            'burlador',
+            'documento falso',
+            'contactos especiais',
+          ],
           'customServiceSearchTerms': [
             'prostituta',
             'vadia',
+            'b u r l a',
             'vender droga',
+            'trabalho secreto',
           ],
           'customServices': [
             {
@@ -223,6 +234,17 @@ void main() {
               'title': 'assassino',
               'trustSafetyDecision': 'allow',
             },
+            {
+              'id': 'custom_burlador',
+              'title': 'burlador',
+              'trustSafetyDecision': 'allow',
+            },
+            {
+              'id': 'custom_unknown',
+              'title': 'servico especial',
+              'description': 'coisa discreta',
+              'trustSafetyDecision': 'allow',
+            },
           ],
         },
       );
@@ -232,6 +254,9 @@ void main() {
       expect(profile.searchText, isNot(contains('prostituta')));
       expect(profile.searchText, isNot(contains('puta')));
       expect(profile.searchText, isNot(contains('vadia')));
+      expect(profile.searchText, isNot(contains('burlador')));
+      expect(profile.searchText, isNot(contains('burlas')));
+      expect(profile.searchText, isNot(contains('servico especial')));
       expect(profile.searchText, isNot(contains('assassino')));
       expect(profile.searchText, isNot(contains('pedofilia')));
       expect(profile.searchText, isNot(contains('vender droga')));
@@ -246,7 +271,7 @@ void main() {
             'nome': 'Valid',
             'city': 'Lisboa',
             'ratingAvg': 5,
-            'ratingCount': 1
+            'ratingCount': 1,
           },
         ).hasValidRating,
         isTrue,
@@ -258,7 +283,7 @@ void main() {
             'nome': 'Zero',
             'city': 'Lisboa',
             'ratingAvg': 5,
-            'ratingCount': 0
+            'ratingCount': 0,
           },
         ).hasValidRating,
         isFalse,
