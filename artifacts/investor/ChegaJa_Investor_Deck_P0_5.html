@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChegaJa Investor Deck P0.5</title>
+  <style>
+    @page { size: 16in 9in; margin: 0; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0b1220;
+      color: #111827;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .slide {
+      position: relative;
+      width: 16in;
+      height: 9in;
+      padding: .55in .68in;
+      page-break-after: always;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(20, 184, 166, .12), rgba(37, 99, 235, .06)),
+        #f6f8f8;
+    }
+    .slide::after {
+      content: "";
+      position: absolute;
+      right: -.8in;
+      bottom: -.95in;
+      width: 3.2in;
+      height: 3.2in;
+      border-radius: 999px;
+      background: rgba(20, 184, 166, .12);
+    }
+    .slide-top, .footer {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      color: #64748b;
+      font-size: 13px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .footer {
+      position: absolute;
+      left: .68in;
+      right: .68in;
+      bottom: .35in;
+      text-transform: none;
+      font-weight: 400;
+    }
+    .content {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1.04fr .96fr;
+      gap: .5in;
+      height: 7.4in;
+      align-items: center;
+    }
+    .copy { max-width: 6.85in; }
+    .kicker {
+      display: inline-flex;
+      color: #0f766e;
+      background: rgba(20, 184, 166, .14);
+      border: 1px solid rgba(20, 184, 166, .28);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 58px;
+      line-height: 1.03;
+      color: #111827;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 20px 0 0;
+      font-size: 25px;
+      line-height: 1.26;
+      color: #334155;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+    .body {
+      margin: 26px 0 0;
+      color: #475569;
+      font-size: 24px;
+      line-height: 1.35;
+    }
+    ul {
+      margin: 30px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 15px;
+      list-style: none;
+    }
+    li {
+      position: relative;
+      padding-left: 30px;
+      color: #334155;
+      font-size: 22px;
+      line-height: 1.28;
+    }
+    li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 11px;
+      height: 11px;
+      border-radius: 99px;
+      background: #14b8a6;
+    }
+    .chips {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .chips span {
+      padding: 10px 14px;
+      border: 1px solid #b6dcd7;
+      border-radius: 999px;
+      color: #0f766e;
+      background: #e7faf7;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .visual {
+      min-height: 5.6in;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .device {
+      width: 100%;
+      border-radius: 24px;
+      padding: 14px;
+      background: #ffffff;
+      border: 1px solid #d7dee8;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .16);
+    }
+    .device img {
+      width: 100%;
+      display: block;
+      border-radius: 16px;
+    }
+    .brand-orbit {
+      position: relative;
+      width: 5.4in;
+      height: 5.4in;
+      border-radius: 32px;
+      background: #0b1220;
+      color: white;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .25);
+    }
+    .logo-mark {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 1.45in;
+      height: 1.45in;
+      border-radius: 28px;
+      background: #14b8a6;
+      display: grid;
+      place-items: center;
+      font-size: 42px;
+      font-weight: 800;
+    }
+    .orbit-card {
+      position: absolute;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.16);
+      font-weight: 700;
+    }
+    .orbit-card.a { left: .55in; top: .7in; }
+    .orbit-card.b { right: .45in; top: 2.25in; }
+    .orbit-card.c { left: 1.3in; bottom: .65in; }
+    .flow-grid, .steps, .module-grid, .compare, .matrix, .map-card, .stage-list, .ask-card, .timeline, .closing-mark {
+      width: 100%;
+    }
+    .flow-grid, .steps, .module-grid, .stage-list, .timeline {
+      display: grid;
+      gap: 16px;
+    }
+    .flow-grid div, .steps span, .module-grid span, .stage-list span, .timeline span {
+      padding: 22px;
+      background: #fff;
+      border: 1px solid #d7dee8;
+      border-radius: 18px;
+      font-weight: 800;
+      color: #111827;
+      box-shadow: 0 14px 35px rgba(15,23,42,.08);
+    }
+    .flow-grid b {
+      height: 24px;
+      width: 2px;
+      background: #14b8a6;
+      justify-self: center;
+    }
+    .module-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .compare div {
+      min-height: 3.4in;
+      border-radius: 22px;
+      padding: 26px;
+      background: #fff;
+      border: 1px solid #d7dee8;
+      box-shadow: 0 14px 35px rgba(15,23,42,.08);
+    }
+    .compare div:last-child {
+      background: #0b1220;
+      color: #fff;
+    }
+    .compare strong {
+      display: block;
+      font-size: 26px;
+      margin-bottom: 18px;
+    }
+    .compare p {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.3;
+      color: inherit;
+    }
+    .matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .matrix div {
+      min-height: 1.35in;
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #0b1220;
+      background: #fff;
+      border: 1px solid #d7dee8;
+    }
+    .matrix .allow { background: #dcfce7; }
+    .matrix .review { background: #fef3c7; }
+    .matrix .block { background: #fee2e2; }
+    .matrix .unknown { background: #dbeafe; }
+    .map-card, .ask-card {
+      min-height: 4.6in;
+      border-radius: 30px;
+      background: #0b1220;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 38px;
+      box-shadow: 0 24px 70px rgba(15,23,42,.25);
+    }
+    .pin {
+      width: .9in;
+      height: .9in;
+      background: #14b8a6;
+      border-radius: 999px 999px 999px 0;
+      transform: rotate(-45deg);
+      margin-bottom: .45in;
+    }
+    .map-card strong, .ask-card strong, .closing-mark {
+      font-size: 48px;
+      line-height: 1.02;
+      font-weight: 900;
+    }
+    .map-card span, .ask-card span {
+      font-size: 22px;
+      color: #cbd5e1;
+      margin-top: 14px;
+    }
+    .bar {
+      display: flex;
+      overflow: hidden;
+      height: 22px;
+      border-radius: 999px;
+      margin-top: 34px;
+      background: rgba(255,255,255,.18);
+    }
+    .bar i { display: block; height: 100%; }
+    .bar i:nth-child(1) { background: #14b8a6; }
+    .bar i:nth-child(2) { background: #2563eb; }
+    .bar i:nth-child(3) { background: #22c55e; }
+    .bar i:nth-child(4) { background: #f59e0b; }
+    .bar i:nth-child(5) { background: #38bdf8; }
+    .bar i:nth-child(6) { background: #a78bfa; }
+    .bar i:nth-child(7) { background: #e2e8f0; }
+    .closing-mark {
+      color: #14b8a6;
+      background: #0b1220;
+      min-height: 4in;
+      display: grid;
+      place-items: center;
+      border-radius: 32px;
+      box-shadow: 0 24px 70px rgba(15,23,42,.25);
+    }
+    @media screen {
+      body { padding: 32px; }
+      .slide { margin: 0 auto 32px; box-shadow: 0 20px 80px rgba(0,0,0,.35); }
+    }
+  </style>
+</head>
+<body>
+
+    <section class="slide slide-1 visual-brand">
+      <div class="slide-top">
+        <span class="section">Abertura</span>
+        <span class="count">01 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+          <div class="kicker">Investor pitch</div>
+          <h1>ChegaJa</h1>
+          <h2>Infraestrutura local de confianca para servicos sob demanda</h2>
+          <p class="body">MVP funcional para organizar descoberta, pedidos, perfis, reputacao e seguranca em servicos locais.</p>
+
+          <div class="chips"><span>Maputo primeiro</span><span>MVP navegavel</span><span>Trust &amp; Safety desde o MVP</span></div>
+        </div>
+        <div class="visual">
+
+      <div class="brand-orbit">
+        <div class="logo-mark">CJ</div>
+        <div class="orbit-card a">Cliente</div>
+        <div class="orbit-card b">Prestador</div>
+        <div class="orbit-card c">Confianca</div>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-2 visual-problemFlow">
+      <div class="slide-top">
+        <span class="section">Problema</span>
+        <span class="count">02 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Contratar servicos locais ainda e disperso</h1>
+          <h2>O problema nao e so encontrar alguem. E encontrar alguem certo.</h2>
+
+          <ul><li>Clientes dependem de contactos soltos, grupos e recomendacoes informais.</li><li>Pouco contexto antes da conversa: portfolio, reputacao, historico e disponibilidade.</li><li>Prestadores pequenos dependem de redes pessoais e pouca visibilidade digital.</li><li>Texto livre sem regras pode abrir risco de servicos proibidos.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="flow-grid">
+        <div>Contactos soltos</div><b></b><div>Pouco contexto</div><b></b><div>Mais risco</div>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-3 visual-flow">
+      <div class="slide-top">
+        <span class="section">Solucao</span>
+        <span class="count">03 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>O ChegaJa estrutura o fluxo completo</h1>
+          <h2>Do pedido ao perfil, da conversa a reputacao.</h2>
+
+          <ul><li>Cliente descreve necessidade em linguagem simples.</li><li>App organiza por Servico, Intencao e Detalhes.</li><li>Prestador tem perfil, portfolio, @handle e categorias.</li><li>Pedido vira proposta, conversa, execucao e avaliacao.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="steps">
+        <span>Procurar</span><span>Pedir</span><span>Conversar</span><span>Executar</span><span>Avaliar</span>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-4 visual-screens">
+      <div class="slide-top">
+        <span class="section">Produto</span>
+        <span class="count">04 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>MVP navegavel, nao so ideia</h1>
+          <h2>Fluxos principais ja existem no produto.</h2>
+
+          <ul><li>Cliente/Prestador, pedidos, orcamento e chat.</li><li>Perfil publico, portfolio, avaliacoes e favoritos.</li><li>Discovery/search manual e link publico.</li><li>Admin leve, categorias sensiveis e catalogo profissional.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="module-grid">
+        <span>Pedidos</span><span>Perfis</span><span>Portfolio</span><span>Discovery</span><span>Admin</span><span>Safety</span>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-5 visual-clientScreenshot">
+      <div class="slide-top">
+        <span class="section">Cliente</span>
+        <span class="count">05 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Cliente: pedir com mais contexto</h1>
+          <h2>Servico -&gt; Intencao -&gt; Detalhes</h2>
+
+          <ul><li>Escolhe servico ou descreve necessidade.</li><li>Pede agora, agenda ou solicita orcamento.</li><li>Compara prestadores por perfil, portfolio e reputacao leve.</li><li>Acompanha o pedido no mesmo fluxo.</li></ul>
+
+        </div>
+        <div class="visual">
+          <div class="device"><img src="media/clientHome.png" alt="Home Cliente" /></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-6 visual-providerScreenshot">
+      <div class="slide-top">
+        <span class="section">Prestador</span>
+        <span class="count">06 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Prestador: visibilidade e pedidos</h1>
+          <h2>Um canal de trabalho, nao apenas cadastro.</h2>
+
+          <ul><li>Perfil profissional com servicos, portfolio e @handle.</li><li>Categorias de atuacao organizadas por catalogo.</li><li>Recebe pedidos compativeis e responde no contexto.</li><li>Construi reputacao por avaliacoes reais.</li></ul>
+
+        </div>
+        <div class="visual">
+          <div class="device"><img src="media/providerHome.png" alt="Home Prestador" /></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-7 visual-comparison">
+      <div class="slide-top">
+        <span class="section">Diferenciais</span>
+        <span class="count">07 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Mais que uma lista de prestadores</h1>
+          <h2>A diferenca esta na estrutura.</h2>
+
+          <ul><li>Catalogo profissional com categorias, subcategorias, aliases e frases comuns.</li><li>&quot;Outro servico&quot; exige nome, descricao e termos de pesquisa.</li><li>Discovery por perfil e servico.</li><li>Trust &amp; Safety e admin leve desde o MVP.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="compare">
+        <div><strong>Lista simples</strong><p>Nome, contacto e pouca confianca.</p></div>
+        <div><strong>ChegaJa</strong><p>Pedido, perfil, portfolio, reputacao e regras.</p></div>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-8 visual-admission">
+      <div class="slide-top">
+        <span class="section">Seguranca</span>
+        <span class="count">08 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Trust &amp; Safety desde o MVP</h1>
+          <h2>Texto livre nao vira porta aberta.</h2>
+
+          <ul><li>allow: entra no fluxo normal.</li><li>sensitiveReview: pode exigir analise.</li><li>block: bloqueia e nao guarda.</li><li>unknownReview: nao publica automaticamente.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="matrix">
+        <div class="allow">allow</div><div class="review">sensitiveReview</div>
+        <div class="block">block</div><div class="unknown">unknownReview</div>
+      </div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-9 visual-maputo">
+      <div class="slide-top">
+        <span class="section">Mercado</span>
+        <span class="count">09 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Foco inicial: Maputo</h1>
+          <h2>Marketplace local precisa de densidade antes de escala.</h2>
+
+          <ul><li>Piloto controlado por categorias de alta frequencia.</li><li>Recrutar poucos prestadores selecionados e acompanhar resposta.</li><li>Ativar clientes por necessidades concretas.</li><li>Medir pedidos, aceite, tempo de resposta, qualidade e repeticao.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="map-card"><div class="pin"></div><strong>Maputo</strong><span>Piloto local com densidade</span></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-10 visual-business">
+      <div class="slide-top">
+        <span class="section">Negocio</span>
+        <span class="count">10 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Modelo futuro, validado por etapas</h1>
+          <h2>Primeiro liquidez e confianca. Depois monetizacao.</h2>
+
+          <ul><li>Comissao por servico quando pagamentos reais forem integrados.</li><li>Planos PRO para prestadores.</li><li>Destaques pagos transparentes e leads qualificados.</li><li>Parcerias locais com empresas e profissionais.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="stage-list"><span>Agora: piloto</span><span>Depois: pagamentos</span><span>Escala: PRO + leads</span></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-11 visual-ask">
+      <div class="slide-top">
+        <span class="section">Investimento</span>
+        <span class="count">11 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Pedido recomendado: 700.000 MZN</h1>
+          <h2>Capital para sair de MVP funcional para piloto real.</h2>
+
+          <ul><li>350.000 MZN: enxuto.</li><li>700.000 MZN: recomendado.</li><li>1.250.000 MZN: robusto.</li><li>Possivel tranche ligada a metas do piloto.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="ask-card"><strong>700.000 MZN</strong><span>piloto recomendado</span><div class="bar"><i style="width:20%"></i><i style="width:15%"></i><i style="width:20%"></i><i style="width:15%"></i><i style="width:10%"></i><i style="width:10%"></i><i style="width:10%"></i></div></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-12 visual-timeline">
+      <div class="slide-top">
+        <span class="section">Plano</span>
+        <span class="count">12 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>60 a 90 dias: piloto controlado</h1>
+          <h2>Aprender com utilizadores reais antes de escalar.</h2>
+
+          <ul><li>Polir UX e preparar demo final.</li><li>Validar Android fisico e suporte inicial.</li><li>Recrutar prestadores e ativar clientes em Maputo.</li><li>Medir sinais reais e reforcar server-side antes de producao ampla.</li></ul>
+
+        </div>
+        <div class="visual">
+
+      <div class="timeline"><span>Preparar</span><span>Recrutar</span><span>Pilotar</span><span>Medir</span></div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+
+    <section class="slide slide-13 visual-closing">
+      <div class="slide-top">
+        <span class="section">Fecho</span>
+        <span class="count">13 / 13</span>
+      </div>
+      <div class="content">
+        <div class="copy">
+
+          <h1>Vamos validar Maputo juntos</h1>
+          <h2>Produto navegavel, tese clara, proximo passo mensuravel.</h2>
+          <p class="body">O investimento financia aprendizagem estruturada: prestadores reais, clientes reais e metricas reais.</p>
+
+          <div class="chips"><span>MVP funcional</span><span>Piloto controlado</span><span>700.000 MZN</span></div>
+        </div>
+        <div class="visual">
+
+      <div class="closing-mark">ChegaJa</div>
+        </div>
+      </div>
+      <div class="footer">ChegaJa investor pack P0.5</div>
+    </section>
+</body>
+</html>

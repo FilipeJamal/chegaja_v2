@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-06-06T00:47:23.224Z",
+  "title": "ChegaJa Investor Deck P0.5",
+  "outputs": {
+    "pptx": "artifacts/investor/ChegaJa_Investor_Deck_P0_5.pptx",
+    "html": "artifacts/investor/ChegaJa_Investor_Deck_P0_5.html",
+    "pdf": "artifacts/investor/ChegaJa_Investor_Deck_P0_5.pdf",
+    "preview": "artifacts/investor/ChegaJa_Investor_Deck_P0_5_preview.png"
+  },
+  "slideCount": 13,
+  "sources": {
+    "docs": [
+      "docs/investor/P0_1_DECK_INVESTIDOR_STRUCTURE.md",
+      "docs/investor/P0_2_ROTEIRO_DEMO_APP.md",
+      "docs/investor/P0_3_ONE_PAGER_INVESTIDOR.md",
+      "docs/investor/P0_4_QA_PERGUNTAS_DIFICEIS_INVESTIDOR.md"
+    ],
+    "media": {
+      "clientHome": {
+        "source": "C:\\Users\\Jamal\\AppData\\Local\\Temp\\chegaja-m22010-visual-qa\\home_cliente__desktop.png",
+        "packaged": "artifacts/investor/media/clientHome.png"
+      },
+      "providerHome": {
+        "source": "C:\\Users\\Jamal\\AppData\\Local\\Temp\\chegaja-m22010-visual-qa\\home_prestador__desktop.png",
+        "packaged": "artifacts/investor/media/providerHome.png"
+      },
+      "orderDetail": {
+        "source": "C:\\Users\\Jamal\\AppData\\Local\\Temp\\chegaja-e2e-full-ui\\2026-06-05T18-50-47-911Z\\30_manual_client_detail.png",
+        "packaged": "artifacts/investor/media/orderDetail.png"
+      },
+      "chat": {
+        "source": "C:\\Users\\Jamal\\AppData\\Local\\Temp\\chegaja-e2e-full-ui\\2026-06-05T18-50-47-911Z\\33_chat_provider_sent.png",
+        "packaged": "artifacts/investor/media/chat.png"
+      },
+      "admin": {
+        "source": "C:\\Users\\Jamal\\Documents\\ProjetosFlutter\\chegaja_v2\\artifacts\\presentation_chegaja\\admin_panel_fixed.png",
+        "packaged": "artifacts/investor/media/admin.png"
+      },
+      "logo": {
+        "source": "C:\\Users\\Jamal\\Documents\\ProjetosFlutter\\chegaja_v2\\assets\\images\\app_icon.png",
+        "packaged": "artifacts/investor/media/logo.png"
+      }
+    }
+  }
+}
