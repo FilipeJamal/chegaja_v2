@@ -37,10 +37,10 @@ ChegaJa e uma infraestrutura local de confianca para servicos sob demanda.
 - P0.3 fechado: one-pager.
 - P0.4 fechado: Q&A de perguntas dificeis.
 - P0.5 fechado para PPTX/PDF/HTML locais.
-- Figma Slides pendente de selecao de team/organization no widget Figma.
+- Figma Slides gerado e apresentado no widget do conector Figma.
 
 ## Proximo uso recomendado
 
 Usar o PDF para envio, o PPTX para edicao/apresentacao e o Q&A para preparar a
-conversa. Se for preciso uma versao Figma Slides editavel, selecionar
-team/organization no widget Figma e gerar a versao visual no conector.
+conversa. Se preferires editar no Figma, abrir uma das opcoes apresentadas no
+widget Figma Slides.

@@ -2,8 +2,7 @@
 
 Data: 2026-06-06
 
-Estado: FECHADO para artefatos locais. Figma Slides pendente de selecao de
-team/organization no conector Figma.
+Estado: FECHADO no escopo atual.
 
 ## Objetivo
 
@@ -15,7 +14,7 @@ com investidor anjo/pre-seed:
 - HTML navegavel para revisao local;
 - preview visual;
 - manifesto de geracao;
-- tentativa de geracao Figma Slides editavel.
+- geracao Figma Slides editavel via widget do conector Figma.
 
 Esta fase nao altera produto, Dart, Firestore Rules, Storage Rules, Cloud
 Functions, pagamentos, KYC, deploy ou M2.21.
@@ -147,31 +146,28 @@ Nao foi observado texto cortado critico nem sobreposicao incoerente nas slides v
 
 ## Figma Slides
 
-Foi feita tentativa de gerar versao editavel no Figma Slides via conector
-Figma.
+Foi gerada uma versao editavel no Figma Slides via conector Figma.
+
+Contexto de autenticacao:
+
+```text
+Utilizador Figma: Filipe Filipe
+Email: bentojamalfilipe@gmail.com
+Plan key usado: team::1635528922743542004
+```
 
 Resultado:
 
 ```text
-O conector pediu selecao de team/organization no widget antes de gerar o deck.
+O conector apresentou o widget de Figma Slides com opcoes de apresentacao.
 ```
 
-Mensagem devolvida pelo conector:
+Observacao:
 
-```text
-You'll need to select a team or organization in the widget before I can
-generate your "ChegaJa Investor Deck P0.5" presentation.
-Once you pick the correct plan, the tool will create several professional and
-readable presentation options for you to choose from.
-```
-
-Decisao:
-
-- PPTX/PDF/HTML locais ficam prontos e versionados.
-- Figma Slides fica pendente ate o Filipe selecionar o plan/team no widget do
-  Figma.
-- Depois da selecao, o mesmo brief usado nesta fase pode ser reenviado ao
-  conector para gerar a versao editavel.
+- O conector nao devolveu URL textual no terminal.
+- A selecao/edicao final acontece no widget Figma apresentado ao utilizador.
+- Os artefatos locais PPTX/PDF/HTML continuam versionados no repo como copia
+  independente e reutilizavel.
 
 ## Validacoes executadas
 
@@ -195,14 +191,14 @@ npm.cmd run test:scripts - passou
 
 ## Risco remanescente
 
-O pacote visual local esta pronto, mas a versao Figma editavel depende da
-selecao de team/organization no conector Figma. Alem disso, antes de uma
-apresentacao externa, e recomendavel fazer uma revisao humana do texto final e
-substituir screenshots se houver capturas mais recentes do app.
+O pacote visual local esta pronto e a versao Figma foi disponibilizada no widget
+do conector. Antes de uma apresentacao externa, e recomendavel fazer uma
+revisao humana do texto final e substituir screenshots se houver capturas mais
+recentes do app.
 
 ## Proximo passo
 
 ```text
-Selecionar team/organization no widget Figma para gerar a versao Figma Slides
-ou usar diretamente o PPTX/PDF local para marcar conversas com investidores.
+Usar o PDF/PPTX local para marcar conversas com investidores e, se preferires
+editar no Figma, abrir uma das opcoes apresentadas no widget Figma Slides.
 ```
