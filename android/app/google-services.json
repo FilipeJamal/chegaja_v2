@@ -7,6 +7,58 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:767588494857:android:4198384a2a6387055252d8",
+        "android_client_info": {
+          "package_name": "com.chegaja.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "767588494857-dcsi33pv451gdni1a8feakjdigcvlhs2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chegaja.app",
+            "certificate_hash": "40a3309f078a47dbdedbbd31ffe1ad206497807f"
+          }
+        },
+        {
+          "client_id": "767588494857-ih8mr4l8hi2vi1d72t02crhbhqad3dng.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.chegaja.app",
+            "certificate_hash": "ce5252a3186660a8cc6ae3122fcd0ecd6decf8f0"
+          }
+        },
+        {
+          "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfLgIdf5fJ_wnFbLuB_So8oX9JpgM-7Og"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "767588494857-7ihke0eqsj1jmm99hbp61iu666s6058m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.chegajaV2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:767588494857:android:630e1b985adfdb715252d8",
         "android_client_info": {
           "package_name": "com.example.chegaja"
@@ -31,10 +83,10 @@
               "client_type": 3
             },
             {
-              "client_id": "767588494857-on2upqqake520m1bips6s7ahrorhqedr.apps.googleusercontent.com",
+              "client_id": "767588494857-7ihke0eqsj1jmm99hbp61iu666s6058m.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.chegaja"
+                "bundle_id": "com.example.chegajaV2"
               }
             }
           ]
@@ -49,6 +101,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "767588494857-oudcb8nl79ckqpqi5vbbc042h9ruj2uu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chegaja_v2",
+            "certificate_hash": "40a3309f078a47dbdedbbd31ffe1ad206497807f"
+          }
+        },
         {
           "client_id": "767588494857-ncffmsvunr3vj80cm7cfh84hv1c7gp8d.apps.googleusercontent.com",
           "client_type": 3
@@ -67,10 +127,10 @@
               "client_type": 3
             },
             {
-              "client_id": "767588494857-on2upqqake520m1bips6s7ahrorhqedr.apps.googleusercontent.com",
+              "client_id": "767588494857-7ihke0eqsj1jmm99hbp61iu666s6058m.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.chegaja"
+                "bundle_id": "com.example.chegajaV2"
               }
             }
           ]

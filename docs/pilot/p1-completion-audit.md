@@ -8,10 +8,10 @@ Decisão atual: **NOT READY para piloto externo**
 
 As dez frentes P1 têm implementação técnica e procedimentos de operação. A
 preparação produtiva segura já inclui migração aditiva, catálogo server-side,
-TTL, segredo de eliminação e configuração Play Integrity para distribuição
-fora da Play Store. O P1 operacional ainda não está fechado: faltam identidade
-de produção, validação jurídica, aparelho físico, enforcement App Check e a
-execução real do piloto.
+TTL, segredo de eliminação, identificador Android final e configuração Play
+Integrity para distribuição fora da Play Store. O P1 operacional ainda não
+está fechado: faltam identidade jurídica, validação jurídica, aparelho físico,
+enforcement App Check e a execução real do piloto.
 
 Não foi feito deploy das Rules e Functions P1. A produção contém 86 utilizadores,
 42 prestadores e 29 pedidos no modelo legado; as Rules novas fecham totalmente
@@ -62,35 +62,44 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 - Functions/Firestore/Storage: **94 testes aprovados**; o emulador carregou as
   63 definições locais sem erro de descoberta.
 - Scripts operacionais: **11 grupos de testes aprovados**.
-- APK release: 123074500 bytes, assinatura v2, um signatário RSA 2048.
+- APK release: 123074488 bytes, assinatura v2, um signatário RSA 2048.
 - SHA-256 APK:
-  `e73b09e9d08112ceabfb178d05fb68d0edb75be0d9f6fe7bf36fd3f9624d6b02`.
+  `b813e4458b5dd41d566d79fc9e491d69ae26d8d870bba4a3744779006e46d81e`.
 - Fingerprint das 351 entradas de release:
-  `a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b`.
+  `e3c1dd9023e2ea20724af46a8a556d05471923a7c721f918e5c177f14c5f9b3a`.
 - Emulador Android 14/API 34: instalação limpa, seletor em português, nenhuma
   permissão no arranque e zero padrões fatais.
-- Readiness: **8/14 gates aprovados**.
+- Identidade Android: `com.chegaja.app`, app Firebase
+  `1:767588494857:android:4198384a2a6387055252d8`, certificados release/debug
+  registados e App Links ligados ao certificado release.
+- Readiness: **9/14 gates aprovados**.
 
-## Seis gates externos em falta
+## Gate fechado nesta etapa
 
-1. Substituir `com.example.chegaja_v2` pelo identificador de produção escolhido
-   pelo titular do domínio/marca e registar a nova app Firebase. A verificação
-   read-only encontrou apenas `com.example.chegaja` e
-   `com.example.chegaja_v2` entre as apps Android atuais do projeto.
-2. Configurar nome, email e endereço reais da entidade responsável.
-3. Obter parecer jurídico versionado para os termos e privacidade.
-4. Executar os 12 casos num Android físico API 33+ com a APK final.
-5. Fazer o corte controlado e comprovar App Check `ENFORCED` em Firestore,
+O identificador Android deixou de ser um bloqueio: `namespace`, `applicationId`,
+`MainActivity`, FlutterFire, Firebase, App Links, APK e evidência de emulador
+estão alinhados em `com.chegaja.app`. A app Firebase de produção tem as
+fingerprints SHA-1/SHA-256 verificadas das chaves release e debug. Os clientes
+Firebase antigos permanecem apenas para compatibilidade e não são a identidade
+da APK final.
+
+## Cinco gates externos em falta
+
+1. Configurar nome, email e endereço reais da entidade responsável.
+2. Obter parecer jurídico versionado para os termos e privacidade.
+3. Executar os 12 casos num Android físico API 33+ com a APK final.
+4. Fazer o corte controlado e comprovar App Check `ENFORCED` em Firestore,
    Storage, Authentication e Functions. A evidência tem de corresponder aos
    hashes exatos da APK, das duas Rules e de `functions/index.js`, além de
    registar a repetição final da migração.
-6. Executar e encerrar o piloto real com consentimento e métricas agregadas.
+5. Executar e encerrar o piloto real com consentimento e métricas agregadas.
 
 ## Ordem obrigatória do corte
 
-1. Fixar entidade jurídica e `applicationId` de produção.
-2. Registar a app Firebase/Play Integrity, reconstruir e repetir a assinatura.
-3. Aprovar a matriz no Android físico.
+1. Fixar a entidade jurídica; o `applicationId` de produção já está fechado.
+2. Aprovar a matriz no Android físico com a app Firebase/Play Integrity e APK
+   final já registadas, reconstruídas e assinadas.
+3. Confirmar que a APK física usa o mesmo hash e certificado desta auditoria.
 4. Definir a coorte e a janela de manutenção.
 5. Congelar writes legados e repetir a migração aditiva para capturar alterações
    posteriores a 2026-07-20.

@@ -1,11 +1,11 @@
 {
   "status": "COMPLETED",
-  "capturedAt": "2026-07-20T12:30:12.167Z",
-  "apkSha256": "e73b09e9d08112ceabfb178d05fb68d0edb75be0d9f6fe7bf36fd3f9624d6b02",
-  "releaseSourceFingerprint": "a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b",
+  "capturedAt": "2026-07-20T16:00:56.049Z",
+  "apkSha256": "b813e4458b5dd41d566d79fc9e491d69ae26d8d870bba4a3744779006e46d81e",
+  "releaseSourceFingerprint": "e3c1dd9023e2ea20724af46a8a556d05471923a7c721f918e5c177f14c5f9b3a",
   "releaseInputFiles": 351,
-  "packageId": "com.example.chegaja_v2",
-  "activity": "com.example.chegaja_v2/.MainActivity",
+  "packageId": "com.chegaja.app",
+  "activity": "com.chegaja.app/.MainActivity",
   "activityInForeground": true,
   "processAliveAfterInteraction": true,
   "device": {
@@ -31,8 +31,8 @@
     "GeneratedPluginsRegister",
     "ERRO FATAL",
     "ClassNotFoundException",
-    "ANR in com.example.chegaja_v2",
-    "Process: com.example.chegaja_v2"
+    "ANR in com.chegaja.app",
+    "Process: com.chegaja.app"
   ],
   "fatalPatternsMatched": [],
   "artifacts": [

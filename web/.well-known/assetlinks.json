@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.example.chegaja_v2",
+      "package_name": "com.chegaja.app",
       "sha256_cert_fingerprints": [
-        "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+        "13:36:FF:14:C1:DD:F0:94:40:38:7B:BD:F9:F4:8D:5A:09:60:2A:87:D1:06:2A:E6:FC:E2:A5:07:2B:AC:1F:81"
       ]
     }
   }

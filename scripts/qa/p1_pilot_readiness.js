@@ -9,6 +9,8 @@ const {
 } = require('./release_source_fingerprint');
 
 const root = path.resolve(__dirname, '../..');
+const expectedAndroidPackage = 'com.chegaja.app';
+const expectedAndroidFirebaseAppId = '1:767588494857:android:4198384a2a6387055252d8';
 const expectedSigningCertificate =
   '1336ff14c1ddf09440387bbdf9f48d5a09602a87d1062ae6fce2a5072bac1f81';
 const requiredPhysicalCases = [
@@ -208,6 +210,38 @@ function validateReleaseProvenance(evidence, apkDigest) {
     && evidence.generatedRegistrantExcluded === true;
 }
 
+function validateAndroidProductionIdentity(identity) {
+  const googleServices = identity.googleServices || {};
+  const androidClients = Array.isArray(googleServices.client) ? googleServices.client : [];
+  const productionClient = androidClients.find((client) => (
+    client?.client_info?.android_client_info?.package_name === expectedAndroidPackage
+  ));
+  const flutterConfig = identity.firebaseFlutter?.flutter?.platforms || {};
+  const localConfig = identity.firebaseLocal?.flutter?.platforms || {};
+  const assetTargets = Array.isArray(identity.assetLinks) ? identity.assetLinks : [];
+  const productionAssetTarget = assetTargets.find((entry) => (
+    entry?.target?.namespace === 'android_app'
+      && entry.target.package_name === expectedAndroidPackage
+  ));
+  const assetCertificates = productionAssetTarget?.target?.sha256_cert_fingerprints || [];
+  const normalizedAssetCertificates = assetCertificates.map((value) => (
+    String(value).replace(/:/g, '').toLowerCase()
+  ));
+
+  return identity.applicationId === expectedAndroidPackage
+    && identity.namespace === expectedAndroidPackage
+    && identity.mainActivity.includes(`package ${expectedAndroidPackage}`)
+    && productionClient?.client_info?.mobilesdk_app_id === expectedAndroidFirebaseAppId
+    && identity.firebaseOptions.includes(`appId: '${expectedAndroidFirebaseAppId}'`)
+    && flutterConfig.android?.default?.appId === expectedAndroidFirebaseAppId
+    && flutterConfig.dart?.['lib/firebase_options.dart']?.configurations?.android
+      === expectedAndroidFirebaseAppId
+    && localConfig.android?.default?.appId === expectedAndroidFirebaseAppId
+    && localConfig.dart?.['lib/firebase_options.dart']?.configurations?.android
+      === expectedAndroidFirebaseAppId
+    && normalizedAssetCertificates.includes(expectedSigningCertificate);
+}
+
 function validatePhysicalEvidence(evidence, apkDigest) {
   if (!evidence || String(evidence.status).toUpperCase() !== 'COMPLETED') return false;
   const device = evidence.device || {};
@@ -274,6 +308,8 @@ function run() {
   const gradle = read('android/app/build.gradle.kts');
   const packageMatch = gradle.match(/applicationId\s*=\s*"([^"]+)"/);
   const applicationId = packageMatch ? packageMatch[1] : '';
+  const namespaceMatch = gradle.match(/namespace\s*=\s*"([^"]+)"/);
+  const namespace = namespaceMatch ? namespaceMatch[1] : '';
   const mergedManifest = read(
     'build/app/intermediates/merged_manifest/release/processReleaseMainManifest/AndroidManifest.xml',
   );
@@ -311,8 +347,16 @@ function run() {
   check('manifest_permissions', mergedManifest
     && forbiddenPermissions.every((permission) => !mergedManifest.includes(permission)),
   'blocker', 'manifesto release não contém áudio, Bluetooth ou identificadores publicitários');
-  check('production_package', applicationId && !applicationId.startsWith('com.example.'), 'blocker',
-    `applicationId atual: ${applicationId || 'não encontrado'}`);
+  check('production_package', validateAndroidProductionIdentity({
+    applicationId,
+    namespace,
+    mainActivity: read('android/app/src/main/kotlin/com/chegaja/app/MainActivity.kt'),
+    googleServices: readJson('android/app/google-services.json'),
+    firebaseOptions: read('lib/firebase_options.dart'),
+    firebaseFlutter: readJson('firebase.flutter.json'),
+    firebaseLocal: readJson('firebase.local.json'),
+    assetLinks: readJson('web/.well-known/assetlinks.json'),
+  }), 'blocker', `identidade Android/Firebase/App Links alinhada em ${expectedAndroidPackage}`);
   check('legal_identity', Boolean(
     clientEnv.LEGAL_ENTITY_NAME
     && clientEnv.LEGAL_CONTACT_EMAIL
@@ -380,6 +424,7 @@ if (require.main === module) run();
 module.exports = {
   containsPiiKeys,
   requiredPhysicalCases,
+  validateAndroidProductionIdentity,
   validateAppCheckEvidence,
   validateDeletionSecretEvidence,
   validateLegalApproval,

@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.com.example.chegaja_v2",
+        "appID": "TEAMID.com.example.chegajaV2",
         "paths": [
           "/pedido/*",
           "/chat/*"

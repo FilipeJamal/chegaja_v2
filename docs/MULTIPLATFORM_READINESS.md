@@ -77,7 +77,7 @@ O estado real e:
 | Android `android/app/google-services.json` | Existe e esta versionado. |
 | iOS `ios/Runner/GoogleService-Info.plist` | Nao existe no repo. Precisa ser gerado/adicionado para build iOS real, especialmente Auth/FCM/APNs. |
 | macOS `macos/Runner/GoogleService-Info.plist` | Nao existe no repo. Precisa ser gerado/adicionado se a build macOS usar configuracao nativa. |
-| Android package id | Ainda esta `com.example.chegaja_v2`. Precisa package id final antes de Firebase/App Store/Play Store. |
+| Android package id | Finalizado como `com.chegaja.app`; app Firebase de produção e certificados release/debug registados em 2026-07-20. |
 | iOS/macOS bundle id | `firebase_options.dart` aponta para bundle generico `com.example.chegajaV2`. Precisa bundle id final. |
 | Windows Firebase options | Existem, usando configuracao web-style. Precisa teste real de Auth/Firestore/Storage. |
 
@@ -100,7 +100,7 @@ Pronto/parcial:
 Riscos:
 
 - App label ainda e `chegaja_v2`.
-- `namespace` e `applicationId` ainda sao `com.example.chegaja_v2`.
+- `namespace` e `applicationId` são `com.chegaja.app`.
 - App Links HTTPS exigem `assetlinks.json` publicado nos dominios.
 
 ### iOS
