@@ -7,6 +7,7 @@ const {
   validateAppCheckEvidence,
   validateDeletionSecretEvidence,
   validateLegalApproval,
+  validateLegalIdentity,
   validatePhysicalEvidence,
   validateRealPilotEvidence,
   validateReleaseProvenance,
@@ -81,7 +82,7 @@ status: APPROVED
 legal_entity: ChegaJá Sociedade, Lda.
 reviewer: Revisora Legal
 reviewed_at: 2026-07-20
-document_version: legal-2026-07-20-pilot-v2
+document_version: legal-2026-07-20-pilot-v3
 approval_reference: parecer-2026-001
 `), true);
 assert.strictEqual(validateLegalApproval(`
@@ -89,9 +90,28 @@ status: APPROVED
 legal_entity: TODO
 reviewer: TODO
 reviewed_at: 2026-07-20
-document_version: legal-2026-07-20-pilot-v2
+document_version: legal-2026-07-20-pilot-v3
 approval_reference: TODO
 `), false);
+
+assert.strictEqual(validateLegalIdentity({
+  LEGAL_ENTITY_NAME: 'Filipe Bento Jamal',
+  LEGAL_ENTITY_TYPE: 'individual_project_promoter',
+  LEGAL_CONTACT_EMAIL: 'privacidade@chegaja.app',
+  LEGAL_CONTACT_ADDRESS: 'Avenida e número confirmados, Maputo, Moçambique',
+}), true);
+assert.strictEqual(validateLegalIdentity({
+  LEGAL_ENTITY_NAME: 'Filipe Bento Jamal',
+  LEGAL_ENTITY_TYPE: 'individual_project_promoter',
+  LEGAL_CONTACT_EMAIL: '',
+  LEGAL_CONTACT_ADDRESS: '',
+}), false);
+assert.strictEqual(validateLegalIdentity({
+  LEGAL_ENTITY_NAME: 'ChegaJá - piloto controlado',
+  LEGAL_ENTITY_TYPE: 'individual_project_promoter',
+  LEGAL_CONTACT_EMAIL: 'privacidade@chegaja.app',
+  LEGAL_CONTACT_ADDRESS: 'Maputo, Moçambique',
+}), false);
 
 assert.strictEqual(validateAppCheckEvidence({
   projectId: 'chegaja-ac88d',

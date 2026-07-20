@@ -9,9 +9,11 @@ Decisão atual: **NOT READY para piloto externo**
 As dez frentes P1 têm implementação técnica e procedimentos de operação. A
 preparação produtiva segura já inclui migração aditiva, catálogo server-side,
 TTL, segredo de eliminação, identificador Android final e configuração Play
-Integrity para distribuição fora da Play Store. O P1 operacional ainda não
-está fechado: faltam identidade jurídica, validação jurídica, aparelho físico,
-enforcement App Check e a execução real do piloto.
+Integrity para distribuição fora da Play Store. O promotor individual também
+está identificado sem apresentar o projeto como empresa constituída. O P1
+operacional ainda não está fechado: faltam completar os contactos jurídicos,
+obter validação jurídica, validar um aparelho físico, aplicar enforcement App
+Check e executar o piloto real.
 
 Não foi feito deploy das Rules e Functions P1. A produção contém 86 utilizadores,
 42 prestadores e 29 pedidos no modelo legado; as Rules novas fecham totalmente
@@ -31,7 +33,7 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 | P1.6 Endpoints/quotas/App Check | Concluída no código | TTL ativo e Play Integrity preparado; enforcement/deploy pendente | `firebase-app-check-status-2026-07-20.json` |
 | P1.7 Pagamentos/MZN | Concluída | Dinheiro habilitado; M-Pesa, e-Mola e Stripe continuam desligados | `paymentPolicy.test.js` |
 | P1.8 Android/permissões | APK e emulador concluídos | Matriz em Android físico pendente | `p1-8-physical-device-validation.md` |
-| P1.9 Legal/eliminação/suporte | Concluída no código | Segredo ativo; entidade e parecer jurídico pendentes | `firebase-account-deletion-secret.json` |
+| P1.9 Legal/eliminação/suporte | Concluída no código | Promotor confirmado; email, morada e parecer jurídico pendentes | `docs/legal/operator-identity.md`, `firebase-account-deletion-secret.json` |
 | P1.10 Piloto Maputo | Produto, backoffice e runbooks concluídos | Participantes e execução real pendentes | `maputo-pilot-runbook.md` |
 
 ## Produção preparada sem exposição adicional
@@ -57,16 +59,16 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 
 ## Provas técnicas
 
-- Flutter: **504 testes aprovados**.
+- Flutter: **506 testes aprovados**.
 - Análise estática Flutter: **0 erros**; 20 avisos e 309 informações não fatais.
 - Functions/Firestore/Storage: **94 testes aprovados**; o emulador carregou as
   63 definições locais sem erro de descoberta.
 - Scripts operacionais: **11 grupos de testes aprovados**.
-- APK release: 123074488 bytes, assinatura v2, um signatário RSA 2048.
+- APK release: 123074424 bytes, assinatura v2, um signatário RSA 2048.
 - SHA-256 APK:
-  `b813e4458b5dd41d566d79fc9e491d69ae26d8d870bba4a3744779006e46d81e`.
+  `f9d29a1d38dca520e9cb68eb83dd72666c177a0442c6012f535bb36d5589ad13`.
 - Fingerprint das 351 entradas de release:
-  `e3c1dd9023e2ea20724af46a8a556d05471923a7c721f918e5c177f14c5f9b3a`.
+  `3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3`.
 - Emulador Android 14/API 34: instalação limpa, seletor em português, nenhuma
   permissão no arranque e zero padrões fatais.
 - Identidade Android: `com.chegaja.app`, app Firebase
@@ -83,9 +85,19 @@ fingerprints SHA-1/SHA-256 verificadas das chaves release e debug. Os clientes
 Firebase antigos permanecem apenas para compatibilidade e não são a identidade
 da APK final.
 
+## Progresso de identidade nesta etapa
+
+O responsável atual é **Filipe Bento Jamal**, como pessoa singular e promotor
+do projeto ChegaJá. A app e os documentos deixaram de sugerir uma entidade
+provisória ou uma empresa inexistente. NUIT/NIF pessoais não foram colocados no
+repositório por minimização de dados e porque a natureza dos números deve ser
+confirmada privadamente antes de qualquer uso jurídico ou fiscal. A versão de
+consentimento passou a `legal-2026-07-20-pilot-v3`.
+
 ## Cinco gates externos em falta
 
-1. Configurar nome, email e endereço reais da entidade responsável.
+1. Configurar email jurídico/privacidade e morada oficial reais do responsável
+   já identificado.
 2. Obter parecer jurídico versionado para os termos e privacidade.
 3. Executar os 12 casos num Android físico API 33+ com a APK final.
 4. Fazer o corte controlado e comprovar App Check `ENFORCED` em Firestore,
@@ -96,7 +108,8 @@ da APK final.
 
 ## Ordem obrigatória do corte
 
-1. Fixar a entidade jurídica; o `applicationId` de produção já está fechado.
+1. Completar email, morada e revisão jurídica do responsável; o promotor e o
+   `applicationId` de produção já estão identificados.
 2. Aprovar a matriz no Android físico com a app Firebase/Play Integrity e APK
    final já registadas, reconstruídas e assinadas.
 3. Confirmar que a APK física usa o mesmo hash e certificado desta auditoria.

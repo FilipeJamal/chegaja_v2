@@ -56,7 +56,8 @@ persistente é guardado no documento do pedido.
 
 ## Aprovações obrigatórias antes do piloto externo
 
-- Identidade jurídica, endereço e contacto reais do responsável pelo ChegaJá.
+- O promotor individual já está identificado; ainda faltam endereço e contacto
+  jurídico reais do responsável pelo ChegaJá.
 - Revisão dos Termos e Política de Privacidade por advogado em Moçambique.
 - Prazos de retenção contabilística, fiscal, financeira, de disputas e segurança.
 - Processo de resposta a pedidos de acesso, correção, eliminação e incidentes.
