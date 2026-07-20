@@ -64,9 +64,9 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 - Scripts operacionais: **11 grupos de testes aprovados**.
 - APK release: 123074500 bytes, assinatura v2, um signatário RSA 2048.
 - SHA-256 APK:
-  `7cf15ca9a0a07948fa2565378288d0846cb8957a5662129654de84d1b0694781`.
+  `e73b09e9d08112ceabfb178d05fb68d0edb75be0d9f6fe7bf36fd3f9624d6b02`.
 - Fingerprint das 351 entradas de release:
-  `a788eed07625aafdb425bd6acbcc88e7a1197dc774d152e28997917ee4c32f73`.
+  `a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b`.
 - Emulador Android 14/API 34: instalação limpa, seletor em português, nenhuma
   permissão no arranque e zero padrões fatais.
 - Readiness: **8/14 gates aprovados**.

@@ -224,27 +224,30 @@ class _SensitiveCategoryRequestSheetState
                 child: Column(
                   children: [
                     for (final url in widget.portfolioUrls)
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: _selectedPortfolioUrls.contains(url),
-                        onChanged: _submitting
-                            ? null
-                            : (checked) {
-                                setState(() {
-                                  if (checked == true) {
-                                    _selectedPortfolioUrls.add(url);
-                                  } else {
-                                    _selectedPortfolioUrls.remove(url);
-                                  }
-                                });
-                              },
-                        title: Text(
-                          url,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      Material(
+                        color: Colors.transparent,
+                        child: CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _selectedPortfolioUrls.contains(url),
+                          onChanged: _submitting
+                              ? null
+                              : (checked) {
+                                  setState(() {
+                                    if (checked == true) {
+                                      _selectedPortfolioUrls.add(url);
+                                    } else {
+                                      _selectedPortfolioUrls.remove(url);
+                                    }
+                                  });
+                                },
+                          title: Text(
+                            url,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: const Text('Portfolio publico'),
+                          controlAffinity: ListTileControlAffinity.leading,
                         ),
-                        subtitle: const Text('Portfolio publico'),
-                        controlAffinity: ListTileControlAffinity.leading,
                       ),
                   ],
                 ),

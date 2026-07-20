@@ -216,34 +216,37 @@ class _SmartSearchBarState<T> extends State<SmartSearchBar<T>> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _results.map((item) {
-            final name = widget.nameSelector(item);
-            return ListTile(
-              dense: true,
-              leading: const CircleAvatar(
-                backgroundColor: Colors.deepPurple,
-                radius: 14,
-                child: Icon(Icons.bolt, color: Colors.white, size: 16),
-              ),
-              title: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _results.map((item) {
+              final name = widget.nameSelector(item);
+              return ListTile(
+                dense: true,
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.deepPurple,
+                  radius: 14,
+                  child: Icon(Icons.bolt, color: Colors.white, size: 16),
                 ),
-              ),
-              // subtitle: Text('Categoria...'), // Opcional se tivéssemos a categoria aqui
-              onTap: () {
-                widget.onItemSelected(item);
-                _focusNode.unfocus();
-                setState(() => _showResults = false);
-              },
-            );
-          }).toList(),
+                title: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                // subtitle: Text('Categoria...'), // Opcional se tivéssemos a categoria aqui
+                onTap: () {
+                  widget.onItemSelected(item);
+                  _focusNode.unfocus();
+                  setState(() => _showResults = false);
+                },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );

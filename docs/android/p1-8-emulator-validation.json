@@ -1,8 +1,8 @@
 {
   "status": "COMPLETED",
-  "capturedAt": "2026-07-20T09:52:34.288Z",
-  "apkSha256": "7cf15ca9a0a07948fa2565378288d0846cb8957a5662129654de84d1b0694781",
-  "releaseSourceFingerprint": "a788eed07625aafdb425bd6acbcc88e7a1197dc774d152e28997917ee4c32f73",
+  "capturedAt": "2026-07-20T12:30:12.167Z",
+  "apkSha256": "e73b09e9d08112ceabfb178d05fb68d0edb75be0d9f6fe7bf36fd3f9624d6b02",
+  "releaseSourceFingerprint": "a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b",
   "releaseInputFiles": 351,
   "packageId": "com.example.chegaja_v2",
   "activity": "com.example.chegaja_v2/.MainActivity",
