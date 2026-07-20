@@ -1,4 +1,4 @@
-package com.example.chegaja_v2
+package com.chegaja.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

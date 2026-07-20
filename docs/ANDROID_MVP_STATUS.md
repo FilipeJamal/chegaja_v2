@@ -140,15 +140,17 @@ Firebase Emulator. Release nao foi aberto para cleartext por esta alteracao.
 
 ## Firebase
 
-O `applicationId` permanece:
+O `applicationId` Android de produção é:
 
 ```text
-com.example.chegaja_v2
+com.chegaja.app
 ```
 
-Nao foi alterado no M2 porque `android/app/google-services.json` ja contem uma
-entrada para `com.example.chegaja_v2`. O package final de producao deve ser
-definido depois com app Android correspondente no Firebase.
+Foi fixado em 2026-07-20 com a app Firebase
+`1:767588494857:android:4198384a2a6387055252d8`. As fingerprints SHA-1 e
+SHA-256 das chaves release e debug verificadas estão registadas; a configuração
+Play Integrity exige `MEETS_DEVICE_INTEGRITY` e mantém versões não reconhecidas
+permitidas apenas para a distribuição controlada fora da Play Store.
 
 ## Deep Links
 
@@ -163,13 +165,13 @@ https://chegaja.pt
 Comando executado apos instalar o APK debug:
 
 ```bash
-adb shell am start -a android.intent.action.VIEW -d "chegaja://pedido/teste" com.example.chegaja_v2
+adb shell am start -a android.intent.action.VIEW -d "chegaja://pedido/teste" com.chegaja.app
 ```
 
 Resultado:
 
 ```text
-Starting: Intent { act=android.intent.action.VIEW dat=chegaja://pedido/... pkg=com.example.chegaja_v2 }
+Starting: Intent { act=android.intent.action.VIEW dat=chegaja://pedido/... pkg=com.chegaja.app }
 ```
 
 O teste valida resolucao/abertura basica do intent. Navegacao para pedido real

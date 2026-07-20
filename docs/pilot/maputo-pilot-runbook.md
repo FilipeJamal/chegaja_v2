@@ -121,7 +121,9 @@ Após 30 dias da primeira coorte, avaliar métrica central, tempo para rendiment
 - APK release: construído, assinado, permissões inspecionadas e executado num AVD Android 14.
 - Certificado release: SHA-1 e SHA-256 registados na app Firebase atual.
 - Android físico: não ligado; matriz física pendente.
-- Package: ainda `com.example.chegaja_v2`; não é identificador público definitivo.
+- Package Android: `com.chegaja.app`, registado na app Firebase de produção
+  `1:767588494857:android:4198384a2a6387055252d8` com certificados
+  release/debug e Play Integrity preparado.
 - Identidade/revisão jurídica: não fornecidas.
 - App Check console enforcement: não demonstrado por artefacto exportado.
 - Participantes reais e trabalhos reais: não existem como evidência neste workspace.

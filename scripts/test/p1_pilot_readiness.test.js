@@ -3,6 +3,7 @@ const assert = require('assert');
 const {
   containsPiiKeys,
   requiredPhysicalCases,
+  validateAndroidProductionIdentity,
   validateAppCheckEvidence,
   validateDeletionSecretEvidence,
   validateLegalApproval,
@@ -19,6 +20,52 @@ const deployedHashes = {
   storageRulesSha256: 'c'.repeat(64),
   functionsIndexSha256: 'd'.repeat(64),
 };
+
+const androidIdentity = {
+  applicationId: 'com.chegaja.app',
+  namespace: 'com.chegaja.app',
+  mainActivity: 'package com.chegaja.app',
+  googleServices: {
+    client: [{
+      client_info: {
+        mobilesdk_app_id: '1:767588494857:android:4198384a2a6387055252d8',
+        android_client_info: { package_name: 'com.chegaja.app' },
+      },
+    }],
+  },
+  firebaseOptions: "appId: '1:767588494857:android:4198384a2a6387055252d8'",
+  firebaseFlutter: {
+    flutter: { platforms: {
+      android: { default: { appId: '1:767588494857:android:4198384a2a6387055252d8' } },
+      dart: { 'lib/firebase_options.dart': { configurations: {
+        android: '1:767588494857:android:4198384a2a6387055252d8',
+      } } },
+    } },
+  },
+  firebaseLocal: {
+    flutter: { platforms: {
+      android: { default: { appId: '1:767588494857:android:4198384a2a6387055252d8' } },
+      dart: { 'lib/firebase_options.dart': { configurations: {
+        android: '1:767588494857:android:4198384a2a6387055252d8',
+      } } },
+    } },
+  },
+  assetLinks: [{
+    target: {
+      namespace: 'android_app',
+      package_name: 'com.chegaja.app',
+      sha256_cert_fingerprints: [
+        '13:36:FF:14:C1:DD:F0:94:40:38:7B:BD:F9:F4:8D:5A:09:60:2A:87:D1:06:2A:E6:FC:E2:A5:07:2B:AC:1F:81',
+      ],
+    },
+  }],
+};
+
+assert.strictEqual(validateAndroidProductionIdentity(androidIdentity), true);
+assert.strictEqual(validateAndroidProductionIdentity({
+  ...androidIdentity,
+  applicationId: 'com.example.chegaja_v2',
+}), false);
 
 assert.strictEqual(validateReleaseProvenance(null, digest), false);
 assert.strictEqual(validateReleaseProvenance({

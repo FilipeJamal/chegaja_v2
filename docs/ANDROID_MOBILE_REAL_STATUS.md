@@ -106,7 +106,7 @@ era criado pela UI do cliente.
 | Upload real de anexos | pendente | Escolher imagem/ficheiro no Android, enviar para Storage e reabrir o anexo depois. |
 | Permissao de notificacao negada | pendente | Negar permissao Android 13+ e confirmar que a app nao crasha e mostra fallback claro. |
 | Permissao de ficheiros/imagens negada | pendente | Negar picker/galeria e confirmar mensagem clara sem crash. |
-| Package id final | pendente futuro | Trocar `com.example.chegaja_v2` apenas quando houver app Firebase/Play final. |
+| Package id final | concluído em 2026-07-20 | `com.chegaja.app` registado no Firebase com certificados release/debug e validado pelo gate P1. |
 | HTTPS App Links | pendente futuro | Publicar `assetlinks.json` nos dominios finais. |
 
 ## Decisao

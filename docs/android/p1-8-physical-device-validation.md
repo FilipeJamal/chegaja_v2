@@ -16,10 +16,10 @@
 ## Evidencia automatizada desta execucao
 
 - APK: `build/app/outputs/flutter-apk/app-release.apk` (release, `--no-shrink`).
-- Tamanho do APK: `123074500` bytes (release final desta execução).
-- SHA-256 do APK: `E73B09E9D08112CEABFB178D05FB68D0EDB75BE0D9F6FE7BF36FD3F9624D6B02`.
+- Tamanho do APK: `123074488` bytes (release final desta execução).
+- SHA-256 do APK: `B813E4458B5DD41D566D79FC9E491D69AE26D8D870BBA4A3744779006E46D81E`.
 - Fingerprint das 351 entradas de release:
-  `a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b`.
+  `e3c1dd9023e2ea20724af46a8a556d05471923a7c721f918e5c177f14c5f9b3a`.
 - Assinatura: APK Signature Scheme v2, um signatario RSA 2048, certificado
   `CN=ChegaJa, OU=App, O=ChegaJa, L=Maputo, ST=Maputo, C=MZ`.
 - SHA-256 do certificado:
@@ -29,7 +29,7 @@
 - Permissoes ausentes e comprovadas: microfone, configuracao de audio,
   Bluetooth, `AD_ID` e Advertising Services.
 - Instalacao ADB: `Success`.
-- Runtime: `com.example.chegaja_v2/.MainActivity` ficou em primeiro plano e
+- Runtime: `com.chegaja.app/.MainActivity` ficou em primeiro plano e
   manteve o processo vivo depois de uma interação de scroll;
   seletor de função em português renderizado; nenhum `FATAL EXCEPTION`,
   `E/flutter`, `FirebaseException`, `MissingPluginException`,
