@@ -1,8 +1,19 @@
 import 'package:chegaja_v2/core/config/app_config.dart';
 
 abstract final class LegalDocuments {
-  static const version = 'legal-2026-07-20-pilot-v2';
+  static const version = 'legal-2026-07-20-pilot-v3';
   static const effectiveDate = '20 de julho de 2026';
+
+  static String get _responsibleContactText {
+    final pendingContact = AppConfig.legalContactConfigured
+        ? ''
+        : ' O email jurídico e a morada oficial ainda têm de ser '
+            'configurados antes do piloto externo.';
+    return 'O ChegaJá é um projeto promovido por '
+        '${AppConfig.legalEntityName}, ${AppConfig.legalEntityRoleLabel}. '
+        'Morada para contacto: ${AppConfig.legalContactAddress}. '
+        'Contacto: ${AppConfig.legalContactEmail}.$pendingContact';
+  }
 
   static List<LegalSection> get terms => [
         const LegalSection(
@@ -54,7 +65,7 @@ abstract final class LegalDocuments {
   static List<LegalSection> get privacy => [
         LegalSection(
           '1. Responsável e contacto',
-          '${AppConfig.legalEntityName}, ${AppConfig.legalContactAddress}. Contacto: ${AppConfig.legalContactEmail}. A identificação jurídica definitiva deve ser confirmada antes de abrir o piloto a participantes externos.',
+          _responsibleContactText,
         ),
         const LegalSection(
           '2. Dados tratados',

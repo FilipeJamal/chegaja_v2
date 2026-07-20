@@ -275,7 +275,7 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('legal_consent_audit').doc('audit1').set({
         uid: 'client1',
-        version: 'legal-2026-07-20-pilot-v2',
+        version: 'legal-2026-07-20-pilot-v3',
       });
     });
     const ownerDb = testEnv.authenticatedContext('client1').firestore();

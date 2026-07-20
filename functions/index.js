@@ -816,7 +816,7 @@ async function mergeAnonymousDataCore({ database = db, auth, sourceIdToken }) {
 const KYC_CONSENT_VERSION = 'kyc-consent-2026-07-20';
 const KYC_UPLOAD_WINDOW_MINUTES = 30;
 const KYC_RETENTION_DAYS = 90;
-const LEGAL_DOCUMENT_VERSION = 'legal-2026-07-20-pilot-v2';
+const LEGAL_DOCUMENT_VERSION = 'legal-2026-07-20-pilot-v3';
 const ACCOUNT_DELETION_GRACE_DAYS = 7;
 
 function requireVerifiedPhoneAuth(auth) {

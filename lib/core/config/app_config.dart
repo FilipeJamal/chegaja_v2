@@ -151,15 +151,39 @@ class AppConfig extends InheritedWidget {
   }
 
   static String get legalEntityName =>
-      _readString('LEGAL_ENTITY_NAME', fallback: 'ChegaJá - piloto controlado');
+      _readString('LEGAL_ENTITY_NAME', fallback: 'Filipe Bento Jamal');
+
+  static String get legalEntityType => _readString(
+        'LEGAL_ENTITY_TYPE',
+        fallback: 'individual_project_promoter',
+      );
+
+  static String get legalEntityRoleLabel {
+    switch (legalEntityType) {
+      case 'individual_project_promoter':
+        return 'pessoa singular e promotor do projeto';
+      case 'individual_entrepreneur':
+        return 'empresário individual';
+      case 'incorporated_company':
+        return 'empresa constituída';
+      default:
+        return 'responsável pelo projeto';
+    }
+  }
 
   static String get legalContactEmail => _readString(
         'LEGAL_CONTACT_EMAIL',
-        fallback: 'Suporte dentro da aplicação',
+        fallback: 'Por confirmar antes do piloto externo',
       );
 
-  static String get legalContactAddress =>
-      _readString('LEGAL_CONTACT_ADDRESS', fallback: 'Maputo, Moçambique');
+  static String get legalContactAddress => _readString(
+        'LEGAL_CONTACT_ADDRESS',
+        fallback: 'Por confirmar antes do piloto externo',
+      );
+
+  static bool get legalContactConfigured =>
+      _hasConfiguredString('LEGAL_CONTACT_EMAIL') &&
+      _hasConfiguredString('LEGAL_CONTACT_ADDRESS');
 
   static String _readString(String key, {required String fallback}) {
     try {
@@ -167,6 +191,14 @@ class AppConfig extends InheritedWidget {
       return value == null || value.isEmpty ? fallback : value;
     } catch (_) {
       return fallback;
+    }
+  }
+
+  static bool _hasConfiguredString(String key) {
+    try {
+      return dotenv.env[key]?.trim().isNotEmpty == true;
+    } catch (_) {
+      return false;
     }
   }
 

@@ -16,10 +16,10 @@
 ## Evidencia automatizada desta execucao
 
 - APK: `build/app/outputs/flutter-apk/app-release.apk` (release, `--no-shrink`).
-- Tamanho do APK: `123074488` bytes (release final desta execução).
-- SHA-256 do APK: `B813E4458B5DD41D566D79FC9E491D69AE26D8D870BBA4A3744779006E46D81E`.
+- Tamanho do APK: `123074424` bytes (release final desta execução).
+- SHA-256 do APK: `F9D29A1D38DCA520E9CB68EB83DD72666C177A0442C6012F535BB36D5589AD13`.
 - Fingerprint das 351 entradas de release:
-  `e3c1dd9023e2ea20724af46a8a556d05471923a7c721f918e5c177f14c5f9b3a`.
+  `3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3`.
 - Assinatura: APK Signature Scheme v2, um signatario RSA 2048, certificado
   `CN=ChegaJa, OU=App, O=ChegaJa, L=Maputo, ST=Maputo, C=MZ`.
 - SHA-256 do certificado:

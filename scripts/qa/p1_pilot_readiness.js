@@ -139,8 +139,26 @@ function validateLegalApproval(content) {
     && isRealValue(field('legal_entity'))
     && isRealValue(field('reviewer'))
     && /^\d{4}-\d{2}-\d{2}$/.test(field('reviewed_at'))
-    && field('document_version') === 'legal-2026-07-20-pilot-v2'
+    && field('document_version') === 'legal-2026-07-20-pilot-v3'
     && isRealValue(field('approval_reference'));
+}
+
+function validateLegalIdentity(values) {
+  if (!values) return false;
+  const realValue = (value) => typeof value === 'string'
+    && value.trim().length > 0
+    && !/(piloto controlado|por confirmar|todo|tbd|placeholder|example)/i.test(value);
+  const email = String(values.LEGAL_CONTACT_EMAIL || '').trim();
+  const allowedTypes = new Set([
+    'individual_project_promoter',
+    'individual_entrepreneur',
+    'incorporated_company',
+  ]);
+  return realValue(values.LEGAL_ENTITY_NAME)
+    && allowedTypes.has(String(values.LEGAL_ENTITY_TYPE || '').trim())
+    && realValue(email)
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    && realValue(values.LEGAL_CONTACT_ADDRESS);
 }
 
 function validateAppCheckEvidence(evidence, expected) {
@@ -357,12 +375,8 @@ function run() {
     firebaseLocal: readJson('firebase.local.json'),
     assetLinks: readJson('web/.well-known/assetlinks.json'),
   }), 'blocker', `identidade Android/Firebase/App Links alinhada em ${expectedAndroidPackage}`);
-  check('legal_identity', Boolean(
-    clientEnv.LEGAL_ENTITY_NAME
-    && clientEnv.LEGAL_CONTACT_EMAIL
-    && clientEnv.LEGAL_CONTACT_ADDRESS
-    && !/piloto controlado/i.test(clientEnv.LEGAL_ENTITY_NAME),
-  ), 'blocker', 'identidade, email e endereço jurídicos reais configurados sem expor valores');
+  check('legal_identity', validateLegalIdentity(clientEnv), 'blocker',
+    'responsável, tipo, email e endereço jurídicos reais configurados sem expor valores');
   check('deletion_pepper', validateDeletionSecretEvidence(
     readJson('docs/pilot/evidence/firebase-account-deletion-secret.json'), functionsSource,
   ), 'blocker', 'ACCOUNT_DELETION_PEPPER ativo no Secret Manager e ligado à função agendada');
@@ -428,6 +442,7 @@ module.exports = {
   validateAppCheckEvidence,
   validateDeletionSecretEvidence,
   validateLegalApproval,
+  validateLegalIdentity,
   validatePhysicalEvidence,
   validateRealPilotEvidence,
   validateReleaseProvenance,
