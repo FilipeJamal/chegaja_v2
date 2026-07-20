@@ -50,6 +50,7 @@ import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/stories_carousel_widget.dart';
 import 'package:chegaja_v2/core/widgets/theme_mode_selector_tile.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
+import 'package:chegaja_v2/features/common/permission_settings_screen.dart';
 import 'package:chegaja_v2/features/admin/admin_panel_screen.dart';
 
 final GlobalKey _clienteServicesAnchorKey = GlobalKey(
@@ -456,8 +457,9 @@ class _ClienteHomeDashboard extends StatelessWidget {
             ClienteHomeHero(
               greeting: l10n.homeGreeting,
               title: l10n.homeSubtitle,
-              subtitle:
-                  'Escolhe um servico, acompanha propostas e fala com o prestador sem perder contexto.',
+              subtitle: AppConfig.pilotMode
+                  ? 'Piloto em Maputo e Matola: limpeza, beleza, alimentação, reparações, tecnologia e eventos em destaque; o catálogo continua aberto.'
+                  : 'Escolhe um servico, acompanha propostas e fala com o prestador sem perder contexto.',
               primaryActionLabel: 'Escolher servico',
               onPrimaryAction: () => _scrollToServices(context),
               onSearch: onSearch,
@@ -470,8 +472,10 @@ class _ClienteHomeDashboard extends StatelessWidget {
               onOpenSearch: onSearch,
             ),
             const SizedBox(height: AppSpacing.x5),
-            const StoriesCarouselWidget(),
-            const SizedBox(height: AppSpacing.x5),
+            if (AppConfig.storiesEnabled) ...[
+              const StoriesCarouselWidget(),
+              const SizedBox(height: AppSpacing.x5),
+            ],
             _ClienteServicesStreamSection(
               user: user,
               servicosStream: servicosStream,
@@ -1777,9 +1781,11 @@ class _ContaTab extends StatelessWidget {
                                 AppListTile(
                                   title: const Text('Backoffice Admin'),
                                   subtitle: const Text(
-                                      'Métricas, suporte e moderação'),
+                                    'Métricas, suporte e moderação',
+                                  ),
                                   leading: const Icon(
-                                      Icons.admin_panel_settings_outlined),
+                                    Icons.admin_panel_settings_outlined,
+                                  ),
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () {
                                     Navigator.of(context).push(
@@ -1884,9 +1890,15 @@ class _ContaPremiumTab extends StatelessWidget {
                     SettingsListTile(
                       icon: Icons.settings_outlined,
                       title: l10n.accountSettings,
-                      subtitle: 'Preferencias da aplicacao',
+                      subtitle: 'Permissoes e preferencias da aplicacao',
                       showDivider: true,
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PermissionSettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
                     SettingsListTile(
                       icon: Icons.help_outline_rounded,

@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-07-20T08:41:49.845Z",
+  "projectId": "chegaja-ac88d",
+  "projectNumber": "767588494857",
+  "appId": "1:767588494857:android:f31e72877260a7555252d8",
+  "packageId": "com.example.chegaja_v2",
+  "registeredReleaseCertificateSha256": "1336ff14c1ddf09440387bbdf9f48d5a09602a87d1062ae6fce2a5072bac1f81",
+  "services": {
+    "firestore": "UNENFORCED",
+    "storage": "UNENFORCED",
+    "authentication": "UNENFORCED"
+  },
+  "playIntegrity": {
+    "tokenTtl": "3600s",
+    "allowUnrecognizedVersion": true,
+    "minDeviceRecognitionLevel": "MEETS_DEVICE_INTEGRITY",
+    "requireLicensed": false,
+    "distributionModel": "CONTROLLED_OFF_PLAY_PILOT"
+  },
+  "sourceCallableEnforcement": true,
+  "decision": "SERVICE_ENFORCEMENT_PENDING_PHYSICAL_DEVICE_VALIDATION_AND_RELEASE_PACKAGE_ID"
+}

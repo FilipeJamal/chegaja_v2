@@ -18,33 +18,43 @@ void main() {
     final codes =
         AppLocalizations.supportedLocales.map((l) => l.languageCode).toSet();
     expect(
-        codes,
-        containsAll(
-            <String>{'pt', 'en', 'es', 'fr', 'de', 'ar', 'ru', 'zh', 'hi'},),);
+      codes,
+      containsAll(
+        <String>{'pt', 'en', 'es', 'fr', 'de', 'ar', 'ru', 'zh', 'hi'},
+      ),
+    );
   });
 
-  test('locale preference is persisted', () async {
+  test('pilot forces Portuguese even when another locale is requested',
+      () async {
     await LocaleService.instance.setLocale(const Locale('pt'));
     expect(LocaleService.instance.locale.languageCode, 'pt');
 
     await LocaleService.instance.setLocale(const Locale('en'));
-    expect(LocaleService.instance.locale.languageCode, 'en');
+    expect(LocaleService.instance.locale.languageCode, 'pt');
+    expect(LocaleService.instance.locale.countryCode, 'MZ');
   });
 
-  test('currency follows selected country and format follows locale', () async {
+  test('pilot currency stays MZN while number formatting follows locale',
+      () async {
     await LocaleService.instance.setLocale(const Locale('en'));
 
     await UserCountryService.instance.setManualCountry('US');
-    expect(UserCountryService.instance.currencyCode, 'USD');
+    expect(UserCountryService.instance.countryCode, 'MZ');
+    expect(UserCountryService.instance.currencyCode, 'MZN');
     final us = CurrencyUtils.format(1.5, localeName: 'en_US');
 
     await UserCountryService.instance.setManualCountry('BR');
-    expect(UserCountryService.instance.currencyCode, 'BRL');
+    expect(UserCountryService.instance.countryCode, 'MZ');
+    expect(UserCountryService.instance.currencyCode, 'MZN');
     final br = CurrencyUtils.format(1.5, localeName: 'pt_BR');
 
+    expect(CurrencyUtils.format(1, localeName: 'pt_PT'), contains('MT'));
     expect(us, isNotEmpty);
     expect(br, isNotEmpty);
     expect(us, isNot(equals(br)));
+    expect(us, contains('MT'));
+    expect(br, contains('MT'));
     expect(br, contains(','));
     expect(CurrencyUtils.currencySymbol(localeName: 'pt_BR'), isNotEmpty);
   });

@@ -116,6 +116,16 @@ void main() {
                 'submittedAt': 1710000000000,
               },
             ],
+            pilotMetrics: const {
+              'mission': {
+                'firstPaidWithin30Days': {
+                  'numerator': 2,
+                  'denominator': 4,
+                  'percentage': 50,
+                },
+              },
+            },
+            pilotParticipants: const [],
             ticketFilter: 'open',
             reportFilter: 'pending_review',
             noShowFilter: 'pending',
@@ -143,6 +153,14 @@ void main() {
               required decision,
             }) async {},
             onDeleteStory: (_) async {},
+            onSetPilotParticipant: ({
+              required uid,
+              required status,
+              required roles,
+              required city,
+              required cohort,
+              note,
+            }) async {},
           ),
         ),
       ),

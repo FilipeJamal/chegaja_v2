@@ -6,7 +6,6 @@ import 'package:country_state_city/country_state_city.dart' as csc;
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/catalog/provider_custom_service.dart';
-import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/models/category_approval_types.dart';
 import 'package:chegaja_v2/core/models/category_requirement.dart';
@@ -27,8 +26,10 @@ import 'package:chegaja_v2/features/prestador/widgets/prestador_sensitive_catego
 import 'package:chegaja_v2/features/prestador/widgets/sensitive_category_request_sheet.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 import 'package:chegaja_v2/core/services/locale_service.dart';
+import 'package:chegaja_v2/core/services/provider_service_policy_service.dart';
 import 'package:chegaja_v2/features/common/widgets/place_search_bottom_sheet.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 
 /// Ecrã de definições do prestador:
 /// - serviços que realiza (IDs de `servicos`)
@@ -135,10 +136,20 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
       // 2) Buscar perfil atual do prestador (se existir)
-      final docPrestador = await FirebaseFirestore.instance
-          .collection('prestadores')
-          .doc(user.uid)
-          .get();
+      final profileDocs = await Future.wait([
+        FirebaseFirestore.instance
+            .collection('provider_public')
+            .doc(user.uid)
+            .get(),
+        FirebaseFirestore.instance
+            .collection('provider_dispatch_private')
+            .doc(user.uid)
+            .get(),
+      ]);
+      final profileData = <String, dynamic>{
+        ...?profileDocs[0].data(),
+        ...?profileDocs[1].data(),
+      };
 
       String? country;
       String? state;
@@ -151,29 +162,26 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       List<ProviderCustomService> customServices = const [];
       var removedUnsafePersistedService = false;
 
-      if (docPrestador.exists) {
-        final data = docPrestador.data();
-        if (data != null) {
-          country = data['country'] as String?;
-          state = data['state'] as String?;
-          city = data['city'] as String?;
-          countryCode =
-              (data['countryCode'] ?? data['country_code'])?.toString();
-          stateCode = (data['stateCode'] ?? data['provinceCode'])?.toString();
-          final r = data['radiusKm'];
-          if (r is num) radius = r.toDouble();
-          portfolioUrls = _cleanStringList(data['portfolioUrls']);
-          final sanitizedServices = ServiceSafetyGuard.sanitizeProviderServices(
-            servicos: data['servicos'],
-            servicosNomes: data['servicosNomes'],
-            customServices: data['customServices'],
-            customServiceNames: data['customServiceNames'],
-            customServiceSearchTerms: data['customServiceSearchTerms'],
-          );
-          servicosIds = sanitizedServices.serviceIds.toList();
-          customServices = sanitizedServices.customServices;
-          removedUnsafePersistedService = sanitizedServices.removedAny;
-        }
+      if (profileData.isNotEmpty) {
+        final data = profileData;
+        country = data['country'] as String?;
+        state = data['state'] as String?;
+        city = data['city'] as String?;
+        countryCode = (data['countryCode'] ?? data['country_code'])?.toString();
+        stateCode = (data['stateCode'] ?? data['provinceCode'])?.toString();
+        final r = data['radiusKm'];
+        if (r is num) radius = r.toDouble();
+        portfolioUrls = _cleanStringList(data['portfolioUrls']);
+        final sanitizedServices = ServiceSafetyGuard.sanitizeProviderServices(
+          servicos: data['servicos'],
+          servicosNomes: data['servicosNomes'],
+          customServices: data['customServices'],
+          customServiceNames: data['customServiceNames'],
+          customServiceSearchTerms: data['customServiceSearchTerms'],
+        );
+        servicosIds = sanitizedServices.serviceIds.toList();
+        customServices = sanitizedServices.customServices;
+        removedUnsafePersistedService = sanitizedServices.removedAny;
       }
 
       if (!mounted) return;
@@ -720,8 +728,12 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     });
 
     try {
-      final ref =
-          FirebaseFirestore.instance.collection('prestadores').doc(user.uid);
+      final publicRef = FirebaseFirestore.instance
+          .collection('provider_public')
+          .doc(user.uid);
+      final dispatchRef = FirebaseFirestore.instance
+          .collection('provider_dispatch_private')
+          .doc(user.uid);
 
       final selecionadosLegados = _todosServicos
           .where((s) => servicosSelecionadosValidos.contains(s.id))
@@ -772,31 +784,36 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
         return;
       }
 
-      await ref.set(
-        {
-          'userId': user.uid,
-          'servicos': sanitizedServices.serviceIds.toList(growable: false),
-          // estes nomes são usados para bater com pedido.categoria
-          'servicosNomes': sanitizedServices.serviceNames,
-          'customServices': sanitizedServices.customServices
-              .map((service) => service.toMap())
-              .toList(growable: false),
-          'customServiceNames': sanitizedServices.customServiceNames,
-          'customServiceSearchTerms':
-              sanitizedServices.customServiceSearchTerms,
-          if (sanitizedServices.customServices.isNotEmpty)
-            'customServiceUpdatedAt': FieldValue.serverTimestamp(),
-          'radiusKm': _radiusKm,
-          'country': _paisCtrl.text.trim(),
-          'countryCode': _selectedCountry?.isoCode,
-          'state': _estadoCtrl.text.trim(),
-          'stateCode': _selectedState?.isoCode,
-          'city': _cidadeCtrl.text.trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
+      final servicePolicyResult =
+          await ProviderServicePolicyService().updateServices(
+        serviceIds: sanitizedServices.serviceIds.toList(growable: false),
+        customServices: sanitizedServices.customServices
+            .map((service) => service.toMap())
+            .toList(growable: false),
       );
+
+      final publicData = <String, dynamic>{
+        'uid': user.uid,
+        // estes nomes são usados para bater com pedido.categoria
+        'radiusKm': _radiusKm,
+        'country': _paisCtrl.text.trim(),
+        'countryCode': _selectedCountry?.isoCode,
+        'state': _estadoCtrl.text.trim(),
+        'stateCode': _selectedState?.isoCode,
+        'city': _cidadeCtrl.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      final dispatchData = <String, dynamic>{
+        'providerId': user.uid,
+        'radiusKm': _radiusKm,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(publicRef, publicData, SetOptions(merge: true));
+      batch.set(dispatchRef, dispatchData, SetOptions(merge: true));
+      await batch.commit();
 
       final countryCode = _selectedCountry?.isoCode;
       if (countryCode != null && countryCode.isNotEmpty) {
@@ -808,9 +825,12 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            sanitizedServices.removedAny
+            sanitizedServices.removedAny ||
+                    servicePolicyResult.blockedCustomCount > 0
                 ? 'Alguns servicos nao puderam ser guardados porque nao sao permitidos no ChegaJa.'
-                : l10n.serviceAreaSaved,
+                : servicePolicyResult.hasPendingReview
+                    ? 'Definicoes guardadas. Alguns servicos aguardam aprovacao.'
+                    : l10n.serviceAreaSaved,
           ),
         ),
       );
@@ -1318,35 +1338,37 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
                         const SizedBox(height: 8),
                         // --- Cartão de Agenda (Existente) ---
                         // --- Idioma ---
-                        Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.language,
-                              color: Colors.purple,
-                              size: 32,
+                        if (!AppConfig.pilotPortugueseOnly) ...[
+                          Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            title: Text(l10n.languageTitle),
-                            subtitle: Text(
-                              l10n.languageModeLabel(
-                                LocaleService.instance.locale.languageCode
-                                    .toUpperCase(),
-                                LocaleService.instance.isManualOverride
-                                    ? l10n.languageModeManual
-                                    : l10n.languageModeAuto,
+                            elevation: 2,
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.language,
+                                color: Colors.purple,
+                                size: 32,
                               ),
+                              title: Text(l10n.languageTitle),
+                              subtitle: Text(
+                                l10n.languageModeLabel(
+                                  LocaleService.instance.locale.languageCode
+                                      .toUpperCase(),
+                                  LocaleService.instance.isManualOverride
+                                      ? l10n.languageModeManual
+                                      : l10n.languageModeAuto,
+                                ),
+                              ),
+                              trailing:
+                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                              onTap: () {
+                                _showLanguagePicker(context);
+                              },
                             ),
-                            trailing:
-                                const Icon(Icons.arrow_forward_ios, size: 16),
-                            onTap: () {
-                              _showLanguagePicker(context);
-                            },
                           ),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
+                        ],
 
                         // --- Cartão de Agenda (Existente) ---
                         Card(

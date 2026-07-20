@@ -30,7 +30,8 @@ const fs = require("fs");
 const path = require("path");
 
 // Reuse dependencies installed under functions/.
-const admin = require("../functions/node_modules/firebase-admin");
+const { cert, initializeApp } = require("../functions/node_modules/firebase-admin/app");
+const { FieldPath, getFirestore } = require("../functions/node_modules/firebase-admin/firestore");
 
 function parseArgs(argv) {
   const args = {
@@ -333,14 +334,14 @@ async function main() {
   if (args.serviceAccount) {
     const raw = fs.readFileSync(path.resolve(args.serviceAccount), "utf8");
     const serviceAccount = JSON.parse(raw);
-    appOptions.credential = admin.credential.cert(serviceAccount);
+    appOptions.credential = cert(serviceAccount);
     appOptions.projectId = appOptions.projectId || serviceAccount.project_id;
   } else if (projectId) {
     appOptions.projectId = projectId;
   }
 
-  admin.initializeApp(appOptions);
-  const db = admin.firestore();
+  initializeApp(appOptions);
+  const db = getFirestore();
 
   const langs =
     args.langs === "auto"
@@ -362,7 +363,7 @@ async function main() {
   let batch = db.batch();
   let batchOps = 0;
 
-  let query = db.collection(args.collection).orderBy(admin.firestore.FieldPath.documentId());
+  let query = db.collection(args.collection).orderBy(FieldPath.documentId());
   if (args.startAfter) {
     query = query.startAfter(args.startAfter);
   }

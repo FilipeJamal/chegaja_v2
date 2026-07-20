@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
@@ -14,7 +13,7 @@ class FavoritesService {
   CollectionReference<Map<String, dynamic>>? get _favoritesRef {
     final uid = _uid;
     if (uid == null) return null;
-    return _db.collection('users').doc(uid).collection('favorites');
+    return _db.collection('users_private').doc(uid).collection('favorites');
   }
 
   /// Adiciona ou remove um prestador dos favoritos.

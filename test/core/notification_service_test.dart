@@ -14,13 +14,14 @@ void main() {
       token: 'token_abc_123',
     );
 
-    final userDoc = await firestore.collection('users').doc('user_1').get();
+    final userDoc =
+        await firestore.collection('users_private').doc('user_1').get();
     expect(userDoc.exists, isTrue);
     expect(userDoc.data()?['fcmToken'], 'token_abc_123');
     expect(userDoc.data()?['fcmTokenPlatform'], isNotEmpty);
 
     final tokenDoc = await firestore
-        .collection('users')
+        .collection('users_private')
         .doc('user_1')
         .collection('fcmTokens')
         .doc('token_abc_123')
@@ -39,7 +40,8 @@ void main() {
       token: '   ',
     );
 
-    final userDoc = await firestore.collection('users').doc('user_1').get();
+    final userDoc =
+        await firestore.collection('users_private').doc('user_1').get();
     expect(userDoc.exists, isFalse);
   });
 }

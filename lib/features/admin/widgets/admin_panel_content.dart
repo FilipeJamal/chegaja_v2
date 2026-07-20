@@ -4,6 +4,7 @@ import 'package:chegaja_v2/features/admin/widgets/admin_audit_logs_section.dart'
 import 'package:chegaja_v2/features/admin/widgets/admin_finance_ledger_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_no_show_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_overview_section.dart';
+import 'package:chegaja_v2/features/admin/widgets/admin_pilot_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_reports_section.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_section_state.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_sensitive_category_requests_section.dart';
@@ -23,6 +24,8 @@ class AdminPanelContent extends StatefulWidget {
     required this.ledgerAnomalies,
     required this.auditLogs,
     required this.sensitiveCategoryRequests,
+    required this.pilotMetrics,
+    required this.pilotParticipants,
     required this.ticketFilter,
     required this.reportFilter,
     required this.noShowFilter,
@@ -37,6 +40,7 @@ class AdminPanelContent extends StatefulWidget {
     required this.onDecideNoShow,
     required this.onReviewSensitiveCategoryRequest,
     required this.onDeleteStory,
+    required this.onSetPilotParticipant,
     this.globalError,
   });
 
@@ -50,6 +54,8 @@ class AdminPanelContent extends StatefulWidget {
   final List<Map<String, dynamic>> ledgerAnomalies;
   final List<Map<String, dynamic>> auditLogs;
   final List<Map<String, dynamic>> sensitiveCategoryRequests;
+  final Map<String, dynamic> pilotMetrics;
+  final List<Map<String, dynamic>> pilotParticipants;
   final String ticketFilter;
   final String reportFilter;
   final String noShowFilter;
@@ -74,6 +80,7 @@ class AdminPanelContent extends StatefulWidget {
   }) onDecideNoShow;
   final AdminSensitiveCategoryReviewCallback onReviewSensitiveCategoryRequest;
   final Future<void> Function(String storyId) onDeleteStory;
+  final PilotParticipantUpdateCallback onSetPilotParticipant;
   final String? globalError;
 
   @override
@@ -115,6 +122,13 @@ class _AdminPanelContentState extends State<AdminPanelContent> {
           noShowCases: widget.noShowCases,
           ledgerAnomalies: widget.ledgerAnomalies,
           error: _firstError(['dashboard', 'ops']),
+        );
+      case _AdminPanelSection.pilot:
+        return AdminPilotSection(
+          metrics: widget.pilotMetrics,
+          participants: widget.pilotParticipants,
+          error: _firstError(['pilot_metrics', 'pilot_participants']),
+          onSetParticipant: widget.onSetPilotParticipant,
         );
       case _AdminPanelSection.moderation:
         return AdminReportsSection(
@@ -205,6 +219,7 @@ class _SectionSelector extends StatelessWidget {
 
 enum _AdminPanelSection {
   overview('Visao geral'),
+  pilot('Piloto Maputo'),
   moderation('Moderacao'),
   credentials('Comprovativos'),
   support('Suporte'),

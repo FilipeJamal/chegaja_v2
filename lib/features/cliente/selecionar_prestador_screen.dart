@@ -104,8 +104,9 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
       final categoriaId = (widget.servicoId ?? '').trim();
       final categoriaNome = (widget.servicoNome ?? '').trim();
 
-      Query<Map<String, dynamic>> query =
-          FirebaseFirestore.instance.collection('prestadores');
+      Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+          .collection('provider_public')
+          .where('isSearchable', isEqualTo: true);
 
       final filtro = categoriaId.isNotEmpty
           ? categoriaId

@@ -6,7 +6,7 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
 const functions = require("../index");
 
 describe("Admin sensitive category request Functions", () => {
-    const db = functions.__test__.db;
+    const db = functions.__test__.getDb();
     const adminAuth = { uid: "admin1", token: { admin: true } };
     const commonAuth = { uid: "user1", token: {} };
 
@@ -20,7 +20,7 @@ describe("Admin sensitive category request Functions", () => {
 
     async function clearProviderApprovals(providerId) {
         const snap = await db
-            .collection("prestadores")
+            .collection("provider_private")
             .doc(providerId)
             .collection("categoryApprovals")
             .get();
@@ -35,7 +35,7 @@ describe("Admin sensitive category request Functions", () => {
         await clearCollection("sensitiveCategoryRequests");
         await clearProviderApprovals("provider1");
         await clearProviderApprovals("provider2");
-        await clearCollection("prestadores");
+        await clearCollection("provider_public");
     }
 
     async function seedRequest(id, overrides = {}) {
@@ -138,7 +138,7 @@ describe("Admin sensitive category request Functions", () => {
         assert.ok(request.data().reviewedAt);
 
         const approval = await db
-            .collection("prestadores")
+            .collection("provider_private")
             .doc("provider1")
             .collection("categoryApprovals")
             .doc("electricity")
@@ -149,7 +149,7 @@ describe("Admin sensitive category request Functions", () => {
         assert.strictEqual(approval.data().approvedBy, "admin1");
         assert.ok(approval.data().approvedAt);
 
-        const provider = await db.collection("prestadores").doc("provider1").get();
+        const provider = await db.collection("provider_public").doc("provider1").get();
         assert.strictEqual(provider.exists, true);
         assert.deepStrictEqual(provider.data().approvedSensitiveCategoryIds, ["electricity"]);
         assert.deepStrictEqual(provider.data().approvedSensitiveCategoryNames, ["Eletricidade"]);
@@ -205,13 +205,13 @@ describe("Admin sensitive category request Functions", () => {
         assert.strictEqual(moreInfo.data().status, "needs_more_info");
 
         const approvals = await db
-            .collection("prestadores")
+            .collection("provider_private")
             .doc("provider1")
             .collection("categoryApprovals")
             .get();
         assert.strictEqual(approvals.empty, true);
 
-        const provider = await db.collection("prestadores").doc("provider1").get();
+        const provider = await db.collection("provider_public").doc("provider1").get();
         if (provider.exists) {
             assert.strictEqual(provider.data().approvedSensitiveCategoryIds, undefined);
             assert.strictEqual(provider.data().approvedSensitiveCategoryNames, undefined);

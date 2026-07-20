@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_pedido_acoes.dart';
@@ -2210,7 +2211,9 @@ class _ChatBubble extends StatelessWidget {
   }
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.tryParse(url);
+    final resolved =
+        await PrivateStorageMediaService.resolveReferenceLazily(url);
+    final uri = Uri.tryParse(resolved);
     if (uri == null) return;
     await launchUrl(
       uri,
@@ -2252,7 +2255,7 @@ class _ChatBubble extends StatelessWidget {
 
     final contentAlignment =
         isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final mediaUrl = message.mediaUrl;
+    final mediaUrl = message.mediaReference;
     final isAudio = message.isAudio && mediaUrl != null;
     final isFile = message.isFile && mediaUrl != null;
     final isImage = message.isImage && mediaUrl != null;
@@ -2628,7 +2631,7 @@ class PedidoMapaCard extends StatelessWidget {
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
-          .collection('prestadores')
+          .collection('provider_dispatch_private')
           .doc(prestadorId)
           .snapshots(),
       builder: (context, snapshot) {

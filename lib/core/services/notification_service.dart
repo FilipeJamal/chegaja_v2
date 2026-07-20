@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -54,6 +55,7 @@ class NotificationService {
   );
 
   bool _initialized = false;
+  bool _listenersInitialized = false;
 
   Future<void> init() async {
     if (_initialized) return;
@@ -65,7 +67,8 @@ class NotificationService {
     // ✅ Validação de Plataforma (Universal)
     if (!_supportsFcm()) {
       debugPrint(
-          '[NotificationService] FCM não suportado neste OS (Web/Desktop sem vapid?).');
+        '[NotificationService] FCM não suportado neste OS (Web/Desktop sem vapid?).',
+      );
       // Mesmo sem FCM, podemos querer iniciar notificações locais para desktops
       // mas o foco aqui é o push via Firebase.
       return;
@@ -77,45 +80,55 @@ class NotificationService {
     // 0) Configurar Notificações Locais (Canais) - Universal
     await _setupLocalNotifications();
 
-    // 1) Permissões (FCM)
     try {
-      await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-    } catch (e) {
-      debugPrint('[NotificationService] requestPermission falhou: $e');
-    }
-
-    // 2) Token policy
-    try {
-      await _ensureTokenPolicy(user.uid);
+      final settings = await _messaging.getNotificationSettings();
+      if (_isAuthorized(settings.authorizationStatus)) {
+        await _ensureTokenPolicy(user.uid);
+      }
     } catch (_) {}
 
-    // 3) Token refresh
-    _tokenSub = _messaging.onTokenRefresh.listen((newToken) {
-      _saveToken(uid: user.uid, token: newToken).catchError((_) {});
-    });
+    _startListeners(user);
 
-    // 4) Foreground messages (FCM não mostra pop-up sozinho, nós mostramos via LocalNotifications)
-    _onMessageSub = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-
-    // 5) Clique em notificação (background push)
-    _onMessageOpenedSub =
-        FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpened);
-
-    // 6) App terminated (Cold start via push)
     try {
       final initial = await _messaging.getInitialMessage();
       if (initial != null) _onMessageOpened(initial);
     } catch (_) {}
 
-    // 7) Deep link Web
-    if (kIsWeb) {
-      _checkWebDeepLink();
+    if (kIsWeb) _checkWebDeepLink();
+  }
+
+  bool _isAuthorized(AuthorizationStatus status) {
+    return status == AuthorizationStatus.authorized ||
+        status == AuthorizationStatus.provisional;
+  }
+
+  void _startListeners(User user) {
+    if (_listenersInitialized) return;
+    _listenersInitialized = true;
+
+    _tokenSub = _messaging.onTokenRefresh.listen((newToken) {
+      _saveToken(uid: user.uid, token: newToken).catchError((_) {});
+    });
+
+    _onMessageSub = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+    _onMessageOpenedSub =
+        FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpened);
+  }
+
+  Future<NotificationSettings> requestUserPermission() async {
+    await init();
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    final user = AuthService.currentUser;
+    if (user != null && _isAuthorized(settings.authorizationStatus)) {
+      await _ensureTokenPolicy(user.uid);
+      _startListeners(user);
     }
+    return settings;
   }
 
   Future<void> _setupLocalNotifications() async {
@@ -125,9 +138,9 @@ class NotificationService {
 
     // Para iOS/macOS (Darwin)
     const darwinSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     // Suporte Linux (opcional, placeholder)
@@ -301,7 +314,7 @@ class NotificationService {
     if (uid.trim().isEmpty || cleanedToken.isEmpty) return;
 
     final platform = kIsWeb ? 'web' : defaultTargetPlatform.name;
-    final userRef = firestore.collection('users').doc(uid);
+    final userRef = firestore.collection('users_private').doc(uid);
 
     await userRef.set(
       {
@@ -312,7 +325,7 @@ class NotificationService {
       SetOptions(merge: true),
     );
 
-    // As Cloud Functions enviam push lendo users/{uid}/fcmTokens/{token}.
+    // As Cloud Functions leem apenas a arvore privada de tokens.
     await userRef.collection('fcmTokens').doc(cleanedToken).set(
       {
         'token': cleanedToken,

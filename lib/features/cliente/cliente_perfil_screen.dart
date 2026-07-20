@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 
+import 'package:chegaja_v2/core/data/firestore_collections.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
@@ -17,6 +18,7 @@ import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 import 'package:chegaja_v2/features/cliente/favoritos_screen.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
+import 'package:chegaja_v2/features/common/account_privacy_screen.dart';
 
 class ClientePerfilScreen extends StatefulWidget {
   const ClientePerfilScreen({super.key});
@@ -78,10 +80,16 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
 
   String? get _uidOrNull => _auth.currentUser?.uid;
 
-  DocumentReference<Map<String, dynamic>>? get _docOrNull {
+  DocumentReference<Map<String, dynamic>>? get _publicDocOrNull {
     final uid = _uidOrNull;
     if (uid == null) return null;
-    return _db.collection('users').doc(uid);
+    return _db.collection(FirestoreCollections.publicProfiles).doc(uid);
+  }
+
+  DocumentReference<Map<String, dynamic>>? get _privateDocOrNull {
+    final uid = _uidOrNull;
+    if (uid == null) return null;
+    return _db.collection(FirestoreCollections.usersPrivate).doc(uid);
   }
 
   @override
@@ -160,35 +168,42 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   }
 
   Future<void> _load() async {
-    final doc = _docOrNull;
-    if (doc == null) {
+    final publicDoc = _publicDocOrNull;
+    final privateDoc = _privateDocOrNull;
+    if (publicDoc == null || privateDoc == null) {
       if (mounted) setState(() => _loading = false);
       return;
     }
 
     setState(() => _loading = true);
     try {
-      final snap = await doc.get();
-      final data = snap.data() ?? <String, dynamic>{};
+      final snapshots = await Future.wait([publicDoc.get(), privateDoc.get()]);
+      final publicData = snapshots[0].data() ?? <String, dynamic>{};
+      final privateData = snapshots[1].data() ?? <String, dynamic>{};
 
-      _nomeCtrl.text = (data['nome'] ?? data['displayName'] ?? '').toString();
-      _bioCtrl.text = (data['bio'] ?? '').toString();
-      _paisCtrl.text = (data['country'] ?? '').toString();
-      _estadoCtrl.text = (data['state'] ?? data['province'] ?? '').toString();
-      _cidadeCtrl.text = (data['city'] ?? '').toString();
-      _photoUrl = (data['photoUrl'] ?? data['fotoUrl'])?.toString();
+      _nomeCtrl.text =
+          (publicData['nome'] ?? publicData['displayName'] ?? '').toString();
+      _bioCtrl.text = (publicData['bio'] ?? '').toString();
+      _paisCtrl.text = (publicData['country'] ?? '').toString();
+      _estadoCtrl.text =
+          (publicData['state'] ?? publicData['province'] ?? '').toString();
+      _cidadeCtrl.text = (publicData['city'] ?? '').toString();
+      _photoUrl = (publicData['photoUrl'] ?? publicData['fotoUrl'])?.toString();
 
       _profileCountryCode =
-          (data['countryCode'] ?? data['country_code'])?.toString();
+          (publicData['countryCode'] ?? publicData['country_code'])?.toString();
       _profileStateCode =
-          (data['stateCode'] ?? data['provinceCode'])?.toString();
+          (publicData['stateCode'] ?? publicData['provinceCode'])?.toString();
       _profilePhoneIso =
-          (data['phoneIsoCode'] ?? data['phoneCountryCode'])?.toString();
+          (privateData['phoneIsoCode'] ?? privateData['phoneCountryCode'])
+              ?.toString();
 
-      final phone =
-          (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
-              .toString()
-              .trim();
+      final phone = (privateData['phoneE164'] ??
+              privateData['phoneNumber'] ??
+              privateData['phone'] ??
+              '')
+          .toString()
+          .trim();
       if (phone.isNotEmpty) {
         _phoneCtrl.text = phone;
         if ((_profilePhoneIso == null || _profilePhoneIso!.isEmpty) &&
@@ -380,8 +395,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   }
 
   Future<void> _save() async {
-    final doc = _docOrNull;
-    if (doc == null) {
+    final publicDoc = _publicDocOrNull;
+    final privateDoc = _privateDocOrNull;
+    if (publicDoc == null || privateDoc == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -415,8 +431,12 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
 
     try {
       final nome = _nomeCtrl.text.trim();
-      await doc.set(
+      final uid = _uidOrNull!;
+      final batch = _db.batch();
+      batch.set(
+        publicDoc,
         {
+          'uid': uid,
           'nome': nome,
           'displayName': nome,
           'bio': _bioCtrl.text.trim(),
@@ -425,6 +445,15 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           'state': _estadoCtrl.text.trim(),
           'stateCode': _selectedState?.isoCode,
           'city': _cidadeCtrl.text.trim(),
+          if (_photoUrl != null) 'photoUrl': _photoUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+      batch.set(
+        privateDoc,
+        {
+          'uid': uid,
           'phoneRaw': phoneRaw,
           if (phoneE164 != null) 'phoneE164': phoneE164,
           if (phoneIsoCode != null) 'phoneIsoCode': phoneIsoCode,
@@ -434,6 +463,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
         },
         SetOptions(merge: true),
       );
+      await batch.commit();
 
       final countryCode = _selectedCountry?.isoCode ?? _profileCountryCode;
       if (countryCode != null && countryCode.trim().isNotEmpty) {
@@ -461,7 +491,7 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
   }
 
   Future<void> _pickAndUploadProfilePhoto() async {
-    final doc = _docOrNull;
+    final doc = _publicDocOrNull;
     final uid = _uidOrNull;
     if (doc == null || uid == null) {
       if (!mounted) return;
@@ -482,7 +512,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
       final bytes = await file.readAsBytes();
       final url = await _uploadBytes(
         bytes: bytes,
-        path: 'users/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        path:
+            'profile_public/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
         contentType: 'image/jpeg',
       );
 
@@ -736,6 +767,24 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                     builder: (_) => const SuporteScreen(userType: 'cliente')),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Conta e privacidade'),
+            subtitle: const Text('Termos, dados, suporte e eliminação'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            tileColor: colorScheme.surfaceContainerHighest,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const AccountPrivacyScreen(userType: 'cliente'),
+                ),
               );
             },
           ),

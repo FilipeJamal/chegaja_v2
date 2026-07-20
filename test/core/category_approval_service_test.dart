@@ -124,7 +124,7 @@ void main() {
     test('getProviderCategoryApprovals lista approvals do provider', () async {
       final db = FakeFirebaseFirestore();
       await db
-          .collection('prestadores')
+          .collection('provider_private')
           .doc('provider1')
           .collection('categoryApprovals')
           .doc('electricity')
@@ -178,7 +178,7 @@ void main() {
     test('isCategoryApprovedForProvider respeita status e expiracao', () async {
       final db = FakeFirebaseFirestore();
       await db
-          .collection('prestadores')
+          .collection('provider_private')
           .doc('provider1')
           .collection('categoryApprovals')
           .doc('electricity')
@@ -189,7 +189,7 @@ void main() {
         'status': 'approved',
       });
       await db
-          .collection('prestadores')
+          .collection('provider_private')
           .doc('provider1')
           .collection('categoryApprovals')
           .doc('gas')

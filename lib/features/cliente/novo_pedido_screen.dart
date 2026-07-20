@@ -15,6 +15,7 @@ import 'package:chegaja_v2/core/catalog/service_intent.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
 import 'package:chegaja_v2/core/catalog/service_taxonomy_matcher.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/models/trust_safety_classification.dart';
@@ -29,6 +30,7 @@ import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/selecionar_prestador_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
 import 'package:chegaja_v2/features/cliente/widgets/service_taxonomy_picker_section.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 
 class NovoPedidoScreen extends StatefulWidget {
   /// Entrada do pedido: 'IMEDIATO', 'AGENDADO' ou 'ORCAMENTO' (atalho para preço por orçamento).
@@ -75,7 +77,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
   String _tipoPrecoSelecionado =
       'a_combinar'; // a_combinar | fixo | por_orcamento
   String _tipoPagamentoSelecionado =
-      'dinheiro'; // dinheiro | online_antes | online_depois
+      'dinheiro'; // dinheiro | mpesa | emola | stripe
 
   String? _categoriaNome;
   String? _servicoIdSelecionado;
@@ -121,7 +123,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       );
       _agendadoPara = p.agendadoPara;
       _tipoPrecoSelecionado = p.tipoPreco;
-      _tipoPagamentoSelecionado = p.tipoPagamento;
+      _tipoPagamentoSelecionado = _paymentMethodForPilot(p.tipoPagamento);
 
       _latitude = p.latitude;
       _longitude = p.longitude;
@@ -157,6 +159,19 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
         }
       }
     }
+  }
+
+  String _paymentMethodForPilot(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    if (normalized == 'mpesa' && AppConfig.mpesaEnabled) return 'mpesa';
+    if (normalized == 'emola' && AppConfig.emolaEnabled) return 'emola';
+    if ((normalized == 'stripe' ||
+            normalized == 'online_antes' ||
+            normalized == 'online_depois') &&
+        AppConfig.stripeEnabled) {
+      return 'stripe';
+    }
+    return 'dinheiro';
   }
 
   @override
@@ -474,13 +489,23 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
       setState(() => _tentouSubmeter = true);
     }
 
-    final user = AuthService.currentUser;
+    var user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.userNotAuthenticatedError)),
       );
       return;
     }
+
+    final phoneReady = await VerifiedPhoneGate.ensure(
+      context,
+      action: widget.pedidoInicial == null
+          ? 'publicar um pedido'
+          : 'alterar este pedido',
+    );
+    if (!phoneReady || !mounted) return;
+    user = AuthService.currentUser;
+    if (user == null) return;
 
     final formState = _formKey.currentState;
     if (formState == null) {
@@ -888,19 +913,26 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
                   borderRadius: BorderRadius.all(Radius.circular(16)),
                 ),
               ),
-              items: [
+              items: <DropdownMenuItem<String>>[
                 DropdownMenuItem(
                   value: 'dinheiro',
                   child: Text(l10n.paymentCash),
                 ),
-                DropdownMenuItem(
-                  value: 'online_antes',
-                  child: Text(l10n.paymentOnlineBefore),
-                ),
-                DropdownMenuItem(
-                  value: 'online_depois',
-                  child: Text(l10n.paymentOnlineAfter),
-                ),
+                if (AppConfig.mpesaEnabled)
+                  const DropdownMenuItem(
+                    value: 'mpesa',
+                    child: Text('M-Pesa'),
+                  ),
+                if (AppConfig.emolaEnabled)
+                  const DropdownMenuItem(
+                    value: 'emola',
+                    child: Text('e-Mola'),
+                  ),
+                if (AppConfig.stripeEnabled)
+                  const DropdownMenuItem(
+                    value: 'stripe',
+                    child: Text('Cartao (Stripe)'),
+                  ),
               ],
               onChanged: (value) {
                 setState(() {

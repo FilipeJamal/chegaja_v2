@@ -67,7 +67,7 @@ describe("Avaliacao rating aggregate Function", () => {
 
     it("updates provider rating aggregates for a valid review", async () => {
         const fakeDb = createFakeDatabase({
-            "prestadores/provider1": prestador(),
+            "provider_public/provider1": prestador(),
             "pedidos/order_rating_1": pedido(),
         });
 
@@ -82,7 +82,7 @@ describe("Avaliacao rating aggregate Function", () => {
             },
         });
 
-        const provider = fakeDb.store.get("prestadores/provider1");
+        const provider = fakeDb.store.get("provider_public/provider1");
         assert.strictEqual(result.updated, true);
         assert.strictEqual(provider.ratingCount, 1);
         assert.strictEqual(provider.ratingSum, 5);
@@ -91,7 +91,7 @@ describe("Avaliacao rating aggregate Function", () => {
 
     it("recalculates average when another valid review is added", async () => {
         const fakeDb = createFakeDatabase({
-            "prestadores/provider1": prestador({
+            "provider_public/provider1": prestador({
                 ratingCount: 1,
                 ratingSum: 5,
                 ratingAvg: 5,
@@ -112,7 +112,7 @@ describe("Avaliacao rating aggregate Function", () => {
             },
         });
 
-        const provider = fakeDb.store.get("prestadores/provider1");
+        const provider = fakeDb.store.get("provider_public/provider1");
         assert.strictEqual(result.updated, true);
         assert.strictEqual(provider.ratingCount, 2);
         assert.strictEqual(provider.ratingSum, 8);
@@ -121,7 +121,7 @@ describe("Avaliacao rating aggregate Function", () => {
 
     it("does not update aggregates for invalid ratings", async () => {
         const fakeDb = createFakeDatabase({
-            "prestadores/provider1": prestador(),
+            "provider_public/provider1": prestador(),
             "pedidos/order_rating_invalid": pedido(),
         });
 
@@ -136,7 +136,7 @@ describe("Avaliacao rating aggregate Function", () => {
             },
         });
 
-        const provider = fakeDb.store.get("prestadores/provider1");
+        const provider = fakeDb.store.get("provider_public/provider1");
         assert.strictEqual(result.updated, false);
         assert.strictEqual(provider.ratingCount, 0);
         assert.strictEqual(provider.ratingSum, 0);
@@ -145,7 +145,7 @@ describe("Avaliacao rating aggregate Function", () => {
 
     it("does not update aggregates when review document id does not match order and client", async () => {
         const fakeDb = createFakeDatabase({
-            "prestadores/provider1": prestador(),
+            "provider_public/provider1": prestador(),
             "pedidos/order_rating_wrong_id": pedido(),
         });
 
@@ -160,7 +160,7 @@ describe("Avaliacao rating aggregate Function", () => {
             },
         });
 
-        const provider = fakeDb.store.get("prestadores/provider1");
+        const provider = fakeDb.store.get("provider_public/provider1");
         assert.strictEqual(result.updated, false);
         assert.strictEqual(provider.ratingCount, 0);
         assert.strictEqual(provider.ratingSum, 0);

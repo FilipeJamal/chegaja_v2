@@ -98,7 +98,7 @@ void main() {
     expect(find.text('75%'), findsOneWidget);
     expect(find.text('Financeiro operacional'), findsOneWidget);
     expect(find.text('Receita liquida (30d)'), findsOneWidget);
-    expect(find.text('EUR 123.45'), findsOneWidget);
+    expect(find.text('MT 123.45'), findsOneWidget);
     expect(find.text('Crescimento e retencao'), findsOneWidget);
     expect(find.text('Novos utilizadores (30d)'), findsOneWidget);
     expect(find.text('Churn estimado (30d)'), findsOneWidget);

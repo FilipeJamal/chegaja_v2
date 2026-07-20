@@ -48,7 +48,7 @@ class Pedido {
   /// tipoPreco: "a_combinar" | "fixo" | "por_orcamento"
   final String tipoPreco;
 
-  /// tipoPagamento: "dinheiro" | "online_antes" | "online_depois"
+  /// tipoPagamento: "dinheiro" | "mpesa" | "emola" | "stripe"
   /// (por enquanto usamos "dinheiro" como padrão)
   final String tipoPagamento;
 

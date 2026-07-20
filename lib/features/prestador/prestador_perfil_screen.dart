@@ -85,7 +85,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
   DocumentReference<Map<String, dynamic>>? get _docOrNull {
     final uid = _uidOrNull;
     if (uid == null) return null;
-    return _db.collection('prestadores').doc(uid);
+    return _db.collection('provider_public').doc(uid);
   }
 
   @override
@@ -526,7 +526,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
       final url = await _uploadBytes(
         bytes: bytes,
         path:
-            'prestadores/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            'profile_public/$uid/profile_${DateTime.now().millisecondsSinceEpoch}.jpg',
         contentType: 'image/jpeg',
       );
 
@@ -579,7 +579,7 @@ class _PrestadorPerfilScreenState extends State<PrestadorPerfilScreen> {
           final url = await _uploadBytes(
             bytes: bytes,
             path:
-                'prestadores/$uid/portfolio/item_${DateTime.now().millisecondsSinceEpoch}_${x.name}.jpg',
+                'portfolio/$uid/item_${DateTime.now().millisecondsSinceEpoch}_${x.name}.jpg',
             contentType: 'image/jpeg',
           );
 

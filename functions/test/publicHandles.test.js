@@ -6,7 +6,7 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
 const functions = require("../index");
 
 describe("Public handle Functions", () => {
-    const db = functions.__test__.db;
+    const db = functions.__test__.getDb();
     const authProvider1 = { uid: "provider1", token: {} };
     const authProvider2 = { uid: "provider2", token: {} };
 
@@ -20,11 +20,11 @@ describe("Public handle Functions", () => {
 
     async function clearData() {
         await clearCollection("handles");
-        await clearCollection("prestadores");
+        await clearCollection("provider_public");
     }
 
     async function seedPrestador(uid) {
-        await db.collection("prestadores").doc(uid).set({
+        await db.collection("provider_public").doc(uid).set({
             nome: `Provider ${uid}`,
             createdAt: Timestamp.fromMillis(Date.now() - 1000),
         });
@@ -101,7 +101,7 @@ describe("Public handle Functions", () => {
         assert.strictEqual(handleSnap.data().uid, "provider1");
         assert.strictEqual(handleSnap.data().status, "active");
 
-        const prestadorSnap = await db.collection("prestadores").doc("provider1").get();
+        const prestadorSnap = await db.collection("provider_public").doc("provider1").get();
         assert.strictEqual(prestadorSnap.data().handle, "maria_bolos");
         assert.strictEqual(prestadorSnap.data().handleDisplay, "@maria_bolos");
         assert.ok(prestadorSnap.data().handleUpdatedAt);

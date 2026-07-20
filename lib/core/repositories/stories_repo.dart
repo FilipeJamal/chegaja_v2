@@ -19,7 +19,8 @@ class StoriesRepo {
     String? countryCode;
     List<String> categoryIds = const <String>[];
     try {
-      final prestadorSnap = await _db.collection('prestadores').doc(prestadorId).get();
+      final prestadorSnap =
+          await _db.collection('provider_public').doc(prestadorId).get();
       final prestadorData = prestadorSnap.data();
       if (prestadorData != null) {
         final rawCountry = prestadorData['countryCode'] ??
@@ -63,12 +64,12 @@ class StoriesRepo {
   }) {
     final now = Timestamp.now();
 
-    Query<Map<String, dynamic>> query = _db
-        .collection('stories')
-        .where('expiresAt', isGreaterThan: now);
+    Query<Map<String, dynamic>> query =
+        _db.collection('stories').where('expiresAt', isGreaterThan: now);
 
     if (countryCode != null && countryCode.trim().isNotEmpty) {
-      query = query.where('countryCode', isEqualTo: countryCode.trim().toUpperCase());
+      query = query.where('countryCode',
+          isEqualTo: countryCode.trim().toUpperCase());
     }
 
     if (categoryIds != null && categoryIds.isNotEmpty) {
@@ -78,25 +79,23 @@ class StoriesRepo {
           .toSet()
           .toList();
       if (unique.isNotEmpty) {
-        query = query.where('categoryIds', arrayContainsAny: unique.take(10).toList());
+        query = query.where('categoryIds',
+            arrayContainsAny: unique.take(10).toList());
       }
     }
 
-    return query
-        .orderBy('expiresAt', descending: true)
-        .snapshots()
-        .map((snap) {
-      return snap.docs
-          .map((doc) => Story.fromMap(doc.id, doc.data()))
-          .toList()
+    return query.orderBy('expiresAt', descending: true).snapshots().map((snap) {
+      return snap.docs.map((doc) => Story.fromMap(doc.id, doc.data())).toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     });
   }
+
   /// Obtém stories de um prestador específico
   static Stream<List<Story>> streamStoriesFromPrestador(String prestadorId) {
     final now = Timestamp.now();
-    
-    return _db.collection('stories')
+
+    return _db
+        .collection('stories')
         .where('prestadorId', isEqualTo: prestadorId)
         .where('expiresAt', isGreaterThan: now)
         .orderBy('expiresAt', descending: true)
@@ -106,12 +105,3 @@ class StoriesRepo {
     });
   }
 }
-
-
-
-
-
-
-
-
-

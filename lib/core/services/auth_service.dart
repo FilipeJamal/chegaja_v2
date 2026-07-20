@@ -1,17 +1,37 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:chegaja_v2/core/data/firestore_collections.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
+
+class PhoneVerificationSession {
+  const PhoneVerificationSession({
+    this.verificationId,
+    this.resendToken,
+    this.webConfirmation,
+    this.autoVerified = false,
+  });
+
+  final String? verificationId;
+  final int? resendToken;
+  final ConfirmationResult? webConfirmation;
+  final bool autoVerified;
+}
+
 /// Servico responsavel pela autenticacao e pelo registo basico do utilizador
-/// na colecao `users` do Firestore.
+/// na colecao privada `users_private` do Firestore.
 class AuthService {
   AuthService._();
 
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static FirebaseFunctions get _functions =>
+      FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
   static Future<User>? _pendingAnonymousEnsure;
   static const String _seenUserFlagKey = 'auth.seenPersistedUser';
   static const List<Duration> _firestoreBootstrapRetryDelays = [
@@ -25,7 +45,7 @@ class AuthService {
   static DocumentReference<Map<String, dynamic>> get userRef {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw Exception('No user logged in');
-    return _db.collection('users').doc(uid);
+    return _db.collection(FirestoreCollections.usersPrivate).doc(uid);
   }
 
   /// Garante que existe um utilizador autenticado.
@@ -72,7 +92,8 @@ class AuthService {
 
     await _markUserSeen();
 
-    final userDocRef = _db.collection('users').doc(signedUser.uid);
+    final userDocRef =
+        _db.collection(FirestoreCollections.usersPrivate).doc(signedUser.uid);
 
     // Se ja existir, nao sobrescrevemos campos importantes,
     // mas garantimos default region se nao existir.
@@ -214,6 +235,142 @@ class AuthService {
 
   static User? get currentUser => _auth.currentUser;
 
+  static bool get hasVerifiedPhone => isVerifiedPhoneIdentity(
+        isAnonymous: currentUser?.isAnonymous ?? true,
+        phoneNumber: currentUser?.phoneNumber,
+      );
+
+  @visibleForTesting
+  static bool isVerifiedPhoneIdentity({
+    required bool isAnonymous,
+    required String? phoneNumber,
+  }) {
+    return !isAnonymous && (phoneNumber?.trim().isNotEmpty ?? false);
+  }
+
+  /// Sends an OTP while preserving the current anonymous account.
+  static Future<PhoneVerificationSession> requestPhoneCode(
+    String phoneE164, {
+    int? forceResendingToken,
+  }) async {
+    final phone = phoneE164.trim();
+    if (!phone.startsWith('+') || phone.length < 8) {
+      throw ArgumentError('Numero de telefone invalido. Usa o formato +258...');
+    }
+    final user = await ensureSignedInAnonymously();
+
+    if (kIsWeb) {
+      final confirmation = await user.linkWithPhoneNumber(phone);
+      return PhoneVerificationSession(webConfirmation: confirmation);
+    }
+
+    final completer = Completer<PhoneVerificationSession>();
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phone,
+      forceResendingToken: forceResendingToken,
+      verificationCompleted: (credential) async {
+        try {
+          await _completePhoneCredential(credential);
+          if (!completer.isCompleted) {
+            completer.complete(
+              const PhoneVerificationSession(autoVerified: true),
+            );
+          }
+        } catch (error, stackTrace) {
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
+        }
+      },
+      verificationFailed: (error) {
+        if (!completer.isCompleted) completer.completeError(error);
+      },
+      codeSent: (verificationId, resendToken) {
+        if (!completer.isCompleted) {
+          completer.complete(
+            PhoneVerificationSession(
+              verificationId: verificationId,
+              resendToken: resendToken,
+            ),
+          );
+        }
+      },
+      codeAutoRetrievalTimeout: (verificationId) {
+        if (!completer.isCompleted) {
+          completer.complete(
+            PhoneVerificationSession(verificationId: verificationId),
+          );
+        }
+      },
+    );
+    return completer.future.timeout(const Duration(minutes: 2));
+  }
+
+  static Future<User> confirmPhoneCode({
+    required PhoneVerificationSession session,
+    required String smsCode,
+  }) async {
+    final code = smsCode.trim();
+    if (code.length < 4) throw ArgumentError('Codigo SMS invalido.');
+
+    if (session.autoVerified) {
+      return _auth.currentUser ??
+          (throw StateError('Telefone confirmado sem sessao ativa.'));
+    }
+
+    if (session.webConfirmation != null) {
+      final result = await session.webConfirmation!.confirm(code);
+      await _syncPhoneIdentity();
+      return result.user ??
+          _auth.currentUser ??
+          (throw StateError('Telefone confirmado sem sessao ativa.'));
+    }
+
+    final verificationId = session.verificationId;
+    if (verificationId == null || verificationId.isEmpty) {
+      throw StateError('Sessao de verificacao expirada.');
+    }
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: code,
+    );
+    return _completePhoneCredential(credential);
+  }
+
+  static Future<User> _completePhoneCredential(
+    PhoneAuthCredential credential,
+  ) async {
+    final sourceUser = _auth.currentUser;
+    if (sourceUser == null) throw StateError('Sessao anonima inexistente.');
+    try {
+      final linked = await sourceUser.linkWithCredential(credential);
+      await _syncPhoneIdentity();
+      return linked.user ?? _auth.currentUser!;
+    } on FirebaseAuthException catch (error) {
+      if (!sourceUser.isAnonymous ||
+          !{
+            'credential-already-in-use',
+            'account-exists-with-different-credential',
+          }.contains(error.code)) {
+        rethrow;
+      }
+
+      final sourceIdToken = await sourceUser.getIdToken(true);
+      if (sourceIdToken == null || sourceIdToken.isEmpty) rethrow;
+      final signedIn = await _auth.signInWithCredential(credential);
+      await _functions.httpsCallable('auth_mergeAnonymousData').call({
+        'sourceIdToken': sourceIdToken,
+      });
+      await _syncPhoneIdentity();
+      return signedIn.user ?? _auth.currentUser!;
+    }
+  }
+
+  static Future<void> _syncPhoneIdentity() async {
+    await _auth.currentUser?.getIdToken(true);
+    await _functions.httpsCallable('auth_syncPhoneIdentity').call();
+  }
+
   static Future<User?> waitForCurrentUser({
     Duration? timeout,
   }) {
@@ -225,7 +382,7 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    await _db.collection('users').doc(user.uid).set(
+    await _db.collection(FirestoreCollections.usersPrivate).doc(user.uid).set(
       {
         'region': region.toUpperCase(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -239,7 +396,10 @@ class AuthService {
     final user = _auth.currentUser;
     if (user == null) return null;
 
-    final doc = await _db.collection('users').doc(user.uid).get();
+    final doc = await _db
+        .collection(FirestoreCollections.usersPrivate)
+        .doc(user.uid)
+        .get();
     return doc.data()?['region'] as String?;
   }
 
@@ -254,7 +414,7 @@ class AuthService {
     final r = role.trim().toLowerCase();
     if (r != 'cliente' && r != 'prestador') return;
 
-    await _db.collection('users').doc(user.uid).set(
+    await _db.collection(FirestoreCollections.usersPrivate).doc(user.uid).set(
       {
         'activeRole': r,
         'roles.$r': true,
@@ -270,29 +430,42 @@ class AuthService {
     // o Firestore pode devolver permission-denied.
     // Criamos um doc minimo aqui.
     if (r == 'prestador') {
-      final prestadorRef = _db.collection('prestadores').doc(user.uid);
-      final prestadorSnap = await prestadorRef.get();
+      final publicRef =
+          _db.collection(FirestoreCollections.providerPublic).doc(user.uid);
+      final dispatchRef = _db
+          .collection(FirestoreCollections.providerDispatchPrivate)
+          .doc(user.uid);
+      final publicSnap = await publicRef.get();
+      final dispatchSnap = await dispatchRef.get();
 
       // IMPORTANTE:
       // NAO sobrescrever isOnline em cada load.
       // Isto causava o prestador voltar a OFFLINE sempre que a Home abria
       // (setActiveRole e chamado no init).
-      if (!prestadorSnap.exists) {
-        await prestadorRef.set(
-          {
-            'isOnline': false,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
-      } else {
-        await prestadorRef.set(
-          {
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
+      final batch = _db.batch();
+      batch.set(
+        publicRef,
+        {
+          'uid': user.uid,
+          if (!publicSnap.exists) 'isSearchable': false,
+          if (!publicSnap.exists) 'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+      batch.set(
+        dispatchRef,
+        {
+          'providerId': user.uid,
+          if (!dispatchSnap.exists) 'isOnline': false,
+          if (!dispatchSnap.exists) 'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+      await batch.commit();
+      if (hasVerifiedPhone) {
+        await _syncPhoneIdentity();
       }
     }
   }

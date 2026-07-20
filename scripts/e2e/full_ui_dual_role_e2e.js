@@ -12,9 +12,12 @@ const {
   summarizeClientOrdersBody,
 } = require('./full_ui_dual_role_e2e_helpers');
 
-let admin;
+let firebaseAdmin;
 try {
-  admin = require(path.join(process.cwd(), 'functions', 'node_modules', 'firebase-admin'));
+  const adminRoot = path.join(process.cwd(), 'functions', 'node_modules', 'firebase-admin');
+  const { getApps, initializeApp } = require(path.join(adminRoot, 'app'));
+  const { FieldValue, getFirestore } = require(path.join(adminRoot, 'firestore'));
+  firebaseAdmin = { FieldValue, getApps, getFirestore, initializeApp };
 } catch (error) {
   console.error('Missing firebase-admin at functions/node_modules/firebase-admin');
   console.error('Run: cd functions && npm install');
@@ -35,10 +38,10 @@ const SCENARIO = resolveScenario(process.argv.slice(2), process.env.E2E_SCENARIO
 
 let serviceCatalogCache = null;
 
-if (admin.apps.length === 0) {
-  admin.initializeApp({ projectId: PROJECT_ID });
+if (firebaseAdmin.getApps().length === 0) {
+  firebaseAdmin.initializeApp({ projectId: PROJECT_ID });
 }
-const db = admin.firestore();
+const db = firebaseAdmin.getFirestore();
 fs.mkdirSync(SHOT_DIR, { recursive: true });
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -364,7 +367,7 @@ async function setProviderState(providerUid, patch) {
     .doc(providerUid)
     .set(
       {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebaseAdmin.FieldValue.serverTimestamp(),
         ...patch,
       },
       { merge: true },

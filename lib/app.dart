@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
+import 'core/config/app_config.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/services/locale_service.dart';
 import 'core/services/role_mode_service.dart';
@@ -90,22 +92,24 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
             publicProfileHandleFromRouteName(Uri.base.toString());
         final Widget home = publicHandle != null
             ? PublicProfileByHandleScreen(rawHandle: publicHandle)
-            : _roleModeService.isLoaded
-                ? _homeForRole(context, _roleModeService.currentRole)
-                : FutureBuilder<void>(
-                    future: _roleLoadFuture,
-                    builder: (context, snapshot) {
-                      if (_roleModeService.isLoaded) {
-                        return _homeForRole(
-                          context,
-                          _roleModeService.currentRole,
-                        );
-                      }
-                      return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()),
+            : _pilotPlatformBlocked
+                ? const _PilotPlatformUnavailableScreen()
+                : _roleModeService.isLoaded
+                    ? _homeForRole(context, _roleModeService.currentRole)
+                    : FutureBuilder<void>(
+                        future: _roleLoadFuture,
+                        builder: (context, snapshot) {
+                          if (_roleModeService.isLoaded) {
+                            return _homeForRole(
+                              context,
+                              _roleModeService.currentRole,
+                            );
+                          }
+                          return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()),
+                          );
+                        },
                       );
-                    },
-                  );
 
         return MaterialApp(
           onGenerateTitle: (context) =>
@@ -124,11 +128,21 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          supportedLocales: AppLocalizations.supportedLocales,
+          supportedLocales: AppConfig.pilotPortugueseOnly
+              ? const [Locale('pt', 'MZ')]
+              : AppLocalizations.supportedLocales,
           home: home,
         );
       },
     );
+  }
+
+  bool get _pilotPlatformBlocked {
+    if (!AppConfig.pilotMode || !kReleaseMode) return false;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return false;
+    }
+    return !AppConfig.windowsPublicEnabled;
   }
 
   Widget _homeForRole(BuildContext context, String? role) {
@@ -142,5 +156,39 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
       _ =>
         widget.roleSelectorBuilder?.call(context) ?? const RoleSelectorScreen(),
     };
+  }
+}
+
+class _PilotPlatformUnavailableScreen extends StatelessWidget {
+  const _PilotPlatformUnavailableScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.android, size: 56),
+                SizedBox(height: 16),
+                Text(
+                  'Piloto disponível apenas em Android',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'As versões Windows, web e outras plataformas não fazem parte do piloto controlado em Maputo.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

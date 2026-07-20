@@ -122,6 +122,6 @@ class TrustSafetyService {
   }
 
   CollectionReference<Map<String, dynamic>> _blockedUsersRef(String uid) {
-    return _db.collection('users').doc(uid).collection('blockedUsers');
+    return _db.collection('users_private').doc(uid).collection('blockedUsers');
   }
 }

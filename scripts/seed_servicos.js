@@ -20,7 +20,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const admin = require("../functions/node_modules/firebase-admin");
+const { cert, initializeApp } = require("../functions/node_modules/firebase-admin/app");
+const { FieldValue, getFirestore } = require("../functions/node_modules/firebase-admin/firestore");
 
 function parseArgs(argv) {
   const args = {
@@ -127,14 +128,14 @@ async function main() {
   if (args.serviceAccount) {
     const raw = fs.readFileSync(path.resolve(args.serviceAccount), "utf8");
     const serviceAccount = JSON.parse(raw);
-    appOptions.credential = admin.credential.cert(serviceAccount);
+    appOptions.credential = cert(serviceAccount);
     appOptions.projectId = appOptions.projectId || serviceAccount.project_id;
   } else if (projectId) {
     appOptions.projectId = projectId;
   }
 
-  admin.initializeApp(appOptions);
-  const db = admin.firestore();
+  initializeApp(appOptions);
+  const db = getFirestore();
   const col = db.collection(args.collection);
 
   const raw = fs.readFileSync(path.resolve(args.file), "utf8");
@@ -171,7 +172,7 @@ async function main() {
       ativo: isActive,
       keywords,
       iconKey: item.iconKey || null,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     };
 
     if (!args.dryRun) {

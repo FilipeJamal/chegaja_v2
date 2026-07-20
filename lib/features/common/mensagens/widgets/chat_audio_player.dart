@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 class ChatAudioPlayer extends StatefulWidget {
@@ -67,7 +68,9 @@ class _ChatAudioPlayerState extends State<ChatAudioPlayer> {
       if (kIsWeb) {
         await _player.setWebCrossOrigin(WebCrossOrigin.anonymous);
       }
-      final duration = await _player.setUrl(widget.url);
+      final resolvedUrl =
+          await PrivateStorageMediaService.resolveReferenceLazily(widget.url);
+      final duration = await _player.setUrl(resolvedUrl);
       _duration = duration;
       _loadFailed = false;
     } catch (e) {

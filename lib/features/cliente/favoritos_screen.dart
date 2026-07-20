@@ -43,8 +43,10 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
       // Se escalar muito, mudar para chunks.
 
       final futures = favIds.map(
-        (id) =>
-            FirebaseFirestore.instance.collection('prestadores').doc(id).get(),
+        (id) => FirebaseFirestore.instance
+            .collection('provider_public')
+            .doc(id)
+            .get(),
       );
 
       final snaps = await Future.wait(futures);

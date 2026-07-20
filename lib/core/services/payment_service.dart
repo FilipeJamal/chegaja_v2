@@ -7,56 +7,117 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/utils/platform_caps.dart';
 
-/// Pagamentos (Stripe) — camada Flutter.
-///
-/// Usa Cloud Functions para:
-/// - criar PaymentIntent (server-side)
-/// - criar conta Connect (prestador)
-/// - gerar link de onboarding
-class PaymentService {
-  PaymentService._();
+enum PaymentMethod { cash, mpesa, emola, stripe }
 
-  static final PaymentService instance = PaymentService._();
+extension PaymentMethodX on PaymentMethod {
+  String get storageValue => switch (this) {
+        PaymentMethod.cash => 'dinheiro',
+        PaymentMethod.mpesa => 'mpesa',
+        PaymentMethod.emola => 'emola',
+        PaymentMethod.stripe => 'stripe',
+      };
 
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
-
-  HttpsCallable _callable(String name) {
-    return _functions.httpsCallable(name);
+  static PaymentMethod fromStorage(String? value) {
+    return switch (value?.trim().toLowerCase()) {
+      'mpesa' => PaymentMethod.mpesa,
+      'emola' => PaymentMethod.emola,
+      'stripe' || 'online_antes' || 'online_depois' => PaymentMethod.stripe,
+      _ => PaymentMethod.cash,
+    };
   }
+}
 
-  /// Fluxo: cria PaymentIntent (Cloud Function) → PaymentSheet → retorna true se pago.
-  ///
-  /// Requisitos:
-  /// - STRIPE_PUBLISHABLE_KEY configurada no app
-  /// - STRIPE_SECRET_KEY configurada nas Functions
-  Future<bool> payPedido({required String pedidoId}) async {
-    final pid = pedidoId.trim();
-    if (pid.isEmpty) {
-      throw ArgumentError('pedidoId vazio');
+abstract class PaymentProvider {
+  const PaymentProvider();
+
+  PaymentMethod get method;
+  String get displayName;
+  bool get isAvailable;
+  bool get requiresExternalConfirmation;
+
+  Future<bool> payPedido(String pedidoId);
+}
+
+class CashPaymentProvider extends PaymentProvider {
+  const CashPaymentProvider();
+
+  @override
+  PaymentMethod get method => PaymentMethod.cash;
+
+  @override
+  String get displayName => 'Dinheiro';
+
+  @override
+  bool get isAvailable => true;
+
+  @override
+  bool get requiresExternalConfirmation => false;
+
+  @override
+  Future<bool> payPedido(String pedidoId) async => true;
+}
+
+class UnavailablePaymentProvider extends PaymentProvider {
+  const UnavailablePaymentProvider({
+    required this.method,
+    required this.displayName,
+    required this.isAvailable,
+  });
+
+  @override
+  final PaymentMethod method;
+
+  @override
+  final String displayName;
+
+  @override
+  final bool isAvailable;
+
+  @override
+  bool get requiresExternalConfirmation => true;
+
+  @override
+  Future<bool> payPedido(String pedidoId) async {
+    if (!isAvailable) {
+      throw StateError('$displayName ainda nao esta disponivel no piloto.');
     }
-    if (!PlatformCaps.supportsStripe) {
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('[Stripe] PaymentSheet indisponivel nesta plataforma.');
-      }
-      return false;
+    throw UnimplementedError(
+      '$displayName foi ativado sem uma integracao validada.',
+    );
+  }
+}
+
+class StripePaymentProvider extends PaymentProvider {
+  StripePaymentProvider(this._functions);
+
+  final FirebaseFunctions _functions;
+
+  @override
+  PaymentMethod get method => PaymentMethod.stripe;
+
+  @override
+  String get displayName => 'Cartao (Stripe)';
+
+  @override
+  bool get isAvailable =>
+      AppConfig.stripeEnabled && PlatformCaps.supportsStripe;
+
+  @override
+  bool get requiresExternalConfirmation => true;
+
+  @override
+  Future<bool> payPedido(String pedidoId) async {
+    if (!isAvailable) {
+      throw StateError('O pagamento Stripe nao esta disponivel no piloto.');
     }
-
-    final res = await _callable('payments_createPaymentIntent').call({
-      'pedidoId': pid,
-    });
-
-    final data = (res.data is Map)
-        ? Map<String, dynamic>.from(res.data as Map)
-        : <String, dynamic>{};
-
-    final clientSecret = (data['clientSecret'] ?? '').toString().trim();
+    final result = await _functions
+        .httpsCallable('payments_createPaymentIntent')
+        .call(<String, dynamic>{'pedidoId': pedidoId});
+    final data = Map<String, dynamic>.from(result.data as Map);
+    final clientSecret = data['clientSecret']?.toString().trim() ?? '';
     if (clientSecret.isEmpty) {
-      throw Exception('PaymentIntent clientSecret não retornou.');
+      throw StateError('O servidor nao devolveu a autorizacao de pagamento.');
     }
-
-    // Inicializa PaymentSheet (modo simples, sem customer/ephemeral key)
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: clientSecret,
@@ -64,46 +125,66 @@ class PaymentService {
         style: ThemeMode.system,
       ),
     );
-
     try {
       await Stripe.instance.presentPaymentSheet();
       return true;
-    } on StripeException catch (e) {
+    } on StripeException catch (error) {
       if (kDebugMode) {
-        // ignore: avoid_print
-        print('[Stripe] pagamento cancelado/erro: ${e.error.localizedMessage}');
+        debugPrint('[Stripe] ${error.error.localizedMessage}');
       }
       return false;
     }
   }
+}
 
-  /// Cria/recupera conta Connect para o prestador e abre o link de onboarding.
+class PaymentService {
+  PaymentService._()
+      : _functions =
+            FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
+
+  static final PaymentService instance = PaymentService._();
+
+  final FirebaseFunctions _functions;
+
+  PaymentProvider providerFor(String? storedMethod) {
+    return switch (PaymentMethodX.fromStorage(storedMethod)) {
+      PaymentMethod.cash => const CashPaymentProvider(),
+      PaymentMethod.mpesa => UnavailablePaymentProvider(
+          method: PaymentMethod.mpesa,
+          displayName: 'M-Pesa',
+          isAvailable: AppConfig.mpesaEnabled,
+        ),
+      PaymentMethod.emola => UnavailablePaymentProvider(
+          method: PaymentMethod.emola,
+          displayName: 'e-Mola',
+          isAvailable: AppConfig.emolaEnabled,
+        ),
+      PaymentMethod.stripe => StripePaymentProvider(_functions),
+    };
+  }
+
+  Future<bool> payPedido({
+    required String pedidoId,
+    String? paymentMethod,
+  }) async {
+    final id = pedidoId.trim();
+    if (id.isEmpty) throw ArgumentError('pedidoId vazio');
+    return providerFor(paymentMethod).payPedido(id);
+  }
+
   Future<void> startPrestadorOnboarding() async {
-    if (!PlatformCaps.supportsCloudFunctions) {
-      throw UnsupportedError(
-        'Onboarding Stripe indisponivel nesta plataforma.',
-      );
+    if (!AppConfig.stripeEnabled || !PlatformCaps.supportsCloudFunctions) {
+      throw UnsupportedError('Onboarding Stripe indisponivel no piloto.');
     }
-
-    final res = await _callable('payments_createOnboardingLink').call();
-
-    final data = (res.data is Map)
-        ? Map<String, dynamic>.from(res.data as Map)
-        : <String, dynamic>{};
-
-    final url = (data['url'] ?? '').toString().trim();
-    if (url.isEmpty) {
-      throw Exception('Onboarding link não retornou.');
-    }
-
+    final result =
+        await _functions.httpsCallable('payments_createOnboardingLink').call();
+    final data = Map<String, dynamic>.from(result.data as Map);
+    final url = data['url']?.toString().trim() ?? '';
     final uri = Uri.tryParse(url);
-    if (uri == null) {
-      throw Exception('Onboarding link inválido.');
+    if (uri == null || !uri.hasScheme) {
+      throw StateError('Link de onboarding invalido.');
     }
-
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) {
-      throw Exception('Não foi possível abrir o link de onboarding.');
-    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) throw StateError('Nao foi possivel abrir o onboarding.');
   }
 }

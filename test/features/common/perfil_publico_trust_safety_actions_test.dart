@@ -34,7 +34,7 @@ Future<void> _pumpProfile(
 }
 
 Future<void> _seedPrestador(FakeFirebaseFirestore db) async {
-  await db.collection('prestadores').doc('prestador1').set({
+  await db.collection('provider_public').doc('prestador1').set({
     'nome': 'Joao Silva',
     'bio': 'Canalizador com experiencia.',
     'servicosNomes': ['Canalizacao'],

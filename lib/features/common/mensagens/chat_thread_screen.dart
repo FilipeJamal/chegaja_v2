@@ -13,14 +13,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/models/moderation_types.dart';
 import 'package:chegaja_v2/core/services/call_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
 import 'package:chegaja_v2/core/services/storage_path_policy.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/url_bytes_loader.dart';
 import 'package:chegaja_v2/core/widgets/app_avatar.dart';
+import 'package:chegaja_v2/core/widgets/private_storage_image.dart';
 import 'package:chegaja_v2/features/common/mensagens/call_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_favorites_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_media_screen.dart';
@@ -29,6 +32,7 @@ import 'package:chegaja_v2/features/common/perfil_publico_screen.dart';
 import 'package:chegaja_v2/features/common/trust_safety/block_user_dialog.dart';
 import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 /// Chat (aba Mensagens) com layout semelhante ao chat nos detalhes do pedido.
@@ -125,7 +129,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   String get _otherRole =>
       widget.viewerRole == 'prestador' ? 'cliente' : 'prestador';
   String get _otherCollection =>
-      _otherRole == 'prestador' ? 'prestadores' : 'users';
+      _otherRole == 'prestador' ? 'provider_public' : 'public_profiles';
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   static const int _maxAudioBytes = 20 * 1024 * 1024; // 20MB
@@ -260,9 +264,23 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startSecureChat());
+  }
+
+  Future<void> _startSecureChat() async {
+    final allowed = await VerifiedPhoneGate.ensure(
+      context,
+      action: 'abrir o chat',
+    );
+    if (!mounted) return;
+    if (!allowed) {
+      Navigator.of(context).pop();
+      return;
+    }
+
     // garante meta do chat e marca como entregue para o viewerRole
-    ChatService.instance.ensureChatMeta(widget.pedidoId);
-    ChatService.instance.marcarEntreguesParaRole(
+    await ChatService.instance.ensureChatMeta(widget.pedidoId);
+    await ChatService.instance.marcarEntreguesParaRole(
       pedidoId: widget.pedidoId,
       role: widget.viewerRole,
     );
@@ -295,7 +313,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
     // users/{uid}
     try {
-      await _db.collection('users').doc(uid).set(
+      await _db.collection('users_private').doc(uid).set(
         {
           'isOnline': isOnline,
           'lastSeenAt': now,
@@ -304,10 +322,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       );
     } catch (_) {}
 
-    // prestadores/{uid}
+    // Estado operacional privado do prestador.
     if (widget.viewerRole == 'prestador') {
       try {
-        await _db.collection('prestadores').doc(uid).set(
+        await _db.collection('provider_dispatch_private').doc(uid).set(
           {
             'isOnline': isOnline,
             'lastSeenAt': now,
@@ -446,7 +464,17 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     final meta =
         contentType == null ? null : SettableMetadata(contentType: contentType);
     final task = await ref.putData(bytes, meta);
-    return await task.ref.getDownloadURL();
+    try {
+      await PrivateStorageMediaService.instance.finalizeUpload(path);
+    } catch (_) {
+      try {
+        await task.ref.delete();
+      } catch (_) {
+        // O backend também rejeita media sem finalização; não mascara o erro original.
+      }
+      rethrow;
+    }
+    return path;
   }
 
   String _safeFileName(String name) {
@@ -486,7 +514,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       final lower = fileName.toLowerCase();
       final contentType = lower.endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-      final url = await _uploadBytes(
+      final mediaPath = await _uploadBytes(
         bytes: bytes,
         path: 'chats/${widget.pedidoId}/images/${ts}_$fileName',
         contentType: contentType,
@@ -502,7 +530,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         text: caption.isNotEmpty ? caption : null,
         extra: {
           'type': 'image',
-          'mediaUrl': url,
+          'mediaPath': mediaPath,
           'fileName': fileName,
           'fileSize': bytes.lengthInBytes,
           'mimeType': contentType,
@@ -568,7 +596,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
       final ts = DateTime.now().millisecondsSinceEpoch;
 
-      final url = await _uploadBytes(
+      final mediaPath = await _uploadBytes(
         bytes: bytes,
         path: 'chats/${widget.pedidoId}/files/${ts}_$fileName',
         contentType: contentType,
@@ -579,7 +607,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         senderRole: widget.viewerRole,
         extra: {
           'type': 'file',
-          'mediaUrl': url,
+          'mediaPath': mediaPath,
           'fileName': fileName,
           'fileSize': bytes.lengthInBytes,
         },
@@ -636,9 +664,20 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
       final fileName = _safeFileName(f.name.isNotEmpty ? f.name : 'audio.m4a');
       final ts = DateTime.now().millisecondsSinceEpoch;
 
-      final url = await _uploadBytes(
+      final lower = fileName.toLowerCase();
+      final contentType = lower.endsWith('.mp3')
+          ? 'audio/mpeg'
+          : lower.endsWith('.wav')
+              ? 'audio/wav'
+              : lower.endsWith('.ogg')
+                  ? 'audio/ogg'
+                  : lower.endsWith('.aac')
+                      ? 'audio/aac'
+                      : 'audio/mp4';
+      final mediaPath = await _uploadBytes(
         bytes: bytes,
         path: 'chats/${widget.pedidoId}/audio/${ts}_$fileName',
+        contentType: contentType,
       );
 
       await ChatService.instance.sendMessage(
@@ -646,7 +685,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         senderRole: widget.viewerRole,
         extra: {
           'type': 'audio',
-          'mediaUrl': url,
+          'mediaPath': mediaPath,
           'fileName': fileName,
           'fileSize': bytes.lengthInBytes,
         },
@@ -860,7 +899,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
     setState(() => _uploading = true);
     try {
-      final url = await _uploadBytes(
+      final mediaPath = await _uploadBytes(
         bytes: bytes,
         path: 'chats/${widget.pedidoId}/audio/$fileName',
         contentType: mimeType,
@@ -871,7 +910,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
         senderRole: widget.viewerRole,
         extra: {
           'type': 'audio',
-          'mediaUrl': url,
+          'mediaPath': mediaPath,
           'fileName': fileName,
           'fileSize': bytes.length,
           'mimeType': mimeType,
@@ -1000,12 +1039,25 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
     setState(() => _sending = true);
     try {
+      final bytes = await loadBytesFromUrl(trimmed);
+      const maxBytes = 15 * 1024 * 1024;
+      if (bytes.isEmpty || bytes.lengthInBytes > maxBytes) {
+        throw StateError('Media externa vazia ou demasiado grande.');
+      }
+      final isGif = type == 'gif';
+      final extension = isGif ? 'gif' : 'webp';
+      final mediaPath = await _uploadBytes(
+        bytes: bytes,
+        path:
+            'chats/${widget.pedidoId}/images/${type}_${DateTime.now().millisecondsSinceEpoch}.$extension',
+        contentType: isGif ? 'image/gif' : 'image/webp',
+      );
       await ChatService.instance.sendMessage(
         pedidoId: widget.pedidoId,
         senderRole: widget.viewerRole,
         extra: {
           'type': type,
-          'mediaUrl': trimmed,
+          'mediaPath': mediaPath,
         },
       );
 
@@ -1623,21 +1675,22 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
 
     Widget content;
     // ... Content building logic remains mostly same but we optimize layout ...
-    if (msg.isImage && msg.mediaUrl != null) {
+    final mediaReference = msg.mediaReference;
+    if (msg.isImage && mediaReference != null) {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
             onTap: () => MediaViewerScreen.open(
               context,
-              urls: [msg.mediaUrl!],
+              urls: [mediaReference],
               title: 'Image',
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                msg.mediaUrl!,
-                errorBuilder: (_, __, ___) => const Icon(Icons.error),
+              child: PrivateStorageImage(
+                reference: mediaReference,
+                error: const Icon(Icons.error),
               ),
             ),
           ),
@@ -1972,16 +2025,18 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
                 },
                 icon: const Icon(Icons.search),
               ),
-              IconButton(
-                tooltip: _l10n.chatVideoCallAction,
-                onPressed: () => _startCall(videoEnabled: true),
-                icon: const Icon(Icons.videocam_outlined),
-              ),
-              IconButton(
-                tooltip: _l10n.chatVoiceCallAction,
-                onPressed: () => _startCall(videoEnabled: false),
-                icon: const Icon(Icons.call_outlined),
-              ),
+              if (AppConfig.callsEnabled) ...[
+                IconButton(
+                  tooltip: _l10n.chatVideoCallAction,
+                  onPressed: () => _startCall(videoEnabled: true),
+                  icon: const Icon(Icons.videocam_outlined),
+                ),
+                IconButton(
+                  tooltip: _l10n.chatVoiceCallAction,
+                  onPressed: () => _startCall(videoEnabled: false),
+                  icon: const Icon(Icons.call_outlined),
+                ),
+              ],
               PopupMenuButton<String>(
                 onSelected: (v) {
                   if (v == 'perfil') {

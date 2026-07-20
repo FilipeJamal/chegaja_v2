@@ -1,0 +1,28 @@
+{
+  "status": "PENDING",
+  "executedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "apkSha256": "TODO",
+  "device": {
+    "physical": true,
+    "apiLevel": 33,
+    "androidVersion": "TODO",
+    "manufacturer": "TODO",
+    "model": "TODO",
+    "network": "TODO"
+  },
+  "cases": [
+    { "id": "clean_install", "result": "blocked", "evidence": "TODO" },
+    { "id": "notifications_denied", "result": "blocked", "evidence": "TODO" },
+    { "id": "notifications_granted", "result": "blocked", "evidence": "TODO" },
+    { "id": "location_denied", "result": "blocked", "evidence": "TODO" },
+    { "id": "location_approximate", "result": "blocked", "evidence": "TODO" },
+    { "id": "location_precise", "result": "blocked", "evidence": "TODO" },
+    { "id": "camera_denied", "result": "blocked", "evidence": "TODO" },
+    { "id": "camera_granted", "result": "blocked", "evidence": "TODO" },
+    { "id": "permission_permanently_denied", "result": "blocked", "evidence": "TODO" },
+    { "id": "background_notification", "result": "blocked", "evidence": "TODO" },
+    { "id": "weak_or_offline_network", "result": "blocked", "evidence": "TODO" },
+    { "id": "restart_state_preserved", "result": "blocked", "evidence": "TODO" }
+  ],
+  "logsRedacted": false
+}

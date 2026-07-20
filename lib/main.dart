@@ -86,35 +86,6 @@ void _scheduleDeferredStartupTasks() {
 Future<void> _runDeferredStartupTasks() async {
   final bootstrap = Stopwatch()..start();
 
-  if (!kRunFirebaseEmulatorTests &&
-      !kFastDevMode &&
-      PlatformCaps.supportsAppCheck) {
-    try {
-      if (kIsWeb) {
-        final siteKey = AppConfig.appCheckWebRecaptchaSiteKey;
-        if (siteKey != null && siteKey.trim().isNotEmpty) {
-          await FirebaseAppCheck.instance.activate(
-            providerWeb: ReCaptchaV3Provider(siteKey),
-          );
-        }
-      } else {
-        await FirebaseAppCheck.instance.activate(
-          providerAndroid: kDebugMode
-              ? const AndroidDebugProvider()
-              : const AndroidPlayIntegrityProvider(),
-          providerApple: kDebugMode
-              ? const AppleDebugProvider()
-              : const AppleDeviceCheckProvider(),
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('[AppCheck] Ignorado: $e');
-      }
-    }
-  }
-
   if (!kRunFirebaseEmulatorTests && !kFastDevMode) {
     final pk = AppConfig.stripePublishableKey;
     if (pk != null && pk.trim().isNotEmpty && PlatformCaps.supportsStripe) {
@@ -212,6 +183,53 @@ Future<void> _runDeferredStartupTasks() async {
   }
 }
 
+Future<void> _activateAppCheck() async {
+  if (kRunFirebaseEmulatorTests ||
+      AppConfig.useFirebaseEmulators ||
+      !PlatformCaps.supportsAppCheck) {
+    return;
+  }
+  if (kIsWeb) {
+    final siteKey = AppConfig.appCheckWebRecaptchaSiteKey;
+    if (siteKey == null || siteKey.trim().isEmpty) {
+      throw StateError('App Check web nao configurado.');
+    }
+    await FirebaseAppCheck.instance.activate(
+      providerWeb: ReCaptchaV3Provider(siteKey),
+    );
+    return;
+  }
+  await FirebaseAppCheck.instance.activate(
+    providerAndroid: kDebugMode
+        ? const AndroidDebugProvider()
+        : const AndroidPlayIntegrityProvider(),
+    providerApple: kDebugMode
+        ? const AppleDebugProvider()
+        : const AppleDeviceCheckProvider(),
+  );
+}
+
+@visibleForTesting
+Future<bool> activateAppCheckWithTimeout(
+  Future<void> Function() activate, {
+  Duration timeout = const Duration(seconds: 8),
+}) async {
+  try {
+    await activate().timeout(timeout);
+    return true;
+  } on TimeoutException catch (error, stack) {
+    if (kDebugMode) {
+      debugPrint('[AppCheck] Ativacao excedeu o limite: $error\n$stack');
+    }
+    return false;
+  } catch (error, stack) {
+    if (kDebugMode) {
+      debugPrint('[AppCheck] Ativacao indisponivel: $error\n$stack');
+    }
+    return false;
+  }
+}
+
 Future<void> main() async {
   const prodConfig = AppConfig(
     flavor: Flavor.prod,
@@ -279,6 +297,8 @@ Future<void> mainCommon(AppConfig config) async {
           FirebaseFirestore.instance.settings =
               const Settings(persistenceEnabled: false);
         }
+
+        await activateAppCheckWithTimeout(_activateAppCheck);
 
         runApp(config);
         _scheduleDeferredStartupTasks();

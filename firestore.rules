@@ -8,6 +8,14 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
 
+    function hasVerifiedPhone() {
+      return signedIn()
+        && request.auth.token != null
+        && request.auth.token.keys().hasAny(['phone_number'])
+        && request.auth.token['phone_number'] is string
+        && request.auth.token['phone_number'].size() >= 8;
+    }
+
     // Admin claim SAFE: se nÃ£o existir, devolve false
     function isAdmin() {
       return signedIn()
@@ -62,7 +70,7 @@ service cloud.firestore {
 
     function isPrestador() {
       return signedIn()
-        && exists(/databases/$(database)/documents/prestadores/$(uid()));
+        && exists(/databases/$(database)/documents/provider_public/$(uid()));
     }
 
     // -------------------------
@@ -70,7 +78,7 @@ service cloud.firestore {
     // -------------------------
     function prestadorData() {
       return signedIn()
-        ? get(/databases/$(database)/documents/prestadores/$(uid())).data
+        ? get(/databases/$(database)/documents/provider_public/$(uid())).data
         : null;
     }
 
@@ -125,7 +133,7 @@ service cloud.firestore {
     function validAvaliacaoCreate(avaliacaoId) {
       let data = request.resource.data;
       let pedido = pedidoSnap(data['pedidoId']).data;
-      return signedIn()
+      return hasVerifiedPhone()
         && data.keys().hasOnly([
           'pedidoId',
           'clienteId',
@@ -432,7 +440,7 @@ service cloud.firestore {
 
     function validReportCreate() {
       let data = request.resource.data;
-      return signedIn()
+      return hasVerifiedPhone()
         && data.keys().hasOnly([
           'reporterId',
           'targetType',
@@ -502,36 +510,149 @@ service cloud.firestore {
         && data['createdAt'] == request.time;
     }
 
+    function providerPublicOwnerFields() {
+      return [
+        'uid',
+        'userId',
+        'nome',
+        'displayName',
+        'photoUrl',
+        'fotoUrl',
+        'bio',
+        'city',
+        'state',
+        'country',
+        'countryCode',
+        'stateCode',
+        'radiusKm',
+        'portfolioUrls',
+        'portfolioImages',
+        'createdAt',
+        'updatedAt',
+        'isSearchable',
+      ];
+    }
+
     function validPrestadorOwnerCreate(prestadorId) {
       return isSelf(prestadorId)
-        && !request.resource.data.keys().hasAny([
-          'ratingCount',
-          'ratingSum',
-          'ratingAvg',
-          'handle',
-          'handleDisplay',
-          'handleUpdatedAt',
-          'approvedSensitiveCategoryIds',
-          'approvedSensitiveCategoryNames',
-          'categoryApprovalsUpdatedAt',
-        ]);
+        && request.resource.data.keys().hasOnly(providerPublicOwnerFields())
+        && (!request.resource.data.keys().hasAny(['uid']) ||
+          request.resource.data['uid'] == prestadorId)
+        && (!request.resource.data.keys().hasAny(['userId']) ||
+          request.resource.data['userId'] == prestadorId)
+        && (!request.resource.data.keys().hasAny(['isSearchable']) ||
+          request.resource.data['isSearchable'] == false);
     }
 
     function validPrestadorOwnerUpdate(prestadorId) {
       return isSelf(prestadorId)
-        && !request.resource.data.diff(resource.data)
-          .affectedKeys()
-          .hasAny([
-            'ratingCount',
-            'ratingSum',
-            'ratingAvg',
-            'handle',
-            'handleDisplay',
-            'handleUpdatedAt',
-            'approvedSensitiveCategoryIds',
-            'approvedSensitiveCategoryNames',
-            'categoryApprovalsUpdatedAt',
-          ]);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nome',
+          'displayName',
+          'photoUrl',
+          'fotoUrl',
+          'bio',
+          'city',
+          'state',
+          'country',
+          'countryCode',
+          'stateCode',
+          'radiusKm',
+          'portfolioUrls',
+          'portfolioImages',
+          'updatedAt',
+        ]);
+    }
+
+    function validPublicProfileOwnerWrite(profileId) {
+      return isSelf(profileId)
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'nome',
+          'displayName',
+          'photoUrl',
+          'fotoUrl',
+          'bio',
+          'city',
+          'state',
+          'province',
+          'country',
+          'countryCode',
+          'stateCode',
+          'createdAt',
+          'updatedAt',
+        ])
+        && (!request.resource.data.keys().hasAny(['uid']) ||
+          request.resource.data['uid'] == profileId);
+    }
+
+    function validProviderDispatchOwnerWrite(providerId) {
+      return isSelf(providerId)
+        && request.resource.data.keys().hasOnly([
+          'providerId',
+          'isOnline',
+          'lastLocation',
+          'geo',
+          'radiusKm',
+          'workingHours',
+          'blockedDates',
+          'lastSeenAt',
+          'createdAt',
+          'updatedAt',
+        ])
+        && (!request.resource.data.keys().hasAny(['providerId']) ||
+          request.resource.data['providerId'] == providerId);
+    }
+
+    function userPrivateOwnerFields() {
+      return [
+        'uid',
+        'isAnonymous',
+        'region',
+        'activeRole',
+        'roles',
+        'phoneRaw',
+        'phoneE164',
+        'phoneIsoCode',
+        'phoneNsn',
+        'phoneCountryCode',
+        'fcmToken',
+        'fcmTokenPlatform',
+        'fcmTokenUpdatedAt',
+        'isOnline',
+        'lastSeenAt',
+        'lastLoginAt',
+        'createdAt',
+        'updatedAt',
+      ];
+    }
+
+    function validUserPrivateOwnerCreate(userId) {
+      return isSelf(userId)
+        && request.resource.data.keys().hasOnly(userPrivateOwnerFields())
+        && (!request.resource.data.keys().hasAny(['uid']) ||
+          request.resource.data['uid'] == userId);
+    }
+
+    function validUserPrivateOwnerUpdate(userId) {
+      return isSelf(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'region',
+          'activeRole',
+          'roles',
+          'phoneRaw',
+          'phoneE164',
+          'phoneIsoCode',
+          'phoneNsn',
+          'phoneCountryCode',
+          'fcmToken',
+          'fcmTokenPlatform',
+          'fcmTokenUpdatedAt',
+          'isOnline',
+          'lastSeenAt',
+          'lastLoginAt',
+          'updatedAt',
+        ]);
     }
 
     function isValidPedidoEstadoValue(value) {
@@ -795,15 +916,37 @@ service cloud.firestore {
           fieldValueOrNull(resource.data, 'createdAt');
     }
 
+    function immutablePedidoRequestDetails() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'servicoId',
+        'servicoNome',
+        'categoria',
+        'titulo',
+        'descricao',
+        'modo',
+        'agendadoPara',
+        'tipoPreco',
+        'tipoPagamento',
+        'latitude',
+        'longitude',
+        'geo',
+        'enderecoTexto',
+        'anexos',
+        'categoryApprovalRequired',
+        'categoryRequirementId',
+        'categoryRequirementName',
+        'categoryRiskLevel',
+        'isCustomService',
+        'customServiceName',
+        'customServiceDescription',
+        'customServiceSearchTerms',
+        'moderationStatus',
+        'requestedProviderId'
+      ]);
+    }
+
     function validPedidoOpenAccept() {
-      return isPrestador()
-        && pedidoAberto(resource.data)
-        && prestadorMatchesPedido(resource.data)
-        && prestadorApprovedForSensitivePedido(resource.data)
-        && hasValidPedidoEstado(request.resource.data)
-        && pedidoEstado(request.resource.data) == 'aceito'
-        && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()
-        && immutablePedidoIdentity();
+      return false;
     }
 
     function validPedidoClientManualInvite() {
@@ -825,17 +968,7 @@ service cloud.firestore {
     }
 
     function validPedidoProviderManualInviteAccept() {
-      return isPrestador()
-        && isPedidoPrestadorActorForUpdate()
-        && hasValidPedidoEstado(request.resource.data)
-        && pedidoEstado(resource.data) == 'aguarda_resposta_prestador'
-        && pedidoEstado(request.resource.data) == 'aceito'
-        && fieldValueOrNull(resource.data, 'prestadorId') == uid()
-        && fieldValueOrNull(request.resource.data, 'prestadorId') == uid()
-        && hasOnlyPedidoProviderManualAcceptFields()
-        && finalPricingFieldsUnchanged()
-        && finalProposalFieldsUnchanged()
-        && immutablePedidoIdentity();
+      return false;
     }
 
     function validPedidoProviderQuoteProposal() {
@@ -898,8 +1031,7 @@ service cloud.firestore {
     }
 
     function validPedidoClientFinalConfirmation() {
-      return validFinalPricingConfirmation()
-        && immutablePedidoIdentity();
+      return false;
     }
 
     function hasOnlyPedidoClientCancelFields() {
@@ -1000,7 +1132,7 @@ service cloud.firestore {
       let nextEstado = pedidoEstado(request.resource.data);
       return !hasValidPedidoEstado(request.resource.data)
         ? false
-        : (!authoritativePedidoFieldsUnchanged()
+        : (!authoritativePedidoFieldsUnchanged() || !immutablePedidoRequestDetails()
           ? false
           : (
             hasPedidoNoShowFieldChange()
@@ -1083,21 +1215,227 @@ service cloud.firestore {
         );
     }
 
-    function hasMediaField(data) {
+    function hasMediaField(data, chatId) {
       return data is map
-        && (
-          (data.keys().hasAny(['mediaUrl']) && data['mediaUrl'] is string) ||
-          (data.keys().hasAny(['fileUrl']) && data['fileUrl'] is string) ||
-          (data.keys().hasAny(['url']) && data['url'] is string)
-        );
+        && data.keys().hasAny(['mediaPath'])
+        && data['mediaPath'] is string
+        && data['mediaPath'].size() > 0
+        && data['mediaPath'].size() <= 500
+        && data['mediaPath'].matches(
+          '^chats/' + chatId + '/(images|files|audio)/[^/]+$'
+        )
+        && !data.keys().hasAny(['mediaUrl', 'fileUrl', 'url']);
     }
 
     function hasValidMessageType(data) {
       return data is map
         && (
           !data.keys().hasAny(['type']) ||
-          data['type'] in ['text', 'image', 'audio', 'file', 'location', 'call', 'sticker', 'gif']
+          data['type'] in ['text', 'image', 'audio', 'file', 'location', 'sticker', 'gif']
         );
+    }
+
+    function isPedidoClientById(pedidoId) {
+      return signedIn()
+        && clienteIdFromData(pedidoSnap(pedidoId).data) == uid();
+    }
+
+    function isPedidoProviderById(pedidoId) {
+      let pedido = pedidoSnap(pedidoId).data;
+      return signedIn()
+        && pedido is map
+        && pedido.keys().hasAny(['prestadorId'])
+        && pedido['prestadorId'] == uid();
+    }
+
+    function validChatMessageCreate(chatId) {
+      let data = request.resource.data;
+      let type = data.keys().hasAny(['type']) ? data['type'] : 'text';
+      return hasVerifiedPhone()
+        && data.keys().hasOnly([
+          'pedidoId',
+          'type',
+          'text',
+          'texto',
+          'message',
+          'conteudo',
+          'replyToId',
+          'replyToText',
+          'senderId',
+          'senderRole',
+          'createdAt',
+          'seenByCliente',
+          'seenByPrestador',
+          'deliveredToCliente',
+          'deliveredToPrestador',
+          'mediaPath',
+          'fileName',
+          'fileSize',
+          'mimeType',
+          'durationMs',
+          'locationLat',
+          'locationLng',
+          'latitude',
+          'longitude',
+        ])
+        && data.keys().hasAll([
+          'pedidoId',
+          'type',
+          'senderId',
+          'senderRole',
+          'createdAt',
+        ])
+        && data['pedidoId'] == chatId
+        && data['senderId'] == uid()
+        && data['senderRole'] in ['cliente', 'prestador']
+        && (
+          (data['senderRole'] == 'cliente' && isPedidoClientById(chatId))
+          || (data['senderRole'] == 'prestador' && isPedidoProviderById(chatId))
+        )
+        && data['createdAt'] is timestamp
+        && data['createdAt'] == request.time
+        && hasValidMessageType(data)
+        && validOptionalString(data, 'text', 2000)
+        && validOptionalString(data, 'texto', 2000)
+        && validOptionalString(data, 'message', 2000)
+        && validOptionalString(data, 'conteudo', 2000)
+        && validOptionalString(data, 'replyToId', 128)
+        && validOptionalString(data, 'replyToText', 500)
+        && validOptionalString(data, 'fileName', 255)
+        && validOptionalString(data, 'mimeType', 120)
+        && (!data.keys().hasAny(['fileSize'])
+          || (data['fileSize'] is int && data['fileSize'] > 0
+            && data['fileSize'] <= 20 * 1024 * 1024))
+        && (!data.keys().hasAny(['durationMs'])
+          || (data['durationMs'] is int && data['durationMs'] >= 0
+            && data['durationMs'] <= 24 * 60 * 60 * 1000))
+        && (
+          type in ['image', 'audio', 'file', 'sticker', 'gif']
+            ? hasMediaField(data, chatId)
+            : hasTextField(data)
+        )
+        && (type == 'location'
+          ? (data.keys().hasAll(['locationLat', 'locationLng'])
+            && data['locationLat'] is number
+            && data['locationLat'] >= -90
+            && data['locationLat'] <= 90
+            && data['locationLng'] is number
+            && data['locationLng'] >= -180
+            && data['locationLng'] <= 180)
+          : !data.keys().hasAny(['locationLat', 'locationLng', 'latitude', 'longitude']));
+    }
+
+    function validChatMessageUpdate(chatId) {
+      let data = request.resource.data;
+      let affected = data.diff(resource.data).affectedKeys();
+      return hasVerifiedPhone()
+        && isPedidoParticipantById(chatId)
+        && affected.hasOnly([
+          'seenByCliente',
+          'seenByPrestador',
+          'deliveredToCliente',
+          'deliveredToPrestador',
+          'starredBy',
+          'reactions',
+          'isDeleted',
+          'isEdited',
+          'editedAt',
+          'updatedAt',
+          'text',
+        ])
+        && (!affected.hasAny(['seenByCliente', 'deliveredToCliente'])
+          || isPedidoClientById(chatId))
+        && (!affected.hasAny(['seenByPrestador', 'deliveredToPrestador'])
+          || isPedidoProviderById(chatId))
+        && (!affected.hasAny(['text', 'isDeleted', 'isEdited', 'editedAt', 'updatedAt'])
+          || resource.data['senderId'] == uid())
+        && (!affected.hasAny(['text'])
+          || (data['text'] is string && data['text'].size() <= 2000))
+        && (!affected.hasAny(['isDeleted']) || data['isDeleted'] == true)
+        && (!affected.hasAny(['isEdited']) || data['isEdited'] == true)
+        && (!affected.hasAny(['editedAt'])
+          || (data['editedAt'] is timestamp && data['editedAt'] == request.time))
+        && (!affected.hasAny(['updatedAt'])
+          || (data['updatedAt'] is timestamp && data['updatedAt'] == request.time))
+        && (!affected.hasAny(['starredBy'])
+          || (data['starredBy'] is list && data['starredBy'].size() <= 2))
+        && (!affected.hasAny(['reactions'])
+          || (data['reactions'] is map && data['reactions'].size() <= 20));
+    }
+
+    function validChatMetaCreate(chatId) {
+      let data = request.resource.data;
+      let pedido = pedidoSnap(chatId).data;
+      return hasVerifiedPhone()
+        && pedido is map
+        && isPedidoParticipantByData(pedido)
+        && data.keys().hasOnly([
+          'pedidoId',
+          'clienteId',
+          'prestadorId',
+          'pedidoTitulo',
+          'createdAt',
+          'updatedAt',
+          'lastMessageAt',
+          'lastMessage',
+          'lastSenderRole',
+          'hasUnreadCliente',
+          'hasUnreadPrestador',
+          'unreadByCliente',
+          'unreadByPrestador',
+          'favoritedBy',
+        ])
+        && data.keys().hasAll([
+          'pedidoId',
+          'clienteId',
+          'prestadorId',
+          'createdAt',
+          'updatedAt',
+        ])
+        && data['pedidoId'] == chatId
+        && data['clienteId'] == clienteIdFromData(pedido)
+        && pedido.keys().hasAny(['prestadorId'])
+        && data['prestadorId'] == pedido['prestadorId']
+        && data['createdAt'] is timestamp
+        && data['createdAt'] == request.time
+        && data['updatedAt'] is timestamp
+        && data['updatedAt'] == request.time
+        && validOptionalString(data, 'pedidoTitulo', 180)
+        && validOptionalString(data, 'lastMessage', 500)
+        && validOptionalString(data, 'lastSenderRole', 20);
+    }
+
+    function validChatMetaUpdate(chatId) {
+      let data = request.resource.data;
+      let affected = data.diff(resource.data).affectedKeys();
+      return hasVerifiedPhone()
+        && isPedidoParticipantById(chatId)
+        && affected.hasOnly([
+          'pedidoTitulo',
+          'updatedAt',
+          'lastMessageAt',
+          'lastMessage',
+          'lastSenderRole',
+          'hasUnreadCliente',
+          'hasUnreadPrestador',
+          'unreadByCliente',
+          'unreadByPrestador',
+          'favoritedBy',
+        ])
+        && validOptionalString(data, 'pedidoTitulo', 180)
+        && validOptionalString(data, 'lastMessage', 500)
+        && validOptionalString(data, 'lastSenderRole', 20)
+        && (!affected.hasAny(['updatedAt'])
+          || (data['updatedAt'] is timestamp && data['updatedAt'] == request.time))
+        && (!affected.hasAny(['lastMessageAt']) || data['lastMessageAt'] is timestamp)
+        && (!affected.hasAny(['hasUnreadCliente']) || data['hasUnreadCliente'] is bool)
+        && (!affected.hasAny(['hasUnreadPrestador']) || data['hasUnreadPrestador'] is bool)
+        && (!affected.hasAny(['unreadByCliente'])
+          || (data['unreadByCliente'] is int && data['unreadByCliente'] >= 0))
+        && (!affected.hasAny(['unreadByPrestador'])
+          || (data['unreadByPrestador'] is int && data['unreadByPrestador'] >= 0))
+        && (!affected.hasAny(['favoritedBy'])
+          || (data['favoritedBy'] is list && data['favoritedBy'].size() <= 2));
     }
 
     // -------------------------
@@ -1124,10 +1462,10 @@ service cloud.firestore {
     // -------------------------
     // USERS
     // -------------------------
-    match /users/{userId} {
-      allow read: if signedIn() || isAdmin();
-      allow create: if isSelf(userId);
-      allow update: if isSelf(userId) || isAdmin();
+    match /users_private/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
+      allow create: if validUserPrivateOwnerCreate(userId) || isAdmin();
+      allow update: if validUserPrivateOwnerUpdate(userId) || isAdmin();
       allow delete: if isAdmin() || devMode();
 
       match /fcmTokens/{tokenId} {
@@ -1141,21 +1479,28 @@ service cloud.firestore {
       }
     }
 
-    match /users/{userId}/favorites/{prestadorId} {
+    match /users_private/{userId}/favorites/{prestadorId} {
       allow read, write: if isSelf(userId) || isAdmin();
     }
 
-    match /users/{userId}/blockedUsers/{blockedUid} {
+    match /users_private/{userId}/blockedUsers/{blockedUid} {
       allow read: if isSelf(userId) || canModerate();
       allow create: if validBlockedUserCreate(userId, blockedUid);
       allow update: if false;
       allow delete: if isSelf(userId) || canModerate();
     }
 
+    match /public_profiles/{profileId} {
+      allow read: if true;
+      allow create, update: if validPublicProfileOwnerWrite(profileId)
+        || isAdmin();
+      allow delete: if isAdmin() || devMode();
+    }
+
     // -------------------------
     // PRESTADORES
     // -------------------------
-    match /prestadores/{prestadorId} {
+    match /provider_public_legacy_rule_disabled/{prestadorId} {
       allow read: if true; // perfis precisam ser visíveis
       allow create: if isAdmin() || validPrestadorOwnerCreate(prestadorId);
       
@@ -1165,8 +1510,25 @@ service cloud.firestore {
 
       allow delete: if isAdmin() || devMode();
 
+    }
+
+    match /provider_public/{prestadorId} {
+      allow read: if isSelf(prestadorId)
+        || isAdmin()
+        || (resource.data is map
+          && resource.data.keys().hasAny(['isSearchable'])
+          && resource.data['isSearchable'] == true);
+      allow create: if isAdmin() || validPrestadorOwnerCreate(prestadorId);
+      allow update: if isAdmin() || validPrestadorOwnerUpdate(prestadorId);
+      allow delete: if isAdmin() || devMode();
+    }
+
+    match /provider_private/{prestadorId} {
+      allow read: if isSelf(prestadorId) || isAdmin();
+      allow create, update, delete: if isAdmin() || devMode();
+
       match /categoryApprovals/{categoryId} {
-        allow read: if true;
+        allow read: if isSelf(prestadorId) || isAdmin();
         allow create, update: if (isAdmin() || devMode())
           && validProviderCategoryApprovalData(
             request.resource.data,
@@ -1175,6 +1537,42 @@ service cloud.firestore {
           );
         allow delete: if isAdmin() || devMode();
       }
+
+      match /financialTransactions/{transactionId} {
+        allow read: if isSelf(prestadorId) || isAdmin();
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /provider_dispatch_private/{prestadorId} {
+      allow read: if isSelf(prestadorId)
+        || isAdmin()
+        || (signedIn()
+          && resource.data is map
+          && resource.data.keys().hasAny(['activeClientIds'])
+          && resource.data['activeClientIds'] is list
+          && resource.data['activeClientIds'].hasAny([uid()]));
+      allow create, update: if isAdmin()
+        || validProviderDispatchOwnerWrite(prestadorId);
+      allow delete: if isAdmin() || devMode();
+    }
+
+    match /kyc_submissions/{prestadorId} {
+      allow read: if isSelf(prestadorId) || isAdmin();
+      allow create, update, delete: if isAdmin() || devMode();
+    }
+
+    match /kyc_upload_grants/{prestadorId} {
+      allow read, write: if isAdmin() || devMode();
+    }
+
+    // Migration-only mixed documents are no longer client-readable.
+    match /users/{legacyUserId} {
+      allow read, write: if false;
+    }
+
+    match /prestadores/{legacyProviderId} {
+      allow read, write: if false;
     }
 
     // -------------------------
@@ -1200,10 +1598,8 @@ service cloud.firestore {
       allow read: if (signedIn() && resource.data['providerId'] == uid())
         || isAdmin()
         || devMode();
-      allow create: if validProviderSensitiveCategoryRequestCreate();
-      allow update: if ((isAdmin() || devMode())
-          && validSensitiveCategoryRequestData(request.resource.data))
-        || validProviderSensitiveCategoryRequestUpdate();
+      allow create, update: if (isAdmin() || devMode())
+        && validSensitiveCategoryRequestData(request.resource.data);
       allow delete: if isAdmin() || devMode();
     }
 
@@ -1245,10 +1641,8 @@ service cloud.firestore {
     // -------------------------
     match /stories/{storyId} {
       allow read: if true;
-      allow create: if devMode() || isAdmin()
-        || (signedIn() && request.resource.data['prestadorId'] == uid());
-      allow update, delete: if isAdmin() || devMode()
-        || (signedIn() && resource.data['prestadorId'] == uid());
+      allow create, update: if false;
+      allow delete: if isAdmin() || devMode();
     }
 
     // -------------------------
@@ -1256,26 +1650,29 @@ service cloud.firestore {
     // -------------------------
     match /pedidos/{pedidoId} {
 
-      // Criar pedido: tem de ser o cliente
-      allow create: if signedIn()
-        && clienteIdFromData(request.resource.data) == uid()
-        && hasValidPedidoEstado(request.resource.data);
+      // Criação passa exclusivamente pela Function autoritativa.
+      allow create: if false;
 
       // Ler (get + list):
       // - cliente e prestador (quando atribuÃ­do)
       // - prestadores podem ler pedidos abertos (Pedidos perto de ti)
       allow read: if devMode()
         ? true
-        : (isPedidoParticipantByData(resource.data)
-          || (isPrestador() && pedidoAberto(resource.data))
-          || isAdmin());
+        : (isPedidoParticipantByData(resource.data) || isAdmin());
 
       // Atualizar:
       // - cliente/prestador participantes
       // - prestador pode aceitar/agir num pedido aberto (SÓ se fizer match com o serviço)
-      allow update: if validPedidoUpdate();
+      allow update: if isPedidoParticipantByData(resource.data)
+        && validPedidoUpdate()
+        || isAdmin();
 
       allow delete: if isAdmin() || devMode();
+    }
+
+    match /pedido_dispatch/{pedidoId} {
+      allow read: if (hasVerifiedPhone() && isPrestador()) || isAdmin();
+      allow create, update, delete: if false;
     }
 
     // -------------------------
@@ -1284,42 +1681,36 @@ service cloud.firestore {
     match /chats/{chatId} {
 
       // âœ… GET (doc especÃ­fico): participante via pedido OU via chat
-      allow get: if (resource != null && resource.data is map && isChatParticipantByData(resource.data))
-                  || isPedidoParticipantById(chatId);
+      allow get: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
 
       // âœ… LIST (queries): usa sÃ³ os campos do prÃ³prio chat
-      allow list: if resource != null && resource.data is map && isChatParticipantByData(resource.data);
+      allow list: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
 
       // Criar meta do chat
-      allow create: if isPedidoParticipantById(chatId)
-        && request.resource.data['pedidoId'] == chatId;
+      allow create: if validChatMetaCreate(chatId);
 
       // Update: participante via pedido ou via chat
-      allow update: if (resource != null && resource.data is map && isChatParticipantByData(resource.data))
-                    || isPedidoParticipantById(chatId);
+      allow update: if validChatMetaUpdate(chatId);
 
       allow delete: if isAdmin() || devMode();
 
       match /messages/{messageId} {
-        allow get, list: if isPedidoParticipantById(chatId) || isChatParticipant(chatId);
+        allow get, list: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
 
         // Criar mensagem: participante e senderId tem de ser o prÃ³prio
-        allow create: if (isPedidoParticipantById(chatId) || isChatParticipant(chatId))
-          && request.resource.data['senderId'] == uid()
-          && (
-            hasTextField(request.resource.data) ||
-            (hasMediaField(request.resource.data) && hasValidMessageType(request.resource.data))
-          );
+        allow create: if validChatMessageCreate(chatId);
 
         // delivered/seen/etc.
-        allow update: if isPedidoParticipantById(chatId) || isChatParticipant(chatId);
+        allow update: if validChatMessageUpdate(chatId);
 
         allow delete: if isAdmin() || devMode();
       }
 
       match /typing/{userId} {
-        allow read: if isChatParticipant(chatId);
-        allow create, update, delete: if isChatParticipant(chatId) && isSelf(userId);
+        allow read: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
+        allow create, update, delete: if hasVerifiedPhone()
+          && isPedidoParticipantById(chatId)
+          && isSelf(userId);
       }
     }
 
@@ -1327,23 +1718,15 @@ service cloud.firestore {
     // CALLS (audio/video)
     // -------------------------
     match /calls/{callId} {
-      allow create: if signedIn()
-        && request.resource.data['callerId'] == uid()
-        && request.resource.data['calleeId'] is string;
-
-      allow get: if isCallParticipantByData(resource.data);
-      allow list: if resource != null
-        && resource.data is map
-        && isCallParticipantByData(resource.data);
-      allow update: if isCallParticipantByData(resource.data);
+      allow create, get, list, update: if false;
       allow delete: if isAdmin() || devMode();
 
       match /offerCandidates/{candidateId} {
-        allow read, write: if isCallParticipantById(callId);
+        allow read, write: if false;
       }
 
       match /answerCandidates/{candidateId} {
-        allow read, write: if isCallParticipantById(callId);
+        allow read, write: if false;
       }
     }
 
@@ -1351,9 +1734,41 @@ service cloud.firestore {
     // SUPPORT TICKETS
     // -------------------------
     match /support_tickets/{ticketId} {
-      allow create: if signedIn()
-        && request.resource.data['uid'] == uid();
-      allow read, update, delete: if isAdmin() || devMode();
+      allow read: if isAdmin() || devMode()
+        || (signedIn() && resource.data['uid'] == uid());
+      allow create, update, delete: if isAdmin() || devMode();
+    }
+
+    // Criacao, cancelamento e execucao sao exclusivamente server-side.
+    match /account_deletion_requests/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /legal_consent_audit/{auditId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /account_deletion_audit/{auditId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /pilot_participants/{userId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /provider_opportunities/{opportunityId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data['providerId'] == uid());
+      allow create, update, delete: if false;
+    }
+
+    match /pilot_metrics_daily/{metricId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     // -------------------------
@@ -1370,6 +1785,11 @@ service cloud.firestore {
     match /payment_ledger/{entryId} {
       allow read: if isAdmin() || devMode();
       allow create, update, delete: if false; // only backend/admin SDK
+    }
+
+    match /commission_payments/{receiptId} {
+      allow read: if isAdmin() || devMode();
+      allow create, update, delete: if false;
     }
 
     // -------------------------

@@ -18,7 +18,7 @@ class PerfilFotoService {
 
   static final PerfilFotoService instance = PerfilFotoService._();
 
-  /// Altera a foto do **prestador** (usa doc em `users/{uid}`).
+  /// Altera a foto pública do prestador.
   Future<void> alterarFotoPrestador(BuildContext context) async {
     final user = AuthService.currentUser;
     if (user == null) {
@@ -49,10 +49,10 @@ class PerfilFotoService {
     }
 
     try {
-      // Caminho simples: users/{uid}/perfil.jpg
+      // Caminho exclusivamente público; documentos nunca usam este prefixo.
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('users')
+          .child('profile_public')
           .child(user.uid)
           .child('perfil.jpg');
 
@@ -64,7 +64,10 @@ class PerfilFotoService {
       final url = await uploadTask.ref.getDownloadURL();
 
       // Guarda o URL na coleção users
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+      await FirebaseFirestore.instance
+          .collection('provider_public')
+          .doc(user.uid)
+          .set(
         {
           'photoUrl': url,
         },
@@ -94,8 +97,7 @@ class PerfilFotoService {
     }
   }
 
-
-  /// Adiciona uma imagem ao portfólio do prestador (users/{uid}.portfolioImages).
+  /// Adiciona uma imagem ao portfólio público do prestador.
   Future<void> adicionarImagemPortfolio(BuildContext context) async {
     final user = AuthService.currentUser;
     if (user == null) {
@@ -138,7 +140,10 @@ class PerfilFotoService {
 
       final url = await uploadTask.ref.getDownloadURL();
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+      await FirebaseFirestore.instance
+          .collection('provider_public')
+          .doc(user.uid)
+          .set(
         {
           'portfolioImages': FieldValue.arrayUnion([url]),
         },
@@ -170,7 +175,10 @@ class PerfilFotoService {
     if (user == null) return;
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+      await FirebaseFirestore.instance
+          .collection('provider_public')
+          .doc(user.uid)
+          .set(
         {
           'portfolioImages': FieldValue.arrayRemove([url]),
         },
@@ -195,5 +203,4 @@ class PerfilFotoService {
       );
     }
   }
-
 }

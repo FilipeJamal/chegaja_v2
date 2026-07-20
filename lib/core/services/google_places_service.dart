@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/services/locale_service.dart';
+import 'package:chegaja_v2/core/services/firebase_http_security_headers.dart';
 import 'package:chegaja_v2/firebase_options.dart';
 
 enum PlaceSearchType { city, region, address }
@@ -21,10 +22,9 @@ class PlaceSuggestion {
     this.secondaryText,
   });
 
-  String get label =>
-      secondaryText == null || secondaryText!.trim().isEmpty
-          ? mainText
-          : '$mainText, $secondaryText';
+  String get label => secondaryText == null || secondaryText!.trim().isEmpty
+      ? mainText
+      : '$mainText, $secondaryText';
 }
 
 class GooglePlacesService {
@@ -112,7 +112,10 @@ class GooglePlacesService {
     final uri = _buildRequestUri(params);
 
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      final headers = await FirebaseHttpSecurityHeaders.build();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) {
         if (kDebugMode) {
           print('[GooglePlaces] HTTP ${response.statusCode}');
@@ -131,20 +134,23 @@ class GooglePlacesService {
       }
 
       final predictions = data['predictions'] as List? ?? const [];
-      return predictions.map((p) {
-        final map = p as Map<String, dynamic>;
-        final formatting = map['structured_formatting'] as Map<String, dynamic>?;
-        final mainText = formatting?['main_text']?.toString() ??
-            map['description']?.toString() ??
-            '';
-        final secondaryText =
-            formatting?['secondary_text']?.toString();
-        return PlaceSuggestion(
-          placeId: map['place_id']?.toString() ?? '',
-          mainText: mainText,
-          secondaryText: secondaryText,
-        );
-      }).where((s) => s.mainText.trim().isNotEmpty).toList();
+      return predictions
+          .map((p) {
+            final map = p as Map<String, dynamic>;
+            final formatting =
+                map['structured_formatting'] as Map<String, dynamic>?;
+            final mainText = formatting?['main_text']?.toString() ??
+                map['description']?.toString() ??
+                '';
+            final secondaryText = formatting?['secondary_text']?.toString();
+            return PlaceSuggestion(
+              placeId: map['place_id']?.toString() ?? '',
+              mainText: mainText,
+              secondaryText: secondaryText,
+            );
+          })
+          .where((s) => s.mainText.trim().isNotEmpty)
+          .toList();
     } catch (e) {
       if (kDebugMode) {
         print('[GooglePlaces] Error: $e');
@@ -173,7 +179,10 @@ class GooglePlacesService {
 
     final uri = _buildDetailsUri(params);
     try {
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      final headers = await FirebaseHttpSecurityHeaders.build();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) {
         if (kDebugMode) {
           print('[GooglePlaces] Details HTTP ${response.statusCode}');

@@ -41,10 +41,12 @@ class RoleModeService extends ChangeNotifier {
     _currentRole = normalized;
     _isLoaded = true;
 
+    // Atualiza a navegacao antes de qualquer I/O. No desktop, uma preferencia
+    // lenta ou indisponivel nao pode deixar o seletor de papel congelado.
+    if (changed) notifyListeners();
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(storageKey, normalized);
-
-    if (changed) notifyListeners();
   }
 
   Future<void> clearMode() async {

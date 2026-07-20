@@ -130,7 +130,12 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
 
   Stream<List<ProviderSearchProfile>> _buildFirestoreStream() {
     final db = widget.firestore ?? FirebaseFirestore.instance;
-    return db.collection('prestadores').limit(widget.limit).snapshots().map(
+    return db
+        .collection('provider_public')
+        .where('isSearchable', isEqualTo: true)
+        .limit(widget.limit)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
               .map(
                 (doc) => ProviderSearchProfile.fromPrestadorDoc(

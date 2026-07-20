@@ -33,6 +33,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   List<Map<String, dynamic>> _auditLogs = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _sensitiveCategoryRequests =
       <Map<String, dynamic>>[];
+  Map<String, dynamic> _pilotMetrics = <String, dynamic>{};
+  List<Map<String, dynamic>> _pilotParticipants = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -112,6 +114,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             limit: 60,
           ),
         ),
+        guarded('pilot_metrics', AdminService.instance.getPilotMetrics),
+        guarded(
+          'pilot_participants',
+          AdminService.instance.listPilotParticipants,
+        ),
       ]);
 
       if (!mounted) return;
@@ -135,6 +142,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         _sensitiveCategoryRequests =
             (results[9] as List<Map<String, dynamic>>?) ??
                 <Map<String, dynamic>>[];
+        _pilotMetrics =
+            (results[10] as Map<String, dynamic>?) ?? <String, dynamic>{};
+        _pilotParticipants = (results[11] as List<Map<String, dynamic>>?) ??
+            <Map<String, dynamic>>[];
         _sectionErrors = sectionErrors;
         _loading = false;
         _refreshing = false;
@@ -233,6 +244,36 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  Future<void> _setPilotParticipant({
+    required String uid,
+    required String status,
+    required List<String> roles,
+    required String city,
+    required String cohort,
+    String? note,
+  }) async {
+    try {
+      await AdminService.instance.setPilotParticipant(
+        uid: uid,
+        status: status,
+        roles: roles,
+        city: city,
+        cohort: cohort,
+        note: note,
+      );
+      await _loadAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Participante do piloto atualizado.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Falha ao atualizar participante: $error')),
+      );
+    }
+  }
+
   Future<void> _openSensitiveCategoryDecision({
     required Map<String, dynamic> request,
     required String decision,
@@ -323,6 +364,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ledgerAnomalies: _ledgerAnomalies,
                 auditLogs: _auditLogs,
                 sensitiveCategoryRequests: _sensitiveCategoryRequests,
+                pilotMetrics: _pilotMetrics,
+                pilotParticipants: _pilotParticipants,
                 ticketFilter: _ticketFilter,
                 reportFilter: _reportFilter,
                 noShowFilter: _noShowFilter,
@@ -340,6 +383,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 onReviewSensitiveCategoryRequest:
                     _openSensitiveCategoryDecision,
                 onDeleteStory: _deleteStory,
+                onSetPilotParticipant: _setPilotParticipant,
               ),
             ),
     );
