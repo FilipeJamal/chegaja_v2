@@ -259,7 +259,9 @@ class ChatService {
         (extraMap['mediaUrl'] ?? extraMap['fileUrl'] ?? extraMap['url'])
             ?.toString()
             .trim();
-    final hasMedia = mediaUrl != null && mediaUrl.isNotEmpty;
+    final mediaPath = extraMap['mediaPath']?.toString().trim();
+    final hasMedia = (mediaPath != null && mediaPath.isNotEmpty) ||
+        (mediaUrl != null && mediaUrl.isNotEmpty);
     final typeFromExtra = (extraMap['type'] as String?)?.trim();
     final msgType = (typeFromExtra != null && typeFromExtra.isNotEmpty)
         ? typeFromExtra

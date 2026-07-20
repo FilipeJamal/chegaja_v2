@@ -52,8 +52,9 @@ class LocationService {
     required bool isOnline,
     required Position pos,
   }) async {
-    final ref =
-        FirebaseFirestore.instance.collection('prestadores').doc(prestadorId);
+    final ref = FirebaseFirestore.instance
+        .collection('provider_dispatch_private')
+        .doc(prestadorId);
 
     final geo = GeoHashUtils.toGeoData(
       latitude: pos.latitude,
@@ -62,6 +63,7 @@ class LocationService {
 
     await ref.set(
       {
+        'providerId': prestadorId,
         'isOnline': isOnline,
         'lastLocation': {
           'lat': pos.latitude,
@@ -83,10 +85,12 @@ class LocationService {
   }) async {
     final pos = await getCurrentPosition();
     if (pos == null) {
-      final ref =
-          FirebaseFirestore.instance.collection('prestadores').doc(prestadorId);
+      final ref = FirebaseFirestore.instance
+          .collection('provider_dispatch_private')
+          .doc(prestadorId);
       await ref.set(
         {
+          'providerId': prestadorId,
           'isOnline': isOnline,
           'updatedAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),

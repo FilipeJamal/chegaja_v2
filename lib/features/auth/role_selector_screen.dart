@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
@@ -86,9 +89,55 @@ class RoleSelectorScreen extends StatelessWidget {
   }
 
   Future<void> _selectRole(String role) async {
-    await AuthService.ensureSignedInAnonymously();
-    await AuthService.setActiveRole(role);
-    await RoleModeService.instance.setMode(role);
+    await selectRoleForApp(role: role);
+  }
+}
+
+@visibleForTesting
+Future<void> selectRoleForApp({
+  required String role,
+  RoleModeService? roleModeService,
+  Future<void> Function()? ensureSignedIn,
+  Future<void> Function(String role)? syncActiveRole,
+  Duration remoteTimeout = const Duration(seconds: 20),
+}) async {
+  final modeService = roleModeService ?? RoleModeService.instance;
+
+  // A navegacao e uma decisao local e deve acontecer imediatamente. Firebase
+  // e sincronizado depois, sem bloquear Cliente/Prestador quando a rede ou um
+  // emulador local estiver indisponivel.
+  await modeService.setMode(role);
+
+  final ensureAuth = ensureSignedIn ??
+      () async {
+        await AuthService.ensureSignedInAnonymously();
+      };
+  final syncRole = syncActiveRole ?? AuthService.setActiveRole;
+
+  unawaited(
+    _syncRemoteRole(
+      role: role,
+      ensureSignedIn: ensureAuth,
+      syncActiveRole: syncRole,
+      timeout: remoteTimeout,
+    ),
+  );
+}
+
+Future<void> _syncRemoteRole({
+  required String role,
+  required Future<void> Function() ensureSignedIn,
+  required Future<void> Function(String role) syncActiveRole,
+  required Duration timeout,
+}) async {
+  try {
+    await ensureSignedIn().timeout(timeout);
+    await syncActiveRole(role).timeout(timeout);
+  } catch (error, stackTrace) {
+    debugPrint('[RoleSelector] sincronizacao remota adiada: $error');
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 }
 

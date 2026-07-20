@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
 import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/widgets/chat_audio_player.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
@@ -625,7 +626,9 @@ class ChatBubble extends StatelessWidget {
   }
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.tryParse(url);
+    final resolved =
+        await PrivateStorageMediaService.resolveReferenceLazily(url);
+    final uri = Uri.tryParse(resolved);
     if (uri == null) return;
     await launchUrl(
       uri,
@@ -667,7 +670,7 @@ class ChatBubble extends StatelessWidget {
 
     final contentAlignment =
         isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final mediaUrl = message.mediaUrl;
+    final mediaUrl = message.mediaReference;
     final isAudio = message.isAudio && mediaUrl != null;
     final isFile = message.isFile && mediaUrl != null;
     final isImage = message.isImage && mediaUrl != null;

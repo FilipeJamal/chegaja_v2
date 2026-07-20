@@ -1,13 +1,12 @@
 import 'package:intl/intl.dart';
-import '../services/user_country_service.dart';
+import '../config/app_config.dart';
 import '../services/locale_service.dart';
 
 class CurrencyUtils {
   /// Formata um valor double como string de moeda.
-  /// 
-  /// Ursa a moeda detetada pelo UserCountryService (SIM ou IP),
-  /// mas usa o locale do telemóvel para formatação numérica (vírgula vs ponto).
-  /// 
+  ///
+  /// No piloto usa MZN; o locale do telemóvel controla a formatação numérica.
+  ///
   /// Exemplo (PT, Angola): "1.000,00 Kz"
   /// Exemplo (EN, Angola): "Kz 1,000.00"
   static String format(double? value, {String? localeName}) {
@@ -19,9 +18,14 @@ class CurrencyUtils {
   }
 
   static NumberFormat formatter({String? localeName}) {
-    final currencyCode = UserCountryService.instance.currencyCode;
+    final currencyCode = AppConfig.currencyCode;
     final resolvedLocale = localeName ?? _defaultLocaleName();
-    return NumberFormat.simpleCurrency(name: currencyCode, locale: resolvedLocale);
+    return NumberFormat.currency(
+      name: currencyCode,
+      symbol: currencyCode == 'MZN' ? 'MT' : currencyCode,
+      locale: resolvedLocale,
+      decimalDigits: 2,
+    );
   }
 
   /// Retorna apenas o simbolo da moeda atual (ex: EUR ou $)
@@ -31,9 +35,6 @@ class CurrencyUtils {
 
   static String _defaultLocaleName() {
     final language = LocaleService.instance.locale.languageCode;
-    final region = UserCountryService.instance.countryCode;
-    if (language.isEmpty) return region;
-    if (region.isEmpty) return language;
-    return '${language}_$region';
+    return language.isEmpty ? 'pt' : language;
   }
 }

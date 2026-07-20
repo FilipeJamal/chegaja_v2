@@ -6,7 +6,7 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
 const functions = require("../index");
 
 describe("Admin audit log Functions", () => {
-    const db = functions.__test__.db;
+    const db = functions.__test__.getDb();
     const adminAuth = { uid: "admin1", token: { admin: true } };
     const commonAuth = { uid: "user1", token: {} };
 

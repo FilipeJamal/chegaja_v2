@@ -8,6 +8,9 @@ import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/payment_service.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/services/kyc_service.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/features/prestador/prestador_subscription_screen.dart';
 
 /// Configuração de pagamentos para o prestador (Stripe Connect Express).
@@ -28,7 +31,8 @@ class PrestadorPagamentosScreen extends StatelessWidget {
       );
     }
 
-    final ref = FirebaseFirestore.instance.collection('prestadores').doc(uid);
+    final ref =
+        FirebaseFirestore.instance.collection('provider_private').doc(uid);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.paymentsTitle)),
@@ -40,18 +44,28 @@ class PrestadorPagamentosScreen extends StatelessWidget {
           final onboardingComplete = data['stripeOnboardingComplete'] == true;
           final kycStatus = (data['kycStatus'] ?? 'nao_iniciado').toString();
           final kycDocs = (data['kycDocs'] as List?) ?? <dynamic>[];
+          final financialStatus =
+              (data['financialStatus'] ?? 'active').toString();
+          final commissionDue = _asDouble(data['commissionBalanceDue']);
+          final commissionDueAt = data['commissionDueAt'] is Timestamp
+              ? (data['commissionDueAt'] as Timestamp).toDate()
+              : null;
+          final restricted = financialStatus == 'suspended_new_jobs';
+          final hasDebt = commissionDue > 0;
+          final statusColor = restricted
+              ? Colors.red
+              : (hasDebt ? Colors.orange : Colors.green);
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                l10n.paymentsHeading,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              const Text(
+                'Comissoes e pagamentos',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
-                l10n.paymentsDescription,
+                'O saldo financeiro e privado e nunca altera as tuas estrelas ou avaliacoes.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -60,111 +74,138 @@ class PrestadorPagamentosScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: onboardingComplete
-                      ? Colors.green.withValues(alpha: 0.06)
-                      : Colors.orange.withValues(alpha: 0.06),
+                  color: statusColor.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: onboardingComplete
-                        ? Colors.green.withValues(alpha: 0.25)
-                        : Colors.orange.withValues(alpha: 0.25),
+                    color: statusColor.withValues(alpha: 0.25),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      onboardingComplete
-                          ? Icons.check_circle
-                          : Icons.info_outline,
-                      color: onboardingComplete
-                          ? Colors.green[700]
-                          : Colors.orange[700],
+                    Row(
+                      children: [
+                        Icon(
+                          restricted
+                              ? Icons.block_outlined
+                              : (hasDebt
+                                  ? Icons.schedule_outlined
+                                  : Icons.check_circle_outline),
+                          color: statusColor,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            restricted
+                                ? 'Novos pedidos temporariamente bloqueados'
+                                : (hasDebt
+                                    ? 'Comissao pendente'
+                                    : 'Situacao financeira regular'),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        onboardingComplete
-                            ? l10n.paymentsActive
-                            : l10n.paymentsInactive,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Saldo pendente: ${CurrencyUtils.format(commissionDue)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
+                    if (commissionDueAt != null && hasDebt) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Prazo: ${MaterialLocalizations.of(context).formatMediumDate(commissionDueAt)}',
+                      ),
+                    ],
+                    if (restricted) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Podes concluir trabalhos atuais, conversar, consultar o historico, pagar, contestar e contactar o suporte.',
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              if (stripeAccountId.isNotEmpty)
+              if (AppConfig.stripeEnabled) ...[
+                const SizedBox(height: 20),
                 Text(
-                  l10n.stripeAccountLabel(stripeAccountId),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
+                  'Pagamentos digitais',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await PaymentService.instance.startPrestadorOnboarding();
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.onboardingOpened),
-                      ),
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.onboardingStartError(e.toString())),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.open_in_new),
-                label: Text(
-                  onboardingComplete
-                      ? l10n.manageStripeAccount
-                      : l10n.activatePayments,
+                const SizedBox(height: 8),
+                if (stripeAccountId.isNotEmpty)
+                  Text(
+                    l10n.stripeAccountLabel(stripeAccountId),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await PaymentService.instance.startPrestadorOnboarding();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.onboardingOpened)),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(l10n.onboardingStartError(e.toString())),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(
+                    onboardingComplete
+                        ? l10n.manageStripeAccount
+                        : l10n.activatePayments,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PrestadorSubscriptionScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.workspace_premium_outlined),
-                label: const Text('Gerir assinatura'),
-              ),
+                const SizedBox(height: 10),
+                if (AppConfig.subscriptionsEnabled)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PrestadorSubscriptionScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.workspace_premium_outlined),
+                    label: const Text('Gerir assinatura'),
+                  ),
+              ],
               const SizedBox(height: 12),
-              _kycSection(
-                context,
-                prestadorId: uid,
-                status: kycStatus,
-                docs: kycDocs,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                l10n.technicalNotesTitle,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.technicalNotesBody,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurfaceVariant,
+              if (AppConfig.kycEnabled) ...[
+                _kycSection(
+                  context,
+                  prestadorId: uid,
+                  status: kycStatus,
+                  docs: kycDocs,
                 ),
+                const SizedBox(height: 12),
+              ],
+              const Text(
+                'No piloto, o dinheiro e o unico meio ativo. M-Pesa, e-Mola e Stripe so serao apresentados depois da validacao comercial e tecnica.',
               ),
             ],
           );
         },
       ),
     );
+  }
+
+  static double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   Widget _kycSection(
@@ -339,36 +380,15 @@ class PrestadorPagamentosScreen extends StatelessWidget {
         );
       }
 
-      final storageRef = FirebaseStorage.instance.ref().child(
-            'kyc/$prestadorId/${DateTime.now().millisecondsSinceEpoch}_$fileName',
-          );
+      final submissionId = DateTime.now().microsecondsSinceEpoch.toString();
+      final storagePath = 'kyc_pending/$prestadorId/$submissionId/$fileName';
+      final storageRef = FirebaseStorage.instance.ref().child(storagePath);
 
       await storageRef.putData(
         bytes,
         SettableMetadata(contentType: contentType),
       );
-      final url = await storageRef.getDownloadURL();
-
-      await FirebaseFirestore.instance
-          .collection('prestadores')
-          .doc(prestadorId)
-          .set(
-        {
-          'kycStatus': 'em_analise',
-          'kycSubmittedAt': FieldValue.serverTimestamp(),
-          'kycUpdatedAt': FieldValue.serverTimestamp(),
-          'kycDocs': FieldValue.arrayUnion([
-            {
-              'url': url,
-              'name': fileName,
-              'contentType': contentType,
-              'size': bytes.lengthInBytes,
-              'uploadedAt': Timestamp.now(),
-            }
-          ]),
-        },
-        SetOptions(merge: true),
-      );
+      await KycService.instance.submitDocumentPaths([storagePath]);
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

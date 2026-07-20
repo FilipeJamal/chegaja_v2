@@ -87,7 +87,12 @@ class ProviderSuggestionsSection extends StatelessWidget {
 
   Stream<List<ProviderSearchProfile>> _buildFirestoreStream() {
     final db = firestore ?? FirebaseFirestore.instance;
-    return db.collection('prestadores').limit(queryLimit).snapshots().map(
+    return db
+        .collection('provider_public')
+        .where('isSearchable', isEqualTo: true)
+        .limit(queryLimit)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs
               .map(
                 (doc) => ProviderSearchProfile.fromPrestadorDoc(

@@ -72,7 +72,7 @@ class PedidoMapaOsmCard extends StatelessWidget {
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
-          .collection('prestadores')
+          .collection('provider_dispatch_private')
           .doc(prestadorId)
           .snapshots(),
       builder: (context, snapshot) {

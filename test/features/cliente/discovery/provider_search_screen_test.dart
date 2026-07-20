@@ -242,15 +242,17 @@ void main() {
     expect(openedProfile?.id, 'p1');
   });
 
-  testWidgets('usa prestadores como fonte Firestore inicial', (tester) async {
+  testWidgets('usa provider_public pesquisavel como fonte Firestore inicial',
+      (tester) async {
     final db = FakeFirebaseFirestore();
-    await db.collection('prestadores').doc('p1').set({
+    await db.collection('provider_public').doc('p1').set({
       'nome': 'Joao Bolos',
       'servicosNomes': ['Bolos personalizados'],
       'city': 'Coimbra',
       'country': 'Portugal',
+      'isSearchable': true,
     });
-    await db.collection('users').doc('u1').set({
+    await db.collection('users_private').doc('u1').set({
       'displayName': 'Utilizador Prestador Legado',
       'roles': {'prestador': true},
     });

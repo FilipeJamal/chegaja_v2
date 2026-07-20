@@ -18,6 +18,7 @@ import 'package:chegaja_v2/core/services/location_service.dart';
 import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
 import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
@@ -38,9 +39,13 @@ import 'package:chegaja_v2/features/common/mensagens/chat_thread_screen.dart';
 import 'package:chegaja_v2/features/common/widgets/account_profile_summary.dart';
 import 'package:chegaja_v2/features/common/widgets/role_mode_switch_tile.dart';
 import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
+import 'package:chegaja_v2/features/common/permission_settings_screen.dart';
+import 'package:chegaja_v2/features/common/account_privacy_screen.dart';
+import 'package:chegaja_v2/features/common/suporte_screen.dart';
 
 import 'package:chegaja_v2/features/prestador/prestador_perfil_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_settings_screen.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_pagamentos_screen.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_home_components.dart';
 
@@ -48,7 +53,7 @@ import 'widgets/prestador_pedido_acoes.dart';
 
 final Map<String, Set<String>> _ignoradosPorPrestador = <String, Set<String>>{};
 
-const double kCommissionPercent = 0.15;
+const double kCommissionPercent = 0.10;
 const bool _disablePrestadorTrackingForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
 const bool _disablePrestadorHomeMessageStreamsForEmulatorTests =
@@ -90,10 +95,14 @@ String _labelTipoPreco(String tipo) {
 
 String _labelTipoPagamento(String tipo) {
   switch (tipo) {
+    case 'mpesa':
+      return 'M-Pesa';
+    case 'emola':
+      return 'e-Mola';
+    case 'stripe':
     case 'online_antes':
-      return 'Pagamento online (antes)';
     case 'online_depois':
-      return 'Pagamento online (depois)';
+      return 'Cartao (Stripe)';
     case 'dinheiro':
     default:
       return 'Pagamento em dinheiro';
@@ -187,9 +196,9 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
       return;
     }
 
-    // Mantem o estado online sincronizado com prestadores/{uid}.isOnline
+    // O estado operacional e a localizacao exata nunca ficam no perfil publico.
     _prestadorDocSub ??= FirebaseFirestore.instance
-        .collection('prestadores')
+        .collection('provider_dispatch_private')
         .doc(user.uid)
         .snapshots()
         .listen((snap) {
@@ -469,11 +478,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     if (!widget.roleReady) return;
     final user = AuthService.currentUser;
     if (user == null) return;
-    final ref = FirebaseFirestore.instance.collection('prestadores').doc(
-          user.uid,
-        );
-    _settingsStream = ref.snapshots();
-    _pedidosSettingsStream = ref.snapshots();
+    final publicRef =
+        FirebaseFirestore.instance.collection('provider_public').doc(
+              user.uid,
+            );
+    final dispatchRef = FirebaseFirestore.instance
+        .collection('provider_dispatch_private')
+        .doc(user.uid);
+    _settingsStream = publicRef.snapshots();
+    _pedidosSettingsStream = dispatchRef.snapshots();
   }
 
   Set<String> get _ignorados {
@@ -603,13 +616,21 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
   }
 
   Future<void> _aceitarPedido(BuildContext context, Pedido pedido) async {
-    final user = AuthService.currentUser;
+    var user = AuthService.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Utilizador não autenticado.')),
       );
       return;
     }
+
+    final phoneReady = await VerifiedPhoneGate.ensure(
+      context,
+      action: 'aceitar trabalhos e receber dados do Cliente',
+    );
+    if (!phoneReady || !context.mounted) return;
+    user = AuthService.currentUser;
+    if (user == null) return;
 
     try {
       await PedidoService.instance.aceitarPedidoAberto(
@@ -705,26 +726,26 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
                   style: TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 16),
-                const Text('Valor mínimo (€)'),
+                const Text('Valor mínimo (MT)'),
                 TextField(
                   key: const Key('orcamento_min_field'),
                   controller: minController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    prefixText: '€ ',
+                    prefixText: 'MT ',
                     hintText: 'Ex.: 20',
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Valor máximo (€)'),
+                const Text('Valor máximo (MT)'),
                 TextField(
                   key: const Key('orcamento_max_field'),
                   controller: maxController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    prefixText: '€ ',
+                    prefixText: 'MT ',
                     hintText: 'Ex.: 35',
                   ),
                 ),
@@ -1082,9 +1103,9 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
           }
         }
 
-        final liquidoHojeStr = '€ ${liquidoHoje.toStringAsFixed(2)}';
-        final brutoHojeStr = '€ ${brutoHoje.toStringAsFixed(2)}';
-        final taxaHojeStr = '€ ${taxaHoje.toStringAsFixed(2)}';
+        final liquidoHojeStr = CurrencyUtils.format(liquidoHoje);
+        final brutoHojeStr = CurrencyUtils.format(brutoHoje);
+        final taxaHojeStr = CurrencyUtils.format(taxaHoje);
         final servicosMesStr = servicosMes.toString();
 
         final pendentesComAcao = pedidosDoPrestador
@@ -1642,7 +1663,8 @@ class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
 
                           final emAberto = pedidos
                               .where(
-                                  (p) => !_isConcluido(p) && !_isCancelado(p))
+                                (p) => !_isConcluido(p) && !_isCancelado(p),
+                              )
                               .toList();
                           final concluidos =
                               pedidos.where(_isConcluido).toList();
@@ -1948,12 +1970,12 @@ class _PrestadorPedidoCard extends StatelessWidget {
 
     if (totalPago != null && commission != null && liquido != null) {
       valorClienteLabel =
-          'Valor pago pelo cliente: € ${totalPago.toStringAsFixed(2)}';
+          'Valor pago pelo cliente: ${CurrencyUtils.format(totalPago)}';
       valorPrestadorLabel =
-          'Tu recebes: € ${liquido.toStringAsFixed(2)} | Taxa: € ${commission.toStringAsFixed(2)}';
+          'Líquido: ${CurrencyUtils.format(liquido)} | Comissão: ${CurrencyUtils.format(commission)}';
     } else if (isConcluido && pedido.preco != null) {
       valorClienteLabel =
-          'Valor do serviço: € ${pedido.preco!.toStringAsFixed(2)}';
+          'Valor do serviço: ${CurrencyUtils.format(pedido.preco)}';
     }
 
     final bool mostrarCancelar =
@@ -2191,7 +2213,7 @@ class _ContaPremiumTab extends StatelessWidget {
                     SettingsListTile(
                       icon: Icons.settings_outlined,
                       title: 'Definicoes',
-                      subtitle: 'Preferencias do prestador',
+                      subtitle: 'Perfil, servicos e permissoes',
                       showDivider: true,
                       onTap: () {
                         Navigator.of(context).push(
@@ -2202,10 +2224,47 @@ class _ContaPremiumTab extends StatelessWidget {
                       },
                     ),
                     SettingsListTile(
+                      icon: Icons.phonelink_lock_outlined,
+                      title: 'Permissoes do dispositivo',
+                      subtitle: 'Localizacao, notificacoes e camara',
+                      showDivider: true,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PermissionSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    SettingsListTile(
                       icon: Icons.help_outline_rounded,
                       iconColor: AppPalette.warning,
                       title: l10n.accountHelpSupport,
                       subtitle: 'Ajuda operacional e suporte',
+                      showDivider: true,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SuporteScreen(
+                              userType: 'prestador',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SettingsListTile(
+                      icon: Icons.privacy_tip_outlined,
+                      title: 'Conta e privacidade',
+                      subtitle: 'Termos, dados e eliminação da conta',
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AccountPrivacyScreen(
+                              userType: 'prestador',
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),

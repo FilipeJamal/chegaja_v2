@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:chegaja_v2/core/services/storage_path_policy.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
+import 'package:chegaja_v2/core/widgets/private_storage_image.dart';
 
 class PedidoAnexosWidget extends StatefulWidget {
   final List<String> initialUrls;
@@ -72,7 +74,17 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
     final meta = SettableMetadata(contentType: resolvedContentType);
 
     final task = await ref.putData(bytes, meta);
-    return await task.ref.getDownloadURL();
+    try {
+      await PrivateStorageMediaService.instance.finalizeUpload(path);
+    } catch (_) {
+      try {
+        await task.ref.delete();
+      } catch (_) {
+        // Falha fechada: o caminho não é devolvido sem proteção confirmada.
+      }
+      rethrow;
+    }
+    return path;
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -175,16 +187,18 @@ class _PedidoAnexosWidgetState extends State<PedidoAnexosWidget> {
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
-                        image: isImage
-                            ? DecorationImage(
-                                image: NetworkImage(url), fit: BoxFit.cover)
-                            : null,
                       ),
-                      child: !isImage
-                          ? const Center(
+                      clipBehavior: Clip.antiAlias,
+                      child: isImage
+                          ? PrivateStorageImage(
+                              reference: url,
+                              fit: BoxFit.cover,
+                              width: 100,
+                              height: 100,
+                            )
+                          : const Center(
                               child: Icon(Icons.insert_drive_file,
-                                  size: 40, color: Colors.grey))
-                          : null,
+                                  size: 40, color: Colors.grey)),
                     ),
                     if (!widget.readOnly)
                       Positioned(

@@ -61,7 +61,7 @@ void main() {
       tester,
     ) async {
       final db = FakeFirebaseFirestore();
-      await db.collection('prestadores').doc('prestador_1').set({
+      await db.collection('provider_public').doc('prestador_1').set({
         'nome': 'Ana Reparacoes',
         'photoUrl': 'https://example.com/foto.jpg',
         'phone': '+351900000000',

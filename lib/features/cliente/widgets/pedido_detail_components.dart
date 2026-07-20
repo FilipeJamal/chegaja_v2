@@ -245,7 +245,7 @@ class _PedidoValueSummaryData {
         title: 'Valor final',
         value: money(pedido.precoFinal!),
         supportingText: 'Consulta o estado para saber se ja foi confirmado.',
-        icon: Icons.euro_rounded,
+        icon: Icons.payments_outlined,
         tone: AppStatusTone.info,
       );
     }
@@ -254,7 +254,7 @@ class _PedidoValueSummaryData {
       title: 'Valor a combinar',
       value: 'A combinar',
       supportingText: 'O valor final sera definido no fluxo do pedido.',
-      icon: Icons.euro_rounded,
+      icon: Icons.payments_outlined,
       tone: AppStatusTone.neutral,
     );
   }

@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-07-20T10:07:00.719Z",
+  "projectId": "chegaja-ac88d",
+  "containsParticipantIdentifiers": false,
+  "legacySourceCounts": {
+    "users": 86,
+    "prestadores": 42,
+    "pedidos": 29
+  },
+  "additiveMigration": {
+    "executed": true,
+    "deletesPerformed": 0,
+    "targetCounts": {
+      "public_profiles": 86,
+      "users_private": 86,
+      "provider_public": 42,
+      "provider_private": 42,
+      "provider_dispatch_private": 42
+    },
+    "publicDocumentsWithForbiddenSensitiveFieldNames": 0,
+    "rerunRequiredImmediatelyBeforeCutover": true
+  },
+  "serverCatalog": {
+    "seeded": true,
+    "policies": 55,
+    "policiesRequiringAdditionalApproval": 11,
+    "distinctRequirementDocuments": 8
+  },
+  "ttlPolicies": {
+    "endpoint_rate_limits.expiresAt": "ACTIVE",
+    "kyc_upload_grants.expiresAt": "ACTIVE"
+  },
+  "storageBoundaryMigration": {
+    "executed": true,
+    "referencedPublicProfilesMoved": 3,
+    "unreferencedPrivateObjectsQuarantined": 16,
+    "restrictedObjectsWithPersistentDownloadTokens": 0,
+    "quarantineDeleteAfterDays": 30,
+    "tempDeleteAfterDays": 2
+  },
+  "productionCutover": {
+    "firestoreRulesDeployed": false,
+    "storageRulesDeployed": false,
+    "functionsDeployedFromP1Source": false,
+    "currentlyDeployedFunctions": 27,
+    "localP1Exports": 63,
+    "reason": "Existing legacy clients and data require a controlled maintenance cutover after final package identity and physical App Check validation."
+  },
+  "localArtifactHashes": {
+    "firestoreRulesSha256": "c768f5f1ecaa5732b67673bfc5f7652ac2324f34a2be20088b2159cc2a15d0ef",
+    "storageRulesSha256": "7ce92850f16d85eb8b4872292c547f38344e2b23ba98981e76c5294a01c79b0b",
+    "functionsIndexSha256": "28480d1fd967789f9f0ca2fd4503192e4d1d6e57889cf442f33593dad44c2251"
+  }
+}

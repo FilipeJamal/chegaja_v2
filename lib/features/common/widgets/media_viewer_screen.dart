@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/moderation_types.dart';
 import 'package:chegaja_v2/features/common/trust_safety/report_content_sheet.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
+import 'package:chegaja_v2/core/widgets/private_storage_image.dart';
 
 /// Visualizador simples de imagens (URLs) em ecrã inteiro, com zoom/pan.
 ///
@@ -118,15 +120,18 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Future<void> _reportCurrentImage() {
-    final currentUrl = widget.urls[_index];
+    final currentReference = widget.urls[_index];
+    final isPrivate =
+        PrivateStorageMediaService.isPrivatePath(currentReference);
     return ReportContentSheet.show(
       context,
       title: 'Denunciar imagem',
       targetType: ReportTargetType.portfolioMedia,
-      targetId: currentUrl,
+      targetId: currentReference,
       targetOwnerId: widget.reportTargetOwnerId,
       sourceContext: 'portfolio_media',
-      mediaUrl: currentUrl,
+      mediaUrl: isPrivate ? null : currentReference,
+      mediaPath: isPrivate ? currentReference : null,
       onSubmit: widget.onReportSubmit,
     );
   }
@@ -184,20 +189,17 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                 maxScale: 4,
                 onInteractionEnd: _handleInteractionEnd,
                 child: Center(
-                  child: Image.network(
-                    url,
+                  child: PrivateStorageImage(
+                    reference: url,
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return const Center(
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => const Center(
+                    loading: const Center(
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: const Center(
                       child: Icon(
                         Icons.broken_image,
                         color: Colors.white70,

@@ -53,7 +53,7 @@ Future<void> _seedPrestador(
   FakeFirebaseFirestore db, {
   Map<String, Object?> overrides = const {},
 }) async {
-  await db.collection('prestadores').doc('prestador1').set({
+  await db.collection('provider_public').doc('prestador1').set({
     'nome': 'Joao Silva',
     'bio': 'Canalizador com experiencia em reparos urgentes.',
     'city': 'Coimbra',
@@ -223,7 +223,7 @@ void main() {
   testWidgets('cliente nao mostra acoes de partilha de prestador',
       (tester) async {
     final db = FakeFirebaseFirestore();
-    await db.collection('users').doc('cliente1').set({
+    await db.collection('public_profiles').doc('cliente1').set({
       'nome': 'Maria Cliente',
       'handle': 'maria_cliente',
     });
@@ -507,7 +507,7 @@ void main() {
   testWidgets('perfil de cliente nao mostra reputacao de prestador',
       (tester) async {
     final db = FakeFirebaseFirestore();
-    await db.collection('users').doc('cliente1').set({
+    await db.collection('public_profiles').doc('cliente1').set({
       'nome': 'Maria Cliente',
       'ratingAvg': 4.9,
       'ratingCount': 8,

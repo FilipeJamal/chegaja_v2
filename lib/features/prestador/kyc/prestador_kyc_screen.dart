@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:chegaja_v2/core/services/kyc_service.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 
 class PrestadorKycScreen extends StatefulWidget {
   const PrestadorKycScreen({super.key});
@@ -18,6 +19,7 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
 
   bool _loading = true;
   bool _submitting = false;
+  bool _consentAccepted = false;
   String _status = 'none'; // none, pending, approved, rejected
 
   @override
@@ -45,7 +47,7 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
   }
 
   Future<void> _pickImage(bool isFront) async {
-    if (_status == 'pending' || _status == 'approved') return;
+    if (_status == 'pending_review' || _status == 'approved') return;
 
     final picked =
         await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
@@ -68,27 +70,35 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
       );
       return;
     }
+    if (!_consentAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Confirma o consentimento antes de submeter.'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
       // 1. Upload images
-      final frontUrl =
+      final frontPath =
           await KycService.instance.uploadDocument(_frontImage!, 'front');
-      final backUrl =
+      final backPath =
           await KycService.instance.uploadDocument(_backImage!, 'back');
 
       // 2. Submit data
-      await KycService.instance.submitKyc(frontUrl, backUrl);
+      await KycService.instance.submitKyc(frontPath, backPath);
 
       if (mounted) {
         setState(() {
-          _status = 'pending';
+          _status = 'pending_review';
           _submitting = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content:
-                  Text('Documentos enviados com sucesso! Aguarda aprovação.')),
+                  Text('Documentos enviados. Aguarda a análise da equipa.')),
         );
       }
     } catch (e) {
@@ -102,7 +112,9 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
   }
 
   Widget _buildImageCard(String label, File? image, bool isFront) {
-    final canEdit = _status == 'none' || _status == 'rejected';
+    final canEdit = _status == 'none' ||
+        _status == 'rejected' ||
+        _status == 'needs_more_info';
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
@@ -158,6 +170,14 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!AppConfig.kycEnabled) {
+      return const Scaffold(
+        body: Center(
+          child:
+              Text('Verificacao de identidade temporariamente indisponivel.'),
+        ),
+      );
+    }
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -173,11 +193,13 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
               Icon(Icons.verified, size: 80, color: Colors.green),
               SizedBox(height: 16),
               Text(
-                'Conta Verificada!',
+                'Identidade confirmada',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text('Já podes aceitar pedidos sem restrições.'),
+              Text('O selo confirma apenas a análise da identidade.'),
+              SizedBox(height: 24),
+              _DeleteKycButton(),
             ],
           ),
         ),
@@ -185,7 +207,7 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
     }
 
     // Se pendente
-    if (_status == 'pending') {
+    if (_status == 'pending_review') {
       return Scaffold(
         appBar: AppBar(title: const Text('Verificação de Identidade')),
         body: Center(
@@ -210,6 +232,8 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('Voltar'),
                 ),
+                const SizedBox(height: 12),
+                const _DeleteKycButton(),
               ],
             ),
           ),
@@ -262,6 +286,21 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
             const SizedBox(height: 8),
             _buildImageCard(
                 'Toque para adicionar foto do Verso', _backImage, false),
+            const SizedBox(height: 24),
+            CheckboxListTile(
+              value: _consentAccepted,
+              onChanged: _submitting
+                  ? null
+                  : (value) => setState(() => _consentAccepted = value == true),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text(
+                'Autorizo o ChegaJá a analisar estes documentos apenas para confirmar a minha identidade.',
+              ),
+              subtitle: const Text(
+                'Os ficheiros são privados, acessíveis apenas à equipa autorizada e eliminados no máximo após 90 dias.',
+              ),
+            ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -276,6 +315,36 @@ class _PrestadorKycScreenState extends State<PrestadorKycScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DeleteKycButton extends StatefulWidget {
+  const _DeleteKycButton();
+
+  @override
+  State<_DeleteKycButton> createState() => _DeleteKycButtonState();
+}
+
+class _DeleteKycButtonState extends State<_DeleteKycButton> {
+  bool _deleting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: _deleting
+          ? null
+          : () async {
+              setState(() => _deleting = true);
+              try {
+                await KycService.instance.deleteMySubmission();
+                if (context.mounted) Navigator.of(context).pop();
+              } finally {
+                if (mounted) setState(() => _deleting = false);
+              }
+            },
+      icon: const Icon(Icons.delete_outline),
+      label: Text(_deleting ? 'A eliminar...' : 'Eliminar documentos'),
     );
   }
 }

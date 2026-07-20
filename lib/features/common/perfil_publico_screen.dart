@@ -44,8 +44,9 @@ class PublicProfileScreen extends StatelessWidget {
 
   FirebaseFirestore get _db => firestore ?? FirebaseFirestore.instance;
 
-  DocumentReference<Map<String, dynamic>> get _doc =>
-      _db.collection(_isPrestador ? 'prestadores' : 'users').doc(userId);
+  DocumentReference<Map<String, dynamic>> get _doc => _db
+      .collection(_isPrestador ? 'provider_public' : 'public_profiles')
+      .doc(userId);
 
   @override
   Widget build(BuildContext context) {
@@ -184,14 +185,9 @@ class PublicProfileScreen extends StatelessWidget {
                           onOpenFacebook: onOpenProfileFacebook,
                         ),
                       ],
-                      if (showPublicContact && profile.phone.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _ProfileSection(
-                          title: 'Contacto',
-                          icon: Icons.phone_outlined,
-                          child: _ContactTile(phone: profile.phone),
-                        ),
-                      ],
+                      // Contactos nunca pertencem a um perfil publico. Quando
+                      // houver uma relacao legitima, o contacto e revelado no
+                      // pedido atribuido por uma fronteira privada.
                     ],
                   ),
                 ),

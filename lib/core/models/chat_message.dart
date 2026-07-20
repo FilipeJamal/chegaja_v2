@@ -6,7 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 ///
 /// Para suportar anexos (imagem/ficheiro/áudio), este modelo lê também:
 /// - `type` (text|image|file|audio|sticker|gif)
-/// - `mediaUrl` (URL do Storage)
+/// - `mediaPath` (caminho interno privado; preferido)
+/// - `mediaUrl` (compatibilidade temporária com mensagens antigas)
 /// - `fileName`, `fileSize`, `mimeType`, `durationMs`
 class ChatMessage {
   final String id;
@@ -18,6 +19,7 @@ class ChatMessage {
 
   /// URL do media no Firebase Storage (quando `type` != text).
   final String? mediaUrl;
+  final String? mediaPath;
   final String? fileName;
   final int? fileSize;
   final String? mimeType;
@@ -58,6 +60,7 @@ class ChatMessage {
     this.starredBy = const <String>[],
     this.type = 'text',
     this.mediaUrl,
+    this.mediaPath,
     this.fileName,
     this.fileSize,
     this.mimeType,
@@ -74,7 +77,15 @@ class ChatMessage {
     this.locationLng,
   });
 
-  bool get hasMedia => (mediaUrl ?? '').trim().isNotEmpty;
+  bool get hasMedia =>
+      (mediaPath ?? '').trim().isNotEmpty || (mediaUrl ?? '').trim().isNotEmpty;
+  String? get mediaReference {
+    final path = (mediaPath ?? '').trim();
+    if (path.isNotEmpty) return path;
+    final url = (mediaUrl ?? '').trim();
+    return url.isEmpty ? null : url;
+  }
+
   bool get isImage =>
       (type == 'image' || type == 'sticker' || type == 'gif') && hasMedia;
   bool get isSticker => type == 'sticker' && hasMedia;
@@ -109,6 +120,7 @@ class ChatMessage {
 
     final mediaUrl =
         (data['mediaUrl'] ?? data['fileUrl'] ?? data['url'])?.toString();
+    final mediaPath = data['mediaPath']?.toString();
     final fileName =
         (data['fileName'] ?? data['nomeArquivo'] ?? data['filename'])
             ?.toString();
@@ -145,6 +157,7 @@ class ChatMessage {
       text: rawText,
       type: type,
       mediaUrl: mediaUrl,
+      mediaPath: mediaPath,
       fileName: fileName,
       fileSize: fileSize,
       mimeType: mimeType,
@@ -178,6 +191,7 @@ class ChatMessage {
       'text': text,
       'type': type,
       if (mediaUrl != null) 'mediaUrl': mediaUrl,
+      if (mediaPath != null) 'mediaPath': mediaPath,
       if (fileName != null) 'fileName': fileName,
       if (fileSize != null) 'fileSize': fileSize,
       if (mimeType != null) 'mimeType': mimeType,

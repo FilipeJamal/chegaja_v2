@@ -5,12 +5,35 @@ import 'package:firebase_storage/firebase_storage.dart';
 class StorageService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  static bool isPublicDestinationPath(String value) {
+    final path = value.trim();
+    if (path.startsWith('/') || path.contains('\\') || path.contains('..')) {
+      return false;
+    }
+    final segments = path.split('/');
+    return segments.length >= 3 &&
+        const {'profile_public', 'portfolio'}.contains(segments.first) &&
+        segments.every((segment) => segment.isNotEmpty);
+  }
+
+  static void _requirePublicDestination(String destinationPath) {
+    if (!isPublicDestinationPath(destinationPath)) {
+      throw ArgumentError.value(
+        destinationPath,
+        'destinationPath',
+        'StorageService aceita apenas media explicitamente publica. '
+            'Anexos privados usam PrivateStorageMediaService.',
+      );
+    }
+  }
+
   /// Upload genérico de arquivo
   static Future<String> uploadFile({
     required File file,
     required String destinationPath,
     String? contentType,
   }) async {
+    _requirePublicDestination(destinationPath);
     final ref = _storage.ref(destinationPath);
     final metadata = SettableMetadata(
       contentType: contentType,
@@ -27,6 +50,7 @@ class StorageService {
     required String destinationPath,
     String? contentType,
   }) async {
+    _requirePublicDestination(destinationPath);
     final ref = _storage.ref(destinationPath);
     final metadata = SettableMetadata(
       contentType: contentType,
@@ -69,12 +93,12 @@ class StorageService {
 
   /// Gera caminho para anexos de Chat
   static String generateChatAttachmentPath({
-    required String pedidoId, 
+    required String pedidoId,
     required String filename,
   }) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     // sanitized filename
     final safeName = filename.replaceAll(RegExp(r'[^a-zA-Z0-9.]+'), '_');
-    return 'chat/$pedidoId/${timestamp}_$safeName';
+    return 'chats/$pedidoId/files/${timestamp}_$safeName';
   }
 }

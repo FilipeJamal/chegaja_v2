@@ -65,7 +65,7 @@ class _PedidoMapaCardState extends State<PedidoMapaCard> {
     if (!estadosAtivos.contains(p.estado)) return;
 
     _prestadorSub = FirebaseFirestore.instance
-        .collection('prestadores')
+        .collection('provider_dispatch_private')
         .doc(p.prestadorId)
         .snapshots()
         .listen((snap) {

@@ -5,20 +5,37 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
 const functions = require("../index");
 
 describe("Pedido value Functions", () => {
-    const db = functions.__test__.db;
+    const db = functions.__test__.getDb();
     const {
+        acceptPedidoDispatchCore,
         confirmarValorFinalPedidoCore,
         proporValorFinalPedidoCore,
     } = functions.__test__.pedidos;
+    const {
+        enforceCommissionDebtCore,
+        recordCommissionPaymentCore,
+    } = functions.__test__.payments;
 
     async function clearPedidos() {
         const snap = await db.collection("pedidos").get();
         const batch = db.batch();
         snap.docs.forEach((doc) => batch.delete(doc.ref));
+        const providerSnap = await db.collection("provider_private").get();
+        providerSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        for (const collection of ["provider_public", "provider_dispatch_private", "payments", "commission_payments"]) {
+            const collectionSnap = await db.collection(collection).get();
+            collectionSnap.docs.forEach((doc) => batch.delete(doc.ref));
+        }
         await batch.commit();
     }
 
     async function seedPedido(id, data = {}) {
+        await db.collection("provider_private").doc("provider1").set({
+            providerId: "provider1",
+            completedJobsCount: 0,
+            commissionBalanceDue: 0,
+            financialStatus: "active",
+        }, { merge: true });
         await db.collection("pedidos").doc(id).set({
             clienteId: "client1",
             prestadorId: "provider1",
@@ -100,8 +117,105 @@ describe("Pedido value Functions", () => {
         assert.strictEqual(pedido.precoFinal, 100);
         assert.strictEqual(pedido.preco, 100);
         assert.strictEqual(pedido.earningsTotal, 100);
-        assert.strictEqual(pedido.commissionPlatform, 15);
-        assert.strictEqual(pedido.earningsProvider, 85);
+        assert.strictEqual(pedido.commissionPlatform, 0);
+        assert.strictEqual(pedido.earningsProvider, 100);
+        assert.strictEqual(pedido.currency, "MZN");
+
+        const provider = (await db.collection("provider_private").doc("provider1").get()).data();
+        assert.strictEqual(provider.completedJobsCount, 1);
+        assert.strictEqual(provider.commissionBalanceDue, 0);
+        assert.strictEqual(provider.financialStatus, "active");
+    });
+
+    it("charges the configured cash commission after the two pilot-free jobs", async () => {
+        await seedPedido("order_confirm_commission", {
+            status: "aguarda_confirmacao_valor",
+            estado: "aguarda_confirmacao_valor",
+            precoPropostoPrestador: 1000,
+            statusConfirmacaoValor: "pendente_cliente",
+            tipoPagamento: "dinheiro",
+        });
+        await db.collection("provider_private").doc("provider1").set({
+            completedJobsCount: 2,
+        }, { merge: true });
+
+        await confirmarValorFinalPedidoCore({
+            db,
+            uid: "client1",
+            data: { pedidoId: "order_confirm_commission" },
+        });
+
+        const pedido = (await db.collection("pedidos").doc("order_confirm_commission").get()).data();
+        const provider = (await db.collection("provider_private").doc("provider1").get()).data();
+        const payment = (await db.collection("payments").doc("cash_order_confirm_commission").get()).data();
+        assert.strictEqual(pedido.commissionPlatform, 100);
+        assert.strictEqual(pedido.earningsProvider, 900);
+        assert.strictEqual(provider.commissionBalanceDue, 100);
+        assert.strictEqual(provider.financialBalance, -100);
+        assert.strictEqual(provider.financialStatus, "payment_due");
+        assert.strictEqual(payment.method, "cash");
+        assert.strictEqual(payment.status, "commission_due");
+    });
+
+    it("suspends only new work after the commission deadline and restores it after payment", async () => {
+        await db.collection("provider_private").doc("provider1").set({
+            providerId: "provider1",
+            commissionBalanceDue: 75,
+            financialBalance: -75,
+            financialStatus: "payment_due",
+            commissionDueAt: new Date(Date.now() - 60_000),
+        });
+        await db.collection("provider_dispatch_private").doc("provider1").set({
+            providerId: "provider1",
+            acceptingNewJobs: true,
+        });
+
+        const enforcement = await enforceCommissionDebtCore({ database: db });
+        assert.strictEqual(enforcement.suspended, 1);
+        let provider = (await db.collection("provider_private").doc("provider1").get()).data();
+        let dispatch = (await db.collection("provider_dispatch_private").doc("provider1").get()).data();
+        assert.strictEqual(provider.financialStatus, "suspended_new_jobs");
+        assert.strictEqual(dispatch.acceptingNewJobs, false);
+
+        await recordCommissionPaymentCore({
+            database: db,
+            auth: { uid: "admin1", token: { admin: true } },
+            data: { providerId: "provider1", amount: 75, reference: "MPESA-TEST-001" },
+        });
+        provider = (await db.collection("provider_private").doc("provider1").get()).data();
+        dispatch = (await db.collection("provider_dispatch_private").doc("provider1").get()).data();
+        assert.strictEqual(provider.commissionBalanceDue, 0);
+        assert.strictEqual(provider.financialStatus, "active");
+        assert.strictEqual(dispatch.acceptingNewJobs, true);
+    });
+
+    it("prevents a financially suspended provider from accepting a request", async () => {
+        await db.collection("provider_public").doc("provider1").set({
+            uid: "provider1",
+            servicos: ["plumbing"],
+            isSearchable: true,
+        });
+        await db.collection("provider_private").doc("provider1").set({
+            providerId: "provider1",
+            financialStatus: "suspended_new_jobs",
+        });
+        await db.collection("pedidos").doc("blocked_accept").set({
+            clienteId: "client1",
+            prestadorId: null,
+            servicoId: "plumbing",
+            status: "criado",
+            estado: "criado",
+            moderationStatus: "approved",
+        });
+
+        await assert.rejects(
+            () => acceptPedidoDispatchCore({
+                database: db,
+                auth: { uid: "provider1", token: { phone_number: "+258840000000" } },
+                pedidoId: "blocked_accept",
+            }),
+            (err) => err.code === "failed-precondition"
+        );
     });
 
     it("blocks non-client confirmation", async () => {

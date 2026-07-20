@@ -9,6 +9,7 @@ import 'package:chegaja_v2/core/models/pedido_historico_item.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/services/analytics_service.dart';
 import 'package:chegaja_v2/core/utils/pedido_state_machine.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
 
 const bool _runFirebaseEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
@@ -18,6 +19,8 @@ const bool _runFirebaseFunctionsEmulatorTests = bool.fromEnvironment(
 );
 
 abstract class PedidoValueFunctionsGateway {
+  Future<void> aceitarPedidoDispatch({required String pedidoId});
+
   Future<void> proporValorFinalPedido({
     required String pedidoId,
     required double valorFinal,
@@ -36,6 +39,11 @@ class FirebasePedidoValueFunctionsGateway
   final FirebaseFunctions _functions;
 
   HttpsCallable _callable(String name) => _functions.httpsCallable(name);
+
+  @override
+  Future<void> aceitarPedidoDispatch({required String pedidoId}) async {
+    await _callable('pedidos_acceptDispatch').call({'pedidoId': pedidoId});
+  }
 
   @override
   Future<void> proporValorFinalPedido({
@@ -190,7 +198,7 @@ class PedidoService {
     required Pedido pedido,
     required String prestadorId,
   }) async {
-    final snap = await _db.collection('prestadores').doc(prestadorId).get();
+    final snap = await _db.collection('provider_public').doc(prestadorId).get();
     final data = snap.data();
 
     final ids = (data?['servicos'] as List?)
@@ -342,7 +350,8 @@ class PedidoService {
       ..._historyPatch(
         evento: 'proposta_enviada',
         userId: prestadorId,
-        descricao: 'Prestador enviou proposta: $valorMin€ - $valorMax€',
+        descricao:
+            'Prestador enviou proposta: ${CurrencyUtils.format(valorMin)} - ${CurrencyUtils.format(valorMax)}',
       ),
     });
 
@@ -507,6 +516,21 @@ class PedidoService {
       throw Exception('Convite nao pertence a este prestador.');
     }
 
+    if (_useAuthoritativeValueFunctions) {
+      await _authoritativeValueFunctions.aceitarPedidoDispatch(
+        pedidoId: pedido.id,
+      );
+      await _logPedidoEvent(
+        name: 'pedido_convite_aceite',
+        pedidoId: pedido.id,
+        estado: 'aceito',
+        modo: pedido.modo,
+        tipoPreco: pedido.tipoPreco,
+        role: 'prestador',
+      );
+      return;
+    }
+
     _assertOwnership(
       pedido: pedido,
       userId: prestadorId,
@@ -602,6 +626,21 @@ class PedidoService {
     required Pedido pedido,
     required String prestadorId,
   }) async {
+    if (_useAuthoritativeValueFunctions) {
+      await _authoritativeValueFunctions.aceitarPedidoDispatch(
+        pedidoId: pedido.id,
+      );
+      await _logPedidoEvent(
+        name: 'pedido_aceite_feed',
+        pedidoId: pedido.id,
+        estado: 'aceito',
+        modo: pedido.modo,
+        tipoPreco: pedido.tipoPreco,
+        role: 'prestador',
+      );
+      return;
+    }
+
     // Validar que o pedido está livre
     if (pedido.prestadorId != null) {
       throw Exception('Este pedido ja tem prestador atribuido.');
@@ -743,7 +782,8 @@ class PedidoService {
       ..._historyPatch(
         evento: 'valor_proposto',
         userId: prestadorId,
-        descricao: 'Prestador propôs valor final: $valorFinal€',
+        descricao:
+            'Prestador propôs valor final: ${CurrencyUtils.format(valorFinal)}',
       ),
     });
 
@@ -826,7 +866,7 @@ class PedidoService {
         evento: 'concluido',
         userId: clienteId,
         descricao:
-            'Cliente confirmou valor final ($valorFinal€) e concluiu pedido',
+            'Cliente confirmou valor final (${CurrencyUtils.format(valorFinal)}) e concluiu pedido',
       ),
     });
 

@@ -1,0 +1,18 @@
+{
+  "projectId": "TODO",
+  "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "migrationRerunAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "apkSha256": "TODO",
+  "services": {
+    "firestore": "UNENFORCED",
+    "storage": "UNENFORCED",
+    "authentication": "UNENFORCED"
+  },
+  "functionsCallablesEnforceAppCheck": false,
+  "deploymentReference": "TODO",
+  "deployedArtifacts": {
+    "firestoreRulesSha256": "TODO",
+    "storageRulesSha256": "TODO",
+    "functionsIndexSha256": "TODO"
+  }
+}

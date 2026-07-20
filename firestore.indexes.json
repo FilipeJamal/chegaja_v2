@@ -69,6 +69,14 @@
         { "fieldPath": "updatedAt", "order": "ASCENDING" }
       ]
     },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "prestadorId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
 
     {
       "collectionGroup": "chats",
@@ -88,12 +96,21 @@
     },
 
     {
-      "collectionGroup": "prestadores",
+      "collectionGroup": "provider_dispatch_private",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "isOnline", "order": "ASCENDING" },
         { "fieldPath": "servicos", "arrayConfig": "CONTAINS" },
         { "fieldPath": "geo.geohash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedido_dispatch",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "prestadorId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

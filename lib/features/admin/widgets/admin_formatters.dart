@@ -26,15 +26,15 @@ double? adminMaybeDouble(Object? value) {
 
 String adminMoneyCents(Object? value) {
   final cents = adminAsInt(value);
-  final euros = cents / 100.0;
-  return 'EUR ${euros.toStringAsFixed(2)}';
+  final meticais = cents / 100.0;
+  return 'MT ${meticais.toStringAsFixed(2)}';
 }
 
 String adminMoneyCentsOrDash(Object? value) {
   final cents = adminMaybeInt(value);
   if (cents == null) return '-';
-  final euros = cents / 100.0;
-  return 'EUR ${euros.toStringAsFixed(2)}';
+  final meticais = cents / 100.0;
+  return 'MT ${meticais.toStringAsFixed(2)}';
 }
 
 String adminPercentRatio(Object? value) {

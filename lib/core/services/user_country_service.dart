@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/locale_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -29,6 +30,13 @@ class UserCountryService extends ChangeNotifier {
 
   /// Initialize and detect country.
   Future<void> init() async {
+    if (AppConfig.pilotMaputoOnly) {
+      _countryCode = 'MZ';
+      _currencyCode = 'MZN';
+      _isManualOverride = false;
+      notifyListeners();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final savedCountry = prefs.getString(_overrideKey);
 
@@ -49,7 +57,8 @@ class UserCountryService extends ChangeNotifier {
       notifyListeners();
       if (kDebugMode) {
         print(
-            '[UserCountryService] Fast dev mode active: $_countryCode/$_currencyCode');
+          '[UserCountryService] Fast dev mode active: $_countryCode/$_currencyCode',
+        );
       }
       return;
     }
@@ -90,7 +99,8 @@ class UserCountryService extends ChangeNotifier {
 
       if (kDebugMode) {
         print(
-            '[UserCountryService] Final country: $_countryCode, currency: $_currencyCode');
+          '[UserCountryService] Final country: $_countryCode, currency: $_currencyCode',
+        );
       }
     } catch (e, st) {
       if (kDebugMode) {
@@ -137,7 +147,8 @@ class UserCountryService extends ChangeNotifier {
   }
 
   Future<void> setManualCountry(String countryCode) async {
-    final normalized = countryCode.trim().toUpperCase();
+    final normalized =
+        AppConfig.pilotMaputoOnly ? 'MZ' : countryCode.trim().toUpperCase();
     if (normalized.isEmpty) return;
 
     _countryCode = normalized;
@@ -178,8 +189,10 @@ class UserCountryService extends ChangeNotifier {
     await init();
   }
 
-  String get countryCode => _countryCode ?? 'US';
-  String get currencyCode => _currencyCode ?? 'USD';
+  String get countryCode =>
+      AppConfig.pilotMaputoOnly ? 'MZ' : (_countryCode ?? 'US');
+  String get currencyCode =>
+      AppConfig.pilotMaputoOnly ? 'MZN' : (_currencyCode ?? 'USD');
   bool get isManualOverride => _isManualOverride;
 
   String? _fetchCountryFromSystemLocale() {

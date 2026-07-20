@@ -194,16 +194,21 @@ async function applyCleanupPlan(plan, deps, { dryRun = true, confirm = false } =
 }
 
 function requireAdmin() {
-  return require(path.resolve(__dirname, '..', '..', 'functions', 'node_modules', 'firebase-admin'));
+  const root = path.resolve(__dirname, '..', '..', 'functions', 'node_modules', 'firebase-admin');
+  const { getApps, initializeApp } = require(path.join(root, 'app'));
+  const { getAuth } = require(path.join(root, 'auth'));
+  const { FieldPath, getFirestore } = require(path.join(root, 'firestore'));
+  const { getStorage } = require(path.join(root, 'storage'));
+  return { FieldPath, getApps, getAuth, getFirestore, getStorage, initializeApp };
 }
 
 function snapshotDocs(snapshot) {
   return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() || {} }));
 }
 
-async function getDocsByIdPrefix(db, admin, collection, prefix) {
+async function getDocsByIdPrefix(db, FieldPath, collection, prefix) {
   const snapshot = await db.collection(collection)
-    .orderBy(admin.firestore.FieldPath.documentId())
+    .orderBy(FieldPath.documentId())
     .startAt(prefix)
     .endAt(`${prefix}${PREFIX_END}`)
     .get();
@@ -238,8 +243,8 @@ async function getStorageFilesForPlan(bucket, { prefix, pedidos, users }) {
   return names;
 }
 
-async function buildCleanupPlanFromFirebase({ admin, db, bucket, prefix }) {
-  const pedidos = await getDocsByIdPrefix(db, admin, 'pedidos', prefix);
+async function buildCleanupPlanFromFirebase({ FieldPath, db, bucket, prefix }) {
+  const pedidos = await getDocsByIdPrefix(db, FieldPath, 'pedidos', prefix);
   const usersByRunId = await getDocsBySmokeRunPrefix(db, 'users', prefix);
   const prestadoresByRunId = await getDocsBySmokeRunPrefix(db, 'prestadores', prefix);
   const storageFiles = await getStorageFilesForPlan(bucket, {
@@ -260,17 +265,17 @@ async function cleanupSmokeData(options) {
   validateCleanupOptions(options);
   const admin = requireAdmin();
 
-  if (admin.apps.length === 0) {
+  if (admin.getApps().length === 0) {
     admin.initializeApp({
       projectId: options.projectId,
       storageBucket: options.storageBucket,
     });
   }
 
-  const db = admin.firestore();
-  const bucket = admin.storage().bucket(options.storageBucket);
+  const db = admin.getFirestore();
+  const bucket = admin.getStorage().bucket(options.storageBucket);
   const plan = await buildCleanupPlanFromFirebase({
-    admin,
+    FieldPath: admin.FieldPath,
     db,
     bucket,
     prefix: options.prefix,
@@ -288,7 +293,7 @@ async function cleanupSmokeData(options) {
     },
     deleteAuthUsers: async (uids) => {
       for (let i = 0; i < uids.length; i += 1000) {
-        await admin.auth().deleteUsers(uids.slice(i, i + 1000));
+        await admin.getAuth().deleteUsers(uids.slice(i, i + 1000));
       }
     },
   }, options);

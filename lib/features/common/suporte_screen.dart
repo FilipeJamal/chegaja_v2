@@ -1,150 +1,203 @@
 import 'package:flutter/material.dart';
+
 import 'package:chegaja_v2/core/services/support_service.dart';
 
 class SuporteScreen extends StatefulWidget {
-  final String userType; // 'cliente' ou 'prestador'
+  const SuporteScreen({super.key, required this.userType});
 
-  const SuporteScreen({
-    super.key,
-    required this.userType,
-  });
+  final String userType;
 
   @override
   State<SuporteScreen> createState() => _SuporteScreenState();
 }
 
 class _SuporteScreenState extends State<SuporteScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _messageCtrl = TextEditingController();
+  static const Map<String, String> _subjects = {
+    'general': 'Dúvida geral',
+    'order': 'Problema com um pedido',
+    'technical': 'Erro na aplicação',
+    'safety': 'Segurança ou denúncia',
+    'account': 'Conta e acesso',
+    'payment': 'Pagamento ou comissão',
+    'privacy_deletion': 'Privacidade ou eliminação',
+    'other': 'Outro assunto',
+  };
 
-  String _selectedSubject = 'Dúvida Geral';
+  final _formKey = GlobalKey<FormState>();
+  final _messageController = TextEditingController();
+  String _selectedCategory = 'general';
   bool _sending = false;
 
-  final List<String> _subjects = [
-    'Dúvida Geral',
-    'Problema com um Pedido',
-    'Erro na Aplicação',
-    'Denúncia',
-    'Outro',
-  ];
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
+    if (!_formKey.currentState!.validate() || _sending) return;
     setState(() => _sending = true);
     try {
-      await SupportService.instance.createTicket(
-        _selectedSubject,
-        _messageCtrl.text.trim(),
-        widget.userType,
+      final ticketId = await SupportService.instance.createTicket(
+        category: _selectedCategory,
+        message: _messageController.text.trim(),
+        userType: widget.userType,
       );
-
       if (!mounted) return;
-
+      _messageController.clear();
       await showDialog<void>(
         context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Pedido Enviado'),
-          content: const Text(
-            'Recebemos o teu pedido de suporte. A nossa equipa irá analisar e entrar em contacto em breve.',
+        builder: (context) => AlertDialog(
+          title: const Text('Pedido recebido'),
+          content: Text(
+            ticketId.isEmpty
+                ? 'A equipa de suporte recebeu a tua mensagem.'
+                : 'Referência: $ticketId. Podes acompanhar o estado nesta página.',
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop(); // Close dialog
-                Navigator.of(context).pop(); // Close screen
-              },
-              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Fechar'),
             ),
           ],
         ),
       );
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar pedido: $e')),
+        SnackBar(content: Text('Não foi possível enviar: $error')),
       );
-      setState(() => _sending = false);
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ajuda e Suporte'),
-      ),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Ajuda e suporte')),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Como podemos ajudar?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Preenche o formulário abaixo e entraremos em contacto o mais breve possível.',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedSubject,
-                decoration: InputDecoration(
-                  labelText: 'Assunto',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                items: _subjects
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedSubject = val);
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _messageCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  labelText: 'Mensagem',
-                  alignLabelWithHint: true,
-                  hintText:
-                      'Descreve o problema ou a tua dúvida com detalhes...',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Por favor, escreve uma mensagem.';
-                  }
-                  if (val.trim().length < 10) {
-                    return 'A mensagem é muito curta.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _sending ? null : _submit,
-                  child: _sending
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Enviar Pedido'),
-                ),
-              ),
-            ],
+        children: [
+          Text(
+            'Como podemos ajudar?',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-        ),
+          const SizedBox(height: 8),
+          const Text(
+            'Não envies documentos de identidade, palavras-passe, PINs ou dados completos de pagamento.',
+          ),
+          const SizedBox(height: 20),
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Assunto',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _subjects.entries
+                      .map(
+                        (entry) => DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _sending
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setState(() => _selectedCategory = value);
+                          }
+                        },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _messageController,
+                  minLines: 5,
+                  maxLines: 8,
+                  maxLength: 2000,
+                  decoration: const InputDecoration(
+                    labelText: 'Mensagem',
+                    alignLabelWithHint: true,
+                    hintText:
+                        'Descreve o que aconteceu e o resultado esperado.',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (text.length < 10) {
+                      return 'Escreve pelo menos 10 caracteres.';
+                    }
+                    if (text.length > 2000) {
+                      return 'A mensagem deve ter no máximo 2000 caracteres.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _sending ? null : _submit,
+                    icon: _sending
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: const Text('Enviar pedido'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Pedidos recentes',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: SupportService.instance.watchMyTickets(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const LinearProgressIndicator();
+              }
+              if (snapshot.hasError) {
+                return const Text(
+                  'Não foi possível carregar o histórico agora.',
+                );
+              }
+              final tickets = snapshot.data ?? const [];
+              if (tickets.isEmpty) {
+                return const Text('Ainda não existem pedidos de suporte.');
+              }
+              return Column(
+                children: tickets.map((ticket) {
+                  final status = ticket['status']?.toString() ?? 'open';
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.support_agent_outlined),
+                    title: Text(ticket['subject']?.toString() ?? 'Suporte'),
+                    subtitle: Text(_statusLabel(status)),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
+
+  String _statusLabel(String status) => switch (status) {
+        'in_progress' => 'Em análise',
+        'resolved' => 'Resolvido',
+        'closed' => 'Fechado',
+        _ => 'Recebido',
+      };
 }

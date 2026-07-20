@@ -1,5 +1,7 @@
 import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/services/servico_search.dart';
+import 'package:chegaja_v2/core/catalog/service_taxonomy_catalog.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 
 class ClienteServiceCatalogResult {
   const ClienteServiceCatalogResult({
@@ -24,7 +26,23 @@ ClienteServiceCatalogResult visibleClienteCatalogServices({
   final normalizedMode = _normalizeCatalogMode(selectedMode);
   final modeServices = services
       .where((service) => _normalizeCatalogMode(service.mode) == normalizedMode)
-      .toList(growable: false);
+      .toList();
+
+  if (AppConfig.pilotMode) {
+    final originalOrder = <String, int>{
+      for (var index = 0; index < modeServices.length; index += 1)
+        modeServices[index].id: index,
+    };
+    modeServices.sort((left, right) {
+      final leftPromoted = _isPilotPromoted(left);
+      final rightPromoted = _isPilotPromoted(right);
+      if (leftPromoted == rightPromoted) {
+        return (originalOrder[left.id] ?? 0)
+            .compareTo(originalOrder[right.id] ?? 0);
+      }
+      return leftPromoted ? -1 : 1;
+    });
+  }
 
   final normalizedQuery = query.trim();
   if (normalizedQuery.length < 2) {
@@ -53,6 +71,15 @@ ClienteServiceCatalogResult visibleClienteCatalogServices({
     totalMatched: matches.length,
     isSearching: true,
   );
+}
+
+bool _isPilotPromoted(Servico service) {
+  final subcategory = ServiceTaxonomyCatalog.findSubcategoryById(service.id) ??
+      ServiceTaxonomyCatalog.mapLegacyServicoToSubcategory(service);
+  return subcategory != null &&
+      AppConfig.pilotPromotedCategoryIds.contains(
+        subcategory.parentCategoryId,
+      );
 }
 
 String _normalizeCatalogMode(String raw) {

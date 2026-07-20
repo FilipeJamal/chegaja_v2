@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
+import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
+import 'package:chegaja_v2/core/widgets/private_storage_image.dart';
 import 'package:chegaja_v2/features/common/widgets/media_viewer_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
@@ -61,7 +63,8 @@ class ChatMediaScreen extends StatelessWidget {
       return Center(child: Text(l10n.chatMediaEmptyPhotos));
     }
 
-    final urls = items.map((e) => e.mediaUrl).whereType<String>().toList();
+    final urls =
+        items.map((e) => e.mediaReference).whereType<String>().toList();
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -84,10 +87,10 @@ class ChatMediaScreen extends StatelessWidget {
           },
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              url,
+            child: PrivateStorageImage(
+              reference: url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              error: Container(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: Icon(
                   Icons.broken_image,
@@ -154,7 +157,7 @@ class ChatMediaScreen extends StatelessWidget {
           title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: subtitle != null ? Text(subtitle) : null,
           onTap: () {
-            final url = msg.mediaUrl;
+            final url = msg.mediaReference;
             if (url != null) _openUrl(url);
           },
         );
@@ -163,7 +166,9 @@ class ChatMediaScreen extends StatelessWidget {
   }
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.tryParse(url);
+    final resolved =
+        await PrivateStorageMediaService.resolveReferenceLazily(url);
+    final uri = Uri.tryParse(resolved);
     if (uri == null) return;
     await launchUrl(
       uri,

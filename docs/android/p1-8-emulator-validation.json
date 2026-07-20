@@ -1,0 +1,43 @@
+{
+  "status": "COMPLETED",
+  "capturedAt": "2026-07-20T12:30:12.167Z",
+  "apkSha256": "e73b09e9d08112ceabfb178d05fb68d0edb75be0d9f6fe7bf36fd3f9624d6b02",
+  "releaseSourceFingerprint": "a0030e638e0611b2647e3a86c5fb0c24852b5a547b381ea74912a5ab6727546b",
+  "releaseInputFiles": 351,
+  "packageId": "com.example.chegaja_v2",
+  "activity": "com.example.chegaja_v2/.MainActivity",
+  "activityInForeground": true,
+  "processAliveAfterInteraction": true,
+  "device": {
+    "physical": false,
+    "manufacturer": "unknown",
+    "model": "Android SDK built for x86_64",
+    "androidVersion": "14",
+    "apiLevel": 34,
+    "abi": "x86_64"
+  },
+  "screen": {
+    "title": "Bem-vindo ao ChegaJa",
+    "clientAction": "Sou cliente",
+    "providerAction": "Sou prestador"
+  },
+  "startupPermissionPrompt": false,
+  "interactionCheck": "vertical_scroll_without_navigation",
+  "fatalPatternsChecked": [
+    "FATAL EXCEPTION",
+    "E/flutter",
+    "FirebaseException",
+    "MissingPluginException",
+    "GeneratedPluginsRegister",
+    "ERRO FATAL",
+    "ClassNotFoundException",
+    "ANR in com.example.chegaja_v2",
+    "Process: com.example.chegaja_v2"
+  ],
+  "fatalPatternsMatched": [],
+  "artifacts": [
+    "build/p1_8_launch.png",
+    "build/p1_8_ui.xml",
+    "build/p1_release_provenance.json"
+  ]
+}

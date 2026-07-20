@@ -40,6 +40,38 @@ class AdminService {
     return _asMap(res.data);
   }
 
+  Future<Map<String, dynamic>> getPilotMetrics() async {
+    final res = await _callable('admin_getPilotMetrics').call();
+    return _asMap(res.data);
+  }
+
+  Future<List<Map<String, dynamic>>> listPilotParticipants({
+    String status = 'all',
+  }) async {
+    final res = await _callable('admin_listPilotParticipants').call({
+      'status': status,
+    });
+    return _asListOfMaps(_asMap(res.data)['participants']);
+  }
+
+  Future<void> setPilotParticipant({
+    required String uid,
+    required String status,
+    required List<String> roles,
+    required String city,
+    String cohort = 'maputo-pilot-1',
+    String? note,
+  }) async {
+    await _callable('admin_setPilotParticipant').call({
+      'uid': uid.trim(),
+      'status': status,
+      'roles': roles,
+      'city': city,
+      'cohort': cohort.trim(),
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    });
+  }
+
   Future<List<Map<String, dynamic>>> listSupportTickets({
     String status = 'all',
     int limit = 50,

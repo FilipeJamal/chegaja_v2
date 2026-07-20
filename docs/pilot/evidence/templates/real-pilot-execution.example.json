@@ -1,0 +1,25 @@
+{
+  "status": "PENDING",
+  "startedAt": "YYYY-MM-DD",
+  "completedAt": "YYYY-MM-DD",
+  "apkSha256": "TODO",
+  "cohort": {
+    "providers": 0,
+    "clients": 0
+  },
+  "metrics": {
+    "providersReceivedFirstOpportunity": 0,
+    "providersCompletedFirstPaidJob": 0,
+    "percentFirstPaidJobWithin30Days": 0,
+    "requestsPublished": 0,
+    "requestsWithResponse": 0,
+    "requestsCompleted": 0,
+    "providerValueGeneratedMzn": 0,
+    "returningClients": 0,
+    "disputesOpened": 0,
+    "disputesResolved": 0
+  },
+  "participantConsentRecorded": false,
+  "aggregatedDataOnly": true,
+  "closureApproved": false
+}

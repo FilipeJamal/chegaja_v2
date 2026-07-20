@@ -156,7 +156,7 @@ class PrestadorMetricStrip extends StatelessWidget {
           label: 'Ganhos hoje',
           value: liquidoHoje,
           supportingText: 'Bruto: $brutoHoje | Taxa: $taxaHoje',
-          icon: Icons.euro_rounded,
+          icon: Icons.payments_outlined,
           tone: AppStatusTone.success,
         ),
         AppMetricTile(

@@ -46,7 +46,7 @@ void main() {
   testWidgets('sucesso renderiza PublicProfileScreen resolvido por uid',
       (tester) async {
     final db = FakeFirebaseFirestore();
-    await db.collection('prestadores').doc('prestador1').set({
+    await db.collection('provider_public').doc('prestador1').set({
       'nome': 'Maria Bolos',
       'handle': 'maria_bolos',
       'bio': 'Bolos artesanais.',

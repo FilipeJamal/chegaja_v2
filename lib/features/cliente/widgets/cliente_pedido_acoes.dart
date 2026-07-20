@@ -1,7 +1,6 @@
 // lib/features/cliente/widgets/cliente_pedido_acoes.dart
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
@@ -383,8 +382,9 @@ class _ValorFinalPendenteCard extends StatelessWidget {
     }
 
     try {
-      // Se o tipo de pagamento for online, cobramos primeiro via Stripe.
-      if (pedido.tipoPagamento != 'dinheiro') {
+      final paymentProvider =
+          PaymentService.instance.providerFor(pedido.tipoPagamento);
+      if (paymentProvider.requiresExternalConfirmation) {
         // UI simples de loading
         unawaited(
           showDialog<void>(
@@ -408,7 +408,10 @@ class _ValorFinalPendenteCard extends StatelessWidget {
 
         bool ok = false;
         try {
-          ok = await PaymentService.instance.payPedido(pedidoId: pedido.id);
+          ok = await PaymentService.instance.payPedido(
+            pedidoId: pedido.id,
+            paymentMethod: pedido.tipoPagamento,
+          );
         } finally {
           if (context.mounted) {
             Navigator.of(context, rootNavigator: true).pop(); // fecha loading

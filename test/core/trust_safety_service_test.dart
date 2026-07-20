@@ -70,7 +70,7 @@ void main() {
       );
 
       final ref = db
-          .collection('users')
+          .collection('users_private')
           .doc('client1')
           .collection('blockedUsers')
           .doc('provider1');
@@ -99,7 +99,7 @@ void main() {
       );
 
       final snap = await db
-          .collection('users')
+          .collection('users_private')
           .doc('client1')
           .collection('blockedUsers')
           .get();

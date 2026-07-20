@@ -2,14 +2,17 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import '../config/app_config.dart';
 import '../models/pedido.dart';
 import '../services/analytics_service.dart';
-import '../utils/geohash_utils.dart';
 import '../utils/pedido_state_machine.dart';
 
 class PedidosRepo {
   PedidosRepo._();
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: AppConfig.functionsRegion);
 
   static Future<String> criarPedido({
     required String clienteId,
@@ -37,83 +40,45 @@ class PedidosRepo {
     String? customServiceDescription,
     List<String>? customServiceSearchTerms,
   }) async {
-    final categoriaFinal =
-        (servicoNome != null && servicoNome.trim().isNotEmpty)
-            ? servicoNome.trim()
-            : (categoria ?? '').trim();
-
     final Timestamp? agTs = (modo == 'AGENDADO' && agendadoPara != null)
         ? Timestamp.fromDate(agendadoPara)
         : null;
-
-    final geo = (latitude != null && longitude != null)
-        ? GeoHashUtils.toGeoData(latitude: latitude, longitude: longitude)
-        : null;
-
-    final statusFinal = status ?? 'criado';
-    if (!PedidoStateMachine.isValidEstado(statusFinal)) {
-      throw ArgumentError('Estado invalido: $statusFinal');
-    }
-
-    final docRef = await _db.collection('pedidos').add({
-      'clienteId': clienteId,
+    final response =
+        await _functions.httpsCallable('pedidos_createSecure').call({
       'prestadorId': prestadorId,
       'servicoId': servicoId,
-      'servicoNome': categoriaFinal.isEmpty ? null : categoriaFinal,
-      'categoria': categoriaFinal.isEmpty ? null : categoriaFinal,
+      'servicoNome': servicoNome ?? categoria,
       'titulo': titulo,
       'descricao': descricao,
       'modo': modo,
       'agendadoPara': agTs,
       'tipoPreco': tipoPreco ?? 'a_combinar',
       'tipoPagamento': tipoPagamento ?? 'dinheiro',
-      'estado': statusFinal,
-      'status': statusFinal,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
       'latitude': latitude,
       'longitude': longitude,
-      if (geo != null) 'geo': geo,
       'enderecoTexto': enderecoTexto,
       if (anexos != null) 'anexos': anexos,
-      if (categoryApprovalRequired) ...{
-        'categoryApprovalRequired': true,
-        if (categoryRequirementId != null &&
-            categoryRequirementId.trim().isNotEmpty)
-          'categoryRequirementId': categoryRequirementId.trim(),
-        if (categoryRequirementName != null &&
-            categoryRequirementName.trim().isNotEmpty)
-          'categoryRequirementName': categoryRequirementName.trim(),
-        if (categoryRiskLevel != null && categoryRiskLevel.trim().isNotEmpty)
-          'categoryRiskLevel': categoryRiskLevel.trim(),
-      },
-      if (isCustomService) ...{
-        'isCustomService': true,
-        if (customServiceName != null && customServiceName.trim().isNotEmpty)
-          'customServiceName': customServiceName.trim(),
-        if (customServiceDescription != null &&
-            customServiceDescription.trim().isNotEmpty)
-          'customServiceDescription': customServiceDescription.trim(),
-        'customServiceSearchTerms': (customServiceSearchTerms ?? const [])
-            .map((term) => term.trim())
-            .where((term) => term.isNotEmpty)
-            .toSet()
-            .toList(growable: false),
-      },
-      'statusProposta': 'nenhuma',
-      'statusConfirmacaoValor': 'nenhum',
+      'isCustomService': isCustomService,
+      'customServiceName': customServiceName,
+      'customServiceDescription': customServiceDescription,
+      'customServiceSearchTerms': customServiceSearchTerms ?? const <String>[],
     });
+    final responseData = Map<String, dynamic>.from(response.data as Map);
+    final pedidoId = (responseData['pedidoId'] as String?)?.trim();
+    if (pedidoId == null || pedidoId.isEmpty) {
+      throw StateError('O servidor nao devolveu o identificador do pedido.');
+    }
 
     await AnalyticsService.instance.logPedidoEvent(
       name: 'pedido_criado',
-      pedidoId: docRef.id,
-      estado: statusFinal,
+      pedidoId: pedidoId,
+      estado: status ?? 'criado',
       modo: modo,
       tipoPreco: tipoPreco ?? 'a_combinar',
       role: 'cliente',
     );
 
-    return docRef.id;
+    return pedidoId;
   }
 
   static Future<void> atualizarPedidoCliente({
@@ -136,70 +101,31 @@ class PedidosRepo {
     String? customServiceDescription,
     List<String>? customServiceSearchTerms,
   }) async {
-    final categoriaFinal =
-        (servicoNome != null && servicoNome.trim().isNotEmpty)
-            ? servicoNome.trim()
-            : (categoria ?? '').trim();
-
     final Timestamp? agTs = (modo == 'AGENDADO' && agendadoPara != null)
         ? Timestamp.fromDate(agendadoPara)
         : null;
-
-    final geo = (latitude != null && longitude != null)
-        ? GeoHashUtils.toGeoData(latitude: latitude, longitude: longitude)
-        : null;
-
-    final data = <String, dynamic>{
+    await _functions.httpsCallable('pedidos_updateSecure').call({
+      'pedidoId': pedidoId,
       'titulo': titulo,
       'descricao': descricao,
       'modo': modo,
       'agendadoPara': agTs,
 
       'servicoId': servicoId,
-      'servicoNome': categoriaFinal.isEmpty ? null : categoriaFinal,
-      'categoria': categoriaFinal.isEmpty ? null : categoriaFinal,
+      'servicoNome': servicoNome ?? categoria,
 
       'latitude': latitude,
       'longitude': longitude,
       // mantém geo consistente com lat/lng
-      'geo': geo ?? FieldValue.delete(),
       'enderecoTexto': enderecoTexto,
       if (anexos != null) 'anexos': anexos,
 
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-
-    if (tipoPreco != null) data['tipoPreco'] = tipoPreco;
-    if (tipoPagamento != null) data['tipoPagamento'] = tipoPagamento;
-    if (isCustomService != null) {
-      data['isCustomService'] = isCustomService;
-      if (isCustomService) {
-        data['customServiceName'] = customServiceName?.trim();
-        data['customServiceDescription'] = customServiceDescription?.trim();
-        data['customServiceSearchTerms'] =
-            (customServiceSearchTerms ?? const [])
-                .map((term) => term.trim())
-                .where((term) => term.isNotEmpty)
-                .toSet()
-                .toList(growable: false);
-      } else {
-        data['customServiceName'] = FieldValue.delete();
-        data['customServiceDescription'] = FieldValue.delete();
-        data['customServiceSearchTerms'] = FieldValue.delete();
-      }
-    }
-    final ref = _db.collection('pedidos').doc(pedidoId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) {
-        throw Exception('Pedido nao encontrado.');
-      }
-      final doc = snap.data();
-      final estado = (doc?['estado'] ?? doc?['status'] ?? 'criado').toString();
-      if (estado != PedidoStateMachine.criado) {
-        throw StateError('Nao podes editar pedido em estado: $estado');
-      }
-      tx.update(ref, data);
+      if (tipoPreco != null) 'tipoPreco': tipoPreco,
+      if (tipoPagamento != null) 'tipoPagamento': tipoPagamento,
+      if (isCustomService != null) 'isCustomService': isCustomService,
+      'customServiceName': customServiceName,
+      'customServiceDescription': customServiceDescription,
+      'customServiceSearchTerms': customServiceSearchTerms ?? const <String>[],
     });
   }
 
@@ -226,8 +152,8 @@ class PedidosRepo {
 
   static Stream<List<Pedido>> streamPedidosDisponiveis() {
     return _db
-        .collection('pedidos')
-        // Usa "status" para alinhar com as regras (pedidoAberto usa status quando existe)
+        .collection('pedido_dispatch')
+        // Projecao sanitizada: nunca contem cliente, morada ou GPS exato.
         .where('status', isEqualTo: 'criado')
         .where('prestadorId', isNull: true)
         .orderBy('createdAt', descending: true)

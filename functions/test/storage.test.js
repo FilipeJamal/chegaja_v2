@@ -132,15 +132,72 @@ describe("Storage Security Rules", () => {
         );
     });
 
-    it("keeps KYC documents private to the owner and admins", async () => {
-        const provider = testEnv.authenticatedContext("provider1");
+    it("allows chat audio only for pedido participants", async () => {
+        await seedPedido(testEnv, "pedido_audio", {
+            clienteId: "client1",
+            prestadorId: "provider1",
+            status: "aceito",
+        });
+        const client = testEnv.authenticatedContext("client1");
+        const attacker = testEnv.authenticatedContext("attacker");
+        const storagePath = "chats/pedido_audio/audio/message.m4a";
+        await assertSucceeds(upload(client, storagePath, "audio/mp4"));
+        await assertFails(upload(attacker, storagePath, "audio/mp4"));
+        await assertFails(upload(client, "chats/pedido_audio/audio/fake.m4a", "image/jpeg"));
+    });
+
+    it("uses dedicated public profile paths and blocks legacy profile uploads", async () => {
+        const client = testEnv.authenticatedContext("client1");
+        const other = testEnv.authenticatedContext("other");
+        const publicPath = "profile_public/client1/profile.jpg";
+        await assertSucceeds(upload(client, publicPath));
+        await assertSucceeds(other.storage().ref(publicPath).getDownloadURL());
+        await assertFails(upload(other, publicPath));
+        await assertFails(upload(client, "users/client1/profile.jpg"));
+        await assertFails(upload(client, "prestadores/client1/profile.jpg"));
+    });
+
+    it("allows KYC upload only in a temporary grant and keeps reads admin-only", async () => {
+        const provider = testEnv.authenticatedContext("provider1", {
+            kyc_upload_enabled: true,
+        });
+        const providerWithoutClaim = testEnv.authenticatedContext("provider1");
         const other = testEnv.authenticatedContext("other");
         const admin = testEnv.authenticatedContext("admin1", {admin: true});
-        const storagePath = "kyc/provider1/front.jpg";
+        const storagePath = "kyc_pending/provider1/submission_1/front.jpg";
+
+        await assertFails(upload(providerWithoutClaim, storagePath));
+        await assertFails(upload(provider, storagePath));
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await context.firestore().collection("kyc_upload_grants").doc("provider1").set({
+                submissionId: "submission_1",
+                expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            });
+        });
 
         await assertSucceeds(upload(provider, storagePath));
-        await assertSucceeds(provider.storage().ref(storagePath).getDownloadURL());
+        await assertFails(provider.storage().ref(storagePath).getDownloadURL());
         await assertSucceeds(admin.storage().ref(storagePath).getDownloadURL());
         await assertFails(other.storage().ref(storagePath).getDownloadURL());
+    });
+
+    it("blocks legacy KYC uploads and expired grants", async () => {
+        const provider = testEnv.authenticatedContext("provider1", {
+            kyc_upload_enabled: true,
+        });
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await context.firestore().collection("kyc_upload_grants").doc("provider1").set({
+                submissionId: "expired",
+                expiresAt: new Date(Date.now() - 60 * 1000),
+            });
+        });
+
+        await assertFails(upload(provider, "kyc/provider1/front.jpg"));
+        await assertFails(upload(provider, "kyc_pending/provider1/expired/front.jpg"));
+    });
+
+    it("blocks story uploads while the feature is outside the pilot", async () => {
+        const provider = testEnv.authenticatedContext("provider1");
+        await assertFails(upload(provider, "stories/provider1/story.jpg"));
     });
 });

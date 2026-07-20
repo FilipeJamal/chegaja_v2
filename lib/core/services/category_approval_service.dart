@@ -1,15 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/models/category_approval_types.dart';
 import 'package:chegaja_v2/core/models/category_requirement.dart';
 import 'package:chegaja_v2/core/models/provider_category_approval.dart';
 import 'package:chegaja_v2/core/models/sensitive_category_request.dart';
 
 class CategoryApprovalService {
-  CategoryApprovalService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CategoryApprovalService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _functions = functions ??
+            (firestore == null
+                ? FirebaseFunctions.instanceFor(
+                    region: AppConfig.functionsRegion,
+                  )
+                : null),
+        _useAuthoritativeFunctions = firestore == null;
 
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions? _functions;
+  final bool _useAuthoritativeFunctions;
 
   SensitiveCategoryRequest buildRequestDraft({
     required String providerId,
@@ -40,6 +53,34 @@ class CategoryApprovalService {
     List<String> portfolioUrls = const [],
     List<String> documentRefs = const [],
   }) async {
+    if (_useAuthoritativeFunctions) {
+      final response = await _functions!
+          .httpsCallable('categories_submitSensitiveRequest')
+          .call(<String, dynamic>{
+        'categoryId': categoryId,
+        'evidenceTypes': evidenceTypesToFirestore(evidenceTypes),
+        'evidenceText': evidenceText,
+        'portfolioUrls': portfolioUrls,
+        'documentRefs': documentRefs,
+      });
+      final responseData = Map<String, dynamic>.from(response.data as Map);
+      final requestId = responseData['requestId']?.toString() ?? '';
+      final now = DateTime.now();
+      return SensitiveCategoryRequest(
+        id: requestId,
+        providerId: providerId,
+        categoryId: categoryId,
+        categoryName: categoryName,
+        status: SensitiveCategoryRequestStatus.pendingReview,
+        evidenceTypes: evidenceTypes,
+        evidenceText: evidenceText,
+        portfolioUrls: portfolioUrls,
+        documentRefs: documentRefs,
+        createdAt: now,
+        updatedAt: now,
+        submittedAt: now,
+      );
+    }
     final ref = _firestore.collection('sensitiveCategoryRequests').doc();
     final now = DateTime.now();
     final request = SensitiveCategoryRequest(
@@ -93,7 +134,7 @@ class CategoryApprovalService {
     String providerId,
   ) async {
     final snap = await _firestore
-        .collection('prestadores')
+        .collection('provider_private')
         .doc(providerId)
         .collection('categoryApprovals')
         .get();
@@ -132,6 +173,23 @@ class CategoryApprovalService {
     List<String> portfolioUrls = const [],
     List<String> documentRefs = const [],
   }) async {
+    if (_useAuthoritativeFunctions) {
+      final existing = await _firestore
+          .collection('sensitiveCategoryRequests')
+          .doc(requestId)
+          .get();
+      final categoryId = existing.data()?['categoryId']?.toString() ?? '';
+      await _functions!
+          .httpsCallable('categories_submitSensitiveRequest')
+          .call(<String, dynamic>{
+        'categoryId': categoryId,
+        'evidenceTypes': evidenceTypesToFirestore(evidenceTypes),
+        'evidenceText': evidenceText,
+        'portfolioUrls': portfolioUrls,
+        'documentRefs': documentRefs,
+      });
+      return;
+    }
     await _firestore
         .collection('sensitiveCategoryRequests')
         .doc(requestId)
@@ -153,7 +211,7 @@ class CategoryApprovalService {
     String categoryId,
   ) async {
     final snap = await _firestore
-        .collection('prestadores')
+        .collection('provider_private')
         .doc(providerId)
         .collection('categoryApprovals')
         .doc(categoryId)

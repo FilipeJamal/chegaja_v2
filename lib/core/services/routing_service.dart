@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/services/locale_service.dart';
+import 'package:chegaja_v2/core/services/firebase_http_security_headers.dart';
 import 'package:chegaja_v2/firebase_options.dart';
 
 class RoutingResult {
@@ -70,7 +71,10 @@ class RoutingService {
 
     try {
       final uri = _buildDirectionsUri(start: start, end: end);
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      final headers = await FirebaseHttpSecurityHeaders.build();
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) {
         if (kDebugMode) {
           print('[RoutingService] Directions HTTP ${response.statusCode}');
@@ -91,7 +95,8 @@ class RoutingService {
       final routes = data['routes'] as List<dynamic>? ?? const [];
       if (routes.isEmpty) return null;
       final route = routes.first as Map<String, dynamic>;
-      final overview = route['overview_polyline'] as Map<String, dynamic>? ?? {};
+      final overview =
+          route['overview_polyline'] as Map<String, dynamic>? ?? {};
       final pointsEncoded = overview['points']?.toString() ?? '';
       if (pointsEncoded.isEmpty) return null;
 

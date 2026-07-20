@@ -69,6 +69,9 @@ Future<void> _seedPedido(FakeFirebaseFirestore db, Pedido pedido) async {
 double _asDouble(dynamic value) => (value as num).toDouble();
 
 class _FakePedidoValueFunctionsGateway implements PedidoValueFunctionsGateway {
+  @override
+  Future<void> aceitarPedidoDispatch({required String pedidoId}) async {}
+
   final propostas = <Map<String, dynamic>>[];
   final confirmacoes = <String>[];
 
@@ -97,7 +100,7 @@ void main() {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);
 
-      await db.collection('prestadores').doc('prest_1').set({
+      await db.collection('provider_public').doc('prest_1').set({
         'servicos': ['srv_eletricista'],
         'servicosNomes': ['Eletricista'],
       });
@@ -135,7 +138,7 @@ void main() {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);
 
-      await db.collection('prestadores').doc('prest_2').set({
+      await db.collection('provider_public').doc('prest_2').set({
         'servicos': ['srv_canalizacao'],
         'servicosNomes': ['Canalizacao'],
       });
@@ -157,7 +160,7 @@ void main() {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);
 
-      await db.collection('prestadores').doc('prest_outro').set({
+      await db.collection('provider_public').doc('prest_outro').set({
         'servicos': ['other_service'],
         'servicosNomes': ['Outro servico'],
       });
@@ -183,7 +186,7 @@ void main() {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);
 
-      await db.collection('prestadores').doc('prest_custom').set({
+      await db.collection('provider_public').doc('prest_custom').set({
         'servicos': ['custom_consultoria_de_imagem'],
         'servicosNomes': ['Consultoria de imagem'],
         'customServiceSearchTerms': ['consultoria de imagem', 'moda'],
@@ -201,7 +204,8 @@ void main() {
         prestadorId: 'prest_custom',
       );
 
-      final snap = await db.collection('pedidos').doc('pedido_custom_match').get();
+      final snap =
+          await db.collection('pedidos').doc('pedido_custom_match').get();
       expect(snap.data()!['prestadorId'], 'prest_custom');
     });
 
@@ -209,7 +213,7 @@ void main() {
       final db = FakeFirebaseFirestore();
       final service = PedidoService(firestore: db, trackAnalytics: false);
 
-      await db.collection('prestadores').doc('prest_1').set({
+      await db.collection('provider_public').doc('prest_1').set({
         'servicos': ['electricity'],
         'servicosNomes': ['Eletricidade'],
       });
