@@ -172,6 +172,8 @@ Executada em 2026-07-24 sobre a branch U0, antes da criação do pull request:
   mantidos visíveis;
 - `node --check functions/index.js`: aprovado;
 - `git diff --check`: aprovado, sem erros de whitespace;
+- Gradle Wrapper 8.12 versionado; JAR e distribuição ligados aos SHA-256
+  oficiais, incluindo `distributionSha256Sum`;
 - varredura de segredos e dados pessoais: nenhum NUIT/NIF pessoal, chave
   privada ou credencial live introduzido pela branch.
 
