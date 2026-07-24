@@ -1,4 +1,3 @@
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,51 +55,35 @@ void main() {
   });
 
   group('ContatoSection', () {
-    testWidgets('mostra Ver perfil no detalhe Cliente com prestador associado',
-        (
+    testWidgets('fica oculta mesmo com prestador ate existir endpoint seguro', (
       tester,
     ) async {
-      final db = FakeFirebaseFirestore();
-      await db.collection('provider_public').doc('prestador_1').set({
-        'nome': 'Ana Reparacoes',
-        'photoUrl': 'https://example.com/foto.jpg',
-        'phone': '+351900000000',
-      });
-
       await tester.pumpWidget(
         _wrap(
           ContatoSection(
             pedido: _buildPedido(prestadorId: 'prestador_1'),
             isCliente: true,
-            firestore: db,
-            resolvePhone: (data) => (data['phone'] ?? '').toString(),
-            onCall: (_) async {},
           ),
         ),
       );
       await tester.pump();
 
-      expect(find.text('Contacto'), findsOneWidget);
-      expect(find.text('Ver perfil'), findsOneWidget);
+      expect(find.text('Contacto'), findsNothing);
+      expect(find.text('Ver perfil'), findsNothing);
       expect(
         find.byKey(const Key('pedido_provider_profile_action')),
-        findsOneWidget,
+        findsNothing,
       );
     });
 
     testWidgets('nao mostra Ver perfil quando pedido nao tem prestador', (
       tester,
     ) async {
-      final db = FakeFirebaseFirestore();
-
       await tester.pumpWidget(
         _wrap(
           ContatoSection(
             pedido: _buildPedido(prestadorId: null),
             isCliente: true,
-            firestore: db,
-            resolvePhone: (data) => (data['phone'] ?? '').toString(),
-            onCall: (_) async {},
           ),
         ),
       );

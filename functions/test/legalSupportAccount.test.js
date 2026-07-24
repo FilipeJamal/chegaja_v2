@@ -18,6 +18,19 @@ describe('legal consent, support and account deletion', () => {
     'provider_dispatch_private',
     'public_profiles',
     'pedidos',
+    'pilot_participants',
+    'provider_opportunities',
+    'provider_acceptance_limits',
+    'account_merge_sources',
+    'account_merge_audit',
+    'account_deletion_audit',
+    'adminAuditLogs',
+    'security_event_logs',
+    'handles',
+    'stories',
+    'pedido_dispatch',
+    'reports',
+    'service_moderation_queue',
   ];
 
   beforeEach(async () => {
@@ -194,6 +207,22 @@ describe('legal consent, support and account deletion', () => {
       status: 'concluido',
       morada: 'Rua que deve desaparecer',
     });
+    await db.collection('pedidos').doc('finished-provider-job').set({
+      clienteId: 'client-finished',
+      prestadorId: phoneAuth.uid,
+      providerAccessGranted: true,
+      providerAccessGrantedTo: phoneAuth.uid,
+      providerAccessGrantedAt: new Date(),
+      status: 'concluido',
+    });
+    await db.collection('pedidos').doc('inconsistent-provider-grant').set({
+      clienteId: 'client-finished',
+      prestadorId: 'another-provider',
+      providerAccessGranted: true,
+      providerAccessGrantedTo: phoneAuth.uid,
+      providerAccessGrantedAt: new Date(),
+      status: 'concluido',
+    });
     await db.collection('chats').doc('private-chat').set({
       clienteId: phoneAuth.uid,
       prestadorId: 'provider-finished',
@@ -223,6 +252,32 @@ describe('legal consent, support and account deletion', () => {
     const retainedOrder = (await db.collection('pedidos').doc('finished-job').get()).data();
     assert.strictEqual(retainedOrder.clienteId, result.pseudonym);
     assert.strictEqual(Object.prototype.hasOwnProperty.call(retainedOrder, 'morada'), false);
+    const retainedProviderOrder = (
+      await db.collection('pedidos').doc('finished-provider-job').get()
+    ).data();
+    assert.strictEqual(retainedProviderOrder.prestadorId, result.pseudonym);
+    assert.strictEqual(retainedProviderOrder.providerAccessGranted, false);
+    assert.strictEqual(
+      Object.prototype.hasOwnProperty.call(retainedProviderOrder, 'providerAccessGrantedTo'),
+      false,
+    );
+    assert.strictEqual(
+      Object.prototype.hasOwnProperty.call(retainedProviderOrder, 'providerAccessGrantedAt'),
+      false,
+    );
+    const inconsistentGrant = (
+      await db.collection('pedidos').doc('inconsistent-provider-grant').get()
+    ).data();
+    assert.strictEqual(inconsistentGrant.prestadorId, 'another-provider');
+    assert.strictEqual(inconsistentGrant.providerAccessGranted, false);
+    assert.strictEqual(
+      Object.prototype.hasOwnProperty.call(inconsistentGrant, 'providerAccessGrantedTo'),
+      false,
+    );
+    assert.strictEqual(
+      Object.prototype.hasOwnProperty.call(inconsistentGrant, 'providerAccessGrantedAt'),
+      false,
+    );
     assert.strictEqual((await db.collection('users_private').doc(phoneAuth.uid).get()).exists, false);
     assert.strictEqual((await db.collection('chats').doc('private-chat').get()).exists, false);
     assert.strictEqual((await db.collection('support_tickets').doc('private-ticket').get()).exists, false);
@@ -232,10 +287,235 @@ describe('legal consent, support and account deletion', () => {
     );
   });
 
+  it('resumes an interrupted executing deletion and removes every owned storage prefix before Auth', async () => {
+    const uid = phoneAuth.uid;
+    await Promise.all([
+      db.collection('users_private').doc(uid).set({ accountStatus: 'deletion_pending' }),
+      db.collection('account_deletion_requests').doc(uid).set({
+        uid,
+        status: 'pending',
+        executeAt: new Date(Date.now() - 1000),
+      }),
+      db.collection('pilot_participants').doc(uid).set({ uid, status: 'inactive' }),
+      db.collection('provider_opportunities').doc(`pedido_${uid}`).set({
+        providerId: uid,
+        pedidoId: 'pedido',
+      }),
+      db.collection('provider_acceptance_limits').doc(`${uid}_window`).set({
+        providerId: uid,
+        count: 1,
+      }),
+      db.collection('account_merge_sources').doc('anonymous-source').set({
+        sourceUid: 'anonymous-source',
+        targetUid: uid,
+        status: 'complete',
+      }),
+      db.collection('account_merge_audit').doc('merge-audit').set({
+        sourceUid: 'anonymous-source',
+        targetUid: uid,
+        note: `merged-into:${uid}`,
+      }),
+      db.collection('legal_consent_audit').doc('legal-audit').set({
+        uid,
+        version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+      }),
+      db.collection('adminAuditLogs').doc('admin-audit').set({
+        actorUid: 'admin',
+        targetId: `${uid}_category`,
+        metadata: { providerId: uid },
+      }),
+      db.collection('security_event_logs').doc('security-audit').set({
+        actorUid: uid,
+        targetId: uid,
+        action: 'kyc.submitted',
+      }),
+      db.collection('handles').doc('old-handle').set({ uid, previousOwnerUid: uid }),
+      db.collection('stories').doc('old-story').set({ prestadorId: uid }),
+      db.collection('pedido_dispatch').doc('targeted-dispatch').set({ targetPrestadorId: uid }),
+      db.collection('reports').doc('retained-report').set({
+        reporterId: uid,
+        targetOwnerId: uid,
+        details: `report-by:${uid}`,
+      }),
+      db.collection('service_moderation_queue').doc('old-moderation').set({ requesterId: uid }),
+      db.collection('provider_dispatch_private').doc('other-provider').set({
+        activeClientIds: ['someone-else', uid],
+      }),
+    ]);
+
+    const events = [];
+    let failOnce = true;
+    const bucket = {
+      async deleteFiles({ prefix }) {
+        events.push(`storage:${prefix}`);
+        if (failOnce && prefix === `prestadores/${uid}/`) {
+          failOnce = false;
+          throw new Error('injected-storage-failure');
+        }
+      },
+    };
+    const authAdmin = {
+      async deleteUser(deletedUid) {
+        events.push(`auth:${deletedUid}`);
+      },
+    };
+
+    await assert.rejects(
+      () => __test__.accounts.executeAccountDeletionCore({
+        database: db,
+        uid,
+        bucket,
+        authAdmin,
+      }),
+      /injected-storage-failure/,
+    );
+    const interrupted = (
+      await db.collection('account_deletion_requests').doc(uid).get()
+    ).data();
+    assert.strictEqual(interrupted.status, 'executing');
+    assert.strictEqual(interrupted.attempt, 1);
+    assert.ok(interrupted.lastAttemptAt);
+    assert.match(interrupted.lastError, /injected-storage-failure/);
+    assert.strictEqual(events.some((event) => event.startsWith('auth:')), false);
+
+    const result = await __test__.accounts.executeAccountDeletionCore({
+      database: db,
+      uid,
+      bucket,
+      authAdmin,
+    });
+    assert.strictEqual(result.ok, true);
+
+    const storageRoots = [
+      'users',
+      'prestadores',
+      'kyc_pending',
+      'profile_public',
+      'portfolio',
+      'stories',
+      'temp',
+      'kyc',
+      'category_evidence',
+    ];
+    const expectedPrefixes = storageRoots.map((prefix) => `${prefix}/${uid}/`);
+    const mergedSourcePrefixes = storageRoots
+      .map((prefix) => `${prefix}/anonymous-source/`);
+    for (const prefix of expectedPrefixes) {
+      assert.ok(events.includes(`storage:${prefix}`), `missing storage cleanup for ${prefix}`);
+    }
+    for (const prefix of mergedSourcePrefixes) {
+      assert.ok(events.includes(`storage:${prefix}`), `missing merged-source cleanup for ${prefix}`);
+    }
+    const firstAuthIndex = events.findIndex((event) => event.startsWith('auth:'));
+    assert.ok(firstAuthIndex > -1);
+    assert.ok([...expectedPrefixes, ...mergedSourcePrefixes].every(
+      (prefix) => events.lastIndexOf(`storage:${prefix}`) < firstAuthIndex,
+    ));
+    assert.ok(events.includes('auth:anonymous-source'));
+    assert.ok(events.includes(`auth:${uid}`));
+
+    assert.strictEqual((await db.collection('pilot_participants').doc(uid).get()).exists, false);
+    assert.strictEqual(
+      (await db.collection('provider_opportunities').where('providerId', '==', uid).get()).empty,
+      true,
+    );
+    assert.strictEqual(
+      (await db.collection('provider_acceptance_limits').where('providerId', '==', uid).get()).empty,
+      true,
+    );
+    assert.strictEqual(
+      (await db.collection('account_merge_sources').where('targetUid', '==', uid).get()).empty,
+      true,
+    );
+    assert.strictEqual((await db.collection('handles').doc('old-handle').get()).exists, false);
+    assert.strictEqual((await db.collection('stories').doc('old-story').get()).exists, false);
+    assert.strictEqual(
+      (await db.collection('pedido_dispatch').doc('targeted-dispatch').get()).exists,
+      false,
+    );
+    assert.strictEqual(
+      (await db.collection('service_moderation_queue').doc('old-moderation').get()).exists,
+      false,
+    );
+    assert.deepStrictEqual(
+      (await db.collection('provider_dispatch_private').doc('other-provider').get())
+        .data().activeClientIds,
+      ['someone-else'],
+    );
+    for (const [collection, id] of [
+      ['account_merge_audit', 'merge-audit'],
+      ['legal_consent_audit', 'legal-audit'],
+      ['adminAuditLogs', 'admin-audit'],
+      ['security_event_logs', 'security-audit'],
+      ['reports', 'retained-report'],
+    ]) {
+      const audit = (await db.collection(collection).doc(id).get()).data();
+      assert.ok(audit, `${collection}/${id} must be retained`);
+      assert.strictEqual(JSON.stringify(audit).includes(uid), false);
+      assert.strictEqual(JSON.stringify(audit).includes('anonymous-source'), false);
+      assert.ok(JSON.stringify(audit).includes(result.pseudonym));
+    }
+  });
+
+  it('blocks new public activity while account deletion is pending', async () => {
+    await db.collection('users_private').doc(phoneAuth.uid).set({
+      accountStatus: 'deletion_pending',
+    });
+    await assert.rejects(
+      () => __test__.auth.syncPhoneIdentityCore({
+        database: db,
+        auth: phoneAuth,
+        authAdmin: {
+          getUser: async () => ({ uid: phoneAuth.uid, phoneNumber: '+258840000001' }),
+        },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => __test__.pedidos.createSecurePedidoCore({
+        database: db,
+        auth: phoneAuth,
+        data: { servicoId: 'cleaning' },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => __test__.providers.updateProviderServicesCore({
+        database: db,
+        auth: phoneAuth,
+        data: { serviceIds: ['cleaning'] },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => __test__.privateStorage.finalizePrivateStorageUploadCore({
+        database: db,
+        auth: phoneAuth,
+        storage: { bucket: () => { throw new Error('must not reach storage'); } },
+        data: { path: `temp/${phoneAuth.uid}/anexos/new.jpg` },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => __test__.handles.handleReserveProviderHandleCore({
+        database: db,
+        auth: phoneAuth,
+        data: { handle: 'pending-delete' },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+  });
+
   it('recognizes terminal and active order states', () => {
     assert.strictEqual(__test__.accounts.isActiveAccountOrder({ status: 'concluido' }), false);
     assert.strictEqual(__test__.accounts.isActiveAccountOrder({ estado: 'cancelado' }), false);
     assert.strictEqual(__test__.accounts.isActiveAccountOrder({ status: 'aceito' }), true);
+    assert.strictEqual(__test__.accounts.isActiveAccountOrder({
+      status: 'concluido', estado: 'aceito',
+    }), true);
+    assert.strictEqual(__test__.accounts.isActiveAccountOrder({
+      status: 'concluido', estado: 'cancelado',
+    }), true);
     assert.strictEqual(__test__.accounts.isActiveAccountOrder({}), true);
   });
 });

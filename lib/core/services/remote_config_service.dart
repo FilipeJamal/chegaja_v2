@@ -9,15 +9,16 @@ class RemoteConfigService {
 
   Future<void> init() async {
     try {
-      await _remoteConfig.setConfigSettings(RemoteConfigSettings(
-        fetchTimeout: const Duration(minutes: 1),
-        minimumFetchInterval: kDebugMode
-            ? const Duration(minutes: 5)
-            : const Duration(hours: 12),
-      ),);
+      await _remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(minutes: 1),
+          minimumFetchInterval: kDebugMode
+              ? const Duration(minutes: 5)
+              : const Duration(hours: 12),
+        ),
+      );
 
       await _remoteConfig.setDefaults(const {
-        'default_commission_rate': 0.15,
         'min_android_version': 21,
         'maintenance_mode': false,
       });
@@ -27,10 +28,6 @@ class RemoteConfigService {
     } catch (e) {
       debugPrint('[RemoteConfig] Error initializing: $e');
     }
-  }
-
-  double getCommissionRate() {
-    return _remoteConfig.getDouble('default_commission_rate');
   }
 
   int getMinAndroidVersion() {

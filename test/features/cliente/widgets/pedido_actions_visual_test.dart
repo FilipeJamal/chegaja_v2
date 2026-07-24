@@ -14,6 +14,9 @@ Pedido buildPedido({
   double? valorMinEstimadoPrestador = 20,
   double? valorMaxEstimadoPrestador = 35,
   double? precoPropostoPrestador,
+  double? commissionPlatform,
+  double? earningsProvider,
+  double? earningsTotal,
 }) {
   return Pedido(
     id: 'pedido_actions',
@@ -32,6 +35,9 @@ Pedido buildPedido({
     valorMinEstimadoPrestador: valorMinEstimadoPrestador,
     valorMaxEstimadoPrestador: valorMaxEstimadoPrestador,
     precoPropostoPrestador: precoPropostoPrestador,
+    commissionPlatform: commissionPlatform,
+    earningsProvider: earningsProvider,
+    earningsTotal: earningsTotal,
     createdAt: DateTime(2026, 5, 19),
   );
 }
@@ -174,8 +180,9 @@ void main() {
     for (final label in <String>[
       'À espera da confirmação do cliente para o valor final.',
       'Valor bruto',
-      'Taxa da plataforma (15%)',
-      'Valor líquido (para ti)',
+      'A comissão e o valor líquido exatos serão calculados pelo '
+          'ChegaJá quando o cliente confirmar. Os primeiros trabalhos '
+          'podem ter isenção segundo a política ativa do piloto.',
     ]) {
       final text = tester.widget<Text>(find.text(label));
       expect(
@@ -184,5 +191,62 @@ void main() {
         reason: '$label precisa de contraste principal em dark mode',
       );
     }
+    expect(
+      find.byKey(const Key('prestador_commission_pending_summary')),
+      findsOneWidget,
+    );
+    expect(find.text('Taxa da plataforma (15%)'), findsNothing);
+  });
+
+  testWidgets('resumo concluído mostra apenas valores autoritativos',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        PrestadorPedidoAcoes(
+          pedido: buildPedido(
+            estado: 'concluido',
+            statusProposta: 'aceita_cliente',
+            statusConfirmacaoValor: 'confirmado_cliente',
+            precoPropostoPrestador: 100,
+            commissionPlatform: 10,
+            earningsProvider: 90,
+            earningsTotal: 100,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Taxa da plataforma (10%)'), findsOneWidget);
+    expect(find.text('Valor líquido (para ti)'), findsOneWidget);
+    expect(
+      find.byKey(const Key('prestador_commission_pending_summary')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('resumo concluído incompleto pede reconciliação sem estimar',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        PrestadorPedidoAcoes(
+          pedido: buildPedido(
+            estado: 'concluido',
+            statusProposta: 'aceita_cliente',
+            statusConfirmacaoValor: 'confirmado_cliente',
+            precoPropostoPrestador: 100,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.textContaining('O ChegaJá precisa reconciliar este trabalho'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('quando o cliente confirmar'), findsNothing);
+    expect(find.textContaining('Taxa da plataforma ('), findsNothing);
+    expect(find.text('A reconciliar'), findsOneWidget);
+    expect(find.textContaining('100'), findsNothing);
+    expect(find.text('Valor líquido (para ti)'), findsNothing);
   });
 }

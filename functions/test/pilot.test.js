@@ -7,7 +7,7 @@ process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'chegaja-ac88d';
 const { __test__ } = require('../index');
 
 describe('controlled Maputo pilot', function () {
-  this.timeout(120000);
+  this.timeout(300000);
   const db = __test__.getDb();
   const originalAllowlist = process.env.PILOT_REQUIRE_ALLOWLIST;
   const originalMaputoOnly = process.env.PILOT_MAPUTO_ONLY;
@@ -69,6 +69,86 @@ describe('controlled Maputo pilot', function () {
         role: 'cliente',
       }),
       (error) => error.code === 'permission-denied',
+    );
+  });
+
+  it('requires phone, current consent, cohort and role before payment actions', async () => {
+    await Promise.all([
+      db.collection('pilot_participants').doc('provider-payment').set({
+        status: 'active',
+        roles: ['prestador'],
+        city: 'Maputo',
+      }),
+      db.collection('users_private').doc('provider-payment').set({
+        legalConsent: {
+          version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+          termsAccepted: true,
+          privacyAccepted: true,
+          ageConfirmed: true,
+        },
+        accountStatus: 'active',
+      }),
+    ]);
+
+    const auth = {
+      uid: 'provider-payment',
+      token: { phone_number: '+258840000004' },
+    };
+    const uid = await __test__.payments.requirePaymentActor({
+      auth,
+      role: 'prestador',
+      database: db,
+    });
+    assert.strictEqual(uid, 'provider-payment');
+
+    await assert.rejects(
+      () => __test__.payments.requirePaymentActor({
+        auth: { uid: 'provider-payment', token: {} },
+        role: 'prestador',
+        database: db,
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => __test__.payments.requirePaymentActor({
+        auth,
+        role: 'cliente',
+        database: db,
+      }),
+      (error) => error.code === 'permission-denied',
+    );
+
+    await db.collection('users_private').doc('provider-payment').update({
+      accountStatus: 'deletion_pending',
+    });
+    await assert.rejects(
+      () => __test__.payments.requirePaymentActor({
+        auth,
+        role: 'prestador',
+        database: db,
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await db.collection('users_private').doc('provider-payment').update({
+      accountStatus: 'inactive',
+    });
+    await assert.rejects(
+      () => __test__.payments.requirePaymentActor({
+        auth,
+        role: 'prestador',
+        database: db,
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+
+    await db.collection('users_private').doc('provider-payment').delete();
+    await assert.rejects(
+      () => __test__.payments.requirePaymentActor({
+        auth,
+        role: 'prestador',
+        database: db,
+      }),
+      (error) => error.code === 'failed-precondition',
     );
   });
 
@@ -157,13 +237,20 @@ describe('controlled Maputo pilot', function () {
       }),
       db.collection('pedidos').doc('order1').set({
         clienteId: 'client1', prestadorId: 'provider1', status: 'concluido',
-        precoFinal: 1000, earningsProvider: 900, commissionPlatform: 100,
+        precoFinal: 1000, earningsTotal: 1000,
+        earningsProvider: 900, commissionPlatform: 100,
         updatedAt: days(15), createdAt: days(18),
       }),
       db.collection('pedidos').doc('order2').set({
         clienteId: 'client1', prestadorId: 'provider2', status: 'concluido',
-        precoFinal: 2000, earningsProvider: 1800, commissionPlatform: 200,
+        precoFinal: 2000, earningsTotal: 2000,
+        earningsProvider: 1800, commissionPlatform: 200,
         updatedAt: days(5), createdAt: days(10),
+      }),
+      db.collection('pedidos').doc('order3').set({
+        clienteId: 'client1', prestadorId: 'provider1', status: 'concluido',
+        precoFinal: 500,
+        updatedAt: days(2), createdAt: days(3),
       }),
       db.collection('commission_payments').doc('receipt1').set({
         providerId: 'provider1', amount: 50, createdAt: days(1),
@@ -185,9 +272,12 @@ describe('controlled Maputo pilot', function () {
     assert.strictEqual(metrics.mission.rate, 0.5);
     assert.strictEqual(metrics.providers.receivedFirstOpportunity, 1);
     assert.strictEqual(metrics.providers.completedFirstPaidWork, 2);
-    assert.strictEqual(metrics.requests.completed, 2);
-    assert.strictEqual(metrics.value.gmvMzn, 3000);
+    assert.strictEqual(metrics.requests.completed, 3);
+    assert.strictEqual(metrics.value.gmvMzn, 3500);
     assert.strictEqual(metrics.value.providerEarningsMzn, 2700);
+    assert.strictEqual(metrics.value.commissionDueMzn, 300);
+    assert.strictEqual(metrics.value.financialRecordsComplete, 2);
+    assert.strictEqual(metrics.value.financialRecordsIncomplete, 1);
     assert.strictEqual(metrics.value.commissionsCollectedMzn, 50);
     assert.strictEqual(metrics.clients.returning, 1);
     assert.strictEqual(metrics.trustSafety.disputesOpened, 2);

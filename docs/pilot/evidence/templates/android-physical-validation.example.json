@@ -1,7 +1,12 @@
 {
+  "schemaVersion": "p1-physical-android-evidence-v2",
   "status": "PENDING",
+  "projectId": "TODO",
+  "projectNumber": "TODO",
+  "sourceRevision": "TODO_40_HEX_GIT_COMMIT",
   "executedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
   "apkSha256": "TODO",
+  "testRunReference": "TODO",
   "device": {
     "physical": true,
     "apiLevel": 33,
@@ -11,18 +16,30 @@
     "network": "TODO"
   },
   "cases": [
-    { "id": "clean_install", "result": "blocked", "evidence": "TODO" },
-    { "id": "notifications_denied", "result": "blocked", "evidence": "TODO" },
-    { "id": "notifications_granted", "result": "blocked", "evidence": "TODO" },
-    { "id": "location_denied", "result": "blocked", "evidence": "TODO" },
-    { "id": "location_approximate", "result": "blocked", "evidence": "TODO" },
-    { "id": "location_precise", "result": "blocked", "evidence": "TODO" },
-    { "id": "camera_denied", "result": "blocked", "evidence": "TODO" },
-    { "id": "camera_granted", "result": "blocked", "evidence": "TODO" },
-    { "id": "permission_permanently_denied", "result": "blocked", "evidence": "TODO" },
-    { "id": "background_notification", "result": "blocked", "evidence": "TODO" },
-    { "id": "weak_or_offline_network", "result": "blocked", "evidence": "TODO" },
-    { "id": "restart_state_preserved", "result": "blocked", "evidence": "TODO" }
+    { "id": "clean_install", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "notifications_denied", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "notifications_granted", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "location_denied", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "location_approximate", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "location_precise", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "camera_denied", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "camera_granted", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "permission_permanently_denied", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "background_notification", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "weak_or_offline_network", "result": "blocked", "evidenceReference": "TODO" },
+    { "id": "restart_state_preserved", "result": "blocked", "evidenceReference": "TODO" }
   ],
-  "logsRedacted": false
+  "evidenceBundle": {
+    "schemaVersion": "p1-audit-reference-v1",
+    "provider": "android-test-run",
+    "logReference": "TODO_TEST_RUN_LOG_REFERENCE",
+    "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "artifactPath": "docs/pilot/evidence/audits/TODO.json",
+    "artifactSha256": "TODO_SHA256",
+    "reviewReference": "TODO_REVIEW_REFERENCE",
+    "redacted": true,
+    "containsParticipantIdentifiers": false
+  },
+  "logsRedacted": false,
+  "containsParticipantIdentifiers": true
 }

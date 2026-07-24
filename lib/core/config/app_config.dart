@@ -122,6 +122,9 @@ class AppConfig extends InheritedWidget {
   static bool get callsEnabled =>
       _readBool('ENABLE_CALLS', defaultValue: false);
 
+  static bool get noShowReportingEnabled =>
+      _readBool('ENABLE_NO_SHOW_REPORTING', defaultValue: false);
+
   static bool get subscriptionsEnabled =>
       _readBool('ENABLE_SUBSCRIPTIONS', defaultValue: false);
 

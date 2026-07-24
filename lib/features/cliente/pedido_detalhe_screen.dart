@@ -12,6 +12,7 @@ import 'package:chegaja_v2/core/services/private_storage_media_service.dart';
 import 'package:chegaja_v2/core/models/chat_message.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_pedido_acoes.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
@@ -20,6 +21,7 @@ import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/politica_reembolso.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
+import 'package:chegaja_v2/core/utils/pedido_state_machine.dart';
 import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
@@ -31,7 +33,6 @@ import 'package:chegaja_v2/features/cliente/widgets/avaliacao_pedido_card.dart';
 import 'package:chegaja_v2/features/cliente/widgets/cliente_pedido_acoes.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_banners.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_chat_widgets.dart';
-import 'package:chegaja_v2/features/cliente/widgets/pedido_contato_section.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_detail_components.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_final_state_panel.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_flow_presenter.dart';
@@ -137,21 +138,6 @@ class PedidoDetalheScreen extends StatelessWidget {
     }
 
     return l10n.valueUnknown;
-  }
-
-  String _resolvePhone(Map<String, dynamic> data) {
-    final phone =
-        (data['phoneE164'] ?? data['phoneNumber'] ?? data['phone'] ?? '')
-            .toString()
-            .trim();
-    if (phone.isNotEmpty) return phone;
-    return (data['phoneRaw'] ?? '').toString().trim();
-  }
-
-  Future<void> _openPhone(String phone) async {
-    final uri = Uri.tryParse('tel:$phone');
-    if (uri == null) return;
-    await launchUrl(uri);
   }
 
   @override
@@ -296,7 +282,8 @@ class PedidoDetalheScreen extends StatelessWidget {
                 ? 'cliente'
                 : (isPrestadorViewer ? 'prestador' : null);
             final bool hasNoShow = pedido.noShowReportedBy != null;
-            final bool podeReportarNoShow = !hasNoShow &&
+            final bool podeReportarNoShow = AppConfig.noShowReportingEnabled &&
+                !hasNoShow &&
                 pedido.prestadorId != null &&
                 noShowRole != null &&
                 (pedido.estado == 'aceito' ||
@@ -582,14 +569,6 @@ class PedidoDetalheScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    ContatoSection(
-                      pedido: pedido,
-                      isCliente: isCliente,
-                      resolvePhone: _resolvePhone,
-                      onCall: _openPhone,
-                    ),
-                    const SizedBox(height: 16),
-
                     // MAPA DO PEDIDO (preview + tap -> fullscreen)
                     Text(
                       l10n.orderLocationTitle,
@@ -703,14 +682,16 @@ class PedidoDetalheScreen extends StatelessWidget {
                     ],
 
                     // CHAT (cartão que abre/fecha o chat)
-                    ChatExpandable(
-                      pedidoId: pedido.id,
-                      isCliente: isCliente,
-                      otherUserId:
-                          isCliente ? pedido.prestadorId : pedido.clienteId,
-                      pedidoTitulo: pedido.titulo,
-                    ),
-                    const SizedBox(height: 16),
+                    if (pedido.hasAcceptedProviderAccess) ...[
+                      ChatExpandable(
+                        pedidoId: pedido.id,
+                        isCliente: isCliente,
+                        otherUserId:
+                            isCliente ? pedido.prestadorId : pedido.clienteId,
+                        pedidoTitulo: pedido.titulo,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
                     if (podeEditar || podeCancelar) ...[
                       const Divider(),
@@ -778,11 +759,19 @@ class PedidoDetalheScreen extends StatelessWidget {
       final user = AuthService.currentUser;
       if (user == null) return;
 
-      await PedidoService.instance.convidarPrestadorManual(
-        pedido: pedido,
-        clienteId: user.uid,
-        prestadorId: selecionado.id,
-      );
+      if (pedido.estado == PedidoStateMachine.aguardaRespostaPrestador) {
+        await PedidoService.instance.trocarPrestadorConvidado(
+          pedido: pedido,
+          clienteId: user.uid,
+          prestadorId: selecionado.id,
+        );
+      } else {
+        await PedidoService.instance.convidarPrestadorManual(
+          pedido: pedido,
+          clienteId: user.uid,
+          prestadorId: selecionado.id,
+        );
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Convite enviado ao prestador.')),
@@ -1263,7 +1252,8 @@ class PedidoDetalheScreen extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                          PedidoFlowPresenter.errorMessage('sendFinalValue')),
+                        PedidoFlowPresenter.errorMessage('sendFinalValue'),
+                      ),
                     ),
                   );
                 }
@@ -2474,121 +2464,6 @@ String _formatDistance(double km, AppLocalizations l10n) {
   }
   final kmLabel = NumberFormat('0.0', l10n.localeName).format(km);
   return l10n.distanceKilometers(kmLabel);
-}
-
-class _ContatoSection extends StatelessWidget {
-  final Pedido pedido;
-  final bool isCliente;
-  final String Function(Map<String, dynamic>) resolvePhone;
-  final Future<void> Function(String) onCall;
-
-  const _ContatoSection({
-    required this.pedido,
-    required this.isCliente,
-    required this.resolvePhone,
-    required this.onCall,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final otherId = isCliente ? pedido.prestadorId : pedido.clienteId;
-    if (otherId == null || otherId.trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final collection = isCliente ? 'prestadores' : 'users';
-    final fallbackCollection = isCliente ? 'users' : null;
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection(collection)
-          .doc(otherId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return _buildContactCard(context, phone: '', loading: true);
-        }
-        final data = snapshot.data?.data() ?? <String, dynamic>{};
-        final primaryPhone = resolvePhone(data);
-        final shouldFallback =
-            primaryPhone.isEmpty && fallbackCollection != null;
-
-        if (shouldFallback) {
-          return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection(fallbackCollection)
-                .doc(otherId)
-                .snapshots(),
-            builder: (context, fallbackSnap) {
-              final fallbackData =
-                  fallbackSnap.data?.data() ?? <String, dynamic>{};
-              final fallbackPhone = resolvePhone(fallbackData);
-              return _buildContactCard(
-                context,
-                phone: fallbackPhone,
-              );
-            },
-          );
-        }
-
-        return _buildContactCard(
-          context,
-          phone: primaryPhone,
-        );
-      },
-    );
-  }
-
-  Widget _buildContactCard(
-    BuildContext context, {
-    required String phone,
-    bool loading = false,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final hasPhone = phone.isNotEmpty;
-    final label = loading
-        ? 'A carregar...'
-        : (hasPhone ? phone : 'Telefone nao informado');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Contacto',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorScheme.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.phone_outlined),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: 13, color: colorScheme.onSurface),
-                ),
-              ),
-              if (hasPhone)
-                IconButton(
-                  tooltip: 'Ligar',
-                  onPressed: () => onCall(phone),
-                  icon: const Icon(Icons.call),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 String _formatEta(double km, AppLocalizations l10n) {

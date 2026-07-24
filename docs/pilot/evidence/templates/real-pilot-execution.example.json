@@ -1,7 +1,12 @@
 {
+  "schemaVersion": "p1-real-pilot-evidence-v2",
   "status": "PENDING",
-  "startedAt": "YYYY-MM-DD",
-  "completedAt": "YYYY-MM-DD",
+  "projectId": "TODO",
+  "projectNumber": "TODO",
+  "sourceRevision": "TODO_40_HEX_GIT_COMMIT",
+  "startedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "completedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
   "apkSha256": "TODO",
   "cohort": {
     "providers": 0,
@@ -19,7 +24,23 @@
     "disputesOpened": 0,
     "disputesResolved": 0
   },
+  "cohortReference": "TODO",
+  "consentAuditReference": "TODO",
+  "metricsSnapshotReference": "TODO",
+  "closureReference": "TODO",
   "participantConsentRecorded": false,
   "aggregatedDataOnly": true,
-  "closureApproved": false
+  "containsParticipantIdentifiers": true,
+  "closureApproved": false,
+  "closureAudit": {
+    "schemaVersion": "p1-audit-reference-v1",
+    "provider": "chegaja-pilot-audit",
+    "logReference": "TODO_PILOT_AUDIT_REFERENCE",
+    "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "artifactPath": "docs/pilot/evidence/audits/TODO.json",
+    "artifactSha256": "TODO_SHA256",
+    "reviewReference": "TODO_METRICS_REVIEW_REFERENCE",
+    "redacted": true,
+    "containsParticipantIdentifiers": false
+  }
 }

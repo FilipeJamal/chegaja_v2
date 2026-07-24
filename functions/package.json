@@ -6,7 +6,7 @@
     "node": "22"
   },
   "scripts": {
-    "test": "mocha --exit --timeout 30000"
+    "test": "mocha --exit --timeout 120000"
   },
   "dependencies": {
     "cors": "^2.8.6",

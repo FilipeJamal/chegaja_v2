@@ -1,10 +1,16 @@
 ﻿# ChegaJá v2.5 (Flutter + Firebase)
 
-Este repositório é o **projeto completo** do ChegaJá (Android / iOS / Web), com:
+> **Estado canónico U0:** o primeiro piloto operacional é Android-only em
+> Coimbra/Portugal. Web, iOS, Stripe e outros pagamentos digitais permanecem
+> fora do piloto e desativados. Consulte
+> [`docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md`](docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md)
+> antes de interpretar documentação histórica.
+
+Este repositório contém o produto multiplataforma em desenvolvimento, com:
 - Flutter app (Cliente & Prestador)
 - Firestore (schema + regras)
 - FCM (tokens no `users/{uid}/fcmTokens`)
-- Cloud Functions (push + Stripe)
+- Cloud Functions (push e integrações de pagamento desativadas por defeito)
 
 > **Nota:** este repo vem pronto para ligar a um projeto Firebase, mas **tu** deves configurar o teu próprio projeto (recomendado) com `flutterfire configure`.
 
@@ -45,13 +51,13 @@ Este override existe para aplicar ajustes locais no plugin enquanto o upstream n
 1. Copia `.env.example` para `.env`.
 2. Preenche:
    - `FCM_VAPID_KEY` (obrigatório para Web push)
-   - `STRIPE_PUBLISHABLE_KEY` (para pagamentos online)
+   - `STRIPE_PUBLISHABLE_KEY` (opcional e fora do piloto atual)
 
 ### Functions
 1. Copia `functions/.env.example` para `functions/.env`.
 2. Preenche:
-   - `STRIPE_SECRET_KEY`
-   - (Opcional) `STRIPE_WEBHOOK_SECRET`
+   - `STRIPE_SECRET_KEY` (opcional e fora do piloto atual)
+   - `STRIPE_WEBHOOK_SECRET` (opcional e fora do piloto atual)
    - `APP_BASE_URL`
 
 ---

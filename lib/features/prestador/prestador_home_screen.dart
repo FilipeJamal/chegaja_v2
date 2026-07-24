@@ -19,6 +19,7 @@ import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/utils/cancelamento_motivos.dart';
 import 'package:chegaja_v2/core/utils/currency_utils.dart';
+import 'package:chegaja_v2/core/utils/pedido_economics.dart';
 import 'package:chegaja_v2/core/widgets/app_content_shell.dart';
 import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_responsive_grid.dart';
@@ -52,8 +53,6 @@ import 'package:chegaja_v2/features/prestador/widgets/prestador_home_components.
 import 'widgets/prestador_pedido_acoes.dart';
 
 final Map<String, Set<String>> _ignoradosPorPrestador = <String, Set<String>>{};
-
-const double kCommissionPercent = 0.10;
 const bool _disablePrestadorTrackingForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
 const bool _disablePrestadorHomeMessageStreamsForEmulatorTests =
@@ -79,6 +78,73 @@ List<String> prestadorSafeServiceNamesFromData(Map<String, dynamic> data) {
     customServiceNames: data['customServiceNames'],
     customServiceSearchTerms: data['customServiceSearchTerms'],
   ).serviceNames;
+}
+
+@immutable
+class PrestadorDailyEconomicsSummary {
+  const PrestadorDailyEconomicsSummary({
+    required this.grossToday,
+    required this.commissionToday,
+    required this.providerEarningsToday,
+    required this.servicesThisMonth,
+  });
+
+  final double grossToday;
+  final double? commissionToday;
+  final double? providerEarningsToday;
+  final int servicesThisMonth;
+}
+
+@visibleForTesting
+PrestadorDailyEconomicsSummary prestadorDailyEconomicsSummary(
+  Iterable<Pedido> pedidos,
+  DateTime now,
+) {
+  var grossToday = 0.0;
+  var commissionToday = 0.0;
+  var providerEarningsToday = 0.0;
+  var servicesThisMonth = 0;
+  var hasIncompleteEconomicsToday = false;
+
+  for (final pedido in pedidos) {
+    if (pedido.estado != 'concluido' || pedido.concluidoEm == null) continue;
+    final confirmationStatus = pedido.statusConfirmacaoValor;
+    if (confirmationStatus.isNotEmpty &&
+        confirmationStatus != 'nenhum' &&
+        confirmationStatus != 'confirmado_cliente') {
+      continue;
+    }
+
+    final completedAt = pedido.concluidoEm!;
+    final sameMonth =
+        completedAt.year == now.year && completedAt.month == now.month;
+    if (!sameMonth) continue;
+    servicesThisMonth += 1;
+    if (completedAt.day != now.day) continue;
+
+    final economics = pedidoAuthoritativeEconomics(pedido);
+    final gross = economics?.total ?? pedidoPersistedGross(pedido);
+    if (gross == null) {
+      hasIncompleteEconomicsToday = true;
+      continue;
+    }
+    grossToday += gross;
+
+    if (economics == null) {
+      hasIncompleteEconomicsToday = true;
+      continue;
+    }
+    commissionToday += economics.commission;
+    providerEarningsToday += economics.providerEarnings;
+  }
+
+  return PrestadorDailyEconomicsSummary(
+    grossToday: grossToday,
+    commissionToday: hasIncompleteEconomicsToday ? null : commissionToday,
+    providerEarningsToday:
+        hasIncompleteEconomicsToday ? null : providerEarningsToday,
+    servicesThisMonth: servicesThisMonth,
+  );
 }
 
 String _labelTipoPreco(String tipo) {
@@ -117,7 +183,7 @@ bool prestadorPedidoPermiteStreamChat(Pedido pedido, String prestadorId) {
   final id = prestadorId.trim();
   if (id.isEmpty) return false;
   if (_isConcluido(pedido) || _isCancelado(pedido)) return false;
-  return pedido.prestadorId == id;
+  return pedido.prestadorId == id && pedido.hasAcceptedProviderAccess;
 }
 
 bool _temAcaoPendentePrestador(Pedido p) {
@@ -633,6 +699,15 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     if (user == null) return;
 
     try {
+      final requiresQuote = pedido.tipoPreco == 'por_orcamento' ||
+          pedido.modo.toUpperCase() == 'POR_PROPOSTA';
+      if (requiresQuote) {
+        // Antes de o Cliente aceitar a estimativa, o Prestador só recebe a
+        // projeção sanitizada. A morada, os anexos e o chat continuam privados.
+        await _proporServico(context, pedido);
+        return;
+      }
+
       await PedidoService.instance.aceitarPedidoAberto(
         pedido: pedido,
         prestadorId: user.uid,
@@ -642,53 +717,9 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
       await _ensureChatMetaAfterAccept(pedido);
 
       if (!context.mounted) return;
-
-      final isOrcamento = pedido.tipoPreco == 'por_orcamento';
-
-      if (isOrcamento) {
-        final bool enviarAgora = await showDialog<bool>(
-              context: context,
-              builder: (ctx) {
-                return AlertDialog(
-                  title: const Text('Pedido aceite ✅'),
-                  content: const Text(
-                    'Este pedido é por orçamento.\n\nQueres enviar o orçamento (faixa min/max) agora?',
-                  ),
-                  actions: [
-                    TextButton(
-                      key: const Key('prestador_orcamento_dialog_later_button'),
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Mais tarde'),
-                    ),
-                    TextButton(
-                      key: const Key('prestador_orcamento_dialog_now_button'),
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: const Text('Enviar agora'),
-                    ),
-                  ],
-                );
-              },
-            ) ??
-            false;
-
-        if (!context.mounted) return;
-
-        if (enviarAgora) {
-          await _proporServico(context, pedido);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Pedido aceite. Podes enviar o orçamento no detalhe do pedido.',
-              ),
-            ),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pedido aceite.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pedido aceite.')),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1066,47 +1097,18 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
       builder: (context, snapshot) {
         final pedidosDoPrestador = snapshot.data ?? [];
 
-        final now = DateTime.now();
-        double brutoHoje = 0;
-        double taxaHoje = 0;
-        double liquidoHoje = 0;
-        int servicosMes = 0;
-
-        for (final p in pedidosDoPrestador) {
-          if (p.estado == 'concluido' && p.concluidoEm != null) {
-            final statusConf = p.statusConfirmacaoValor;
-
-            if (statusConf.isNotEmpty &&
-                statusConf != 'nenhum' &&
-                statusConf != 'confirmado_cliente') {
-              continue;
-            }
-
-            final d = p.concluidoEm!;
-            final mesmoMes = d.year == now.year && d.month == now.month;
-            final mesmoDia = mesmoMes && d.day == now.day;
-
-            if (mesmoMes) servicosMes++;
-
-            if (mesmoDia) {
-              final total = p.earningsTotal ?? p.precoFinal ?? p.preco ?? 0.0;
-              if (total <= 0) continue;
-
-              final commission =
-                  p.commissionPlatform ?? (total * kCommissionPercent);
-              final liquido = p.earningsProvider ?? (total - commission);
-
-              brutoHoje += total;
-              taxaHoje += commission;
-              liquidoHoje += liquido;
-            }
-          }
-        }
-
-        final liquidoHojeStr = CurrencyUtils.format(liquidoHoje);
-        final brutoHojeStr = CurrencyUtils.format(brutoHoje);
-        final taxaHojeStr = CurrencyUtils.format(taxaHoje);
-        final servicosMesStr = servicosMes.toString();
+        final economics = prestadorDailyEconomicsSummary(
+          pedidosDoPrestador,
+          DateTime.now(),
+        );
+        final liquidoHojeStr = economics.providerEarningsToday == null
+            ? 'A reconciliar'
+            : CurrencyUtils.format(economics.providerEarningsToday!);
+        final brutoHojeStr = CurrencyUtils.format(economics.grossToday);
+        final taxaHojeStr = economics.commissionToday == null
+            ? 'A reconciliar'
+            : CurrencyUtils.format(economics.commissionToday!);
+        final servicosMesStr = economics.servicesThisMonth.toString();
 
         final pendentesComAcao = pedidosDoPrestador
             .where(_temAcaoPendentePrestador)
@@ -1955,13 +1957,12 @@ class _PrestadorPedidoCard extends StatelessWidget {
     double? liquido;
 
     if (isConcluido) {
-      final t = pedido.earningsTotal ?? pedido.precoFinal ?? pedido.preco;
+      final economics = pedidoAuthoritativeEconomics(pedido);
+      final t = economics?.total ?? pedidoPersistedGross(pedido);
       if (t != null && t > 0) {
-        final c = pedido.commissionPlatform ?? (t * kCommissionPercent);
-        final l = pedido.earningsProvider ?? (t - c);
         totalPago = t;
-        commission = c;
-        liquido = l;
+        commission = economics?.commission;
+        liquido = economics?.providerEarnings;
       }
     }
 
@@ -1976,6 +1977,12 @@ class _PrestadorPedidoCard extends StatelessWidget {
     } else if (isConcluido && pedido.preco != null) {
       valorClienteLabel =
           'Valor do serviço: ${CurrencyUtils.format(pedido.preco)}';
+    }
+    if (isConcluido && totalPago != null && valorPrestadorLabel == null) {
+      valorClienteLabel =
+          'Valor do serviço: ${CurrencyUtils.format(totalPago)}';
+      valorPrestadorLabel =
+          'Comissão e líquido: a reconciliar (sem estimativa no dispositivo)';
     }
 
     final bool mostrarCancelar =

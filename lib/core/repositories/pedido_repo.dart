@@ -6,7 +6,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../config/app_config.dart';
 import '../models/pedido.dart';
 import '../services/analytics_service.dart';
-import '../utils/pedido_state_machine.dart';
 
 class PedidosRepo {
   PedidosRepo._();
@@ -130,17 +129,98 @@ class PedidosRepo {
   }
 
   static Stream<Pedido?> streamPedidoPorId(String pedidoId) {
-    return _db.collection('pedidos').doc(pedidoId).snapshots().map((doc) {
-      final data = doc.data();
-      if (data == null) return null;
-      return Pedido.fromMap(doc.id, data);
-    });
+    late StreamController<Pedido?> controller;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? privateSub;
+    StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? dispatchSub;
+    Pedido? privatePedido;
+    Pedido? dispatchPedido;
+    var privateResolved = false;
+    var dispatchResolved = false;
+    var retryingPrivateAfterGrant = false;
+
+    void emitBestView() {
+      if (controller.isClosed || retryingPrivateAfterGrant) return;
+      if (privatePedido != null) {
+        controller.add(privatePedido);
+        return;
+      }
+      if (dispatchPedido != null) {
+        controller.add(dispatchPedido);
+        return;
+      }
+      if (privateResolved && dispatchResolved) controller.add(null);
+    }
+
+    Future<void> subscribePrivate({bool afterDispatchRemoval = false}) async {
+      retryingPrivateAfterGrant = afterDispatchRemoval;
+      privateResolved = false;
+      privatePedido = null;
+      await privateSub?.cancel();
+      if (controller.isClosed) return;
+      privateSub = _db.collection('pedidos').doc(pedidoId).snapshots().listen(
+        (doc) {
+          privateResolved = true;
+          retryingPrivateAfterGrant = false;
+          final data = doc.data();
+          privatePedido = data == null ? null : Pedido.fromMap(doc.id, data);
+          emitBestView();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          privateResolved = true;
+          retryingPrivateAfterGrant = false;
+          privatePedido = null;
+          if (error is! FirebaseException ||
+              error.code != 'permission-denied') {
+            if (!controller.isClosed) controller.addError(error, stackTrace);
+          }
+          emitBestView();
+        },
+      );
+    }
+
+    controller = StreamController<Pedido?>(
+      onListen: () {
+        unawaited(subscribePrivate());
+        dispatchSub =
+            _db.collection('pedido_dispatch').doc(pedidoId).snapshots().listen(
+          (doc) {
+            final previouslyTargeted = dispatchPedido != null;
+            dispatchResolved = true;
+            final data = doc.data();
+            dispatchPedido = data == null ? null : Pedido.fromMap(doc.id, data);
+            if (previouslyTargeted && dispatchPedido == null) {
+              // A callable cria o grant no pedido antes de o trigger remover a
+              // projecao. Uma nova subscricao passa entao a receber a vista
+              // integral; se outro Prestador aceitou, termina em null.
+              unawaited(subscribePrivate(afterDispatchRemoval: true));
+              return;
+            }
+            emitBestView();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            dispatchResolved = true;
+            dispatchPedido = null;
+            if (error is! FirebaseException ||
+                error.code != 'permission-denied') {
+              if (!controller.isClosed) controller.addError(error, stackTrace);
+            }
+            emitBestView();
+          },
+        );
+      },
+      onCancel: () async {
+        await privateSub?.cancel();
+        await dispatchSub?.cancel();
+      },
+    );
+    return controller.stream;
   }
 
   static Stream<List<Pedido>> streamPedidosDoCliente(String clienteId) {
     return _db
         .collection('pedidos')
         .where('clienteId', isEqualTo: clienteId)
+        .limit(200)
         .snapshots()
         .map((s) {
       final pedidos =
@@ -156,7 +236,9 @@ class PedidosRepo {
         // Projecao sanitizada: nunca contem cliente, morada ou GPS exato.
         .where('status', isEqualTo: 'criado')
         .where('prestadorId', isNull: true)
+        .where('targetProviderId', isNull: true)
         .orderBy('createdAt', descending: true)
+        .limit(100)
         .snapshots()
         .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
   }
@@ -165,53 +247,18 @@ class PedidosRepo {
     required String pedidoId,
     required String prestadorId,
   }) async {
-    final ref = _db.collection('pedidos').doc(pedidoId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) {
-        throw Exception('Pedido nao encontrado.');
-      }
-      final doc = snap.data();
-      final estado = (doc?['estado'] ?? doc?['status'] ?? 'criado').toString();
-      if (!PedidoStateMachine.canTransitionForRole(
-        role: 'prestador',
-        from: estado,
-        to: PedidoStateMachine.aceito,
-      )) {
-        throw StateError('Transicao invalida: $estado -> aceito');
-      }
-
-      tx.update(ref, {
-        'prestadorId': prestadorId,
-        'estado': 'aceito',
-        'status': 'aceito',
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    if (prestadorId.trim().isEmpty) {
+      throw ArgumentError.value(prestadorId, 'prestadorId');
+    }
+    await _functions.httpsCallable('pedidos_acceptDispatch').call({
+      'pedidoId': pedidoId,
     });
   }
 
   static Future<void> iniciarPedido({required String pedidoId}) async {
-    final ref = _db.collection('pedidos').doc(pedidoId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) {
-        throw Exception('Pedido nao encontrado.');
-      }
-      final doc = snap.data();
-      final estado = (doc?['estado'] ?? doc?['status'] ?? 'criado').toString();
-      if (!PedidoStateMachine.canTransitionForRole(
-        role: 'prestador',
-        from: estado,
-        to: PedidoStateMachine.emAndamento,
-      )) {
-        throw StateError('Transicao invalida: $estado -> em_andamento');
-      }
-
-      tx.update(ref, {
-        'estado': 'em_andamento',
-        'status': 'em_andamento',
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    await _functions.httpsCallable('pedidos_applyActionSecure').call({
+      'pedidoId': pedidoId,
+      'action': 'provider_start_service',
     });
   }
 
@@ -219,41 +266,91 @@ class PedidosRepo {
     required String pedidoId,
     required double preco,
   }) async {
-    final ref = _db.collection('pedidos').doc(pedidoId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) {
-        throw Exception('Pedido nao encontrado.');
-      }
-      final doc = snap.data();
-      final estado = (doc?['estado'] ?? doc?['status'] ?? 'criado').toString();
-      if (!PedidoStateMachine.canTransitionForRole(
-        role: 'sistema',
-        from: estado,
-        to: PedidoStateMachine.concluido,
-      )) {
-        throw StateError('Transicao invalida: $estado -> concluido');
-      }
-
-      tx.update(ref, {
-        'estado': 'concluido',
-        'status': 'concluido',
-        'preco': preco,
-        'precoFinal': preco,
-        'concluidoEm': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    if (!preco.isFinite || preco <= 0) {
+      throw ArgumentError.value(preco, 'preco');
+    }
+    // O backend confirma o valor que está persistido no pedido; nunca confia
+    // no preço recebido por esta API legada.
+    await _functions.httpsCallable('confirmarValorFinalPedido').call({
+      'pedidoId': pedidoId,
     });
   }
 
   static Stream<List<Pedido>> streamPedidosDoPrestador(String prestadorId) {
-    return _db
-        .collection('pedidos')
-        .where('prestadorId', isEqualTo: prestadorId)
-        // Descendente para bater com o índice (prestadorId ASC + createdAt DESC)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
+    late StreamController<List<Pedido>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? privateSub;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? targetedSub;
+    var privatePedidos = <Pedido>[];
+    var targetedPedidos = <Pedido>[];
+
+    void emitCombined() {
+      final byId = <String, Pedido>{
+        for (final pedido in targetedPedidos) pedido.id: pedido,
+        for (final pedido in privatePedidos) pedido.id: pedido,
+      };
+      final pedidos = byId.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (!controller.isClosed) controller.add(pedidos);
+    }
+
+    controller = StreamController<List<Pedido>>(
+      onListen: () {
+        privateSub = _db
+            .collection('pedidos')
+            .where('prestadorId', isEqualTo: prestadorId)
+            .where('providerAccessGranted', isEqualTo: true)
+            .where('providerAccessGrantedTo', isEqualTo: prestadorId)
+            .where(
+              'status',
+              whereIn: const [
+                'aceito',
+                'em_andamento',
+                'aguarda_confirmacao_valor',
+                'concluido',
+              ],
+            )
+            .where(
+              'providerAccessGrantedAt',
+              isGreaterThan: Timestamp.fromMillisecondsSinceEpoch(0),
+            )
+            .where(
+              'providerAccessGrantedAt',
+              isLessThan: Timestamp.fromDate(DateTime.utc(2100)),
+            )
+            .orderBy('providerAccessGrantedAt', descending: true)
+            .limit(200)
+            .snapshots()
+            .listen(
+              (snapshot) {
+                privatePedidos = snapshot.docs
+                    .map((doc) => Pedido.fromMap(doc.id, doc.data()))
+                    .toList();
+                emitCombined();
+              },
+              onError: controller.addError,
+            );
+        targetedSub = _db
+            .collection('pedido_dispatch')
+            .where('targetProviderId', isEqualTo: prestadorId)
+            .where('prestadorId', isNull: true)
+            .limit(100)
+            .snapshots()
+            .listen(
+          (snapshot) {
+            targetedPedidos = snapshot.docs
+                .map((doc) => Pedido.fromMap(doc.id, doc.data()))
+                .toList();
+            emitCombined();
+          },
+          onError: controller.addError,
+        );
+      },
+      onCancel: () async {
+        await privateSub?.cancel();
+        await targetedSub?.cancel();
+      },
+    );
+    return controller.stream;
   }
 
   /// Cancela o pedido (Cliente ou Prestador).
@@ -266,62 +363,20 @@ class PedidosRepo {
     String? motivoDetalhe,
     String? tipoReembolso,
   }) async {
-    final docRef = _db.collection('pedidos').doc(pedidoId);
-
-    return _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(docRef);
-      if (!snapshot.exists) {
-        throw Exception('Pedido não encontrado para cancelar.');
-      }
-
-      final data = snapshot.data()!;
-      final currentStatus = data['status'] as String? ?? 'criado';
-
-      // 1. Validar transição
-      PedidoStateMachine.assertTransition(
-        role: role,
-        from: currentStatus,
-        to: PedidoStateMachine.cancelado,
-      );
-
-      // 2. Updates
-      final updates = <String, dynamic>{
-        'status': PedidoStateMachine.cancelado,
-        'estado': PedidoStateMachine.cancelado, // Manter consistência
-        'updatedAt': FieldValue.serverTimestamp(),
-        'canceladoPor': role,
-        'motivoCancelamento': motivo,
-      };
-
-      if (tipoReembolso != null) {
-        updates['tipoReembolso'] = tipoReembolso;
-      }
-
-      // Adicionar evento ao histórico
-      // Precisamos importar PedidoHistoricoItem se não estiver importado,
-      // mas como estava no código anterior, assumo que está ok ou vou usar Map direto para evitar erros de import.
-      final novoEvento = <String, dynamic>{
-        'evento': PedidoStateMachine.cancelado,
-        'timestamp': Timestamp.now(),
-        'userId': userId,
-        'descricao': motivoDetalhe != null ? '$motivo: $motivoDetalhe' : motivo,
-      };
-
-      updates['historico'] = FieldValue.arrayUnion([novoEvento]);
-
-      transaction.update(docRef, updates);
-
-      // Analytics
-      unawaited(
-        AnalyticsService.instance.logPedidoEvent(
-          name: 'pedido_cancelado',
-          pedidoId: pedidoId,
-          estado: 'cancelado',
-          role: role,
-          modo: data['modo'] ?? '?',
-          tipoPreco: data['tipoPreco'] ?? '?',
-        ),
-      );
+    final normalizedRole = role.trim().toLowerCase();
+    if (normalizedRole != 'cliente' && normalizedRole != 'prestador') {
+      throw ArgumentError.value(role, 'role');
+    }
+    if (userId.trim().isEmpty) {
+      throw ArgumentError.value(userId, 'userId');
+    }
+    await _functions.httpsCallable('pedidos_applyActionSecure').call({
+      'pedidoId': pedidoId,
+      'action':
+          normalizedRole == 'cliente' ? 'client_cancel' : 'provider_cancel',
+      'motivo': motivo.trim(),
+      if (motivoDetalhe != null && motivoDetalhe.trim().isNotEmpty)
+        'motivoDetalhe': motivoDetalhe.trim(),
     });
   }
 }

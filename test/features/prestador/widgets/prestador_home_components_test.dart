@@ -12,12 +12,16 @@ Pedido buildPedido({
   String tipoPagamento = 'dinheiro',
   String modo = 'IMEDIATO',
   String? prestadorId,
+  bool grantAccess = false,
   DateTime? agendadoPara,
 }) {
   return Pedido(
     id: id,
     clienteId: 'cliente_1',
     prestadorId: prestadorId,
+    providerAccessGranted: grantAccess,
+    providerAccessGrantedTo: grantAccess ? prestadorId : null,
+    providerAccessGrantedAt: grantAccess ? DateTime(2026, 5, 19, 12) : null,
     servicoId: 'srv_eletricista',
     servicoNome: 'Eletricista',
     titulo: 'Trocar tomada',
@@ -43,7 +47,22 @@ void main() {
   group('prestadorPedidoPermiteStreamChat', () {
     test('permite apenas pedidos ativos do prestador atual', () {
       final pedidos = [
-        buildPedido(id: 'ativo', estado: 'aceito', prestadorId: 'prestador_1'),
+        buildPedido(
+          id: 'ativo',
+          estado: 'aceito',
+          prestadorId: 'prestador_1',
+          grantAccess: true,
+        ),
+        buildPedido(
+          id: 'convite_targeted',
+          estado: 'aguarda_resposta_prestador',
+          prestadorId: 'prestador_1',
+        ),
+        buildPedido(
+          id: 'cotacao_targeted',
+          estado: 'aguarda_resposta_cliente',
+          prestadorId: 'prestador_1',
+        ),
         buildPedido(id: 'aberto', estado: 'criado'),
         buildPedido(
           id: 'outro_prestador',

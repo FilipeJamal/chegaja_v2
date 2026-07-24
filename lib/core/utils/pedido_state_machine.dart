@@ -40,8 +40,18 @@ class PedidoStateMachine {
   }
 
   static const Map<String, Set<String>> _allowedTransitions = {
-    criado: {aguardaRespostaPrestador, aguardaRespostaCliente, aceito, cancelado},
-    aguardaRespostaPrestador: {aceito, criado, cancelado},
+    criado: {
+      aguardaRespostaPrestador,
+      aguardaRespostaCliente,
+      aceito,
+      cancelado
+    },
+    aguardaRespostaPrestador: {
+      aceito,
+      aguardaRespostaCliente,
+      criado,
+      cancelado,
+    },
     aguardaRespostaCliente: {aceito, criado, cancelado},
     aceito: {emAndamento, aguardaRespostaCliente, criado, cancelado},
     emAndamento: {aguardaConfirmacaoValor, cancelado},
@@ -61,7 +71,7 @@ class PedidoStateMachine {
     },
     'prestador': {
       criado: {aceito, aguardaRespostaCliente},
-      aguardaRespostaPrestador: {aceito, criado},
+      aguardaRespostaPrestador: {aceito, aguardaRespostaCliente, criado},
       aguardaRespostaCliente: {criado},
       aceito: {emAndamento, aguardaRespostaCliente, criado},
       emAndamento: {aguardaConfirmacaoValor, cancelado},
@@ -94,13 +104,12 @@ class PedidoStateMachine {
     return allowed[f]?.contains(t) ?? false;
   }
 
-
   static const int timeoutMinutes = 30;
 
   static bool hasExpired(String status, DateTime? lastUpdate) {
     if (lastUpdate == null) return false;
     final s = status.trim().toLowerCase();
-    
+
     // States subject to timeout (pending acceptance)
     if (s == criado || s == aguardaRespostaPrestador) {
       final diff = DateTime.now().difference(lastUpdate);

@@ -1,6 +1,14 @@
 const assert = require("assert");
 
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
+const originalCommissionEnv = {
+    DEFAULT_CASH_COMMISSION_RATE: process.env.DEFAULT_CASH_COMMISSION_RATE,
+    COMMISSION_FREE_FIRST_JOBS: process.env.COMMISSION_FREE_FIRST_JOBS,
+    DEFAULT_CURRENCY_CODE: process.env.DEFAULT_CURRENCY_CODE,
+};
+process.env.DEFAULT_CASH_COMMISSION_RATE = "0.10";
+process.env.COMMISSION_FREE_FIRST_JOBS = "2";
+process.env.DEFAULT_CURRENCY_CODE = "MZN";
 
 const functions = require("../index");
 
@@ -15,6 +23,7 @@ describe("Pedido value Functions", () => {
         enforceCommissionDebtCore,
         recordCommissionPaymentCore,
     } = functions.__test__.payments;
+    const legalVersion = functions.__test__.legal.LEGAL_DOCUMENT_VERSION;
 
     async function clearPedidos() {
         const snap = await db.collection("pedidos").get();
@@ -22,7 +31,7 @@ describe("Pedido value Functions", () => {
         snap.docs.forEach((doc) => batch.delete(doc.ref));
         const providerSnap = await db.collection("provider_private").get();
         providerSnap.docs.forEach((doc) => batch.delete(doc.ref));
-        for (const collection of ["provider_public", "provider_dispatch_private", "payments", "commission_payments"]) {
+        for (const collection of ["provider_public", "provider_dispatch_private", "provider_opportunities", "provider_acceptance_limits", "payments", "commission_payments", "pilot_participants", "users_private"]) {
             const collectionSnap = await db.collection(collection).get();
             collectionSnap.docs.forEach((doc) => batch.delete(doc.ref));
         }
@@ -39,6 +48,9 @@ describe("Pedido value Functions", () => {
         await db.collection("pedidos").doc(id).set({
             clienteId: "client1",
             prestadorId: "provider1",
+            providerAccessGranted: true,
+            providerAccessGrantedTo: "provider1",
+            providerAccessGrantedAt: new Date(),
             status: "em_andamento",
             estado: "em_andamento",
             createdAt: new Date(),
@@ -48,7 +60,20 @@ describe("Pedido value Functions", () => {
     }
 
     beforeEach(async () => {
+        // Other suites deliberately exercise missing payment configuration and
+        // restore their own environment. Reassert this suite's explicit pilot
+        // policy so results never depend on Mocha file loading order.
+        process.env.DEFAULT_CASH_COMMISSION_RATE = "0.10";
+        process.env.COMMISSION_FREE_FIRST_JOBS = "2";
+        process.env.DEFAULT_CURRENCY_CODE = "MZN";
         await clearPedidos();
+    });
+
+    after(() => {
+        for (const [key, value] of Object.entries(originalCommissionEnv)) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
     });
 
     it("allows assigned provider to propose final value", async () => {
@@ -190,6 +215,22 @@ describe("Pedido value Functions", () => {
     });
 
     it("prevents a financially suspended provider from accepting a request", async () => {
+        await Promise.all([
+            db.collection("users_private").doc("provider1").set({
+                accountStatus: "active",
+                legalConsent: {
+                    version: legalVersion,
+                    termsAccepted: true,
+                    privacyAccepted: true,
+                    ageConfirmed: true,
+                },
+            }),
+            db.collection("pilot_participants").doc("provider1").set({
+                status: "active",
+                roles: ["prestador"],
+                city: "Maputo",
+            }),
+        ]);
         await db.collection("provider_public").doc("provider1").set({
             uid: "provider1",
             servicos: ["plumbing"],
@@ -199,6 +240,11 @@ describe("Pedido value Functions", () => {
             providerId: "provider1",
             financialStatus: "suspended_new_jobs",
         });
+        await db.collection("provider_dispatch_private").doc("provider1").set({
+            providerId: "provider1",
+            acceptingNewJobs: true,
+            isOnline: true,
+        });
         await db.collection("pedidos").doc("blocked_accept").set({
             clienteId: "client1",
             prestadorId: null,
@@ -206,6 +252,14 @@ describe("Pedido value Functions", () => {
             status: "criado",
             estado: "criado",
             moderationStatus: "approved",
+        });
+        await db.collection("provider_opportunities").doc("blocked_accept_provider1").set({
+            pedidoId: "blocked_accept",
+            providerId: "provider1",
+            approximateDistanceKm: 1,
+            matchedRadiusKm: 10,
+            status: "active",
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
         });
 
         await assert.rejects(

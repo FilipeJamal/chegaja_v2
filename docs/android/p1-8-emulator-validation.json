@@ -1,43 +1,54 @@
 {
   "status": "COMPLETED",
-  "capturedAt": "2026-07-20T18:40:43.801Z",
-  "apkSha256": "f9d29a1d38dca520e9cb68eb83dd72666c177a0442c6012f535bb36d5589ad13",
-  "releaseSourceFingerprint": "3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3",
-  "releaseInputFiles": 351,
+  "capturedAt": "2026-07-24T17:30:04.250Z",
+  "apkSha256": "f4c7dd486df35dd861e448822018f8bb02dd5adf4605b6fa5efda4fbbea35d75",
+  "fingerprintSchema": "android-release-inputs-v3",
+  "releaseSourceFingerprint": "b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d",
+  "releaseInputFiles": 470,
+  "releaseVirtualInputs": 1,
   "packageId": "com.chegaja.app",
   "activity": "com.chegaja.app/.MainActivity",
   "activityInForeground": true,
   "processAliveAfterInteraction": true,
   "device": {
     "physical": false,
-    "manufacturer": "unknown",
-    "model": "Android SDK built for x86_64",
-    "androidVersion": "14",
-    "apiLevel": 34,
-    "abi": "x86_64"
+    "manufacturer": "Google",
+    "model": "sdk_gphone64_x86_64",
+    "androidVersion": "15",
+    "apiLevel": 35,
+    "abi": "x86_64",
+    "avdName": "chegaja_u0_api35",
+    "buildFingerprint": "google/sdk_gphone64_x86_64/emu64xa:15/AE3A.240806.043/12960925:userdebug/dev-keys",
+    "bootCompleted": true
   },
   "screen": {
-    "title": "Bem-vindo ao ChegaJa",
+    "physicalSize": "1080x2400",
+    "title": "Bem-vindo ao ChegaJá",
     "clientAction": "Sou cliente",
     "providerAction": "Sou prestador"
   },
   "startupPermissionPrompt": false,
   "interactionCheck": "vertical_scroll_without_navigation",
+  "fatalMatchPolicy": "Apenas ocorrências fatais, crash ou ANR do processo com.chegaja.app contam como correspondência.",
   "fatalPatternsChecked": [
     "FATAL EXCEPTION",
+    "ANR in com.chegaja.app",
+    "Process: com.chegaja.app",
     "E/flutter",
     "FirebaseException",
     "MissingPluginException",
-    "GeneratedPluginsRegister",
-    "ERRO FATAL",
-    "ClassNotFoundException",
-    "ANR in com.chegaja.app",
-    "Process: com.chegaja.app"
+    "GeneratedPluginsRegister"
   ],
   "fatalPatternsMatched": [],
+  "runtimeLogSha256": "be496ddbcaf2b1600308ec3a40de5a12809e1be24bea2787d88a239adcac584e",
+  "nonFatalDiagnostics": [],
+  "environmentDiagnostics": [
+    "O AVD Android 15 novo concluiu o primeiro boot antes da instalação; a validação começou apenas depois de sys.boot_completed=1."
+  ],
   "artifacts": [
-    "build/p1_8_launch.png",
-    "build/p1_8_ui.xml",
-    "build/p1_release_provenance.json"
+    "docs/android/evidence/u0-2026-07-21/p1_8_launch.png",
+    "docs/android/evidence/u0-2026-07-21/p1_8_ui.xml",
+    "docs/android/evidence/u0-2026-07-21/p1_8_runtime_redacted.log",
+    "docs/android/evidence/u0-2026-07-21/p1_release_provenance.json"
   ]
 }

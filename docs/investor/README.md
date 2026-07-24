@@ -2,8 +2,14 @@
 
 Data: 2026-06-06
 
-Este diretorio junta o material P0 para apresentar o ChegaJa a investidor
-anjo/pre-seed.
+> **NÃO ENVIAR EXTERNAMENTE:** este pacote é histórico e está desatualizado.
+> Usa Maputo e 700.000 MZN, não contém o plano Coimbra nem a ronda canónica de
+> €300.000 e inclui alegações que ainda carecem de evidência. Consultar
+> `docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md` antes de produzir o novo
+> pacote.
+
+Este diretório preserva o material P0 de junho para referência; não está apto
+para apresentação a investidores.
 
 ## Documentos
 
@@ -39,8 +45,9 @@ ChegaJa e uma infraestrutura local de confianca para servicos sob demanda.
 - P0.5 fechado para PPTX/PDF/HTML locais.
 - Figma Slides gerado e apresentado no widget do conector Figma.
 
-## Proximo uso recomendado
+## Uso permitido
 
-Usar o PDF para envio, o PPTX para edicao/apresentacao e o Q&A para preparar a
-conversa. Se preferires editar no Figma, abrir uma das opcoes apresentadas no
-widget Figma Slides.
+Usar PDF, PPTX, HTML e Q&A apenas como referência interna para construir o novo
+pacote Coimbra/€300.000. Nenhum destes artefactos deve ser enviado, apresentado
+ou usado em outreach. O novo pacote terá de substituir alegações não provadas e
+passar pelos gates definidos na fonte canónica.

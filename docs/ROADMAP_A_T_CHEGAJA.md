@@ -2,6 +2,11 @@
 
 Data: 2026-05-23
 
+> **Histórico:** este roadmap regista a construção A–T. Desde 2026-07-20, a
+> fonte canónica de prioridade e estado é
+> `docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md`. Um bloco «FECHADO» aqui
+> não prova deploy, segurança operacional, validação jurídica ou piloto real.
+
 ## Legenda
 
 ```text

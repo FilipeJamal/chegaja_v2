@@ -45,12 +45,18 @@ try {
     $utf8NoBom
   )
 
+  $preBuildSnapshot = 'build/p1_release_inputs_pre.json'
+  node scripts/qa/release_source_fingerprint.js --write-input-snapshot $preBuildSnapshot
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Nao foi possivel capturar os inputs antes da compilacao.'
+  }
+
   flutter build apk --release --no-shrink --no-pub
   if ($LASTEXITCODE -ne 0) {
     throw 'flutter build apk falhou.'
   }
 
-  node scripts/qa/release_source_fingerprint.js --write-build-evidence
+  node scripts/qa/release_source_fingerprint.js --write-build-evidence --input-snapshot $preBuildSnapshot
   if ($LASTEXITCODE -ne 0) {
     throw 'Nao foi possivel gerar a proveniencia da APK release.'
   }

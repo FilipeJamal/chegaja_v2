@@ -20,6 +20,17 @@
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "prestadorId", "order": "ASCENDING" },
+        { "fieldPath": "providerAccessGranted", "order": "ASCENDING" },
+        { "fieldPath": "providerAccessGrantedTo", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "providerAccessGrantedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "estado", "order": "ASCENDING" },
         { "fieldPath": "prestadorId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
@@ -100,8 +111,18 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "isOnline", "order": "ASCENDING" },
+        { "fieldPath": "acceptingRequests", "order": "ASCENDING" },
         { "fieldPath": "servicos", "arrayConfig": "CONTAINS" },
         { "fieldPath": "geo.geohash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "provider_opportunities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
       ]
     },
     {
@@ -110,9 +131,23 @@
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "prestadorId", "order": "ASCENDING" },
+        { "fieldPath": "targetProviderId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "provider_opportunities",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "provider_acceptance_limits",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    }
+  ]
 }

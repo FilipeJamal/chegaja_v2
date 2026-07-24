@@ -1,0 +1,8 @@
+ChegaJa Android runtime validation
+Release package com.chegaja.app remained alive after selector interaction.
+MainActivity remained the top resumed activity.
+The Portuguese role selector exposed both client and provider actions.
+The runtime scan reviewed 178 package-process log lines.
+The package-fatal match count was zero.
+No startup permission prompt was present.
+No participant data, credentials, tokens, local paths, or device identifiers are retained here.
