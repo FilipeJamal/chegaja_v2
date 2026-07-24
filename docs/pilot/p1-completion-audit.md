@@ -93,20 +93,22 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 - Flutter: **522 testes aprovados** em 105 ficheiros.
 - Análise estática Dart/Flutter: **0 erros** e **328 avisos/informações não
   fatais**; permanecem visíveis no CI.
-- Functions/Firestore/Storage: **167 testes aprovados** em 24 ficheiros; o emulador carregou as
-  63 definições locais sem erro de descoberta.
+- Functions/Firestore/Storage: **167 testes aprovados** em 24 ficheiros; o
+  emulador carregou as 63 definições locais sem erro de descoberta.
 - Scripts operacionais: **14 grupos de testes aprovados**.
-- APK release: 123090808 bytes, assinatura v2, um signatário RSA 2048.
+- APK release: 123074424 bytes, assinatura v2, um signatário RSA 2048.
 - SHA-256 APK:
-  `e2be3d862ce6af3f6289b4dc2a84195bd54f0ba1bb0e83c08d5d7e0557503fa6`.
-- Fingerprint de release `android-release-inputs-v2`, calculado sobre 470
+  `f4c7dd486df35dd861e448822018f8bb02dd5adf4605b6fa5efda4fbbea35d75`.
+- Fingerprint de release `android-release-inputs-v3`, calculado sobre 470
   ficheiros e 1 entrada virtual:
-  `d1e757c6d191a6a2b7a8d8afb99b38768985fde672668460ec9a85c510fd4356`.
-- Emulador temporário Android 15/API 35 x86_64: instalação confirmada pelo
-  Package Manager após timeout do cliente `adb install`, atividade em primeiro
-  plano, processo vivo depois de scroll, seletor limpo em português e zero
-  padrões fatais. Duas mensagens de ciclo de vida do Geolocator e quatro probes
-  DEBUG de frameworks opcionais foram preservadas como diagnósticos não fatais.
+  `b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d`.
+- Revisão dos fontes de release:
+  `73798a47af4635d461fc3cda7625405bcfcd0ec1`, com árvore limpa e inputs
+  estáveis durante a build.
+- Emulador novo Android 15/API 35 x86_64: instalação `Success` depois do
+  primeiro boot completo, atividade em primeiro plano, processo vivo depois de
+  scroll, seletor limpo em português e zero padrões fatais em 178 linhas do
+  processo.
 - Identidade Android: `com.chegaja.app`, app Firebase
   `1:767588494857:android:4198384a2a6387055252d8`, certificados release/debug
   registados e App Links ligados ao certificado release.

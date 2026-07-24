@@ -2,7 +2,7 @@
 
 ## Estado desta execucao
 
-- Data: 2026-07-21
+- Data: 2026-07-24
 - Android SDK/licencas: pronto; todas as licencas aceites.
 - Assinatura release: `android/key.properties` e ficheiro de keystore presentes.
 - Chave Google Maps Android: configurada em `android/local.properties`.
@@ -10,20 +10,23 @@
   Chrome e Edge.
 - Dispositivo Android fisico: **nao detetado**.
 - AVDs disponiveis: API 34, 35 e 36.
-- Validacao emulada: **EXECUTADA** num AVD temporario Android 15/API 35
-  x86_64, isolado em `build/u0-avd`.
+- Validacao emulada: **EXECUTADA** num AVD novo Android 15/API 35 x86_64,
+  `chegaja_u0_api35`.
 - Validacao fisica: **NAO EXECUTADA**. Nao substituir por alegacao baseada em
   emulador.
 
 ## Evidencia automatizada desta execucao
 
 - APK: `build/app/outputs/flutter-apk/app-release.apk` (release, `--no-shrink`).
-- Tamanho do APK: `123090808` bytes (release final desta execucao).
-- SHA-256 do APK: `E2BE3D862CE6AF3F6289B4DC2A84195BD54F0BA1BB0E83C08D5D7E0557503FA6`.
+- Tamanho do APK: `123074424` bytes (release final desta execucao).
+- SHA-256 do APK: `F4C7DD486DF35DD861E448822018F8BB02DD5ADF4605B6FA5EFDA4FBBEA35D75`.
 - Fingerprint das 470 entradas de release:
-  `d1e757c6d191a6a2b7a8d8afb99b38768985fde672668460ec9a85c510fd4356`.
-- Esquema de proveniencia: `android-release-inputs-v2`; uma entrada virtual
+  `b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d`.
+- Esquema de proveniencia: `android-release-inputs-v3`; uma entrada virtual
   representa a presenca da chave Android Maps sem serializar o segredo.
+- Revisao dos fontes de release:
+  `73798a47af4635d461fc3cda7625405bcfcd0ec1`; a atestacao confirma arvore
+  limpa e fingerprint inalterado antes/depois da build.
 - Assinatura: APK Signature Scheme v2, um signatario RSA 2048, certificado
   `CN=ChegaJa, OU=App, O=ChegaJa, L=Maputo, ST=Maputo, C=MZ`.
 - SHA-256 do certificado:
@@ -32,17 +35,13 @@
   notificacoes, camara e permissoes operacionais de rede/FCM.
 - Permissoes ausentes e comprovadas: microfone, configuracao de audio,
   Bluetooth, `AD_ID` e Advertising Services.
-- Instalacao ADB: o cliente atingiu o timeout de 300 segundos durante o
-  retorno, mas o Package Manager confirmou `com.chegaja.app`, `versionCode=1`,
-  `versionName=1.0.0` e o `base.apk` instalado antes do arranque.
+- Instalacao ADB: `Success` depois de o AVD novo confirmar
+  `sys.boot_completed=1`; o Package Manager confirmou o `base.apk` de
+  `com.chegaja.app`.
 - Runtime: `com.chegaja.app/.MainActivity` ficou em primeiro plano e
   manteve o processo vivo depois de uma interação de scroll;
-  seletor de função em português renderizado; nenhum `FATAL EXCEPTION`,
-  `E/flutter` exato, `FirebaseException`, `MissingPluginException`,
-  `GeneratedPluginsRegister`, ANR ou crash do pacote no arranque. Quatro
-  probes `DEBUG` de frameworks opcionais continham `ClassNotFoundException` e
-  duas mensagens de ciclo de vida usaram a tag `E/FlutterGeolocator`; ambas
-  as classes estão registadas separadamente como diagnósticos não fatais.
+  seletor de função em português renderizado; 178 linhas do processo foram
+  verificadas e nenhum dos padrões fatais declarados foi encontrado.
 - Prompt no arranque: nenhum. A aplicacao abriu diretamente no seletor de
   funcao.
 - Evidencia versionada: captura, hierarquia de acessibilidade, logcat redigido
@@ -50,10 +49,10 @@
   `docs/android/evidence/u0-2026-07-21/`. A pasta `build/` e apenas a origem
   local e nao constitui a unica prova.
 
-A prova final foi executada num AVD temporario Android 15/API 35 x86_64 criado
-a partir da imagem instalada. Os AVDs pessoais API 35/36 continuavam com
-referencias incompletas e nao foram usados. A prova emulada nao substitui a
-matriz obrigatoria num Android 13+ fisico.
+A prova final foi executada num AVD novo Android 15/API 35 x86_64 criado a
+partir da imagem oficial instalada. Uma referencia AVD antiga com o mesmo API
+estava incompleta e nao foi usada. A prova emulada nao substitui a matriz
+obrigatoria num Android 13+ fisico.
 
 O APK release deve ser gerado com o wrapper reproduzivel:
 

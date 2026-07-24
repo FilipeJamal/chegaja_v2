@@ -1,0 +1,19 @@
+{
+  "attestationSchema": "android-release-build-attestation-v1",
+  "fingerprintSchema": "android-release-inputs-v3",
+  "generatedAt": "2026-07-24T17:14:57.671Z",
+  "apkSha256": "f4c7dd486df35dd861e448822018f8bb02dd5adf4605b6fa5efda4fbbea35d75",
+  "releaseSourceFingerprint": "b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d",
+  "preBuildSourceFingerprint": "b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d",
+  "postBuildSourceFingerprint": "b8feda5d788344bf5fee99d5e7f1ad22e056ed067dd8dba8a828bf0e61430c3d",
+  "sourceStableDuringBuild": true,
+  "sourceRevision": "73798a47af4635d461fc3cda7625405bcfcd0ec1",
+  "sourceTreeClean": true,
+  "preBuildCapturedAt": "2026-07-24T16:56:42.503Z",
+  "postBuildCapturedAt": "2026-07-24T17:14:57.671Z",
+  "releaseInputFiles": 470,
+  "releaseVirtualInputs": 1,
+  "generatedRegistrantExcluded": true,
+  "localPathsSerialized": false,
+  "secretValuesSerialized": false
+}

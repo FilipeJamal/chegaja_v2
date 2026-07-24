@@ -179,3 +179,17 @@ Executada em 2026-07-24 sobre a branch U0, antes da criação do pull request:
 
 Esta validação não substitui CI, revisão do pull request, Android físico,
 cutover produtivo, enforcement App Check ou piloto real.
+
+## Prova release U0
+
+- commit dos inputs Android: `73798a47af4635d461fc3cda7625405bcfcd0ec1`;
+- APK: 123074424 bytes, assinatura v2, um signatário RSA 2048;
+- SHA-256:
+  `f4c7dd486df35dd861e448822018f8bb02dd5adf4605b6fa5efda4fbbea35d75`;
+- proveniência `android-release-inputs-v3`: árvore limpa, 470 ficheiros, uma
+  entrada virtual redigida e fingerprint estável antes/depois da build;
+- Android 15/API 35: instalação concluída, seletor português capturado,
+  atividade em primeiro plano e processo vivo depois de scroll;
+- readiness técnico: **9/15**, mantendo fechados exatamente os seis gates
+  externos de identidade jurídica, cutover/proveniência, parecer jurídico,
+  Android físico, App Check produtivo e piloto real.
