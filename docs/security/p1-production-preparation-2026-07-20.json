@@ -1,4 +1,7 @@
 {
+  "evidenceStatus": "HISTORICAL_SUPERSEDED",
+  "supersededBy": "docs/pilot/evidence/p1-cutover-migration.json",
+  "warning": "Snapshot histórico de preparação; hashes locais não provam o cutover final e não são aceites pelo readiness atual.",
   "capturedAt": "2026-07-20T10:07:00.719Z",
   "projectId": "chegaja-ac88d",
   "containsParticipantIdentifiers": false,

@@ -1,28 +1,35 @@
 {
   "status": "COMPLETED",
-  "capturedAt": "2026-07-20T18:40:43.801Z",
-  "apkSha256": "f9d29a1d38dca520e9cb68eb83dd72666c177a0442c6012f535bb36d5589ad13",
-  "releaseSourceFingerprint": "3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3",
-  "releaseInputFiles": 351,
+  "capturedAt": "2026-07-21T05:12:44.544Z",
+  "apkSha256": "e2be3d862ce6af3f6289b4dc2a84195bd54f0ba1bb0e83c08d5d7e0557503fa6",
+  "fingerprintSchema": "android-release-inputs-v2",
+  "releaseSourceFingerprint": "d1e757c6d191a6a2b7a8d8afb99b38768985fde672668460ec9a85c510fd4356",
+  "releaseInputFiles": 470,
+  "releaseVirtualInputs": 1,
   "packageId": "com.chegaja.app",
   "activity": "com.chegaja.app/.MainActivity",
   "activityInForeground": true,
   "processAliveAfterInteraction": true,
   "device": {
     "physical": false,
-    "manufacturer": "unknown",
-    "model": "Android SDK built for x86_64",
-    "androidVersion": "14",
-    "apiLevel": 34,
-    "abi": "x86_64"
+    "manufacturer": "Google",
+    "model": "sdk_gphone64_x86_64",
+    "androidVersion": "15",
+    "apiLevel": 35,
+    "abi": "x86_64",
+    "avdName": "chegaja_u0_api35",
+    "buildFingerprint": "google/sdk_gphone64_x86_64/emu64xa:15/AE3A.240806.043/12960925:userdebug/dev-keys",
+    "bootCompleted": true
   },
   "screen": {
-    "title": "Bem-vindo ao ChegaJa",
+    "physicalSize": "1080x2400",
+    "title": "Bem-vindo ao ChegaJá",
     "clientAction": "Sou cliente",
     "providerAction": "Sou prestador"
   },
   "startupPermissionPrompt": false,
   "interactionCheck": "vertical_scroll_without_navigation",
+  "fatalMatchPolicy": "Só ocorrências em contexto fatal, crash ou ANR do pacote contam como correspondência; probes de frameworks opcionais e mensagens de ciclo de vida são registados separadamente.",
   "fatalPatternsChecked": [
     "FATAL EXCEPTION",
     "E/flutter",
@@ -30,14 +37,33 @@
     "MissingPluginException",
     "GeneratedPluginsRegister",
     "ERRO FATAL",
-    "ClassNotFoundException",
+    "ClassNotFoundException em contexto FATAL/crash do processo com.chegaja.app",
     "ANR in com.chegaja.app",
     "Process: com.chegaja.app"
   ],
   "fatalPatternsMatched": [],
+  "nonFatalDiagnostics": [
+    {
+      "pattern": "E/FlutterGeolocator",
+      "count": 2,
+      "level": "ERROR_TAG",
+      "classification": "ciclo de vida do serviço de localização; sem exceção ou crash"
+    },
+    {
+      "pattern": "ClassNotFoundException",
+      "count": 4,
+      "level": "DEBUG",
+      "classification": "probes de frameworks opcionais: React Native, FlutterEngine Java, Cordova e Unity"
+    }
+  ],
+  "environmentDiagnostics": [
+    "O primeiro boot do AVD excedeu o Watchdog durante a inicialização de serviços do sistema; o system_server reiniciou e concluiu o boot antes da instalação.",
+    "Foram fechados com Wait diálogos de ANR do Pixel Launcher, Process system e System UI; não existiu ANR de com.chegaja.app.",
+    "Sem DNS no AVD, as tarefas diferidas de Firebase Auth, App Check, Crashlytics e Remote Config falharam de forma controlada; o seletor continuou funcional."
+  ],
   "artifacts": [
-    "build/p1_8_launch.png",
-    "build/p1_8_ui.xml",
-    "build/p1_release_provenance.json"
+    "docs/android/evidence/u0-2026-07-21/p1_8_launch.png",
+    "docs/android/evidence/u0-2026-07-21/p1_8_ui.xml",
+    "docs/android/evidence/u0-2026-07-21/p1_release_provenance.json"
   ]
 }

@@ -12,6 +12,7 @@ describe('pilot payment policy', () => {
       'ENABLE_EMOLA',
       'ENABLE_STRIPE',
       'STRIPE_MZN_VALIDATED',
+      'ENABLE_SUBSCRIPTIONS',
       'DEFAULT_CASH_COMMISSION_RATE',
       'COMMISSION_FREE_FIRST_JOBS',
     ]) {
@@ -34,14 +35,73 @@ describe('pilot payment policy', () => {
     assert.strictEqual(result.currency, 'MZN');
   });
 
+  it('requires an explicit rate instead of silently charging a default', () => {
+    delete process.env.DEFAULT_CASH_COMMISSION_RATE;
+    assert.throws(
+      () => __test__.pedidos.cashCommissionPolicy({ completedJobsCount: 2 }),
+      (error) => error.code === 'failed-precondition',
+    );
+  });
+
+  it('accepts only a succeeded authoritative payment for the exact order', () => {
+    const payment = {
+      pedidoId: 'order-1',
+      clienteId: 'client-1',
+      prestadorId: 'provider-1',
+      amount: 100000,
+      feeAmount: 10000,
+      currency: 'mzn',
+      status: 'succeeded',
+    };
+    const expected = {
+      pedidoId: 'order-1',
+      clienteId: 'client-1',
+      prestadorId: 'provider-1',
+      amount: 100000,
+      currency: 'MZN',
+    };
+    assert.strictEqual(
+      __test__.payments.authoritativeDigitalPaymentMatches(payment, expected),
+      true,
+    );
+    assert.strictEqual(
+      __test__.payments.authoritativeDigitalPaymentMatches({
+        ...payment,
+        status: 'requires_payment_method',
+      }, expected),
+      false,
+    );
+    assert.strictEqual(
+      __test__.payments.authoritativeDigitalPaymentMatches({
+        ...payment,
+        pedidoId: 'other-order',
+      }, expected),
+      false,
+    );
+    assert.strictEqual(
+      __test__.payments.authoritativeDigitalPaymentMatches({
+        ...payment,
+        feeAmount: 100001,
+      }, expected),
+      false,
+    );
+  });
+
   it('keeps unvalidated payment providers disabled server-side', () => {
     process.env.ENABLE_MPESA = 'false';
     process.env.ENABLE_STRIPE = 'true';
     process.env.STRIPE_MZN_VALIDATED = 'false';
+    process.env.ENABLE_SUBSCRIPTIONS = 'true';
     assert.strictEqual(__test__.payments.paymentMethodEnabled('dinheiro'), true);
     assert.strictEqual(__test__.payments.paymentMethodEnabled('mpesa'), false);
     assert.strictEqual(__test__.payments.paymentMethodEnabled('stripe'), false);
+    assert.strictEqual(__test__.payments.subscriptionsEnabled(), false);
     process.env.ENABLE_MPESA = 'true';
     assert.strictEqual(__test__.payments.paymentMethodEnabled('mpesa'), true);
+    process.env.STRIPE_MZN_VALIDATED = 'true';
+    assert.strictEqual(__test__.payments.paymentMethodEnabled('stripe'), true);
+    assert.strictEqual(__test__.payments.subscriptionsEnabled(), true);
+    process.env.ENABLE_SUBSCRIPTIONS = 'false';
+    assert.strictEqual(__test__.payments.subscriptionsEnabled(), false);
   });
 });

@@ -9,6 +9,14 @@ service firebase.storage {
       return request.auth.uid;
     }
 
+    function hasVerifiedPhone() {
+      return signedIn()
+        && request.auth.token != null
+        && request.auth.token.keys().hasAny(['phone_number'])
+        && request.auth.token['phone_number'] is string
+        && request.auth.token['phone_number'].size() >= 8;
+    }
+
     function isAdmin() {
       return signedIn()
         && request.auth.token != null
@@ -21,6 +29,32 @@ service firebase.storage {
         && request.auth.token != null
         && request.auth.token.keys().hasAny(['kyc_upload_enabled'])
         && request.auth.token['kyc_upload_enabled'] == true;
+    }
+
+    function activePilotParticipantData() {
+      return signedIn() && firestore.exists(
+          /databases/(default)/documents/pilot_participants/$(uid())
+        )
+        ? firestore.get(
+            /databases/(default)/documents/pilot_participants/$(uid())
+          ).data
+        : null;
+    }
+
+    function isActivePilotParticipantForRole(role) {
+      let participant = activePilotParticipantData();
+      return hasVerifiedPhone()
+        && participant is map
+        && participant.keys().hasAny(['status'])
+        && participant['status'] == 'active'
+        && participant.keys().hasAny(['roles'])
+        && participant['roles'] is list
+        && participant['roles'].hasAny([role]);
+    }
+
+    function isActivePilotParticipant() {
+      return isActivePilotParticipantForRole('cliente')
+        || isActivePilotParticipantForRole('prestador');
     }
 
     function hasActiveKycUploadGrant(prestadorId, submissionId) {
@@ -46,14 +80,66 @@ service firebase.storage {
       return firestore.exists(pedidoPath(pedidoId));
     }
 
-    function isPedidoParticipant(pedidoId) {
+    function providerHasFullPedidoAccess(pedido) {
       return signedIn()
+        && pedido is map
+        && pedido.keys().hasAll([
+          'prestadorId',
+          'providerAccessGranted',
+          'providerAccessGrantedTo',
+          'providerAccessGrantedAt'
+        ])
+        && pedido['prestadorId'] == uid()
+        && pedido['providerAccessGranted'] == true
+        && pedido['providerAccessGrantedTo'] == uid()
+        && pedido['providerAccessGrantedAt'] is timestamp
+        && pedido['providerAccessGrantedAt'] > timestamp.date(1970, 1, 1)
+        && pedidoAllowsProviderHistory(pedido);
+    }
+
+    function pedidoAllowsProviderHistory(pedido) {
+      let hasStatus = pedido is map && pedido.keys().hasAny(['status']);
+      let hasEstado = pedido is map && pedido.keys().hasAny(['estado']);
+      let status = hasStatus ? pedido['status'] : null;
+      let estado = hasEstado ? pedido['estado'] : null;
+      let lifecycle = status is string ? status : estado;
+      return lifecycle in [
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+          'concluido'
+        ]
+        && (!hasStatus || !hasEstado || status == estado);
+    }
+
+    function pedidoAllowsParticipantWrites(pedidoId) {
+      let pedido = firestore.get(pedidoPath(pedidoId)).data;
+      let hasStatus = pedido is map && pedido.keys().hasAny(['status']);
+      let hasEstado = pedido is map && pedido.keys().hasAny(['estado']);
+      let status = hasStatus ? pedido['status'] : null;
+      let estado = hasEstado ? pedido['estado'] : null;
+      let lifecycle = status is string ? status : estado;
+      return lifecycle in [
+          'criado',
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor'
+        ]
+        && (!hasStatus || !hasEstado || status == estado);
+    }
+
+    function isPedidoParticipant(pedidoId) {
+      let pedido = firestore.get(pedidoPath(pedidoId)).data;
+      return hasVerifiedPhone()
         && pedidoExists(pedidoId)
         && (
-          clienteIdFromData(firestore.get(pedidoPath(pedidoId)).data) == uid()
+          (clienteIdFromData(pedido) == uid()
+            && isActivePilotParticipantForRole('cliente'))
           || (
-            firestore.get(pedidoPath(pedidoId)).data.keys().hasAny(['prestadorId'])
-            && firestore.get(pedidoPath(pedidoId)).data['prestadorId'] == uid()
+            providerHasFullPedidoAccess(pedido)
+            && isActivePilotParticipantForRole('prestador')
           )
         );
     }
@@ -98,38 +184,65 @@ service firebase.storage {
 
     match /pedidos/{pedidoId}/anexos/{fileName} {
       allow read: if isPedidoParticipant(pedidoId) || isAdmin();
-      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+      allow create: if (
+          isAdmin()
+          || (resource == null
+            && isPedidoParticipant(pedidoId)
+            && pedidoAllowsParticipantWrites(pedidoId))
+        )
         && validUpload(20 * 1024 * 1024);
-      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow update: if isAdmin() && validUpload(20 * 1024 * 1024);
+      allow delete: if isAdmin();
     }
 
     match /temp/{userId}/anexos/{fileName} {
-      allow read: if signedIn() && (uid() == userId || isAdmin());
-      allow create, update: if signedIn()
-        && (uid() == userId || isAdmin())
+      allow read: if isAdmin()
+        || (uid() == userId && isActivePilotParticipantForRole('cliente'));
+      allow create, update: if (
+          isAdmin()
+          || (uid() == userId && isActivePilotParticipantForRole('cliente'))
+        )
         && validUpload(20 * 1024 * 1024);
       allow delete: if signedIn() && (uid() == userId || isAdmin());
     }
 
     match /chats/{pedidoId}/images/{fileName} {
       allow read: if isPedidoParticipant(pedidoId) || isAdmin();
-      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+      allow create: if (
+          isAdmin()
+          || (resource == null
+            && isPedidoParticipant(pedidoId)
+            && pedidoAllowsParticipantWrites(pedidoId))
+        )
         && validImageUpload(15 * 1024 * 1024);
-      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow update: if isAdmin() && validImageUpload(15 * 1024 * 1024);
+      allow delete: if isAdmin();
     }
 
     match /chats/{pedidoId}/files/{fileName} {
       allow read: if isPedidoParticipant(pedidoId) || isAdmin();
-      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+      allow create: if (
+          isAdmin()
+          || (resource == null
+            && isPedidoParticipant(pedidoId)
+            && pedidoAllowsParticipantWrites(pedidoId))
+        )
         && validUpload(20 * 1024 * 1024);
-      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow update: if isAdmin() && validUpload(20 * 1024 * 1024);
+      allow delete: if isAdmin();
     }
 
     match /chats/{pedidoId}/audio/{fileName} {
       allow read: if isPedidoParticipant(pedidoId) || isAdmin();
-      allow create, update: if (isPedidoParticipant(pedidoId) || isAdmin())
+      allow create: if (
+          isAdmin()
+          || (resource == null
+            && isPedidoParticipant(pedidoId)
+            && pedidoAllowsParticipantWrites(pedidoId))
+        )
         && validAudioUpload(20 * 1024 * 1024);
-      allow delete: if isPedidoParticipant(pedidoId) || isAdmin();
+      allow update: if isAdmin() && validAudioUpload(20 * 1024 * 1024);
+      allow delete: if isAdmin();
     }
 
     match /users/{userId}/{fileName} {
@@ -138,16 +251,21 @@ service firebase.storage {
 
     match /profile_public/{userId}/{fileName} {
       allow read: if true;
-      allow create, update: if signedIn()
-        && (uid() == userId || isAdmin())
+      allow create, update: if (
+          isAdmin()
+          || (uid() == userId && isActivePilotParticipant())
+        )
         && validImageUpload(10 * 1024 * 1024);
       allow delete: if signedIn() && (uid() == userId || isAdmin());
     }
 
     match /portfolio/{userId}/{fileName} {
       allow read: if true;
-      allow create, update: if signedIn()
-        && (uid() == userId || isAdmin())
+      allow create, update: if (
+          isAdmin()
+          || (uid() == userId
+            && isActivePilotParticipantForRole('prestador'))
+        )
         && validImageUpload(10 * 1024 * 1024);
       allow delete: if signedIn() && (uid() == userId || isAdmin());
     }
@@ -163,6 +281,7 @@ service firebase.storage {
     match /kyc_pending/{prestadorId}/{submissionId}/{fileName} {
       allow read: if isAdmin();
       allow create: if uid() == prestadorId
+        && isActivePilotParticipantForRole('prestador')
         && canUploadKyc()
         && hasActiveKycUploadGrant(prestadorId, submissionId)
         && validImageUpload(10 * 1024 * 1024);

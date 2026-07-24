@@ -16,7 +16,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getAppCheck } = require('firebase-admin/app-check');
 const { getAuth } = require('firebase-admin/auth');
 const {
-  getFirestore, Timestamp, FieldValue, GeoPoint,
+  getFirestore, Timestamp, FieldValue, FieldPath, GeoPoint,
 } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getStorage } = require('firebase-admin/storage');
@@ -505,11 +505,24 @@ function getPedidoEstado(data) {
   return String(data.status || data.estado || '').trim();
 }
 
+function getCanonicalPedidoStatus(data) {
+  if (!data || typeof data !== 'object') return '';
+  const hasStatus = Object.prototype.hasOwnProperty.call(data, 'status');
+  const hasEstado = Object.prototype.hasOwnProperty.call(data, 'estado');
+  if (!hasStatus || typeof data.status !== 'string') return '';
+  const status = data.status.trim();
+  if (!status) return '';
+  if (hasEstado) {
+    if (typeof data.estado !== 'string' || data.estado.trim() !== status) return '';
+  }
+  return status;
+}
+
 function sanitizeDispatchText(value, maxLength = 500) {
   return safeText(value, maxLength)
     .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[contacto removido]')
     .replace(/(?:https?:\/\/|www\.)\S+/gi, '[link removido]')
-    .replace(/(?:\+?258[\s.-]?)?(?:8[2-7])[\s.-]?\d{3}[\s.-]?\d{3}/g, '[contacto removido]')
+    .replace(/(?:\+|00)?\d(?:[\s().-]*\d){6,}/g, '[contacto removido]')
     .replace(/\b-?\d{1,2}\.\d{4,}\s*[,;]\s*-?\d{1,3}\.\d{4,}\b/g, '[localizacao removida]')
     .trim();
 }
@@ -525,33 +538,81 @@ function sanitizeDispatchZone(value) {
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean)
-    .filter((part) => !/\d{3,}/.test(part));
+    .filter((part) => {
+      const normalized = normalizeSafetyText(part);
+      const digits = part.replace(/\D/g, '');
+      const looksLikeContact = /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/.test(part)
+        || /(?:258)?8[2-7]\d{7}/.test(digits)
+        || /(?:https?:\/\/|www\.)\S+/i.test(part);
+      const looksLikeAddress = /\b(rua|avenida|av|travessa|estrada|alameda|casa|porta|apartamento|apt|bloco|lote|talhao|quarteirao|edificio|predio|andar|numero|referencia|perto|frente|lado)\b/.test(
+        normalized,
+      );
+      return !looksLikeContact && !looksLikeAddress && !/\d{3,}/.test(part);
+    });
   const candidates = parts.slice(-2).map((part) => part.replace(/\b\d+[A-Za-z-]*\b/g, '').trim());
   const zone = candidates.filter(Boolean).join(', ');
   return sanitizeDispatchText(zone || 'Zona aproximada', 120);
 }
 
+function normalizedDispatchMode(value) {
+  const mode = cleanString(value || 'IMEDIATO').toUpperCase();
+  return ['IMEDIATO', 'AGENDADO', 'POR_PROPOSTA'].includes(mode) ? mode : 'IMEDIATO';
+}
+
+function normalizedDispatchPriceModel(value) {
+  const model = cleanString(value || 'a_combinar').toLowerCase();
+  return ['a_combinar', 'fixo', 'por_hora', 'por_orcamento', 'por_tarefa'].includes(model)
+    ? model
+    : 'a_combinar';
+}
+
+function dispatchZoneSource(pedido = {}) {
+  const explicitZone = cleanString(pedido.dispatchZone || pedido.zone);
+  if (explicitZone) return explicitZone;
+  const district = cleanString(pedido.bairro);
+  const city = cleanString(pedido.city);
+  if (district && city && normalizeSafetyText(district) !== normalizeSafetyText(city)) {
+    return `${district}, ${city}`;
+  }
+  return district || city;
+}
+
 function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
   const latitude = approximateCoordinate(pedido.latitude ?? pedido.geo?.geopoint?.latitude);
   const longitude = approximateCoordinate(pedido.longitude ?? pedido.geo?.geopoint?.longitude);
-  const zoneLabel = sanitizeDispatchZone(
-    pedido.dispatchZone || pedido.zone || pedido.bairro || pedido.city || pedido.enderecoTexto,
-  );
-  const status = getPedidoEstado(pedido) || 'criado';
+  // enderecoTexto is deliberately excluded: it is client-authored and can
+  // contain a door, landmark, phone number or other identifying detail.
+  const zoneLabel = sanitizeDispatchZone(dispatchZoneSource(pedido));
+  const mode = normalizedDispatchMode(pedido.modo);
+  const status = getCanonicalPedidoStatus(pedido) || 'criado';
+  const serviceLabel = pedido.isCustomService === true
+    ? 'Serviço personalizado'
+    : sanitizeDispatchText(pedido.servicoNome || pedido.categoria, 160);
+  const targetProviderId = ['aguarda_resposta_prestador', 'aguarda_resposta_cliente'].includes(status)
+    ? cleanString(pedido.prestadorId)
+    : '';
   return {
     pedidoId,
     servicoId: safeText(pedido.servicoId, 120),
-    servicoNome: sanitizeDispatchText(pedido.servicoNome || pedido.categoria, 160),
-    categoria: sanitizeDispatchText(pedido.categoria || pedido.servicoNome, 160),
-    titulo: sanitizeDispatchText(pedido.titulo, 180),
-    descricao: sanitizeDispatchText(pedido.descricao, 500),
-    modo: safeText(pedido.modo, 40),
-    agendadoPara: pedido.agendadoPara || null,
-    tipoPreco: safeText(pedido.tipoPreco, 60),
-    tipoPagamento: safeText(pedido.tipoPagamento, 60),
+    servicoNome: serviceLabel,
+    categoria: serviceLabel,
+    modo: mode,
+    agendadoPara: mode === 'AGENDADO' ? (pedido.agendadoPara || null) : null,
+    tipoPreco: normalizedDispatchPriceModel(pedido.tipoPreco),
     estado: status,
     status,
     prestadorId: null,
+    targetProviderId: targetProviderId || null,
+    valorMinEstimadoPrestador: targetProviderId
+      && Number.isFinite(Number(pedido.valorMinEstimadoPrestador))
+      ? Number(pedido.valorMinEstimadoPrestador)
+      : null,
+    valorMaxEstimadoPrestador: targetProviderId
+      && Number.isFinite(Number(pedido.valorMaxEstimadoPrestador))
+      ? Number(pedido.valorMaxEstimadoPrestador)
+      : null,
+    statusProposta: targetProviderId ? safeText(pedido.statusProposta, 40) : 'nenhuma',
+    propostaExpiresAt: targetProviderId ? (pedido.propostaExpiresAt || null) : null,
     zoneLabel,
     enderecoTexto: zoneLabel,
     latitude,
@@ -561,46 +622,88 @@ function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
     categoryRequirementName: sanitizeDispatchText(pedido.categoryRequirementName, 160),
     categoryRiskLevel: safeText(pedido.categoryRiskLevel, 40),
     isCustomService: pedido.isCustomService === true,
-    customServiceName: sanitizeDispatchText(pedido.customServiceName, 160),
     createdAt: pedido.createdAt || FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
 }
 
+function buildPedidoOpportunityNotification(pedidoId, pedido = {}) {
+  const projection = buildPedidoDispatchProjection(pedidoId, pedido);
+  const service = projection.servicoNome || projection.categoria || 'Serviço local';
+  const modeLabel = {
+    AGENDADO: 'Horário agendado',
+    POR_PROPOSTA: 'Orçamento/projeto',
+    IMEDIATO: 'Disponível agora',
+  }[projection.modo];
+  return {
+    title: 'ChegaJá - Novo pedido perto de ti',
+    body: safeText([service, projection.zoneLabel, modeLabel].filter(Boolean).join(' | '), 120),
+    data: {
+      type: 'novo_pedido',
+      pedidoId,
+    },
+  };
+}
+
 function isOpenPedido(pedido) {
-  return getPedidoEstado(pedido) === 'criado'
+  return getCanonicalPedidoStatus(pedido) === 'criado'
     && !cleanString(pedido?.prestadorId)
+    && cleanString(pedido?.moderationStatus || 'approved') === 'approved';
+}
+
+function isTargetedDispatchPedido(pedido) {
+  return ['aguarda_resposta_prestador', 'aguarda_resposta_cliente'].includes(
+    getCanonicalPedidoStatus(pedido),
+  )
+    && !!cleanString(pedido?.prestadorId)
     && cleanString(pedido?.moderationStatus || 'approved') === 'approved';
 }
 
 async function syncPedidoDispatch(database, pedidoId, pedido) {
   const dispatchRef = database.collection('pedido_dispatch').doc(pedidoId);
-  if (!isOpenPedido(pedido)) {
+  const open = isOpenPedido(pedido);
+  const targeted = isTargetedDispatchPedido(pedido);
+  if (!open && !targeted) {
     await dispatchRef.delete();
-    return { open: false };
+    return { open: false, targeted: false };
   }
   await dispatchRef.set(buildPedidoDispatchProjection(pedidoId, pedido), { merge: false });
-  return { open: true };
+  return { open, targeted };
 }
 
-async function syncProviderActiveClients(database, providerId) {
+async function syncProviderActiveClients(database, providerId, { pageSize = 500 } = {}) {
   const cleanProviderId = cleanString(providerId);
   if (!cleanProviderId) return;
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 500) {
+    throw new Error('pageSize must be an integer between 1 and 500');
+  }
   const activeStates = [
     'aceito',
     'em_andamento',
     'aguarda_confirmacao_valor',
-    'aguarda_resposta_cliente',
   ];
-  const active = await database.collection('pedidos')
-    .where('prestadorId', '==', cleanProviderId)
-    .where('status', 'in', activeStates)
-    .limit(500)
-    .get();
-  const activeClientIds = [...new Set(active.docs.map((doc) => getClienteId(doc.data())).filter(Boolean))];
+  const activeClientIds = new Set();
+  let cursor = null;
+  while (true) {
+    let query = database.collection('pedidos')
+      .where('prestadorId', '==', cleanProviderId)
+      .where('status', 'in', activeStates)
+      .orderBy(FieldPath.documentId())
+      .limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    snapshot.docs
+      .map((doc) => doc.data() || {})
+      .filter((pedido) => providerHasFullPedidoAccess(pedido, cleanProviderId))
+      .map(getClienteId)
+      .filter(Boolean)
+      .forEach((clientId) => activeClientIds.add(clientId));
+    if (snapshot.size < pageSize) break;
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+  }
   await database.collection('provider_dispatch_private').doc(cleanProviderId).set({
     providerId: cleanProviderId,
-    activeClientIds,
+    activeClientIds: [...activeClientIds],
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 }
@@ -619,6 +722,101 @@ function providerMatchesPedido(provider = {}, pedido = {}) {
   return !!required && approvals.has(required);
 }
 
+const PROVIDER_LOCATION_MAX_AGE_MINUTES_DEFAULT = 30;
+
+function deterministicCompositeDocumentId(prefix, components) {
+  const normalized = components.map((component) => cleanString(component));
+  if (normalized.some((component) => !component)) {
+    throw new HttpsError('invalid-argument', 'Identificador composto invalido.');
+  }
+  const payload = normalized
+    .map((component) => `${Buffer.byteLength(component, 'utf8')}:${component}`)
+    .join('|');
+  const digest = crypto.createHash('sha256').update(payload).digest('hex');
+  return `${prefix}_${digest}`;
+}
+
+function opportunityDocumentId(pedidoId, providerId) {
+  return deterministicCompositeDocumentId('opp', [pedidoId, providerId]);
+}
+
+function acceptanceQuotaDocumentId(providerId, acceptanceWindow) {
+  return deterministicCompositeDocumentId('quota', [providerId, String(acceptanceWindow)]);
+}
+
+function safeLegacyCompositeDocumentId(components) {
+  const legacy = components.map((component) => cleanString(component)).join('_');
+  return legacy
+    && !legacy.includes('/')
+    && Buffer.byteLength(legacy, 'utf8') <= 1500
+    ? legacy
+    : null;
+}
+
+function numericCoordinate(value, minimum, maximum) {
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) && coordinate >= minimum && coordinate <= maximum
+    ? coordinate
+    : null;
+}
+
+function pedidoCoordinates(pedido = {}) {
+  const geopoint = pedido.geo && pedido.geo.geopoint;
+  const latitude = numericCoordinate(
+    geopoint && geopoint.latitude !== undefined ? geopoint.latitude : pedido.latitude,
+    -90,
+    90,
+  );
+  const longitude = numericCoordinate(
+    geopoint && geopoint.longitude !== undefined ? geopoint.longitude : pedido.longitude,
+    -180,
+    180,
+  );
+  return latitude === null || longitude === null ? null : { latitude, longitude };
+}
+
+function providerDispatchLocation(dispatchState = {}, nowMillis = Date.now()) {
+  const maxAgeMinutes = Math.max(
+    5,
+    Math.min(
+      Number(getEnv(
+        'PROVIDER_LOCATION_MAX_AGE_MINUTES',
+        String(PROVIDER_LOCATION_MAX_AGE_MINUTES_DEFAULT),
+      )) || PROVIDER_LOCATION_MAX_AGE_MINUTES_DEFAULT,
+      60,
+    ),
+  );
+  const location = dispatchState.lastLocation;
+  const geo = dispatchState.geo;
+  const geopoint = geo && geo.geopoint;
+  const latitude = numericCoordinate(location && location.lat, -90, 90);
+  const longitude = numericCoordinate(location && location.lng, -180, 180);
+  const geoLatitude = numericCoordinate(geopoint && geopoint.latitude, -90, 90);
+  const geoLongitude = numericCoordinate(geopoint && geopoint.longitude, -180, 180);
+  const radiusKm = Number(dispatchState.radiusKm);
+  const lastLocationAtMillis = toMillis(dispatchState.lastLocationAt);
+  const geohash = cleanString(geo && geo.geohash);
+  const coordinatesAgree = latitude !== null
+    && longitude !== null
+    && geoLatitude !== null
+    && geoLongitude !== null
+    && Math.abs(latitude - geoLatitude) <= 1e-9
+    && Math.abs(longitude - geoLongitude) <= 1e-9;
+  const fresh = !!lastLocationAtMillis
+    && lastLocationAtMillis <= nowMillis + 60 * 1000
+    && lastLocationAtMillis >= nowMillis - maxAgeMinutes * 60 * 1000;
+  if (!coordinatesAgree
+    || !fresh
+    || geohash.length < 5
+    || geohash.length > 12
+    || !Number.isFinite(radiusKm)
+    || radiusKm < 1
+    || radiusKm > 50) {
+    return null;
+  }
+  return { latitude, longitude, radiusKm, lastLocationAtMillis };
+}
+
 async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
   if (!auth || !auth.uid) throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
   if (!auth.token || !cleanString(auth.token.phone_number)) {
@@ -627,23 +825,7 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
   const providerId = cleanString(auth.uid);
   const cleanPedidoId = cleanString(pedidoId);
   if (!cleanPedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
-
-  const providerSnap = await database.collection('provider_public').doc(providerId).get();
-  if (!providerSnap.exists) throw new HttpsError('failed-precondition', 'Perfil de prestador inexistente.');
-  const provider = providerSnap.data() || {};
-  const [providerPrivateSnap, dispatchPrivateSnap] = await Promise.all([
-    database.collection('provider_private').doc(providerId).get(),
-    database.collection('provider_dispatch_private').doc(providerId).get(),
-  ]);
-  const providerPrivate = providerPrivateSnap.data() || {};
-  const dispatchPrivate = dispatchPrivateSnap.data() || {};
-  if (providerPrivate.financialStatus === 'suspended_new_jobs'
-    || dispatchPrivate.acceptingNewJobs === false) {
-    throw new HttpsError(
-      'failed-precondition',
-      'Regulariza ou contesta o saldo de comissao antes de aceitar novos pedidos.',
-    );
-  }
+  const nowMillis = Date.now();
 
   const pedidoRef = database.collection('pedidos').doc(cleanPedidoId);
   await database.runTransaction(async (tx) => {
@@ -656,11 +838,138 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
     if (!isOpenPedido(pedido) && !invitedProvider) {
       throw new HttpsError('failed-precondition', 'Pedido ja nao esta disponivel.');
     }
-    if (!providerMatchesPedido(provider, pedido)) {
-      throw new HttpsError('permission-denied', 'Prestador nao elegivel para este pedido.');
+    if (pedidoIsSelfDealing(pedido, providerId)) {
+      throw new HttpsError('permission-denied', 'Nao podes aceitar um pedido da tua propria conta.');
+    }
+    if (pedidoRequiresAcceptedQuote(pedido)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Este pedido exige uma estimativa aceite antes de revelar os dados privados.',
+      );
+    }
+    const opportunityCollection = database.collection('provider_opportunities');
+    const opportunityRefV2 = opportunityCollection
+      .doc(opportunityDocumentId(cleanPedidoId, providerId));
+    const legacyOpportunityId = safeLegacyCompositeDocumentId([cleanPedidoId, providerId]);
+    const legacyOpportunityRef = legacyOpportunityId
+      ? opportunityCollection.doc(legacyOpportunityId)
+      : null;
+    let opportunityRef = opportunityRefV2;
+    let opportunity = null;
+    if (!invitedProvider) {
+      let opportunitySnap = await tx.get(opportunityRefV2);
+      if (!opportunitySnap.exists
+        && legacyOpportunityRef
+        && legacyOpportunityRef.path !== opportunityRefV2.path) {
+        const legacyOpportunitySnap = await tx.get(legacyOpportunityRef);
+        if (legacyOpportunitySnap.exists) {
+          opportunitySnap = legacyOpportunitySnap;
+          opportunityRef = legacyOpportunityRef;
+        }
+      }
+      opportunity = opportunitySnap.exists ? (opportunitySnap.data() || {}) : null;
+      const expiresAtMillis = toMillis(opportunity && opportunity.expiresAt);
+      if (!opportunity
+        || cleanString(opportunity.pedidoId) !== cleanPedidoId
+        || cleanString(opportunity.providerId) !== providerId
+        || cleanString(opportunity.status) !== 'active'
+        || !expiresAtMillis
+        || expiresAtMillis <= nowMillis) {
+        throw new HttpsError(
+          'permission-denied',
+          'Esta oportunidade nao esta ativa para a tua conta.',
+        );
+      }
+    }
+    const eligibleProvider = await readEligibleProviderForPedido({
+      transaction: tx,
+      database,
+      providerId,
+      pedido,
+      requireAvailableForNewWork: true,
+      requireOnlineForNewWork: !invitedProvider,
+      nowMillis,
+    });
+    if (!invitedProvider) {
+      const currentProviderLocation = providerDispatchLocation(
+        eligibleProvider.dispatchState,
+        nowMillis,
+      );
+      const currentPedidoLocation = pedidoCoordinates(pedido);
+      if (!currentProviderLocation || !currentPedidoLocation) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Atualiza a tua localizacao antes de aceitar esta oportunidade.',
+        );
+      }
+      const currentDistanceKm = geofire.distanceBetween(
+        [currentProviderLocation.latitude, currentProviderLocation.longitude],
+        [currentPedidoLocation.latitude, currentPedidoLocation.longitude],
+      );
+      if (!Number.isFinite(currentDistanceKm)
+        || currentDistanceKm > currentProviderLocation.radiusKm) {
+        throw new HttpsError(
+          'failed-precondition',
+          'A oportunidade ja esta fora da tua area atual de atendimento.',
+        );
+      }
+    }
+    const acceptanceWindow = Math.floor(nowMillis / (60 * 60 * 1000)) * 60 * 60 * 1000;
+    const acceptanceLimit = Math.max(
+      1,
+      Math.min(Number(getEnv('PROVIDER_ACCEPTANCES_PER_HOUR', '5')) || 5, 20),
+    );
+    const acceptanceLimitCollection = database.collection('provider_acceptance_limits');
+    const acceptanceLimitRef = acceptanceLimitCollection
+      .doc(acceptanceQuotaDocumentId(providerId, acceptanceWindow));
+    const acceptanceLimitSnap = await tx.get(acceptanceLimitRef);
+    let acceptanceCount = acceptanceLimitSnap.exists
+      ? Number(acceptanceLimitSnap.data().count || 0)
+      : 0;
+    if (!acceptanceLimitSnap.exists) {
+      const legacyAcceptanceLimitId = safeLegacyCompositeDocumentId([
+        providerId,
+        acceptanceWindow,
+      ]);
+      if (legacyAcceptanceLimitId) {
+        const legacyAcceptanceLimitSnap = await tx.get(
+          acceptanceLimitCollection.doc(legacyAcceptanceLimitId),
+        );
+        const legacyData = legacyAcceptanceLimitSnap.exists
+          ? (legacyAcceptanceLimitSnap.data() || {})
+          : {};
+        if (cleanString(legacyData.providerId) === providerId
+          && toMillis(legacyData.windowStartedAt) === acceptanceWindow) {
+          acceptanceCount = Number(legacyData.count || 0);
+        }
+      }
+    }
+    if (!Number.isFinite(acceptanceCount) || acceptanceCount < 0 || acceptanceCount >= acceptanceLimit) {
+      throw new HttpsError(
+        'resource-exhausted',
+        'Limite temporario de aceitacoes atingido. Tenta novamente mais tarde.',
+      );
+    }
+    tx.set(acceptanceLimitRef, {
+      providerId,
+      idVersion: 'sha256-v1',
+      windowStartedAt: Timestamp.fromMillis(acceptanceWindow),
+      count: acceptanceCount + 1,
+      expiresAt: Timestamp.fromMillis(acceptanceWindow + 24 * 60 * 60 * 1000),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    if (!invitedProvider) {
+      tx.update(opportunityRef, {
+        status: 'accepted',
+        acceptedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
     }
     tx.update(pedidoRef, {
       prestadorId: providerId,
+      providerAccessGranted: true,
+      providerAccessGrantedTo: providerId,
+      providerAccessGrantedAt: FieldValue.serverTimestamp(),
       status: 'aceito',
       estado: 'aceito',
       updatedAt: FieldValue.serverTimestamp(),
@@ -686,131 +995,332 @@ function mergePreferTarget(source = {}, target = {}) {
   return merged;
 }
 
-async function syncPhoneIdentityCore({ database = db, auth }) {
+async function syncPhoneIdentityCore({ database = db, auth, authAdmin = firebaseAuth }) {
   if (!auth || !auth.uid) throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
-  const userRecord = await firebaseAuth.getUser(auth.uid);
+  const userRecord = await authAdmin.getUser(auth.uid);
   const phoneNumber = cleanString(userRecord.phoneNumber);
   if (!phoneNumber) throw new HttpsError('failed-precondition', 'Telefone ainda nao confirmado.');
+  await requireAccountAllowsNewActivity({
+    database,
+    uid: auth.uid,
+    message: 'Cancela primeiro o pedido de eliminacao para voltar a publicar o perfil.',
+  });
 
   const now = FieldValue.serverTimestamp();
   const privateRef = database.collection('users_private').doc(auth.uid);
   const providerPublicRef = database.collection('provider_public').doc(auth.uid);
-  const [providerSnap, activePilotProvider] = await Promise.all([
-    providerPublicRef.get(),
-    pilotParticipantIsActive({
-      database,
-      uid: auth.uid,
-      role: 'prestador',
-    }),
-  ]);
-  const batch = database.batch();
-  batch.set(privateRef, {
+  const activePilotProvider = await pilotParticipantIsActive({
+    database,
     uid: auth.uid,
-    isAnonymous: false,
-    phoneE164: phoneNumber,
-    phoneVerified: true,
-    phoneVerifiedAt: now,
-    updatedAt: now,
-  }, { merge: true });
-  if (providerSnap.exists) {
-    batch.set(providerPublicRef, {
-      isSearchable: activePilotProvider,
-      trustSignals: { phoneConfirmed: true },
+    role: 'prestador',
+  });
+  await database.runTransaction(async (transaction) => {
+    const [privateSnap, providerSnap] = await Promise.all([
+      transaction.get(privateRef),
+      transaction.get(providerPublicRef),
+    ]);
+    if (!accountAllowsNewWork(privateSnap.exists ? privateSnap.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Cancela primeiro o pedido de eliminacao para voltar a publicar o perfil.',
+      );
+    }
+    transaction.set(privateRef, {
+      uid: auth.uid,
+      isAnonymous: false,
+      phoneE164: phoneNumber,
+      phoneVerified: true,
+      phoneVerifiedAt: now,
       updatedAt: now,
     }, { merge: true });
-  }
-  await batch.commit();
+    if (providerSnap.exists) {
+      transaction.set(providerPublicRef, {
+        isSearchable: activePilotProvider,
+        trustSignals: { phoneConfirmed: true },
+        updatedAt: now,
+      }, { merge: true });
+    }
+  });
   return { ok: true, phoneVerified: true };
 }
 
-async function mergeAnonymousDataCore({ database = db, auth, sourceIdToken }) {
+async function mergeAnonymousDataCore({
+  database = db,
+  auth,
+  sourceIdToken,
+  authAdmin = firebaseAuth,
+}) {
   if (!auth || !auth.uid) throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
-  const targetUser = await firebaseAuth.getUser(auth.uid);
+  const targetUser = await authAdmin.getUser(auth.uid);
   if (!targetUser.phoneNumber) {
     throw new HttpsError('failed-precondition', 'A conta de destino precisa de telefone confirmado.');
   }
   const token = cleanString(sourceIdToken);
   if (!token) throw new HttpsError('invalid-argument', 'Token da sessao temporaria em falta.');
-  const sourceAuth = await firebaseAuth.verifyIdToken(token, true);
+  let sourceAuth;
+  let completedTombstoneRetry = false;
+  try {
+    sourceAuth = await authAdmin.verifyIdToken(token, true);
+  } catch (revokedOrDisabledError) {
+    // `updateUser(disabled: true)` is the final side effect. If its response is
+    // lost, the next call's revocation check can fail even though all durable
+    // data work completed. A signature-validated token may resume only when a
+    // completed tombstone already binds this exact source to this target.
+    let decoded;
+    try {
+      decoded = await authAdmin.verifyIdToken(token, false);
+    } catch (_) {
+      throw revokedOrDisabledError;
+    }
+    const retrySourceUid = cleanString(decoded && decoded.uid);
+    const retryTombstone = retrySourceUid
+      ? await database.collection('account_merge_sources').doc(retrySourceUid).get()
+      : null;
+    const retryData = retryTombstone && retryTombstone.exists
+      ? (retryTombstone.data() || {})
+      : {};
+    if (!retrySourceUid
+      || !retryTombstone
+      || !retryTombstone.exists
+      || cleanString(retryData.targetUid) !== auth.uid
+      || retryData.rekeyCompleted !== true
+      || cleanString(retryData.status) !== 'complete') {
+      throw revokedOrDisabledError;
+    }
+    sourceAuth = decoded;
+    completedTombstoneRetry = true;
+  }
   const sourceUid = cleanString(sourceAuth.uid);
   const provider = sourceAuth.firebase && sourceAuth.firebase.sign_in_provider;
   if (!sourceUid || sourceUid === auth.uid || provider !== 'anonymous') {
     throw new HttpsError('permission-denied', 'Sessao temporaria invalida.');
   }
 
+  const targetUid = auth.uid;
+  await requireAccountAllowsNewActivity({
+    database,
+    uid: targetUid,
+    message: 'A conta de destino esta em processo de eliminacao.',
+  });
   const sourcePrivateRef = database.collection('users_private').doc(sourceUid);
-  const targetPrivateRef = database.collection('users_private').doc(auth.uid);
+  const targetPrivateRef = database.collection('users_private').doc(targetUid);
+  const tombstoneRef = database.collection('account_merge_sources').doc(sourceUid);
   const [sourcePrivateSnap, targetPrivateSnap] = await Promise.all([
     sourcePrivateRef.get(),
     targetPrivateRef.get(),
   ]);
   const sourcePrivate = sourcePrivateSnap.data() || {};
-  if (sourcePrivate.mergedInto && sourcePrivate.mergedInto !== auth.uid) {
+  if (sourcePrivate.mergedInto && sourcePrivate.mergedInto !== targetUid) {
     throw new HttpsError('already-exists', 'Sessao temporaria ja foi migrada.');
   }
-  if (sourcePrivate.mergedInto === auth.uid) {
-    return { ok: true, sourceUid, targetUid: auth.uid, idempotent: true };
+  // Acquire the deterministic source lock before any copy/re-key operation.
+  // A different phone account can therefore never race this merge and move
+  // the same anonymous records to two destinations. The same target may
+  // resume an interrupted in-progress merge idempotently.
+  const tombstoneState = await database.runTransaction(async (transaction) => {
+    const existing = await transaction.get(tombstoneRef);
+    if (existing.exists) {
+      const data = existing.data() || {};
+      if (cleanString(data.targetUid) !== targetUid) {
+        throw new HttpsError('already-exists', 'Sessao temporaria ja foi migrada.');
+      }
+      return data;
+    }
+    const pending = {
+      sourceUid,
+      targetUid,
+      mergeVersion: 'anonymous-data-v3',
+      status: 'in_progress',
+      rekeyCompleted: false,
+      startedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(tombstoneRef, pending, { merge: false });
+    return pending;
+  });
+  const alreadyRekeyed = tombstoneState.rekeyCompleted === true;
+  if (completedTombstoneRetry && !alreadyRekeyed) {
+    throw new HttpsError('failed-precondition', 'Migracao da sessao temporaria incompleta.');
   }
-
   const docPairs = [
-    ['public_profiles', sourceUid, auth.uid, 'uid'],
-    ['provider_public', sourceUid, auth.uid, 'uid'],
-    ['provider_private', sourceUid, auth.uid, 'providerId'],
-    ['provider_dispatch_private', sourceUid, auth.uid, 'providerId'],
+    ['public_profiles', sourceUid, targetUid, 'uid'],
+    ['provider_public', sourceUid, targetUid, 'uid'],
+    ['provider_private', sourceUid, targetUid, 'providerId'],
+    ['provider_dispatch_private', sourceUid, targetUid, 'providerId'],
+    ['users', sourceUid, targetUid, 'uid'],
+    ['prestadores', sourceUid, targetUid, 'uid'],
   ];
-  const bulk = database.bulkWriter();
-  const targetPrivate = targetPrivateSnap.data() || {};
-  bulk.set(targetPrivateRef, {
-    ...mergePreferTarget(sourcePrivate, targetPrivate),
-    uid: auth.uid,
-    isAnonymous: false,
-    phoneE164: targetUser.phoneNumber,
-    phoneVerified: true,
-    phoneVerifiedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
 
-  for (const [collection, sourceId, targetId, identityField] of docPairs) {
-    const [sourceSnap, targetSnap] = await Promise.all([
-      database.collection(collection).doc(sourceId).get(),
-      database.collection(collection).doc(targetId).get(),
-    ]);
-    if (!sourceSnap.exists) continue;
-    bulk.set(database.collection(collection).doc(targetId), {
-      ...mergePreferTarget(sourceSnap.data(), targetSnap.data()),
-      [identityField]: targetId,
+  if (!alreadyRekeyed) {
+    const bulk = database.bulkWriter();
+    const targetPrivate = targetPrivateSnap.data() || {};
+    bulk.set(targetPrivateRef, {
+      ...mergePreferTarget(sourcePrivate, targetPrivate),
+      uid: targetUid,
+      isAnonymous: false,
+      phoneE164: targetUser.phoneNumber,
+      phoneVerified: true,
+      phoneVerifiedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+
+    for (const [collection, sourceId, targetId, identityField] of docPairs) {
+      const [sourceSnap, targetSnap] = await Promise.all([
+        database.collection(collection).doc(sourceId).get(),
+        database.collection(collection).doc(targetId).get(),
+      ]);
+      if (!sourceSnap.exists) continue;
+      bulk.set(database.collection(collection).doc(targetId), {
+        ...mergePreferTarget(sourceSnap.data(), targetSnap.data()),
+        [identityField]: targetId,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+
+    await bulk.close();
+
+    // Copy and re-key in bounded pages. No completion marker is written until
+    // every ownership record has moved successfully.
+    await copySubcollectionDocuments({
+      sourceCollection: sourcePrivateRef.collection('favorites'),
+      targetCollection: targetPrivateRef.collection('favorites'),
+    });
+    await updateMatchingDocuments({
+      database,
+      collection: 'pedidos',
+      field: 'clienteId',
+      uid: sourceUid,
+      update: (pedido) => {
+        const legacyClientId = cleanString(pedido.clientId);
+        const aliasesConflict = Boolean(
+          legacyClientId && legacyClientId !== sourceUid,
+        );
+        const createsSelfDealing = cleanString(pedido.prestadorId) === targetUid;
+        const mustRevokeGrant = aliasesConflict || createsSelfDealing;
+        return {
+          clienteId: targetUid,
+          ...(legacyClientId === sourceUid ? { clientId: targetUid } : {}),
+          ...(mustRevokeGrant ? {
+            providerAccessGranted: false,
+            providerAccessGrantedTo: null,
+            providerAccessGrantedAt: null,
+          } : {}),
+        };
+      },
+    });
+    await updateMatchingDocuments({
+      database,
+      collection: 'pedidos',
+      field: 'clientId',
+      uid: sourceUid,
+      update: (pedido) => {
+        const primaryClientId = cleanString(pedido.clienteId);
+        const aliasesConflict = Boolean(
+          primaryClientId && primaryClientId !== sourceUid,
+        );
+        const createsSelfDealing = cleanString(pedido.prestadorId) === targetUid;
+        const mustRevokeGrant = aliasesConflict || createsSelfDealing;
+        return {
+          clientId: targetUid,
+          ...(primaryClientId === sourceUid ? { clienteId: targetUid } : {}),
+          ...(mustRevokeGrant ? {
+            providerAccessGranted: false,
+            providerAccessGrantedTo: null,
+            providerAccessGrantedAt: null,
+          } : {}),
+        };
+      },
+    });
+    await updateMatchingDocuments({
+      database,
+      collection: 'pedidos',
+      field: 'prestadorId',
+      uid: sourceUid,
+      update: (pedido) => {
+        const primaryClientId = cleanString(pedido.clienteId);
+        const legacyClientId = cleanString(pedido.clientId);
+        const aliasesConflict = Boolean(
+          primaryClientId && legacyClientId && primaryClientId !== legacyClientId,
+        );
+        const clientId = aliasesConflict
+          ? ''
+          : (primaryClientId || legacyClientId);
+        const lifecycle = getCanonicalPedidoStatus(pedido);
+        const transfersAcceptedGrant = providerHasFullPedidoAccess(pedido, sourceUid)
+          && ['aceito', 'em_andamento', 'aguarda_confirmacao_valor', 'concluido']
+            .includes(lifecycle)
+          && Boolean(clientId)
+          && clientId !== sourceUid
+          && clientId !== targetUid;
+        return {
+          prestadorId: targetUid,
+          providerAccessGranted: transfersAcceptedGrant,
+          providerAccessGrantedTo: transfersAcceptedGrant ? targetUid : null,
+          providerAccessGrantedAt: transfersAcceptedGrant
+            ? pedido.providerAccessGrantedAt
+            : null,
+        };
+      },
+    });
+    await updateMatchingDocuments({
+      database,
+      collection: 'chats',
+      field: 'clienteId',
+      uid: sourceUid,
+      update: { clienteId: targetUid },
+    });
+    await updateMatchingDocuments({
+      database,
+      collection: 'chats',
+      field: 'prestadorId',
+      uid: sourceUid,
+      update: { prestadorId: targetUid },
+    });
+
+    // Mark the deterministic source lock complete only after every copy and
+    // re-key operation has completed.
+    await database.runTransaction(async (transaction) => {
+      const existing = await transaction.get(tombstoneRef);
+      if (!existing.exists || cleanString(existing.data().targetUid) !== targetUid) {
+        throw new HttpsError('aborted', 'Bloqueio da migracao de conta foi alterado.');
+      }
+      transaction.update(tombstoneRef, {
+        mergeVersion: 'anonymous-data-v3',
+        status: 'complete',
+        rekeyCompleted: true,
+        completedAt: FieldValue.serverTimestamp(),
+      });
+    });
   }
 
-  const favorites = await sourcePrivateRef.collection('favorites').limit(500).get();
-  favorites.docs.forEach((doc) => {
-    bulk.set(targetPrivateRef.collection('favorites').doc(doc.id), doc.data(), { merge: true });
-  });
-
-  const ownershipQueries = await Promise.all([
-    database.collection('pedidos').where('clienteId', '==', sourceUid).limit(500).get(),
-    database.collection('pedidos').where('prestadorId', '==', sourceUid).limit(500).get(),
-    database.collection('chats').where('clienteId', '==', sourceUid).limit(500).get(),
-    database.collection('chats').where('prestadorId', '==', sourceUid).limit(500).get(),
-  ]);
-  ownershipQueries[0].docs.forEach((doc) => bulk.update(doc.ref, { clienteId: auth.uid }));
-  ownershipQueries[1].docs.forEach((doc) => bulk.update(doc.ref, { prestadorId: auth.uid }));
-  ownershipQueries[2].docs.forEach((doc) => bulk.update(doc.ref, { clienteId: auth.uid }));
-  ownershipQueries[3].docs.forEach((doc) => bulk.update(doc.ref, { prestadorId: auth.uid }));
-
-  bulk.set(sourcePrivateRef, {
-    mergedInto: auth.uid,
-    mergedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  bulk.create(database.collection('account_merge_audit').doc(), {
+  const mergeAuditId = crypto
+    .createHash('sha256')
+    .update(`${sourceUid}\u0000${targetUid}`)
+    .digest('hex');
+  await database.collection('account_merge_audit').doc(mergeAuditId).set({
     sourceUid,
-    targetUid: auth.uid,
+    targetUid,
     createdAt: FieldValue.serverTimestamp(),
-  });
-  await bulk.close();
-  await syncPhoneIdentityCore({ database, auth });
-  return { ok: true, sourceUid, targetUid: auth.uid, idempotent: false };
+  }, { merge: false });
+
+  // Once the durable tombstone exists, remove every copied source document.
+  // recursiveDelete also removes favorites and any other nested private data.
+  for (const sourceRef of [
+    sourcePrivateRef,
+    ...docPairs.map(([collection, sourceId]) => (
+      database.collection(collection).doc(sourceId)
+    )),
+  ]) {
+    await database.recursiveDelete(sourceRef);
+  }
+
+  await syncPhoneIdentityCore({ database, auth, authAdmin });
+  await syncProviderActiveClients(database, targetUid);
+  try {
+    await authAdmin.updateUser(sourceUid, { disabled: true });
+  } catch (error) {
+    if (!error || error.code !== 'auth/user-not-found') throw error;
+  }
+  return { ok: true, sourceUid, targetUid, idempotent: alreadyRekeyed };
 }
 
 const KYC_CONSENT_VERSION = 'kyc-consent-2026-07-20';
@@ -818,6 +1328,18 @@ const KYC_UPLOAD_WINDOW_MINUTES = 30;
 const KYC_RETENTION_DAYS = 90;
 const LEGAL_DOCUMENT_VERSION = 'legal-2026-07-20-pilot-v3';
 const ACCOUNT_DELETION_GRACE_DAYS = 7;
+const ACCOUNT_DELETION_LEASE_MS = 15 * 60 * 1000;
+const ACCOUNT_DELETION_STORAGE_ROOTS = Object.freeze([
+  'users',
+  'prestadores',
+  'kyc_pending',
+  'profile_public',
+  'portfolio',
+  'stories',
+  'temp',
+  'kyc',
+  'category_evidence',
+]);
 
 function requireVerifiedPhoneAuth(auth) {
   const uid = requireCallableUid(auth && auth.uid);
@@ -827,11 +1349,11 @@ function requireVerifiedPhoneAuth(auth) {
   return uid;
 }
 
-async function requireCurrentLegalConsent({ database = db, uid }) {
-  const snapshot = await database.collection('users_private').doc(uid).get();
-  const consent = snapshot.exists ? snapshot.data().legalConsent : null;
+function assertCurrentLegalConsent(consent) {
   if (!consent
     || cleanString(consent.version) !== LEGAL_DOCUMENT_VERSION
+    || consent.termsAccepted !== true
+    || consent.privacyAccepted !== true
     || consent.ageConfirmed !== true) {
     throw new HttpsError(
       'failed-precondition',
@@ -839,6 +1361,12 @@ async function requireCurrentLegalConsent({ database = db, uid }) {
     );
   }
   return consent;
+}
+
+async function requireCurrentLegalConsent({ database = db, uid }) {
+  const snapshot = await database.collection('users_private').doc(uid).get();
+  const consent = snapshot.exists ? snapshot.data().legalConsent : null;
+  return assertCurrentLegalConsent(consent);
 }
 
 function pilotAllowlistRequired() {
@@ -852,22 +1380,32 @@ function normalizedPilotRoles(value) {
   return [...new Set(roles)];
 }
 
-async function requirePilotParticipant({ database = db, uid, role }) {
-  if (!pilotAllowlistRequired()) {
+function pilotParticipantIsActiveForRole(participant, role) {
+  const roles = normalizedPilotRoles(participant && participant.roles);
+  const city = normalizeSafetyText(participant && participant.city);
+  return !!participant
+    && participant.status === 'active'
+    && roles.includes(role)
+    && ['maputo', 'matola'].includes(city);
+}
+
+async function requirePilotParticipant({
+  database = db,
+  uid,
+  role,
+  allowEmulatorBypass = true,
+}) {
+  if (allowEmulatorBypass && !pilotAllowlistRequired()) {
     return { active: true, bypassed: true, roles: ['cliente', 'prestador'] };
   }
   const snapshot = await database.collection('pilot_participants').doc(uid).get();
   const participant = snapshot.exists ? snapshot.data() : null;
   const roles = normalizedPilotRoles(participant && participant.roles);
-  if (!participant || participant.status !== 'active' || !roles.includes(role)) {
+  if (!pilotParticipantIsActiveForRole(participant, role)) {
     throw new HttpsError(
       'permission-denied',
       'Esta conta ainda nao faz parte do piloto controlado. Contacta o suporte.',
     );
-  }
-  const city = normalizeSafetyText(participant.city || '');
-  if (!['maputo', 'matola'].includes(city)) {
-    throw new HttpsError('failed-precondition', 'O piloto esta limitado a Maputo e Matola.');
   }
   return { ...participant, active: true, roles };
 }
@@ -929,28 +1467,37 @@ async function acceptLegalDocumentsCore({ database = db, auth, data = {} }) {
   }
 
   const acceptedAt = FieldValue.serverTimestamp();
-  const batch = database.batch();
-  batch.set(database.collection('users_private').doc(uid), {
-    legalConsent: {
+  const privateRef = database.collection('users_private').doc(uid);
+  const auditRef = database.collection('legal_consent_audit').doc();
+  await database.runTransaction(async (transaction) => {
+    const userPrivate = await transaction.get(privateRef);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Cancela primeiro o pedido de eliminacao para atualizar os consentimentos.',
+      );
+    }
+    transaction.set(privateRef, {
+      legalConsent: {
+        version,
+        locale,
+        termsAccepted: true,
+        privacyAccepted: true,
+        ageConfirmed: true,
+        acceptedAt,
+      },
+      updatedAt: acceptedAt,
+    }, { merge: true });
+    transaction.create(auditRef, {
+      uid,
       version,
       locale,
       termsAccepted: true,
       privacyAccepted: true,
       ageConfirmed: true,
       acceptedAt,
-    },
-    updatedAt: acceptedAt,
-  }, { merge: true });
-  batch.create(database.collection('legal_consent_audit').doc(), {
-    uid,
-    version,
-    locale,
-    termsAccepted: true,
-    privacyAccepted: true,
-    ageConfirmed: true,
-    acceptedAt,
+    });
   });
-  await batch.commit();
   return { ok: true, version };
 }
 
@@ -983,7 +1530,10 @@ async function createSupportTicketCore({ database = db, auth, data = {} }) {
   if (pedidoId) {
     const pedido = await database.collection('pedidos').doc(pedidoId).get();
     const pedidoData = pedido.exists ? pedido.data() : null;
-    if (!pedidoData || ![getClienteId(pedidoData), cleanString(pedidoData.prestadorId)].includes(uid)) {
+    const hasPedidoAccess = pedidoData
+      && (cleanString(getClienteId(pedidoData)) === uid
+        || providerHasFullPedidoAccess(pedidoData, uid));
+    if (!hasPedidoAccess) {
       throw new HttpsError('permission-denied', 'Nao tens acesso a este pedido.');
     }
   }
@@ -1170,6 +1720,8 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
   let gmvMzn = 0;
   let providerEarningsMzn = 0;
   let commissionDueMzn = 0;
+  let financialRecordsComplete = 0;
+  let financialRecordsIncomplete = 0;
   const firstCompletedAtByProvider = new Map();
   const activeProviders30 = new Set();
   const activeProviders90 = new Set();
@@ -1188,14 +1740,31 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
     if (status === 'cancelado') requestsCancelled += 1;
     if (status !== 'concluido') return;
     requestsCompleted += 1;
-    const finalValue = Number(data.precoFinal ?? data.preco ?? data.earningsTotal ?? 0);
-    const providerEarnings = Number(data.earningsProvider ?? finalValue);
-    const commission = Number(data.commissionPlatform ?? 0);
+    const finalValue = Number(data.earningsTotal ?? data.precoFinal ?? data.preco ?? 0);
+    const hasProviderEarnings = data.earningsProvider !== null
+      && data.earningsProvider !== undefined;
+    const hasCommission = data.commissionPlatform !== null
+      && data.commissionPlatform !== undefined;
+    const providerEarnings = Number(data.earningsProvider);
+    const commission = Number(data.commissionPlatform);
     if (Number.isFinite(finalValue) && finalValue > 0) gmvMzn += finalValue;
-    if (Number.isFinite(providerEarnings) && providerEarnings > 0) {
+    const economicsTolerance = Math.max(0.01, Math.abs(finalValue) * 0.001);
+    const hasAuthoritativeEconomics = Number.isFinite(finalValue)
+      && finalValue > 0
+      && hasProviderEarnings
+      && hasCommission
+      && Number.isFinite(providerEarnings)
+      && providerEarnings >= 0
+      && Number.isFinite(commission)
+      && commission >= 0
+      && Math.abs((providerEarnings + commission) - finalValue) <= economicsTolerance;
+    if (hasAuthoritativeEconomics) {
+      financialRecordsComplete += 1;
       providerEarningsMzn += providerEarnings;
+      commissionDueMzn += commission;
+    } else {
+      financialRecordsIncomplete += 1;
     }
-    if (Number.isFinite(commission) && commission > 0) commissionDueMzn += commission;
     const completedAt = toMillis(data.completedAt || data.updatedAt || data.createdAt);
     if (providerIds.has(providerId) && completedAt) {
       const previous = firstCompletedAtByProvider.get(providerId);
@@ -1282,6 +1851,8 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
       providerEarningsMzn: round2(providerEarningsMzn),
       commissionDueMzn: round2(commissionDueMzn),
       commissionsCollectedMzn: round2(commissionsCollectedMzn),
+      financialRecordsComplete,
+      financialRecordsIncomplete,
       commissionCollectionRate: commissionDueMzn > 0
         ? commissionsCollectedMzn / commissionDueMzn
         : null,
@@ -1308,20 +1879,40 @@ const ACCOUNT_TERMINAL_ORDER_STATES = new Set([
 ]);
 
 function isActiveAccountOrder(data = {}) {
-  const status = cleanString(data.status || data.estado).toLowerCase();
-  return !ACCOUNT_TERMINAL_ORDER_STATES.has(status);
+  const hasStatus = Object.prototype.hasOwnProperty.call(data, 'status');
+  const hasEstado = Object.prototype.hasOwnProperty.call(data, 'estado');
+  const status = hasStatus ? cleanString(data.status).toLowerCase() : '';
+  const estado = hasEstado ? cleanString(data.estado).toLowerCase() : '';
+
+  // A lifecycle conflict is never safe evidence that work has finished. This
+  // intentionally fails closed so deletion cannot erase an account while one
+  // of the authoritative aliases still says that the order is active.
+  if (hasStatus && hasEstado && status !== estado) return true;
+  const lifecycle = hasStatus ? status : estado;
+  return !lifecycle || !ACCOUNT_TERMINAL_ORDER_STATES.has(lifecycle);
 }
 
-async function findActiveAccountOrders({ database = db, uid }) {
-  const snapshots = await Promise.all([
-    database.collection('pedidos').where('clienteId', '==', uid).limit(200).get(),
-    database.collection('pedidos').where('clientId', '==', uid).limit(200).get(),
-    database.collection('pedidos').where('prestadorId', '==', uid).limit(200).get(),
-  ]);
+async function findActiveAccountOrders({ database = db, uid, pageSize = 200 }) {
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 500) {
+    throw new Error('pageSize must be an integer between 1 and 500');
+  }
   const active = new Map();
-  snapshots.forEach((snapshot) => snapshot.docs.forEach((doc) => {
-    if (isActiveAccountOrder(doc.data())) active.set(doc.id, doc);
-  }));
+  for (const field of ['clienteId', 'clientId', 'prestadorId']) {
+    let cursor = null;
+    while (true) {
+      let query = database.collection('pedidos')
+        .where(field, '==', uid)
+        .orderBy(FieldPath.documentId())
+        .limit(pageSize);
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await query.get();
+      snapshot.docs.forEach((doc) => {
+        if (isActiveAccountOrder(doc.data())) active.set(doc.id, doc);
+      });
+      if (snapshot.size < pageSize) break;
+      cursor = snapshot.docs[snapshot.docs.length - 1];
+    }
+  }
   return [...active.values()];
 }
 
@@ -1341,7 +1932,8 @@ async function requestAccountDeletionCore({ database = db, auth, data = {} }) {
 
   const requestRef = database.collection('account_deletion_requests').doc(uid);
   const existing = await requestRef.get();
-  if (existing.exists && cleanString(existing.data().status) === 'pending') {
+  if (existing.exists && ['pending', 'pending_active_work', 'executing']
+    .includes(cleanString(existing.data().status))) {
     const executeAt = existing.data().executeAt;
     return { ok: true, alreadyPending: true, executeAtMillis: toMillis(executeAt) };
   }
@@ -1445,19 +2037,211 @@ function accountDeletionPseudonym(uid) {
   return `deleted:${digest}`;
 }
 
-async function updateMatchingDocuments({ database, collection, field, uid, update }) {
-  const snapshot = await database.collection(collection).where(field, '==', uid).limit(500).get();
-  if (snapshot.empty) return 0;
-  const bulk = database.bulkWriter();
-  snapshot.docs.forEach((doc) => bulk.update(doc.ref, update));
-  await bulk.close();
-  return snapshot.size;
+function accountDeletionStoragePrefixes(uid) {
+  const ownerUid = cleanString(uid);
+  if (!ownerUid) throw new Error('uid is required for storage cleanup');
+  return ACCOUNT_DELETION_STORAGE_ROOTS.map((root) => `${root}/${ownerUid}/`);
 }
 
-async function deleteMatchingDocuments({ database, collection, field, uid }) {
-  const snapshot = await database.collection(collection).where(field, '==', uid).limit(500).get();
-  for (const doc of snapshot.docs) await database.recursiveDelete(doc.ref);
-  return snapshot.size;
+function accountDeletionRequestCanExecute(request = {}, nowMillis = Date.now()) {
+  const status = cleanString(request.status);
+  if (!['pending', 'pending_active_work', 'executing'].includes(status)) return false;
+  const executeAtMillis = toMillis(request.executeAt);
+  if (!executeAtMillis || executeAtMillis > nowMillis) return false;
+  return status !== 'executing' || toMillis(request.leaseUntil) <= nowMillis;
+}
+
+function pseudonymizeUidInValue(value, uid, pseudonym) {
+  if (typeof value === 'string') {
+    const replaced = value.split(uid).join(pseudonym);
+    return { value: replaced, changed: replaced !== value };
+  }
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next = value.map((item) => {
+      const transformed = pseudonymizeUidInValue(item, uid, pseudonym);
+      changed = changed || transformed.changed;
+      return transformed.value;
+    });
+    return { value: changed ? next : value, changed };
+  }
+  if (!value || typeof value !== 'object' || typeof value.toMillis === 'function') {
+    return { value, changed: false };
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return { value, changed: false };
+  }
+  let changed = false;
+  const next = {};
+  for (const [key, item] of Object.entries(value)) {
+    const transformed = pseudonymizeUidInValue(item, uid, pseudonym);
+    changed = changed || transformed.changed;
+    next[key] = transformed.value;
+  }
+  return { value: changed ? next : value, changed };
+}
+
+async function pseudonymizeUidInAuditCollection({
+  database,
+  collection,
+  uid,
+  pseudonym,
+  pageSize = 400,
+}) {
+  let cursor = null;
+  let updated = 0;
+  while (true) {
+    let query = database.collection(collection)
+      .orderBy(FieldPath.documentId())
+      .limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+    const bulk = database.bulkWriter();
+    for (const doc of snapshot.docs) {
+      const transformed = pseudonymizeUidInValue(doc.data() || {}, uid, pseudonym);
+      if (transformed.changed) {
+        bulk.set(doc.ref, transformed.value, { merge: false });
+        updated += 1;
+      }
+    }
+    await bulk.close();
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < pageSize) break;
+  }
+  return updated;
+}
+
+async function collectMergeSourceUidsForTarget({
+  database,
+  targetUid,
+  pageSize = 400,
+}) {
+  const sourceUids = new Set();
+  let cursor = null;
+  while (true) {
+    let query = database.collection('account_merge_sources')
+      .where('targetUid', '==', targetUid)
+      .orderBy(FieldPath.documentId())
+      .limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+    snapshot.docs.forEach((doc) => {
+      const sourceUid = cleanString((doc.data() || {}).sourceUid || doc.id);
+      if (sourceUid && sourceUid !== targetUid) sourceUids.add(sourceUid);
+    });
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < pageSize) break;
+  }
+  return [...sourceUids];
+}
+
+async function copySubcollectionDocuments({
+  sourceCollection,
+  targetCollection,
+  pageSize = 400,
+}) {
+  let cursor = null;
+  let copied = 0;
+  while (true) {
+    let query = sourceCollection.orderBy(FieldPath.documentId()).limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+    const bulk = sourceCollection.firestore.bulkWriter();
+    snapshot.docs.forEach((doc) => {
+      bulk.set(targetCollection.doc(doc.id), doc.data(), { merge: true });
+    });
+    await bulk.close();
+    copied += snapshot.size;
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < pageSize) break;
+  }
+  return copied;
+}
+
+async function updateMatchingDocuments({
+  database,
+  collection,
+  field,
+  uid,
+  update,
+  pageSize = 400,
+}) {
+  let updated = 0;
+  while (true) {
+    const snapshot = await database.collection(collection)
+      .where(field, '==', uid)
+      .limit(pageSize)
+      .get();
+    if (snapshot.empty) break;
+    const bulk = database.bulkWriter();
+    for (const doc of snapshot.docs) {
+      const patch = typeof update === 'function' ? update(doc.data() || {}, doc) : update;
+      if (!patch || !Object.prototype.hasOwnProperty.call(patch, field) || patch[field] === uid) {
+        throw new Error(`Paginated update must move ${collection}.${field} away from its source value.`);
+      }
+      bulk.update(doc.ref, patch);
+    }
+    await bulk.close();
+    updated += snapshot.size;
+    if (snapshot.size < pageSize) break;
+  }
+  return updated;
+}
+
+async function deleteMatchingDocuments({
+  database,
+  collection,
+  field,
+  uid,
+  pageSize = 400,
+}) {
+  let deleted = 0;
+  while (true) {
+    const snapshot = await database.collection(collection)
+      .where(field, '==', uid)
+      .limit(pageSize)
+      .get();
+    if (snapshot.empty) break;
+    for (let index = 0; index < snapshot.docs.length; index += 20) {
+      const chunk = snapshot.docs.slice(index, index + 20);
+      await Promise.all(chunk.map((doc) => database.recursiveDelete(doc.ref)));
+    }
+    deleted += snapshot.size;
+    if (snapshot.size < pageSize) break;
+  }
+  return deleted;
+}
+
+async function removeUidFromArrayDocuments({
+  database,
+  collection,
+  field,
+  uid,
+  pageSize = 400,
+}) {
+  let updated = 0;
+  while (true) {
+    const snapshot = await database.collection(collection)
+      .where(field, 'array-contains', uid)
+      .limit(pageSize)
+      .get();
+    if (snapshot.empty) break;
+    const bulk = database.bulkWriter();
+    snapshot.docs.forEach((doc) => {
+      bulk.update(doc.ref, {
+        [field]: FieldValue.arrayRemove(uid),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+    await bulk.close();
+    updated += snapshot.size;
+    if (snapshot.size < pageSize) break;
+  }
+  return updated;
 }
 
 async function executeAccountDeletionCore({
@@ -1469,28 +2253,72 @@ async function executeAccountDeletionCore({
   deleteAuth = true,
 }) {
   const requestRef = database.collection('account_deletion_requests').doc(uid);
-  const request = await requestRef.get();
-  if (!request.exists || !['pending', 'pending_active_work'].includes(cleanString(request.data().status))) {
-    return { ok: false, skipped: true, reason: 'not_pending' };
-  }
-  const executeAtMillis = toMillis(request.data().executeAt);
-  if (!executeAtMillis || executeAtMillis > Date.now()) {
-    return { ok: false, skipped: true, reason: 'grace_period' };
-  }
-  const activeOrders = await findActiveAccountOrders({ database, uid });
-  if (activeOrders.length > 0) {
-    const retryAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
-    await requestRef.set({
-      status: 'pending_active_work',
-      executeAt: retryAt,
-      blockedReason: 'active_work',
-      checkedAt: FieldValue.serverTimestamp(),
+  const attemptStartedAtMillis = Date.now();
+  const acquisition = await database.runTransaction(async (transaction) => {
+    const request = await transaction.get(requestRef);
+    if (!request.exists) return { acquired: false, reason: 'not_pending' };
+    const requestData = request.data() || {};
+    const status = cleanString(requestData.status);
+    if (!['pending', 'pending_active_work', 'executing'].includes(status)) {
+      return { acquired: false, reason: 'not_pending' };
+    }
+    const executeAtMillis = toMillis(requestData.executeAt);
+    if (!executeAtMillis || executeAtMillis > attemptStartedAtMillis) {
+      return { acquired: false, reason: 'grace_period' };
+    }
+    if (!accountDeletionRequestCanExecute(requestData, attemptStartedAtMillis)) {
+      return { acquired: false, reason: 'already_executing' };
+    }
+    const previousAttempt = Number(requestData.attempt || 0);
+    const attempt = (Number.isSafeInteger(previousAttempt) && previousAttempt >= 0
+      ? previousAttempt
+      : 0) + 1;
+    transaction.set(requestRef, {
+      status: 'executing',
+      attempt,
+      lastAttemptAt: FieldValue.serverTimestamp(),
+      leaseUntil: Timestamp.fromMillis(attemptStartedAtMillis + ACCOUNT_DELETION_LEASE_MS),
+      blockedReason: FieldValue.delete(),
+      lastError: FieldValue.delete(),
+      lastErrorAt: FieldValue.delete(),
+      ...(requestData.startedAt ? {} : { startedAt: FieldValue.serverTimestamp() }),
     }, { merge: true });
-    return { ok: false, skipped: true, reason: 'active_work', retryAtMillis: retryAt.toMillis() };
+    return {
+      acquired: true,
+      attempt,
+      linkedSourceUidsCaptured: requestData.linkedSourceUidsCaptured === true,
+      linkedSourceUids: Array.isArray(requestData.linkedSourceUids)
+        ? requestData.linkedSourceUids.map(cleanString).filter(Boolean)
+        : [],
+    };
+  });
+  if (!acquisition.acquired) {
+    return { ok: false, skipped: true, reason: acquisition.reason };
   }
-
   const pseudonym = accountDeletionPseudonym(uid);
-  await requestRef.set({ status: 'executing', startedAt: FieldValue.serverTimestamp() }, { merge: true });
+  try {
+    let linkedSourceUids = acquisition.linkedSourceUids;
+    if (!acquisition.linkedSourceUidsCaptured) {
+      linkedSourceUids = await collectMergeSourceUidsForTarget({ database, targetUid: uid });
+      await requestRef.set({
+        linkedSourceUids,
+        linkedSourceUidsCaptured: true,
+        linkedSourceUidsCapturedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    const identityUids = [...new Set([uid, ...linkedSourceUids])];
+    const activeOrders = await findActiveAccountOrders({ database, uid });
+    if (activeOrders.length > 0) {
+      const retryAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
+      await requestRef.set({
+        status: 'pending_active_work',
+        executeAt: retryAt,
+        leaseUntil: FieldValue.delete(),
+        blockedReason: 'active_work',
+        checkedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return { ok: false, skipped: true, reason: 'active_work', retryAtMillis: retryAt.toMillis() };
+    }
   const orderPrivateFields = {
     nomeCliente: FieldValue.delete(),
     clienteNome: FieldValue.delete(),
@@ -1523,7 +2351,22 @@ async function executeAccountDeletionCore({
   });
   counts.pedidosPrestador = await updateMatchingDocuments({
     database, collection: 'pedidos', field: 'prestadorId', uid,
-    update: { prestadorId: pseudonym, ...providerPrivateFields },
+    update: {
+      prestadorId: pseudonym,
+      providerAccessGranted: false,
+      providerAccessGrantedTo: FieldValue.delete(),
+      providerAccessGrantedAt: FieldValue.delete(),
+      ...providerPrivateFields,
+    },
+  });
+  counts.pedidosProviderGrant = await updateMatchingDocuments({
+    database, collection: 'pedidos', field: 'providerAccessGrantedTo', uid,
+    update: {
+      providerAccessGranted: false,
+      providerAccessGrantedTo: FieldValue.delete(),
+      providerAccessGrantedAt: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
   });
   for (const collection of ['payments', 'commission_payments', 'payment_ledger']) {
     for (const field of ['clienteId', 'prestadorId', 'uid']) {
@@ -1549,48 +2392,203 @@ async function executeAccountDeletionCore({
     database, collection: 'support_tickets', field: 'uid', uid,
   });
 
-  const keyedDocuments = [
-    ['users_private', uid],
-    ['public_profiles', uid],
-    ['provider_private', uid],
-    ['provider_public', uid],
-    ['provider_dispatch_private', uid],
-    ['prestadores', uid],
-    ['users', uid],
-    ['kyc_submissions', uid],
-    ['kyc_upload_grants', uid],
-  ];
-  for (const [collection, id] of keyedDocuments) {
-    await database.recursiveDelete(database.collection(collection).doc(id));
-  }
-  for (const [collection, field] of [
-    ['provider_custom_service_requests', 'providerId'],
-    ['provider_sensitive_category_requests', 'providerId'],
-    ['category_approval_requests', 'providerId'],
-  ]) {
-    await deleteMatchingDocuments({ database, collection, field, uid });
+  // Anonymous sessions merged into this account are part of the same data
+  // subject. The merge normally re-keys them, but deletion also removes any
+  // legacy or interrupted residue defensively.
+  for (const sourceUid of linkedSourceUids) {
+    await updateMatchingDocuments({
+      database, collection: 'pedidos', field: 'clienteId', uid: sourceUid,
+      update: { clienteId: pseudonym, ...orderPrivateFields },
+    });
+    await updateMatchingDocuments({
+      database, collection: 'pedidos', field: 'clientId', uid: sourceUid,
+      update: { clientId: pseudonym, ...orderPrivateFields },
+    });
+    await updateMatchingDocuments({
+      database, collection: 'pedidos', field: 'prestadorId', uid: sourceUid,
+      update: {
+        prestadorId: pseudonym,
+        providerAccessGranted: false,
+        providerAccessGrantedTo: FieldValue.delete(),
+        providerAccessGrantedAt: FieldValue.delete(),
+        ...providerPrivateFields,
+      },
+    });
+    await updateMatchingDocuments({
+      database, collection: 'pedidos', field: 'providerAccessGrantedTo', uid: sourceUid,
+      update: {
+        providerAccessGranted: false,
+        providerAccessGrantedTo: FieldValue.delete(),
+        providerAccessGrantedAt: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+    for (const collection of ['payments', 'commission_payments', 'payment_ledger']) {
+      for (const field of ['clienteId', 'prestadorId', 'uid']) {
+        await updateMatchingDocuments({
+          database, collection, field, uid: sourceUid,
+          update: { [field]: pseudonym, updatedAt: FieldValue.serverTimestamp() },
+        });
+      }
+    }
+    for (const field of ['clienteId', 'prestadorId']) {
+      await updateMatchingDocuments({
+        database, collection: 'avaliacoes', field, uid: sourceUid,
+        update: { [field]: pseudonym, comentario: FieldValue.delete() },
+      });
+    }
+    await deleteMatchingDocuments({
+      database, collection: 'chats', field: 'clienteId', uid: sourceUid,
+    });
+    await deleteMatchingDocuments({
+      database, collection: 'chats', field: 'prestadorId', uid: sourceUid,
+    });
+    await deleteMatchingDocuments({
+      database, collection: 'support_tickets', field: 'uid', uid: sourceUid,
+    });
   }
 
+  const keyedCollections = [
+    'users_private',
+    'public_profiles',
+    'provider_private',
+    'provider_public',
+    'provider_dispatch_private',
+    'prestadores',
+    'users',
+    'kyc_submissions',
+    'kyc_upload_grants',
+    'pilot_participants',
+    'account_merge_sources',
+  ];
+  for (const identityUid of identityUids) {
+    for (const collection of keyedCollections) {
+      await database.recursiveDelete(database.collection(collection).doc(identityUid));
+    }
+  }
+  counts.activeClientReferences = 0;
+  counts.providerOpportunities = 0;
+  counts.providerAcceptanceLimits = 0;
+  counts.mergeSourcesBySource = 0;
+  counts.mergeSourcesByTarget = 0;
+  for (const identityUid of identityUids) {
+    for (const [collection, field] of [
+      ['provider_custom_service_requests', 'providerId'],
+      ['provider_sensitive_category_requests', 'providerId'],
+      ['category_approval_requests', 'providerId'],
+      ['sensitiveCategoryRequests', 'providerId'],
+      ['service_moderation_queue', 'requesterId'],
+      ['stories', 'prestadorId'],
+      ['stories', 'ownerId'],
+      ['pedido_dispatch', 'targetPrestadorId'],
+      ['handles', 'uid'],
+      ['handles', 'previousOwnerUid'],
+    ]) {
+      await deleteMatchingDocuments({
+        database, collection, field, uid: identityUid,
+      });
+    }
+    counts.activeClientReferences += await removeUidFromArrayDocuments({
+      database,
+      collection: 'provider_dispatch_private',
+      field: 'activeClientIds',
+      uid: identityUid,
+    });
+    counts.providerOpportunities += await deleteMatchingDocuments({
+      database,
+      collection: 'provider_opportunities',
+      field: 'providerId',
+      uid: identityUid,
+    });
+    counts.providerAcceptanceLimits += await deleteMatchingDocuments({
+      database,
+      collection: 'provider_acceptance_limits',
+      field: 'providerId',
+      uid: identityUid,
+    });
+    counts.mergeSourcesBySource += await deleteMatchingDocuments({
+      database,
+      collection: 'account_merge_sources',
+      field: 'sourceUid',
+      uid: identityUid,
+    });
+    counts.mergeSourcesByTarget += await deleteMatchingDocuments({
+      database,
+      collection: 'account_merge_sources',
+      field: 'targetUid',
+      uid: identityUid,
+    });
+  }
   if (deleteStorage) {
-    for (const prefix of [`users/${uid}/`, `prestadores/${uid}/`, `kyc_pending/${uid}/`]) {
-      await bucket.deleteFiles({ prefix, force: true });
+    for (const identityUid of identityUids) {
+      for (const prefix of accountDeletionStoragePrefixes(identityUid)) {
+        await bucket.deleteFiles({ prefix, force: true });
+      }
+    }
+  }
+  for (const identityUid of identityUids) {
+    counts.support += await deleteMatchingDocuments({
+      database, collection: 'support_tickets', field: 'uid', uid: identityUid,
+    });
+  }
+  counts.auditDocumentsPseudonymized = 0;
+  for (const collection of [
+    'legal_consent_audit',
+    'account_merge_audit',
+    'adminAuditLogs',
+    'security_event_logs',
+    'reports',
+  ]) {
+    for (const identityUid of identityUids) {
+      counts.auditDocumentsPseudonymized += await pseudonymizeUidInAuditCollection({
+        database,
+        collection,
+        uid: identityUid,
+        pseudonym,
+      });
     }
   }
   if (deleteAuth) {
-    try {
-      await authAdmin.deleteUser(uid);
-    } catch (error) {
-      if (error && error.code !== 'auth/user-not-found') throw error;
+    for (const identityUid of identityUids) {
+      try {
+        await authAdmin.deleteUser(identityUid);
+      } catch (error) {
+        if (error && error.code !== 'auth/user-not-found') throw error;
+      }
     }
   }
   await database.collection('account_deletion_audit').doc(pseudonym.replace(':', '_')).set({
     pseudonym,
     completedAt: FieldValue.serverTimestamp(),
+    attemptCount: acquisition.attempt,
+    mergedSourceCount: linkedSourceUids.length,
     retainedTransactionalRecords: true,
     legalVersion: LEGAL_DOCUMENT_VERSION,
   });
   await requestRef.delete();
   return { ok: true, pseudonym, counts };
+  } catch (error) {
+    const lastError = safeText(
+      error && error.message ? error.message : String(error),
+      500,
+    ) || 'account_deletion_failed';
+    try {
+      await requestRef.set({
+        status: 'executing',
+        attempt: acquisition.attempt,
+        lastAttemptAt: FieldValue.serverTimestamp(),
+        lastError,
+        lastErrorAt: FieldValue.serverTimestamp(),
+        leaseUntil: Timestamp.fromMillis(Date.now() - 1),
+      }, { merge: true });
+    } catch (stateError) {
+      logger.error('[account-deletion] Falha ao guardar estado de retry.', {
+        uid: maskIdentifier(uid),
+        error: String(stateError && stateError.message ? stateError.message : stateError),
+      });
+    }
+    throw error;
+  }
 }
 
 function requireKycEnabled() {
@@ -1637,6 +2635,11 @@ async function setKycUploadClaim(uid, enabled) {
 async function beginKycSubmissionCore({ database = db, auth }) {
   requireKycEnabled();
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'A conta em eliminacao nao pode iniciar uma verificacao de identidade.',
+  });
   const existing = await database.collection('kyc_submissions').doc(uid).get();
   const status = cleanString(existing.data() && existing.data().status);
   if (['pending_review', 'approved'].includes(status)) {
@@ -1647,15 +2650,22 @@ async function beginKycSubmissionCore({ database = db, auth }) {
   const expiresAt = Timestamp.fromMillis(
     Date.now() + KYC_UPLOAD_WINDOW_MINUTES * 60 * 1000,
   );
-  await Promise.all([
-    database.collection('kyc_upload_grants').doc(uid).set({
+  await database.runTransaction(async (transaction) => {
+    const userPrivate = await transaction.get(database.collection('users_private').doc(uid));
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'A conta em eliminacao nao pode iniciar uma verificacao de identidade.',
+      );
+    }
+    transaction.set(database.collection('kyc_upload_grants').doc(uid), {
       uid,
       submissionId,
       expiresAt,
       createdAt: FieldValue.serverTimestamp(),
-    }),
-    setKycUploadClaim(uid, true),
-  ]);
+    });
+  });
+  await setKycUploadClaim(uid, true);
   return {
     ok: true,
     submissionId,
@@ -1701,6 +2711,11 @@ async function deleteStoragePaths(paths) {
 async function submitKycCore({ database = db, auth, data = {} }) {
   requireKycEnabled();
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'A conta em eliminacao nao pode enviar documentos de identidade.',
+  });
   if (!auth.token || auth.token.kyc_upload_enabled !== true) {
     throw new HttpsError('permission-denied', 'A janela de envio KYC nao esta ativa.');
   }
@@ -1736,30 +2751,51 @@ async function submitKycCore({ database = db, auth, data = {} }) {
   const retentionDeleteAt = Timestamp.fromMillis(
     Date.now() + KYC_RETENTION_DAYS * 24 * 60 * 60 * 1000,
   );
-  const batch = database.batch();
-  batch.set(submissionRef, {
-    providerId: uid,
-    submissionId,
-    status: 'pending_review',
-    documentPaths,
-    consentVersion,
-    consentAt: FieldValue.serverTimestamp(),
-    submittedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    retentionDeleteAt,
-    reviewedBy: FieldValue.delete(),
-    reviewedAt: FieldValue.delete(),
-    decisionReason: FieldValue.delete(),
-  }, { merge: true });
-  batch.delete(grantRef);
-  batch.create(database.collection('security_event_logs').doc(), {
-    actorUid: uid,
-    action: 'kyc.submitted',
-    targetType: 'kyc_submission',
-    targetId: uid,
-    createdAt: FieldValue.serverTimestamp(),
+  await database.runTransaction(async (transaction) => {
+    const [userPrivate, freshGrant, freshSubmission] = await Promise.all([
+      transaction.get(database.collection('users_private').doc(uid)),
+      transaction.get(grantRef),
+      transaction.get(submissionRef),
+    ]);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'A conta em eliminacao nao pode enviar documentos de identidade.',
+      );
+    }
+    const freshGrantData = freshGrant.exists ? (freshGrant.data() || {}) : {};
+    if (!freshGrant.exists
+      || cleanString(freshGrantData.submissionId) !== submissionId
+      || toMillis(freshGrantData.expiresAt) <= Date.now()) {
+      throw new HttpsError('permission-denied', 'A janela de envio KYC expirou.');
+    }
+    const freshStatus = cleanString(freshSubmission.data() && freshSubmission.data().status);
+    if (['pending_review', 'approved'].includes(freshStatus)) {
+      throw new HttpsError('failed-precondition', 'Ja existe uma verificacao ativa.');
+    }
+    transaction.set(submissionRef, {
+      providerId: uid,
+      submissionId,
+      status: 'pending_review',
+      documentPaths,
+      consentVersion,
+      consentAt: FieldValue.serverTimestamp(),
+      submittedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      retentionDeleteAt,
+      reviewedBy: FieldValue.delete(),
+      reviewedAt: FieldValue.delete(),
+      decisionReason: FieldValue.delete(),
+    }, { merge: true });
+    transaction.delete(grantRef);
+    transaction.create(database.collection('security_event_logs').doc(), {
+      actorUid: uid,
+      action: 'kyc.submitted',
+      targetType: 'kyc_submission',
+      targetId: uid,
+      createdAt: FieldValue.serverTimestamp(),
+    });
   });
-  await batch.commit();
   await setKycUploadClaim(uid, false);
   const previousPaths = (previousData.documentPaths || [])
     .filter((path) => !documentPaths.includes(path));
@@ -1834,32 +2870,43 @@ async function reviewKycSubmissionCore({ database = db, auth, data = {} }) {
   if (beforeStatus !== 'pending_review') {
     throw new HttpsError('failed-precondition', 'Esta submissao ja foi decidida.');
   }
-  const batch = database.batch();
-  batch.set(submissionRef, {
-    status: decision,
-    reviewedBy: auth.uid,
-    reviewedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    decisionReason: reason || null,
-  }, { merge: true });
-  if (decision === 'approved') {
-    batch.set(database.collection('provider_public').doc(providerId), {
-      'trustSignals.identityConfirmed': true,
+  await database.runTransaction(async (transaction) => {
+    const [userPrivate, freshSubmission] = await Promise.all([
+      transaction.get(database.collection('users_private').doc(providerId)),
+      transaction.get(submissionRef),
+    ]);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError('failed-precondition', 'A conta do prestador esta em processo de eliminacao.');
+    }
+    if (!freshSubmission.exists
+      || cleanString(freshSubmission.data().status) !== 'pending_review') {
+      throw new HttpsError('failed-precondition', 'Esta submissao ja foi decidida.');
+    }
+    transaction.set(submissionRef, {
+      status: decision,
+      reviewedBy: auth.uid,
+      reviewedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+      decisionReason: reason || null,
     }, { merge: true });
-  }
-  await writeAdminAuditLog({
-    database,
-    batch,
-    auth,
-    action: `kyc.${decision}`,
-    targetType: 'kyc_submission',
-    targetId: providerId,
-    beforeStatus,
-    afterStatus: decision,
-    reason,
+    if (decision === 'approved') {
+      transaction.set(database.collection('provider_public').doc(providerId), {
+        'trustSignals.identityConfirmed': true,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    await writeAdminAuditLog({
+      database,
+      batch: transaction,
+      auth,
+      action: `kyc.${decision}`,
+      targetType: 'kyc_submission',
+      targetId: providerId,
+      beforeStatus,
+      afterStatus: decision,
+      reason,
+    });
   });
-  await batch.commit();
   return { ok: true, providerId, status: decision };
 }
 
@@ -1898,17 +2945,33 @@ async function authorizePrivateStoragePath({ database = db, auth, storagePath })
   if (!auth || !auth.uid) throw new HttpsError('unauthenticated', 'Autenticacao obrigatoria.');
   const parsed = normalizePrivateStoragePath(storagePath);
   if (authIsAdmin(auth)) return parsed;
+  const uid = requireVerifiedPhoneAuth(auth);
   if (parsed.scope === 'temp') {
-    if (parsed.ownerId !== auth.uid) {
+    if (parsed.ownerId !== uid) {
       throw new HttpsError('permission-denied', 'Sem acesso a este anexo temporario.');
     }
+    await requirePilotParticipant({
+      database,
+      uid,
+      role: 'cliente',
+      allowEmulatorBypass: false,
+    });
     return parsed;
   }
   const pedido = await database.collection('pedidos').doc(parsed.pedidoId).get();
   const data = pedido.exists ? (pedido.data() || {}) : null;
-  if (!data || (getClienteId(data) !== auth.uid && cleanString(data.prestadorId) !== auth.uid)) {
+  const role = data && getClienteId(data) === uid
+    ? 'cliente'
+    : (data && providerHasFullPedidoAccess(data, uid) ? 'prestador' : '');
+  if (!data || !role) {
     throw new HttpsError('permission-denied', 'Sem acesso aos anexos deste pedido.');
   }
+  await requirePilotParticipant({
+    database,
+    uid,
+    role,
+    allowEmulatorBypass: false,
+  });
   return parsed;
 }
 
@@ -1924,6 +2987,14 @@ async function finalizePrivateStorageUploadCore({
   auth,
   data = {},
 }) {
+  if (!authIsAdmin(auth)) {
+    const uid = requireVerifiedPhoneAuth(auth);
+    await requireAccountAllowsNewActivity({
+      database,
+      uid,
+      message: 'A conta em eliminacao nao pode concluir novos carregamentos.',
+    });
+  }
   const parsed = await authorizePrivateStoragePath({
     database,
     auth,
@@ -2097,6 +3168,9 @@ function buildSecurePedidoData({ uid, input, policy, moderationStatus, requested
   return {
     clienteId: uid,
     prestadorId: providerId,
+    providerAccessGranted: false,
+    providerAccessGrantedTo: null,
+    providerAccessGrantedAt: null,
     requestedProviderId: moderationStatus === 'pending_review' && requestedProviderId
       ? requestedProviderId
       : null,
@@ -2134,6 +3208,20 @@ function buildSecurePedidoData({ uid, input, policy, moderationStatus, requested
     statusConfirmacaoValor: 'nenhum',
     lastAuthoritativeFunction: 'pedidos_createSecure',
   };
+}
+
+function normalizedPedidoContentRevision(value) {
+  const revision = Number(value);
+  return Number.isSafeInteger(revision) && revision >= 1 ? revision : 1;
+}
+
+function pedidoIsSecurelyEditableByClient(pedido, uid) {
+  return getClienteId(pedido) === uid
+    && getPedidoEstado(pedido) === 'criado'
+    && !cleanString(pedido && pedido.prestadorId)
+    && !(pedido && pedido.providerAccessGranted === true)
+    && !cleanString(pedido && pedido.providerAccessGrantedTo)
+    && !(pedido && pedido.providerAccessGrantedAt);
 }
 
 async function promotePedidoAttachments({
@@ -2183,21 +3271,17 @@ async function promotePedidoAttachments({
   return promoted;
 }
 
-async function validateRequestedProvider(database, requestedProviderId, pedido) {
-  const providerId = cleanString(requestedProviderId);
-  if (!providerId) return '';
-  const providerSnap = await database.collection('provider_public').doc(providerId).get();
-  if (!providerSnap.exists || providerSnap.data().isSearchable !== true) {
-    throw new HttpsError('failed-precondition', 'O prestador selecionado nao esta disponivel.');
-  }
-  if (!providerMatchesPedido(providerSnap.data() || {}, pedido)) {
-    throw new HttpsError('failed-precondition', 'O prestador nao esta elegivel para este servico.');
-  }
-  return providerId;
-}
-
 async function createSecurePedidoCore({ database = db, auth, data = {} }) {
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'Cancela primeiro o pedido de eliminacao para publicar um pedido.',
+  });
+  const requestedProviderId = cleanString(data.prestadorId);
+  if (requestedProviderId === uid) {
+    throw new HttpsError('invalid-argument', 'Nao podes convidar a tua propria conta.');
+  }
   const custom = data.isCustomService === true;
   const serviceId = cleanString(data.servicoId);
   let policy;
@@ -2236,13 +3320,8 @@ async function createSecurePedidoCore({ database = db, auth, data = {} }) {
     input: { ...data, anexos: [] },
     policy,
     moderationStatus,
-    requestedProviderId: cleanString(data.prestadorId),
+    requestedProviderId,
   });
-  const requestedProviderId = await validateRequestedProvider(
-    database,
-    data.prestadorId,
-    validationPayload,
-  );
   const ref = database.collection('pedidos').doc();
   const attachmentPaths = await promotePedidoAttachments({
     uid,
@@ -2257,27 +3336,49 @@ async function createSecurePedidoCore({ database = db, auth, data = {} }) {
     moderationStatus,
     requestedProviderId,
   });
-  const batch = database.batch();
-  batch.create(ref, {
-    ...payload,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-  if (moderationStatus === 'pending_review') {
-    batch.set(database.collection('service_moderation_queue').doc(ref.id), {
-      pedidoId: ref.id,
-      requesterId: uid,
-      serviceId: policy.id,
-      title: payload.customServiceName || payload.servicoNome,
-      description: payload.customServiceDescription || payload.descricao || '',
-      status: 'pending_review',
-      safetyMatches: safety.matches,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-  }
   try {
-    await batch.commit();
+    await database.runTransaction(async (transaction) => {
+      const clientPrivateSnap = await transaction.get(
+        database.collection('users_private').doc(uid),
+      );
+      if (!accountAllowsNewWork(clientPrivateSnap.exists ? clientPrivateSnap.data() : {})) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Cancela primeiro o pedido de eliminacao para publicar um pedido.',
+        );
+      }
+      if (requestedProviderId) {
+        await readEligibleProviderForPedido({
+          transaction,
+          database,
+          providerId: requestedProviderId,
+          pedido: validationPayload,
+          requireAvailableForNewWork: true,
+          requireVerifiedPhoneProfile: true,
+          nowMillis: Date.now(),
+        });
+      }
+      transaction.create(ref, {
+        ...payload,
+        contentRevision: 1,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      if (moderationStatus === 'pending_review') {
+        transaction.set(database.collection('service_moderation_queue').doc(ref.id), {
+          pedidoId: ref.id,
+          requesterId: uid,
+          serviceId: policy.id,
+          title: payload.customServiceName || payload.servicoNome,
+          description: payload.customServiceDescription || payload.descricao || '',
+          status: 'pending_review',
+          contentRevision: 1,
+          safetyMatches: safety.matches,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    });
   } catch (error) {
     await Promise.all(attachmentPaths.map((storagePath) => (
       firebaseStorage.bucket().file(storagePath).delete({ ignoreNotFound: true })
@@ -2285,19 +3386,25 @@ async function createSecurePedidoCore({ database = db, auth, data = {} }) {
     )));
     throw error;
   }
-  return { ok: true, pedidoId: ref.id, moderationStatus };
+  return { ok: true, pedidoId: ref.id, moderationStatus, contentRevision: 1 };
 }
 
 async function updateSecurePedidoCore({ database = db, auth, data = {} }) {
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'A conta em eliminacao nao pode alterar pedidos.',
+  });
   const pedidoId = requirePedidoId(data);
   const currentRef = database.collection('pedidos').doc(pedidoId);
   const currentSnap = await currentRef.get();
   if (!currentSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
   const current = currentSnap.data() || {};
-  if (getClienteId(current) !== uid || getPedidoEstado(current) !== 'criado' || current.prestadorId) {
+  if (!pedidoIsSecurelyEditableByClient(current, uid)) {
     throw new HttpsError('failed-precondition', 'Este pedido ja nao pode ser editado.');
   }
+  const expectedContentRevision = normalizedPedidoContentRevision(current.contentRevision);
   const requestedAttachments = Object.prototype.hasOwnProperty.call(data, 'anexos')
     ? data.anexos
     : current.anexos;
@@ -2332,31 +3439,53 @@ async function updateSecurePedidoCore({ database = db, auth, data = {} }) {
     ? 'pending_review'
     : 'approved';
   const payload = buildSecurePedidoData({ uid, input: merged, policy, moderationStatus });
-  const batch = database.batch();
-  batch.update(currentRef, {
-    ...payload,
-    createdAt: current.createdAt,
-    updatedAt: FieldValue.serverTimestamp(),
-    lastAuthoritativeFunction: 'pedidos_updateSecure',
-  });
   const queueRef = database.collection('service_moderation_queue').doc(pedidoId);
-  if (moderationStatus === 'pending_review') {
-    batch.set(queueRef, {
-      pedidoId,
-      requesterId: uid,
-      serviceId: policy.id,
-      title: payload.customServiceName || payload.servicoNome,
-      description: payload.customServiceDescription || payload.descricao || '',
-      status: 'pending_review',
-      safetyMatches: safety.matches,
-      createdAt: FieldValue.serverTimestamp(),
+  const contentRevision = await database.runTransaction(async (transaction) => {
+    const [freshSnap, clientPrivateSnap] = await Promise.all([
+      transaction.get(currentRef),
+      transaction.get(database.collection('users_private').doc(uid)),
+    ]);
+    if (!accountAllowsNewWork(clientPrivateSnap.exists ? clientPrivateSnap.data() : {})) {
+      throw new HttpsError('failed-precondition', 'A conta em eliminacao nao pode alterar pedidos.');
+    }
+    if (!freshSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
+    const fresh = freshSnap.data() || {};
+    if (!pedidoIsSecurelyEditableByClient(fresh, uid)) {
+      throw new HttpsError('failed-precondition', 'Este pedido ja nao pode ser editado.');
+    }
+    const freshContentRevision = normalizedPedidoContentRevision(fresh.contentRevision);
+    if (freshContentRevision !== expectedContentRevision) {
+      throw new HttpsError(
+        'failed-precondition',
+        'O pedido foi alterado entretanto. Atualiza os dados antes de tentar novamente.',
+      );
+    }
+    const nextContentRevision = freshContentRevision + 1;
+    transaction.update(currentRef, {
+      ...payload,
+      contentRevision: nextContentRevision,
       updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-  } else {
-    batch.delete(queueRef);
-  }
-  await batch.commit();
-  return { ok: true, pedidoId, moderationStatus };
+      lastAuthoritativeFunction: 'pedidos_updateSecure',
+    });
+    if (moderationStatus === 'pending_review') {
+      transaction.set(queueRef, {
+        pedidoId,
+        requesterId: uid,
+        serviceId: policy.id,
+        title: payload.customServiceName || payload.servicoNome,
+        description: payload.customServiceDescription || payload.descricao || '',
+        status: 'pending_review',
+        contentRevision: nextContentRevision,
+        safetyMatches: safety.matches,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } else {
+      transaction.delete(queueRef);
+    }
+    return nextContentRevision;
+  });
+  return { ok: true, pedidoId, moderationStatus, contentRevision };
 }
 
 async function reviewPedidoServiceCore({ database = db, auth, data = {} }) {
@@ -2371,53 +3500,104 @@ async function reviewPedidoServiceCore({ database = db, auth, data = {} }) {
     throw new HttpsError('invalid-argument', 'Indica o motivo da rejeicao.');
   }
   const pedidoRef = database.collection('pedidos').doc(pedidoId);
-  const pedidoSnap = await pedidoRef.get();
-  if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
-  const pedido = pedidoSnap.data() || {};
-  if (pedido.moderationStatus !== 'pending_review') {
-    throw new HttpsError('failed-precondition', 'Pedido nao esta pendente de moderacao.');
+  const queueRef = database.collection('service_moderation_queue').doc(pedidoId);
+  const initialQueueSnap = await queueRef.get();
+  if (!initialQueueSnap.exists) {
+    throw new HttpsError('failed-precondition', 'Fila de moderacao inexistente para este pedido.');
   }
-  const requestedProviderId = cleanString(pedido.requestedProviderId);
-  const nextStatus = decision === 'approved' && requestedProviderId
-    ? 'aguarda_resposta_prestador'
-    : (decision === 'approved' ? 'criado' : 'cancelado');
-  const batch = database.batch();
-  batch.update(pedidoRef, {
+  const requestedRevision = data.contentRevision === undefined || data.contentRevision === null
+    ? null
+    : Number(data.contentRevision);
+  if (requestedRevision !== null
+    && (!Number.isSafeInteger(requestedRevision) || requestedRevision < 1)) {
+    throw new HttpsError('invalid-argument', 'contentRevision invalida.');
+  }
+  const expectedContentRevision = requestedRevision
+    || normalizedPedidoContentRevision((initialQueueSnap.data() || {}).contentRevision);
+  await database.runTransaction(async (transaction) => {
+    const pedidoSnap = await transaction.get(pedidoRef);
+    const queueSnap = await transaction.get(queueRef);
+    if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
+    if (!queueSnap.exists) {
+      throw new HttpsError('failed-precondition', 'Fila de moderacao inexistente para este pedido.');
+    }
+    const pedido = pedidoSnap.data() || {};
+    const queue = queueSnap.data() || {};
+    if (pedido.moderationStatus !== 'pending_review' || queue.status !== 'pending_review') {
+      throw new HttpsError('failed-precondition', 'Pedido nao esta pendente de moderacao.');
+    }
+    const pedidoRevision = normalizedPedidoContentRevision(pedido.contentRevision);
+    const queueRevision = normalizedPedidoContentRevision(queue.contentRevision);
+    if (pedidoRevision !== queueRevision || pedidoRevision !== expectedContentRevision) {
+      throw new HttpsError(
+        'failed-precondition',
+        'O conteudo do pedido mudou. Reabre a revisao antes de decidir.',
+      );
+    }
+    const requestedProviderId = cleanString(pedido.requestedProviderId);
+    const nextStatus = decision === 'approved' && requestedProviderId
+      ? 'aguarda_resposta_prestador'
+      : (decision === 'approved' ? 'criado' : 'cancelado');
+    if (decision === 'approved' && requestedProviderId) {
+      if (pedidoIsSelfDealing(pedido, requestedProviderId)) {
+        throw new HttpsError('permission-denied', 'Cliente e prestador devem ser contas diferentes.');
+      }
+      await readEligibleProviderForPedido({
+        transaction,
+        database,
+        providerId: requestedProviderId,
+        pedido: { ...pedido, moderationStatus: 'approved' },
+        requireAvailableForNewWork: true,
+        requireVerifiedPhoneProfile: true,
+        nowMillis: Date.now(),
+      });
+    }
+    transaction.update(pedidoRef, {
+      moderationStatus: decision,
+      moderationReviewedBy: auth.uid,
+      moderationReviewedAt: FieldValue.serverTimestamp(),
+      moderationDecisionReason: reason || null,
+      prestadorId: decision === 'approved' && requestedProviderId ? requestedProviderId : null,
+      providerAccessGranted: false,
+      providerAccessGrantedTo: null,
+      providerAccessGrantedAt: null,
+      estado: nextStatus,
+      status: nextStatus,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(queueRef, {
+      status: decision,
+      contentRevision: pedidoRevision,
+      reviewedBy: auth.uid,
+      reviewedAt: FieldValue.serverTimestamp(),
+      decisionReason: reason || null,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    await writeAdminAuditLog({
+      database,
+      batch: transaction,
+      auth,
+      action: `service_request.${decision}`,
+      targetType: 'pedido',
+      targetId: pedidoId,
+      beforeStatus: 'pending_review',
+      afterStatus: decision,
+      reason,
+      metadata: { contentRevision: pedidoRevision },
+    });
+  });
+  return {
+    ok: true,
+    pedidoId,
     moderationStatus: decision,
-    moderationReviewedBy: auth.uid,
-    moderationReviewedAt: FieldValue.serverTimestamp(),
-    moderationDecisionReason: reason || null,
-    prestadorId: decision === 'approved' && requestedProviderId ? requestedProviderId : null,
-    estado: nextStatus,
-    status: nextStatus,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-  batch.set(database.collection('service_moderation_queue').doc(pedidoId), {
-    status: decision,
-    reviewedBy: auth.uid,
-    reviewedAt: FieldValue.serverTimestamp(),
-    decisionReason: reason || null,
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  await writeAdminAuditLog({
-    database,
-    batch,
-    auth,
-    action: `service_request.${decision}`,
-    targetType: 'pedido',
-    targetId: pedidoId,
-    beforeStatus: 'pending_review',
-    afterStatus: decision,
-    reason,
-  });
-  await batch.commit();
-  return { ok: true, pedidoId, moderationStatus: decision };
+    contentRevision: expectedContentRevision,
+  };
 }
 
-function providerApprovalIsActive(data) {
+function providerApprovalIsActive(data, nowMillis = Date.now()) {
   if (!data || data.status !== 'approved') return false;
   if (!data.expiresAt) return true;
-  return typeof data.expiresAt.toMillis === 'function' && data.expiresAt.toMillis() > Date.now();
+  return typeof data.expiresAt.toMillis === 'function' && data.expiresAt.toMillis() > nowMillis;
 }
 
 function sanitizeProviderCustomService(value) {
@@ -2447,6 +3627,11 @@ function sanitizeProviderCustomService(value) {
 
 async function updateProviderServicesCore({ database = db, auth, data = {} }) {
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'Cancela primeiro o pedido de eliminacao para publicar servicos.',
+  });
   const requestedIds = cleanStringArray(data.serviceIds, { maxItems: 50, maxLength: 120 });
   const rawCustom = Array.isArray(data.customServices) ? data.customServices.slice(0, 10) : [];
   const customServices = rawCustom.map(sanitizeProviderCustomService).filter(Boolean);
@@ -2473,7 +3658,7 @@ async function updateProviderServicesCore({ database = db, auth, data = {} }) {
 
   const approvedCustom = [];
   const pendingCustomIds = [];
-  const customBatch = database.batch();
+  const pendingCustomWrites = [];
   for (const custom of customServices) {
     if (custom.trustSafetyDecision === 'block') continue;
     const requestRef = database.collection('provider_custom_service_requests').doc(`${uid}_${custom.id}`);
@@ -2482,17 +3667,16 @@ async function updateProviderServicesCore({ database = db, auth, data = {} }) {
       approvedCustom.push({ ...custom, trustSafetyDecision: 'approved' });
     } else {
       pendingCustomIds.push(custom.id);
-      customBatch.set(requestRef, {
+      pendingCustomWrites.push([requestRef, {
         providerId: uid,
         serviceId: custom.id,
         service: custom,
         status: 'pending_review',
         createdAt: request.exists ? (request.data().createdAt || FieldValue.serverTimestamp()) : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      }]);
     }
   }
-  await customBatch.commit();
 
   const serviceIds = [
     ...acceptedPolicies.map((policy) => policy.id),
@@ -2505,33 +3689,43 @@ async function updateProviderServicesCore({ database = db, auth, data = {} }) {
   const customNames = approvedCustom.map((service) => service.title);
   const customTerms = [...new Set(approvedCustom.flatMap((service) => service.normalizedSearchTerms))];
   const now = FieldValue.serverTimestamp();
-  const batch = database.batch();
-  batch.set(database.collection('provider_public').doc(uid), {
-    uid,
-    servicos: serviceIds,
-    servicosNomes: serviceNames,
-    categories: serviceIds,
-    customServices: approvedCustom,
-    customServiceNames: customNames,
-    customServiceSearchTerms: customTerms,
-    customServiceUpdatedAt: now,
-    updatedAt: now,
-  }, { merge: true });
-  batch.set(database.collection('provider_dispatch_private').doc(uid), {
-    providerId: uid,
-    servicos: serviceIds,
-    servicosNomes: serviceNames,
-    updatedAt: now,
-  }, { merge: true });
-  batch.set(database.collection('provider_private').doc(uid), {
-    providerId: uid,
-    selectedServiceIds: requestedIds,
-    pendingSensitiveServiceIds: pendingSensitiveIds,
-    selectedCustomServiceIds: customServices.map((service) => service.id),
-    pendingCustomServiceIds: pendingCustomIds,
-    serviceSelectionUpdatedAt: now,
-  }, { merge: true });
-  await batch.commit();
+  await database.runTransaction(async (transaction) => {
+    const userPrivate = await transaction.get(database.collection('users_private').doc(uid));
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Cancela primeiro o pedido de eliminacao para publicar servicos.',
+      );
+    }
+    pendingCustomWrites.forEach(([ref, payload]) => {
+      transaction.set(ref, payload, { merge: true });
+    });
+    transaction.set(database.collection('provider_public').doc(uid), {
+      uid,
+      servicos: serviceIds,
+      servicosNomes: serviceNames,
+      categories: serviceIds,
+      customServices: approvedCustom,
+      customServiceNames: customNames,
+      customServiceSearchTerms: customTerms,
+      customServiceUpdatedAt: now,
+      updatedAt: now,
+    }, { merge: true });
+    transaction.set(database.collection('provider_dispatch_private').doc(uid), {
+      providerId: uid,
+      servicos: serviceIds,
+      servicosNomes: serviceNames,
+      updatedAt: now,
+    }, { merge: true });
+    transaction.set(database.collection('provider_private').doc(uid), {
+      providerId: uid,
+      selectedServiceIds: requestedIds,
+      pendingSensitiveServiceIds: pendingSensitiveIds,
+      selectedCustomServiceIds: customServices.map((service) => service.id),
+      pendingCustomServiceIds: pendingCustomIds,
+      serviceSelectionUpdatedAt: now,
+    }, { merge: true });
+  });
   return {
     ok: true,
     serviceIds,
@@ -2548,6 +3742,11 @@ const CATEGORY_EVIDENCE_TYPES = new Set([
 
 async function submitSensitiveCategoryRequestCore({ database = db, auth, data = {} }) {
   const uid = requireVerifiedPhoneAuth(auth);
+  await requireAccountAllowsNewActivity({
+    database,
+    uid,
+    message: 'A conta em eliminacao nao pode submeter novas aprovacoes.',
+  });
   const categoryId = cleanString(data.categoryId);
   if (!categoryId) throw new HttpsError('invalid-argument', 'Categoria obrigatoria.');
   const requirement = await database.collection('categoryRequirements').doc(categoryId).get();
@@ -2580,22 +3779,37 @@ async function submitSensitiveCategoryRequestCore({ database = db, auth, data = 
     throw new HttpsError('failed-precondition', 'Esta categoria ja esta aprovada.');
   }
   const now = FieldValue.serverTimestamp();
-  await ref.set({
-    providerId: uid,
-    categoryId,
-    categoryName: safeText(requirementData.categoryName || categoryId, 160),
-    status: 'pending_review',
-    evidenceTypes,
-    evidenceText: evidenceText || null,
-    portfolioUrls,
-    documentRefs,
-    createdAt: existing.exists ? (existing.data().createdAt || now) : now,
-    updatedAt: now,
-    submittedAt: now,
-    reviewedBy: FieldValue.delete(),
-    reviewedAt: FieldValue.delete(),
-    decisionReason: FieldValue.delete(),
-  }, { merge: true });
+  await database.runTransaction(async (transaction) => {
+    const [userPrivate, freshRequest] = await Promise.all([
+      transaction.get(database.collection('users_private').doc(uid)),
+      transaction.get(ref),
+    ]);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'A conta em eliminacao nao pode submeter novas aprovacoes.',
+      );
+    }
+    if (freshRequest.exists && freshRequest.data().status === 'approved') {
+      throw new HttpsError('failed-precondition', 'Esta categoria ja esta aprovada.');
+    }
+    transaction.set(ref, {
+      providerId: uid,
+      categoryId,
+      categoryName: safeText(requirementData.categoryName || categoryId, 160),
+      status: 'pending_review',
+      evidenceTypes,
+      evidenceText: evidenceText || null,
+      portfolioUrls,
+      documentRefs,
+      createdAt: freshRequest.exists ? (freshRequest.data().createdAt || now) : now,
+      updatedAt: now,
+      submittedAt: now,
+      reviewedBy: FieldValue.delete(),
+      reviewedAt: FieldValue.delete(),
+      decisionReason: FieldValue.delete(),
+    }, { merge: true });
+  });
   return { ok: true, requestId, status: 'pending_review' };
 }
 
@@ -2624,43 +3838,53 @@ async function reviewProviderCustomServiceCore({ database = db, auth, data = {} 
   }
   const privateState = await database.collection('provider_private').doc(providerId).get();
   const selected = new Set(cleanStringArray(privateState.data() && privateState.data().selectedCustomServiceIds));
-  const batch = database.batch();
-  batch.update(ref, {
-    status: decision,
-    reviewedBy: auth.uid,
-    reviewedAt: FieldValue.serverTimestamp(),
-    decisionReason: reason || null,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-  if (decision === 'approved' && selected.has(service.id)) {
-    const approvedService = { ...service, trustSafetyDecision: 'approved' };
-    batch.set(database.collection('provider_public').doc(providerId), {
-      servicos: FieldValue.arrayUnion(service.id),
-      categories: FieldValue.arrayUnion(service.id),
-      servicosNomes: FieldValue.arrayUnion(service.title),
-      customServices: FieldValue.arrayUnion(approvedService),
-      customServiceNames: FieldValue.arrayUnion(service.title),
-      customServiceSearchTerms: FieldValue.arrayUnion(...service.normalizedSearchTerms),
+  await database.runTransaction(async (transaction) => {
+    const [userPrivate, freshRequest] = await Promise.all([
+      transaction.get(database.collection('users_private').doc(providerId)),
+      transaction.get(ref),
+    ]);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError('failed-precondition', 'A conta do prestador esta em processo de eliminacao.');
+    }
+    if (!freshRequest.exists || cleanString(freshRequest.data().status) !== 'pending_review') {
+      throw new HttpsError('failed-precondition', 'Pedido ja decidido.');
+    }
+    transaction.update(ref, {
+      status: decision,
+      reviewedBy: auth.uid,
+      reviewedAt: FieldValue.serverTimestamp(),
+      decisionReason: reason || null,
       updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    batch.set(database.collection('provider_dispatch_private').doc(providerId), {
-      servicos: FieldValue.arrayUnion(service.id),
-      servicosNomes: FieldValue.arrayUnion(service.title),
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-  }
-  await writeAdminAuditLog({
-    database,
-    batch,
-    auth,
-    action: `custom_service.${decision}`,
-    targetType: 'provider_custom_service',
-    targetId: requestId,
-    beforeStatus: 'pending_review',
-    afterStatus: decision,
-    reason,
+    });
+    if (decision === 'approved' && selected.has(service.id)) {
+      const approvedService = { ...service, trustSafetyDecision: 'approved' };
+      transaction.set(database.collection('provider_public').doc(providerId), {
+        servicos: FieldValue.arrayUnion(service.id),
+        categories: FieldValue.arrayUnion(service.id),
+        servicosNomes: FieldValue.arrayUnion(service.title),
+        customServices: FieldValue.arrayUnion(approvedService),
+        customServiceNames: FieldValue.arrayUnion(service.title),
+        customServiceSearchTerms: FieldValue.arrayUnion(...service.normalizedSearchTerms),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(database.collection('provider_dispatch_private').doc(providerId), {
+        servicos: FieldValue.arrayUnion(service.id),
+        servicosNomes: FieldValue.arrayUnion(service.title),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    await writeAdminAuditLog({
+      database,
+      batch: transaction,
+      auth,
+      action: `custom_service.${decision}`,
+      targetType: 'provider_custom_service',
+      targetId: requestId,
+      beforeStatus: 'pending_review',
+      afterStatus: decision,
+      reason,
+    });
   });
-  await batch.commit();
   return { ok: true, requestId, status: decision };
 }
 
@@ -2791,9 +4015,44 @@ function normalizedRate(value, fallback) {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : fallback;
 }
 
+function requiredCommissionRate(name) {
+  const raw = cleanString(getEnv(name));
+  const rate = raw ? normalizedRate(raw, null) : null;
+  if (rate === null) {
+    throw new HttpsError(
+      'failed-precondition',
+      `${name} deve ser configurada explicitamente antes de cobrar comissao.`,
+    );
+  }
+  return rate;
+}
+
+function authoritativeDigitalPaymentMatches(payment, {
+  pedidoId,
+  clienteId,
+  prestadorId,
+  amount,
+  currency,
+}) {
+  if (!payment) return false;
+  const paymentAmount = Number(payment.amount);
+  const feeAmount = Number(payment.feeAmount);
+  return cleanString(payment.status).toLowerCase() === 'succeeded'
+    && cleanString(payment.pedidoId) === pedidoId
+    && cleanString(payment.clienteId) === clienteId
+    && cleanString(payment.prestadorId) === prestadorId
+    && Number.isInteger(paymentAmount)
+    && paymentAmount === amount
+    && Number.isInteger(feeAmount)
+    && feeAmount >= 0
+    && feeAmount <= paymentAmount
+    && cleanString(payment.currency).toLowerCase() === cleanString(currency).toLowerCase();
+}
+
 function calculatePedidoEconomics(finalValue, {
-  commissionRate = normalizedRate(getEnv('DEFAULT_DIGITAL_COMMISSION_RATE', '0.15'), 0.15),
+  commissionRate = requiredCommissionRate('DEFAULT_DIGITAL_COMMISSION_RATE'),
   commissionCap = null,
+  currency = cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toUpperCase(),
 } = {}) {
   const value = roundMoney(finalValue);
   if (value === null || value <= 0) {
@@ -2809,6 +4068,10 @@ function calculatePedidoEconomics(finalValue, {
     ? Math.min(rawCommission, parsedCap)
     : rawCommission;
   const earningsProvider = roundMoney(value - commissionPlatform);
+  const normalizedCurrency = cleanString(currency).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+    throw new HttpsError('failed-precondition', 'Moeda autoritativa invalida.');
+  }
 
   return {
     precoFinal: value,
@@ -2817,14 +4080,14 @@ function calculatePedidoEconomics(finalValue, {
     commissionPlatform,
     earningsProvider,
     earningsTotal: value,
-    currency: cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toUpperCase() || 'MZN',
+    currency: normalizedCurrency,
   };
 }
 
 function cashCommissionPolicy({ completedJobsCount = 0 } = {}) {
   const freeJobs = Math.max(0, Math.floor(Number(getEnv('COMMISSION_FREE_FIRST_JOBS', '2')) || 2));
   const completed = Math.max(0, Math.floor(Number(completedJobsCount) || 0));
-  const configuredRate = normalizedRate(getEnv('DEFAULT_CASH_COMMISSION_RATE', '0.10'), 0.10);
+  const configuredRate = requiredCommissionRate('DEFAULT_CASH_COMMISSION_RATE');
   const rawCapValue = getEnv('CASH_COMMISSION_CAP_MZN', '').trim();
   const rawCap = rawCapValue ? Number(rawCapValue) : Number.NaN;
   return {
@@ -2867,6 +4130,862 @@ function requirePositiveMoney(value, fieldName) {
     throw new HttpsError('invalid-argument', `${fieldName} invalido.`);
   }
   return money;
+}
+
+const PEDIDO_ACTION_SPECS = Object.freeze({
+  provider_submit_quote: Object.freeze({
+    role: 'prestador',
+    fields: Object.freeze(['valorMin', 'valorMax', 'mensagem', 'validadeMinutos']),
+  }),
+  client_accept_quote: Object.freeze({ role: 'cliente', fields: Object.freeze([]) }),
+  client_reject_quote: Object.freeze({ role: 'cliente', fields: Object.freeze([]) }),
+  client_invite_provider: Object.freeze({
+    role: 'cliente',
+    fields: Object.freeze(['prestadorId']),
+  }),
+  client_replace_invited_provider: Object.freeze({
+    role: 'cliente',
+    fields: Object.freeze(['prestadorId']),
+  }),
+  provider_decline_invite: Object.freeze({ role: 'prestador', fields: Object.freeze([]) }),
+  provider_start_service: Object.freeze({ role: 'prestador', fields: Object.freeze([]) }),
+  client_reject_final_value: Object.freeze({
+    role: 'cliente',
+    fields: Object.freeze(['motivo']),
+  }),
+  client_cancel: Object.freeze({
+    role: 'cliente',
+    fields: Object.freeze(['motivo', 'motivoDetalhe']),
+  }),
+  provider_cancel: Object.freeze({
+    role: 'prestador',
+    fields: Object.freeze(['motivo', 'motivoDetalhe']),
+  }),
+  client_report_no_show: Object.freeze({
+    role: 'cliente',
+    fields: Object.freeze(['motivo']),
+  }),
+  provider_report_no_show: Object.freeze({
+    role: 'prestador',
+    fields: Object.freeze(['motivo']),
+  }),
+});
+
+const VALID_PEDIDO_ACTION_STATES = new Set([
+  'criado',
+  'aguarda_resposta_prestador',
+  'aguarda_resposta_cliente',
+  'aceito',
+  'em_andamento',
+  'aguarda_confirmacao_valor',
+  'concluido',
+  'cancelado',
+]);
+
+function strictPedidoActionText(value, {
+  field,
+  maxLength,
+  required = false,
+} = {}) {
+  if (value === undefined || value === null) {
+    if (required) throw new HttpsError('invalid-argument', `${field} obrigatorio.`);
+    return '';
+  }
+  if (typeof value !== 'string' || /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(value)) {
+    throw new HttpsError('invalid-argument', `${field} invalido.`);
+  }
+  const text = value.replace(/\s+/g, ' ').trim();
+  if ((required && !text) || text.length > maxLength) {
+    throw new HttpsError('invalid-argument', `${field} invalido.`);
+  }
+  return text;
+}
+
+function strictPedidoDocumentId(value, field = 'pedidoId') {
+  const documentId = strictPedidoActionText(value, {
+    field,
+    maxLength: 128,
+    required: true,
+  });
+  if (documentId === '.' || documentId === '..' || documentId.includes('/')) {
+    throw new HttpsError('invalid-argument', `${field} invalido.`);
+  }
+  return documentId;
+}
+
+function strictPedidoActionMoney(value, field) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new HttpsError('invalid-argument', `${field} invalido.`);
+  }
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded <= 0 || rounded > 100000000 || Math.abs(value - rounded) > 0.000001) {
+    throw new HttpsError('invalid-argument', `${field} invalido.`);
+  }
+  return rounded;
+}
+
+function parsePedidoActionInput(data = {}) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new HttpsError('invalid-argument', 'Pedido de acao invalido.');
+  }
+  const action = strictPedidoActionText(data.action, {
+    field: 'action',
+    maxLength: 80,
+    required: true,
+  });
+  const spec = PEDIDO_ACTION_SPECS[action];
+  if (!spec) throw new HttpsError('invalid-argument', 'action invalida.');
+
+  const allowedFields = new Set(['action', 'pedidoId', ...spec.fields]);
+  const forgedFields = Object.keys(data).filter((field) => !allowedFields.has(field));
+  if (forgedFields.length > 0) {
+    throw new HttpsError(
+      'invalid-argument',
+      `Campos nao permitidos para ${action}: ${forgedFields.sort().join(', ')}.`,
+    );
+  }
+
+  const input = {
+    action,
+    role: spec.role,
+    pedidoId: strictPedidoDocumentId(data.pedidoId),
+  };
+  if (action === 'provider_submit_quote') {
+    input.valorMin = strictPedidoActionMoney(data.valorMin, 'valorMin');
+    input.valorMax = strictPedidoActionMoney(data.valorMax, 'valorMax');
+    if (input.valorMax < input.valorMin) {
+      throw new HttpsError('invalid-argument', 'valorMax deve ser maior ou igual a valorMin.');
+    }
+    input.mensagem = strictPedidoActionText(data.mensagem, {
+      field: 'mensagem',
+      maxLength: 500,
+    });
+    const validadeMinutos = data.validadeMinutos === undefined
+      ? 1440
+      : data.validadeMinutos;
+    if (!Number.isInteger(validadeMinutos)
+      || validadeMinutos < 15
+      || validadeMinutos > 10080) {
+      throw new HttpsError('invalid-argument', 'validadeMinutos invalido.');
+    }
+    input.validadeMinutos = validadeMinutos;
+  }
+  if (['client_invite_provider', 'client_replace_invited_provider'].includes(action)) {
+    input.prestadorId = strictPedidoDocumentId(data.prestadorId, 'prestadorId');
+  }
+  if (['client_reject_final_value', 'client_report_no_show', 'provider_report_no_show'].includes(action)) {
+    input.motivo = strictPedidoActionText(data.motivo, {
+      field: 'motivo',
+      maxLength: 500,
+    });
+  }
+  if (['client_cancel', 'provider_cancel'].includes(action)) {
+    input.motivo = strictPedidoActionText(data.motivo, {
+      field: 'motivo',
+      maxLength: 160,
+      required: true,
+    });
+    input.motivoDetalhe = strictPedidoActionText(data.motivoDetalhe, {
+      field: 'motivoDetalhe',
+      maxLength: 500,
+    });
+  }
+  return input;
+}
+
+function authoritativePedidoActionState(pedido) {
+  const status = cleanString(pedido && pedido.status).toLowerCase();
+  const estado = cleanString(pedido && pedido.estado).toLowerCase();
+  if (status && estado && status !== estado) {
+    throw new HttpsError('failed-precondition', 'Estado inconsistente; contacta o suporte.');
+  }
+  const state = status || estado;
+  if (!VALID_PEDIDO_ACTION_STATES.has(state)) {
+    throw new HttpsError('failed-precondition', 'Estado do pedido invalido.');
+  }
+  return state;
+}
+
+function assertPedidoActionState(action, state, allowedStates) {
+  if (!allowedStates.includes(state)) {
+    throw new HttpsError(
+      'failed-precondition',
+      `A acao ${action} nao e permitida no estado ${state}.`,
+    );
+  }
+}
+
+function assertPedidoActionOwner({ pedido, uid, role }) {
+  const ownsPedido = role === 'cliente'
+    ? cleanString(getClienteId(pedido)) === uid
+    : cleanString(pedido && pedido.prestadorId) === uid;
+  if (!ownsPedido) {
+    throw new HttpsError('permission-denied', 'Sem permissao para executar esta acao no pedido.');
+  }
+}
+
+function pedidoActionResetPatch() {
+  return {
+    prestadorId: null,
+    providerAccessGranted: false,
+    providerAccessGrantedTo: null,
+    providerAccessGrantedAt: null,
+    valorMinEstimadoPrestador: null,
+    valorMaxEstimadoPrestador: null,
+    mensagemPropostaPrestador: null,
+    statusProposta: 'nenhuma',
+    propostaExpiresAt: null,
+    statusConfirmacaoValor: 'nenhum',
+    precoPropostoPrestador: null,
+    precoFinal: null,
+    preco: null,
+    commissionRate: null,
+    commissionPlatform: null,
+    earningsProvider: null,
+    earningsTotal: null,
+    concluidoEm: null,
+    completedAt: null,
+    completedBy: null,
+    canceladoPor: null,
+    motivoCancelamento: null,
+    motivoCancelamentoDetalhe: null,
+    tipoReembolso: null,
+  };
+}
+
+function pedidoHasSettledDigitalPayment(pedido) {
+  const method = cleanString(pedido && pedido.tipoPagamento).toLowerCase();
+  const status = cleanString(pedido && pedido.paymentStatus).toLowerCase();
+  return !['', 'dinheiro', 'cash'].includes(method) && ['paid', 'succeeded'].includes(status);
+}
+
+function accountAllowsNewWork(userPrivate) {
+  const status = cleanString(userPrivate && userPrivate.accountStatus).toLowerCase();
+  return ![
+    'deletion_pending',
+    'disabled',
+    'deleted',
+    'suspended',
+    'inactive',
+    'blocked',
+  ].includes(status);
+}
+
+async function requireAccountAllowsNewActivity({
+  database = db,
+  uid,
+  message = 'Esta conta nao pode iniciar novas operacoes.',
+}) {
+  const snapshot = await database.collection('users_private').doc(uid).get();
+  const userPrivate = snapshot.exists ? (snapshot.data() || {}) : {};
+  if (!accountAllowsNewWork(userPrivate)) {
+    throw new HttpsError('failed-precondition', message);
+  }
+  return userPrivate;
+}
+
+async function readEligibleProviderForPedido({
+  transaction,
+  database,
+  providerId,
+  pedido,
+  requireAvailableForNewWork,
+  requireOnlineForNewWork = false,
+  requireVerifiedPhoneProfile = false,
+  nowMillis = Date.now(),
+}) {
+  const publicSnap = await transaction.get(database.collection('provider_public').doc(providerId));
+  if (!publicSnap.exists) {
+    throw new HttpsError('failed-precondition', 'Perfil de prestador inexistente.');
+  }
+  const provider = publicSnap.data() || {};
+  if (provider.isSearchable !== true || !providerMatchesPedido(provider, pedido)) {
+    throw new HttpsError('failed-precondition', 'Prestador nao elegivel para este pedido.');
+  }
+
+  const participantSnap = await transaction.get(
+    database.collection('pilot_participants').doc(providerId),
+  );
+  if (!participantSnap.exists
+    || !pilotParticipantIsActiveForRole(participantSnap.data(), 'prestador')) {
+    throw new HttpsError('permission-denied', 'Prestador fora da coorte ativa do piloto.');
+  }
+
+  const userPrivateSnap = await transaction.get(
+    database.collection('users_private').doc(providerId),
+  );
+  const userPrivate = userPrivateSnap.exists ? (userPrivateSnap.data() || {}) : {};
+  if (requireVerifiedPhoneProfile && userPrivate.phoneVerified !== true) {
+    throw new HttpsError('failed-precondition', 'O prestador precisa de telefone confirmado.');
+  }
+  assertCurrentLegalConsent(userPrivate.legalConsent);
+  if (!accountAllowsNewWork(userPrivate)) {
+    throw new HttpsError('failed-precondition', 'A conta do prestador nao aceita novos trabalhos.');
+  }
+
+  if (pedido.categoryApprovalRequired === true) {
+    const requirementId = cleanString(pedido.categoryRequirementId || pedido.servicoId);
+    if (!requirementId) {
+      throw new HttpsError('failed-precondition', 'Categoria sensivel sem requisito autoritativo.');
+    }
+    const approvalSnap = await transaction.get(
+      database.collection('provider_private').doc(providerId)
+        .collection('categoryApprovals').doc(requirementId),
+    );
+    if (!approvalSnap.exists || !providerApprovalIsActive(approvalSnap.data(), nowMillis)) {
+      throw new HttpsError('failed-precondition', 'A aprovacao desta categoria nao esta ativa.');
+    }
+  }
+
+  let privateState = {};
+  let dispatchState = {};
+  if (requireAvailableForNewWork) {
+    const privateSnap = await transaction.get(
+      database.collection('provider_private').doc(providerId),
+    );
+    const dispatchSnap = await transaction.get(
+      database.collection('provider_dispatch_private').doc(providerId),
+    );
+    privateState = privateSnap.exists ? (privateSnap.data() || {}) : {};
+    dispatchState = dispatchSnap.exists ? (dispatchSnap.data() || {}) : {};
+    if (cleanString(privateState.financialStatus) === 'suspended_new_jobs'
+      || dispatchState.acceptingNewJobs === false
+      || dispatchState.acceptingRequests === false) {
+      throw new HttpsError(
+        'failed-precondition',
+        'O prestador nao pode receber novos pedidos neste momento.',
+      );
+    }
+    if (requireOnlineForNewWork && dispatchState.isOnline !== true) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Fica online para aceitar esta oportunidade.',
+      );
+    }
+  }
+  return {
+    provider,
+    participant: participantSnap.data() || {},
+    userPrivate,
+    privateState,
+    dispatchState,
+  };
+}
+
+function pedidoIsApprovedForWork(pedido) {
+  return cleanString(pedido && (pedido.moderationStatus || 'approved')) === 'approved';
+}
+
+function pedidoIsSelfDealing(pedido, providerId = null) {
+  const clientId = cleanString(getClienteId(pedido));
+  const assignedProviderId = cleanString(providerId || (pedido && pedido.prestadorId));
+  return !!clientId && !!assignedProviderId && clientId === assignedProviderId;
+}
+
+function providerHasFullPedidoAccess(pedido, providerId) {
+  const uid = cleanString(providerId);
+  return !!uid
+    && cleanString(pedido && pedido.prestadorId) === uid
+    && pedido && pedido.providerAccessGranted === true
+    && cleanString(pedido && pedido.providerAccessGrantedTo) === uid
+    && !!(pedido && pedido.providerAccessGrantedAt)
+    && typeof pedido.providerAccessGrantedAt.toMillis === 'function'
+    && pedido.providerAccessGrantedAt.toMillis() > 0;
+}
+
+function pedidoRequiresAcceptedQuote(pedido) {
+  return cleanString(pedido && pedido.tipoPreco).toLowerCase() === 'por_orcamento'
+    || cleanString(pedido && pedido.modo).toUpperCase() === 'POR_PROPOSTA';
+}
+
+function pedidoHasAcceptedQuote(pedido) {
+  const min = Number(pedido && pedido.valorMinEstimadoPrestador);
+  const max = Number(pedido && pedido.valorMaxEstimadoPrestador);
+  return cleanString(pedido && pedido.statusProposta) === 'aceita_cliente'
+    && Number.isFinite(min)
+    && min > 0
+    && Number.isFinite(max)
+    && max >= min;
+}
+
+async function assertNoActiveDigitalPayment({ transaction, database, pedido }) {
+  const method = cleanString(pedido && pedido.tipoPagamento).toLowerCase();
+  if (['', 'dinheiro', 'cash'].includes(method)) return;
+  const paymentIntentId = cleanString(pedido && pedido.paymentIntentId);
+  const pedidoStatus = cleanString(pedido && pedido.paymentStatus).toLowerCase();
+  if (!paymentIntentId) {
+    if (['', 'canceled', 'cancelled'].includes(pedidoStatus)) return;
+    throw new HttpsError(
+      'failed-precondition',
+      'O estado do pagamento digital precisa de revisao pelo suporte.',
+    );
+  }
+  const paymentSnap = await transaction.get(database.collection('payments').doc(paymentIntentId));
+  const paymentStatus = paymentSnap.exists
+    ? cleanString(paymentSnap.data().status).toLowerCase()
+    : '';
+  if (['canceled', 'cancelled'].includes(pedidoStatus)
+    && ['canceled', 'cancelled'].includes(paymentStatus)) return;
+  throw new HttpsError(
+    'failed-precondition',
+    'Existe um pagamento digital ativo; contacta o suporte antes de alterar o pedido.',
+  );
+}
+
+async function applyPedidoActionSecureCore({
+  database = db,
+  auth,
+  data = {},
+  now = Timestamp.now(),
+}) {
+  const uid = requireVerifiedPhoneAuth(auth);
+  const input = parsePedidoActionInput(data);
+  await requireCurrentLegalConsent({ database, uid });
+  await requirePilotParticipant({
+    database,
+    uid,
+    role: input.role,
+    allowEmulatorBypass: false,
+  });
+  if (['client_invite_provider', 'client_replace_invited_provider'].includes(input.action)) {
+    if (input.prestadorId === uid) {
+      throw new HttpsError('invalid-argument', 'Nao podes convidar a tua propria conta.');
+    }
+    await requirePilotParticipant({
+      database,
+      uid: input.prestadorId,
+      role: 'prestador',
+      allowEmulatorBypass: false,
+    });
+  }
+
+  const pedidoRef = database.collection('pedidos').doc(input.pedidoId);
+  let previousStatus = '';
+  let nextStatus = '';
+  await database.runTransaction(async (transaction) => {
+    const pedidoSnap = await transaction.get(pedidoRef);
+    if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
+    const pedido = pedidoSnap.data() || {};
+    const state = authoritativePedidoActionState(pedido);
+    previousStatus = state;
+    const nowMillis = now && typeof now.toMillis === 'function' ? now.toMillis() : Date.now();
+    const actorUserSnap = await transaction.get(database.collection('users_private').doc(uid));
+    const actorUser = actorUserSnap.exists ? (actorUserSnap.data() || {}) : {};
+    assertCurrentLegalConsent(actorUser.legalConsent);
+    const actorParticipantSnap = await transaction.get(
+      database.collection('pilot_participants').doc(uid),
+    );
+    if (!actorParticipantSnap.exists
+      || !pilotParticipantIsActiveForRole(actorParticipantSnap.data(), input.role)) {
+      throw new HttpsError('permission-denied', 'A conta deixou de pertencer a esta coorte do piloto.');
+    }
+    const newRelationshipActions = [
+      'provider_submit_quote',
+      'client_accept_quote',
+      'client_invite_provider',
+      'client_replace_invited_provider',
+    ];
+    if (newRelationshipActions.includes(input.action) && !accountAllowsNewWork(actorUser)) {
+      throw new HttpsError('failed-precondition', 'A conta nao pode iniciar uma nova relacao de trabalho.');
+    }
+    const workProgressActions = [
+      ...newRelationshipActions,
+      'provider_start_service',
+    ];
+    if (workProgressActions.includes(input.action) && !pedidoIsApprovedForWork(pedido)) {
+      throw new HttpsError('failed-precondition', 'O pedido ainda nao foi aprovado por Trust & Safety.');
+    }
+    const selfDealingSensitiveActions = [
+      'provider_submit_quote',
+      'client_accept_quote',
+      'provider_start_service',
+      'client_reject_final_value',
+      'client_report_no_show',
+      'provider_report_no_show',
+    ];
+    if (selfDealingSensitiveActions.includes(input.action) && pedidoIsSelfDealing(pedido)) {
+      throw new HttpsError('permission-denied', 'Cliente e prestador devem ser contas diferentes.');
+    }
+    if (['client_report_no_show', 'provider_report_no_show'].includes(input.action)
+      && !envFlagEnabled('ENABLE_NO_SHOW_REPORTING', false)) {
+      throw new HttpsError('failed-precondition', 'O reporte de no-show ainda nao esta ativo no piloto.');
+    }
+    if ([
+      'provider_submit_quote',
+      'client_reject_quote',
+      'client_reject_final_value',
+      'client_cancel',
+      'provider_cancel',
+    ].includes(input.action)) {
+      await assertNoActiveDigitalPayment({ transaction, database, pedido });
+    }
+    const commonPatch = {
+      updatedAt: FieldValue.serverTimestamp(),
+      lastAuthoritativeFunction: 'pedidos_applyActionSecure',
+    };
+    let patch;
+    let event;
+    let description;
+
+    switch (input.action) {
+      case 'provider_submit_quote': {
+        assertPedidoActionState(input.action, state, [
+          'criado',
+          'aguarda_resposta_prestador',
+        ]);
+        if (!pedidoRequiresAcceptedQuote(pedido)) {
+          throw new HttpsError(
+            'failed-precondition',
+            'Este pedido nao usa o fluxo de orcamento.',
+          );
+        }
+        if (cleanString(getClienteId(pedido)) === uid) {
+          throw new HttpsError('permission-denied', 'Nao podes apresentar proposta ao teu proprio pedido.');
+        }
+        const assignedProviderId = cleanString(pedido.prestadorId);
+        if ((state === 'criado' && assignedProviderId)
+          || (state !== 'criado' && assignedProviderId !== uid)) {
+          throw new HttpsError('permission-denied', 'Pedido atribuido a outro prestador.');
+        }
+        await readEligibleProviderForPedido({
+          transaction,
+          database,
+          providerId: uid,
+          pedido,
+          requireAvailableForNewWork: true,
+          nowMillis,
+        });
+        nextStatus = 'aguarda_resposta_cliente';
+        patch = {
+          ...pedidoActionResetPatch(),
+          prestadorId: uid,
+          valorMinEstimadoPrestador: input.valorMin,
+          valorMaxEstimadoPrestador: input.valorMax,
+          mensagemPropostaPrestador: input.mensagem || null,
+          statusProposta: 'pendente_cliente',
+          propostaExpiresAt: Timestamp.fromMillis(
+            nowMillis + input.validadeMinutos * 60 * 1000,
+          ),
+          status: nextStatus,
+          estado: nextStatus,
+        };
+        event = 'proposta_enviada';
+        description = `Prestador enviou proposta: ${input.valorMin} - ${input.valorMax}`;
+        break;
+      }
+      case 'client_accept_quote': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, ['aguarda_resposta_cliente']);
+        if (!pedidoRequiresAcceptedQuote(pedido)) {
+          throw new HttpsError('failed-precondition', 'Este pedido nao exige aprovacao de orcamento.');
+        }
+        const expiresAt = pedido.propostaExpiresAt;
+        const quoteMin = Number(pedido.valorMinEstimadoPrestador);
+        const quoteMax = Number(pedido.valorMaxEstimadoPrestador);
+        if (cleanString(pedido.statusProposta) !== 'pendente_cliente'
+          || !cleanString(pedido.prestadorId)
+          || !expiresAt
+          || typeof expiresAt.toMillis !== 'function'
+          || expiresAt.toMillis() <= nowMillis
+          || !Number.isFinite(quoteMin)
+          || quoteMin <= 0
+          || !Number.isFinite(quoteMax)
+          || quoteMax < quoteMin) {
+          throw new HttpsError('failed-precondition', 'A proposta ja nao esta valida.');
+        }
+        await readEligibleProviderForPedido({
+          transaction,
+          database,
+          providerId: cleanString(pedido.prestadorId),
+          pedido,
+          requireAvailableForNewWork: true,
+          nowMillis,
+        });
+        nextStatus = 'aceito';
+        patch = {
+          statusProposta: 'aceita_cliente',
+          status: nextStatus,
+          estado: nextStatus,
+          providerAccessGranted: true,
+          providerAccessGrantedTo: cleanString(pedido.prestadorId),
+          providerAccessGrantedAt: FieldValue.serverTimestamp(),
+        };
+        event = 'proposta_aceita';
+        description = 'Cliente aceitou a proposta do prestador';
+        break;
+      }
+      case 'client_reject_quote': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, ['aguarda_resposta_cliente']);
+        if (cleanString(pedido.statusProposta) !== 'pendente_cliente') {
+          throw new HttpsError('failed-precondition', 'Nao existe proposta pendente.');
+        }
+        nextStatus = 'criado';
+        patch = {
+          ...pedidoActionResetPatch(),
+          statusProposta: 'rejeitada_cliente',
+          status: nextStatus,
+          estado: nextStatus,
+        };
+        event = 'proposta_rejeitada';
+        description = 'Cliente rejeitou a proposta';
+        break;
+      }
+      case 'client_invite_provider': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, ['criado']);
+        if (cleanString(pedido.prestadorId)) {
+          throw new HttpsError('failed-precondition', 'Pedido ja tem prestador atribuido.');
+        }
+        await readEligibleProviderForPedido({
+          transaction,
+          database,
+          providerId: input.prestadorId,
+          pedido,
+          requireAvailableForNewWork: true,
+          nowMillis,
+        });
+        nextStatus = 'aguarda_resposta_prestador';
+        patch = {
+          ...pedidoActionResetPatch(),
+          prestadorId: input.prestadorId,
+          status: nextStatus,
+          estado: nextStatus,
+        };
+        event = 'convite_enviado';
+        description = 'Cliente convidou prestador manualmente';
+        break;
+      }
+      case 'client_replace_invited_provider': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, ['aguarda_resposta_prestador']);
+        const invitedProviderId = cleanString(pedido.prestadorId);
+        if (!invitedProviderId) {
+          throw new HttpsError('failed-precondition', 'Pedido sem convite pendente.');
+        }
+        if (invitedProviderId === input.prestadorId) {
+          throw new HttpsError('failed-precondition', 'Seleciona um prestador diferente.');
+        }
+        await readEligibleProviderForPedido({
+          transaction,
+          database,
+          providerId: input.prestadorId,
+          pedido,
+          requireAvailableForNewWork: true,
+          nowMillis,
+        });
+        nextStatus = 'aguarda_resposta_prestador';
+        patch = {
+          ...pedidoActionResetPatch(),
+          prestadorId: input.prestadorId,
+          status: nextStatus,
+          estado: nextStatus,
+        };
+        event = 'convite_substituido';
+        description = 'Cliente substituiu o prestador convidado';
+        break;
+      }
+      case 'provider_decline_invite': {
+        assertPedidoActionOwner({ pedido, uid, role: 'prestador' });
+        assertPedidoActionState(input.action, state, ['aguarda_resposta_prestador']);
+        nextStatus = 'criado';
+        patch = {
+          ...pedidoActionResetPatch(),
+          status: nextStatus,
+          estado: nextStatus,
+          ultimoCancelamentoPrestadorId: uid,
+          ultimoCancelamentoPrestadorMotivo: 'convite_recusado',
+          ultimoCancelamentoPrestadorMotivoDetalhe: null,
+          ultimoCancelamentoPrestadorEm: FieldValue.serverTimestamp(),
+        };
+        event = 'convite_recusado';
+        description = 'Prestador recusou o convite';
+        break;
+      }
+      case 'provider_start_service': {
+        assertPedidoActionOwner({ pedido, uid, role: 'prestador' });
+        assertPedidoActionState(input.action, state, ['aceito']);
+        if (!providerHasFullPedidoAccess(pedido, uid)) {
+          throw new HttpsError('permission-denied', 'O acesso privado ao pedido nao esta ativo.');
+        }
+        if (pedidoRequiresAcceptedQuote(pedido) && !pedidoHasAcceptedQuote(pedido)) {
+          throw new HttpsError(
+            'failed-precondition',
+            'O cliente precisa de aceitar a estimativa antes do inicio do servico.',
+          );
+        }
+        nextStatus = 'em_andamento';
+        patch = {
+          status: nextStatus,
+          estado: nextStatus,
+          serviceStartedAt: FieldValue.serverTimestamp(),
+        };
+        event = 'servico_iniciado';
+        description = 'Prestador iniciou o servico';
+        break;
+      }
+      case 'client_reject_final_value': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, ['aguarda_confirmacao_valor']);
+        if (!providerHasFullPedidoAccess(pedido, cleanString(pedido.prestadorId))) {
+          throw new HttpsError('failed-precondition', 'A relacao com o prestador nao esta ativa.');
+        }
+        if (cleanString(pedido.statusConfirmacaoValor) !== 'pendente_cliente'
+          || !(Number(pedido.precoPropostoPrestador) > 0)) {
+          throw new HttpsError('failed-precondition', 'Valor final nao esta pendente.');
+        }
+        nextStatus = 'em_andamento';
+        patch = {
+          statusConfirmacaoValor: 'rejeitado_cliente',
+          status: nextStatus,
+          estado: nextStatus,
+        };
+        event = 'valor_final_rejeitado';
+        description = input.motivo
+          ? `Cliente rejeitou o valor final: ${input.motivo}`
+          : 'Cliente rejeitou o valor final';
+        break;
+      }
+      case 'client_cancel': {
+        assertPedidoActionOwner({ pedido, uid, role: 'cliente' });
+        assertPedidoActionState(input.action, state, [
+          'criado',
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+        ]);
+        if (pedidoHasSettledDigitalPayment(pedido)) {
+          throw new HttpsError(
+            'failed-precondition',
+            'O pagamento digital ja foi confirmado; contacta o suporte para cancelar.',
+          );
+        }
+        nextStatus = 'cancelado';
+        patch = {
+          status: nextStatus,
+          estado: nextStatus,
+          providerAccessGranted: false,
+          providerAccessGrantedTo: null,
+          providerAccessGrantedAt: null,
+          canceladoPor: 'cliente',
+          motivoCancelamento: input.motivo,
+          motivoCancelamentoDetalhe: input.motivoDetalhe || null,
+        };
+        event = 'cancelado';
+        description = input.motivoDetalhe
+          ? `${input.motivo}: ${input.motivoDetalhe}`
+          : input.motivo;
+        break;
+      }
+      case 'provider_cancel': {
+        assertPedidoActionOwner({ pedido, uid, role: 'prestador' });
+        assertPedidoActionState(input.action, state, [
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+        ]);
+        if (['aceito', 'em_andamento', 'aguarda_confirmacao_valor'].includes(state)
+          && !providerHasFullPedidoAccess(pedido, uid)) {
+          throw new HttpsError('permission-denied', 'O acesso privado ao pedido nao esta ativo.');
+        }
+        if (pedidoHasSettledDigitalPayment(pedido)) {
+          throw new HttpsError(
+            'failed-precondition',
+            'O pagamento digital ja foi confirmado; contacta o suporte para cancelar.',
+          );
+        }
+        const withdrawal = [
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+        ].includes(state);
+        nextStatus = withdrawal ? 'criado' : 'cancelado';
+        patch = withdrawal
+          ? {
+            ...pedidoActionResetPatch(),
+            status: nextStatus,
+            estado: nextStatus,
+            ultimoCancelamentoPrestadorId: uid,
+            ultimoCancelamentoPrestadorMotivo: input.motivo,
+            ultimoCancelamentoPrestadorMotivoDetalhe: input.motivoDetalhe || null,
+            ultimoCancelamentoPrestadorEm: FieldValue.serverTimestamp(),
+          }
+          : {
+            status: nextStatus,
+            estado: nextStatus,
+            providerAccessGranted: false,
+            providerAccessGrantedTo: null,
+            providerAccessGrantedAt: null,
+            canceladoPor: 'prestador',
+            motivoCancelamento: input.motivo,
+            motivoCancelamentoDetalhe: input.motivoDetalhe || null,
+          };
+        event = withdrawal ? 'desistencia_prestador' : 'cancelado';
+        description = input.motivoDetalhe
+          ? `${input.motivo}: ${input.motivoDetalhe}`
+          : input.motivo;
+        break;
+      }
+      case 'client_report_no_show':
+      case 'provider_report_no_show': {
+        assertPedidoActionOwner({ pedido, uid, role: input.role });
+        assertPedidoActionState(input.action, state, ['aceito', 'em_andamento']);
+        if (!cleanString(pedido.prestadorId)) {
+          throw new HttpsError('failed-precondition', 'Pedido sem prestador atribuido.');
+        }
+        if (cleanString(pedido.noShowReportedBy)) {
+          throw new HttpsError('already-exists', 'Ja existe um no-show reportado neste pedido.');
+        }
+        if (!providerHasFullPedidoAccess(pedido, cleanString(pedido.prestadorId))) {
+          throw new HttpsError('failed-precondition', 'A relacao com o prestador nao esta ativa.');
+        }
+        nextStatus = state;
+        patch = {
+          noShowReportedBy: input.role,
+          noShowReason: input.motivo || null,
+          noShowAt: FieldValue.serverTimestamp(),
+        };
+        event = 'noshow';
+        description = input.motivo
+          ? `${input.role} reportou no-show: ${input.motivo}`
+          : `${input.role} reportou no-show`;
+        break;
+      }
+      default:
+        throw new HttpsError('invalid-argument', 'action invalida.');
+    }
+
+    transaction.update(pedidoRef, {
+      ...patch,
+      ...commonPatch,
+      historico: FieldValue.arrayUnion(historyItem({
+        evento: event,
+        userId: uid,
+        descricao: description,
+      })),
+    });
+  });
+
+  logger.info('[pedidos] acao autoritativa aplicada', {
+    functionName: 'pedidos_applyActionSecure',
+    pedidoId: input.pedidoId,
+    action: input.action,
+    actorId: maskIdentifier(uid),
+    actorRole: input.role,
+    previousStatus,
+    nextStatus,
+  });
+  return {
+    ok: true,
+    pedidoId: input.pedidoId,
+    action: input.action,
+    previousStatus,
+    status: nextStatus,
+  };
 }
 
 function ensureAdmin(auth) {
@@ -3098,6 +5217,10 @@ exports.onChatMessageCreated = onDocumentCreated(
     const prestadorId = (pedido.prestadorId || '').toString();
 
     if (!clienteId) return;
+    if (!providerHasFullPedidoAccess(pedido, prestadorId)) {
+      logger.warn('[chat] mensagem ignorada sem grant de relacao aceite', { pedidoId });
+      return;
+    }
 
     const recipientId = senderRole === 'cliente' ? prestadorId : clienteId;
     if (!recipientId) {
@@ -3132,14 +5255,14 @@ exports.onChatMessageCreated = onDocumentCreated(
       pedidoId,
       messageId,
       title: senderRole === 'cliente' ? 'Nova mensagem do cliente' : 'Nova mensagem do prestador',
-      body: safeText(text, 140),
+      body: 'Recebeste uma nova mensagem.',
       fromUserId: senderId,
     });
 
     // Push
     await sendPushToUser(recipientId, {
       title: 'ChegaJá - Nova mensagem',
-      body: safeText(text, 120),
+      body: 'Abre a aplicação para consultar a mensagem.',
       data: {
         type: 'chat_message',
         pedidoId,
@@ -3294,6 +5417,174 @@ exports.onPedidoUpdated = onDocumentUpdated(
 // 3) PEDIDOS -> push para prestadores próximos (matching)
 // ------------------------------------------------------------
 
+async function loadDocumentsById(database, collectionName, documentIds) {
+  const documents = new Map();
+  const uniqueIds = [...new Set(documentIds.map(cleanString).filter(Boolean))];
+  for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+    const ids = uniqueIds.slice(offset, offset + 100);
+    const snapshots = await database.getAll(
+      ...ids.map((id) => database.collection(collectionName).doc(id)),
+    );
+    snapshots.forEach((snapshot) => {
+      documents.set(snapshot.id, snapshot.exists ? (snapshot.data() || {}) : null);
+    });
+  }
+  return documents;
+}
+
+function providerIsEligibleForInitialMatching({
+  pedido,
+  dispatchState,
+  providerPublic,
+  providerPrivate,
+  userPrivate,
+  participant,
+  nowMillis,
+}) {
+  if (!providerPublic
+    || providerPublic.isSearchable !== true
+    || !providerMatchesPedido(providerPublic, pedido)
+    || !pilotParticipantIsActiveForRole(participant, 'prestador')
+    || !accountAllowsNewWork(userPrivate)
+    || cleanString(providerPrivate && providerPrivate.financialStatus) === 'suspended_new_jobs'
+    || !dispatchState
+    || dispatchState.acceptingRequests !== true
+    || dispatchState.acceptingNewJobs === false
+    || dispatchState.isOnline !== true
+    || !providerDispatchLocation(dispatchState, nowMillis)) {
+    return false;
+  }
+  try {
+    assertCurrentLegalConsent(userPrivate && userPrivate.legalConsent);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function matchPedidoToProvidersCore({
+  database = db,
+  pedidoId,
+  pedido = {},
+  now = Timestamp.now(),
+  notifyProvider = sendPushToUser,
+}) {
+  const cleanPedidoId = cleanString(pedidoId);
+  if (!cleanPedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
+  await syncPedidoDispatch(database, cleanPedidoId, pedido);
+  if (!isOpenPedido(pedido)) return { providerIds: [], reason: 'pedido_not_open' };
+
+  const pedidoLocation = pedidoCoordinates(pedido);
+  if (!pedidoLocation) {
+    logger.info(`[matching] pedido sem geo: ${cleanPedidoId} (skip geo matching)`);
+    return { providerIds: [], reason: 'pedido_without_location' };
+  }
+  const nowMillis = toMillis(now) || Date.now();
+  const nowTimestamp = Timestamp.fromMillis(nowMillis);
+  const servicoId = cleanString(pedido.servicoId);
+  const center = [pedidoLocation.latitude, pedidoLocation.longitude];
+  const maxRadiusKm = 20;
+  const bounds = geofire.geohashQueryBounds(center, maxRadiusKm * 1000);
+  const queries = bounds.map(([start, end]) => {
+    let query = database.collection('provider_dispatch_private')
+      .where('isOnline', '==', true)
+      .where('acceptingRequests', '==', true);
+    if (servicoId) query = query.where('servicos', 'array-contains', servicoId);
+    query = query
+      .orderBy('geo.geohash')
+      .startAt(start)
+      .endAt(end)
+      .limit(100);
+    return query.get();
+  });
+  const snapshots = await Promise.all(queries);
+  const dispatchByProvider = new Map();
+  snapshots.forEach((snapshot) => snapshot.docs.forEach((document) => {
+    if (!dispatchByProvider.has(document.id)) {
+      dispatchByProvider.set(document.id, document.data() || {});
+    }
+  }));
+
+  const distanceCandidates = [];
+  dispatchByProvider.forEach((dispatchState, providerId) => {
+    const location = providerDispatchLocation(dispatchState, nowMillis);
+    if (!location) return;
+    const distanceKm = geofire.distanceBetween(
+      [location.latitude, location.longitude],
+      center,
+    );
+    if (Number.isFinite(distanceKm) && distanceKm <= location.radiusKm) {
+      distanceCandidates.push({
+        id: providerId,
+        dispatchState,
+        distanceKm,
+        radiusKm: location.radiusKm,
+      });
+    }
+  });
+  if (distanceCandidates.length === 0) {
+    logger.info(`[matching] nenhum prestador no raio para pedido ${cleanPedidoId}`);
+    return { providerIds: [], reason: 'no_in_radius_provider' };
+  }
+
+  const candidateIds = distanceCandidates.map((candidate) => candidate.id);
+  const [publicByProvider, privateByProvider, userByProvider, participantByProvider] =
+    await Promise.all([
+      loadDocumentsById(database, 'provider_public', candidateIds),
+      loadDocumentsById(database, 'provider_private', candidateIds),
+      loadDocumentsById(database, 'users_private', candidateIds),
+      loadDocumentsById(database, 'pilot_participants', candidateIds),
+    ]);
+  const targets = distanceCandidates
+    .filter((candidate) => providerIsEligibleForInitialMatching({
+      pedido,
+      dispatchState: candidate.dispatchState,
+      providerPublic: publicByProvider.get(candidate.id),
+      providerPrivate: privateByProvider.get(candidate.id),
+      userPrivate: userByProvider.get(candidate.id),
+      participant: participantByProvider.get(candidate.id),
+      nowMillis,
+    }))
+    .sort((left, right) => left.distanceKm - right.distanceKm)
+    .slice(0, 30);
+  if (targets.length === 0) {
+    logger.info(`[matching] nenhum prestador elegivel para pedido ${cleanPedidoId}`);
+    return { providerIds: [], reason: 'no_eligible_provider' };
+  }
+
+  const opportunityTtlMinutes = Math.max(
+    5,
+    Math.min(Number(getEnv('PROVIDER_OPPORTUNITY_TTL_MINUTES', '15')) || 15, 30),
+  );
+  const opportunityExpiresAt = Timestamp.fromMillis(
+    nowMillis + opportunityTtlMinutes * 60 * 1000,
+  );
+  await Promise.all(targets.map(async (match) => {
+    const opportunityRef = database.collection('provider_opportunities')
+      .doc(opportunityDocumentId(cleanPedidoId, match.id));
+    await opportunityRef.set({
+      pedidoId: cleanPedidoId,
+      providerId: match.id,
+      serviceId: servicoId,
+      approximateDistanceKm: Math.round(match.distanceKm * 10) / 10,
+      matchedRadiusKm: match.radiusKm,
+      channel: 'matching_push',
+      idVersion: 'sha256-v1',
+      status: 'active',
+      expiresAt: opportunityExpiresAt,
+      deliveredAt: nowTimestamp,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: false });
+    await notifyProvider(
+      match.id,
+      buildPedidoOpportunityNotification(cleanPedidoId, pedido),
+    );
+  }));
+  const providerIds = targets.map((target) => target.id);
+  logger.info(`[matching] push enviado para ${providerIds.length} prestadores pedido=${cleanPedidoId}`);
+  return { providerIds, expiresAt: opportunityExpiresAt };
+}
+
 exports.onPedidoCreated = onDocumentCreated(
   {
     region: REGION,
@@ -3302,104 +5593,7 @@ exports.onPedidoCreated = onDocumentCreated(
   async (event) => {
     const { pedidoId } = event.params;
     const pedido = event.data.data() || {};
-
-    await syncPedidoDispatch(db, pedidoId, pedido);
-
-    // Só pedidos abertos
-    if (!isOpenPedido(pedido)) return;
-
-    const servicoId = (pedido.servicoId || '').toString();
-    const titulo = (pedido.titulo || '').toString();
-
-    // Geo
-    const geo = pedido.geo || null;
-    const geopoint = geo && geo.geopoint ? geo.geopoint : null;
-
-    if (!geopoint || typeof geopoint.latitude !== 'number' || typeof geopoint.longitude !== 'number') {
-      logger.info(`[matching] pedido sem geo: ${pedidoId} (skip geo matching)`);
-      return;
-    }
-
-    const center = [geopoint.latitude, geopoint.longitude];
-
-    // Raio máximo de busca (em metros) - depois filtramos pelo radiusKm do prestador.
-    const maxRadiusKm = 20;
-    const radiusInM = maxRadiusKm * 1000;
-
-    const bounds = geofire.geohashQueryBounds(center, radiusInM);
-
-    const queries = bounds.map(([start, end]) => {
-      let q = db.collection('provider_dispatch_private')
-        .orderBy('geo.geohash')
-        .startAt(start)
-        .endAt(end)
-        .where('isOnline', '==', true);
-
-      if (servicoId) {
-        q = q.where('servicos', 'array-contains', servicoId);
-      }
-
-      return q.get();
-    });
-
-    const snaps = await Promise.all(queries);
-
-    const seen = new Set();
-    const matches = [];
-
-    for (const snap of snaps) {
-      for (const doc of snap.docs) {
-        if (seen.has(doc.id)) continue;
-        seen.add(doc.id);
-
-        const p = doc.data() || {};
-        const pgeo = p.geo || null;
-        const ppoint = pgeo && pgeo.geopoint ? pgeo.geopoint : null;
-        if (!ppoint) continue;
-
-        const distKm = geofire.distanceBetween([ppoint.latitude, ppoint.longitude], center);
-        const radiusKm = Number(p.radiusKm || 0) || 0;
-        const effectiveRadius = radiusKm > 0 ? radiusKm : 10;
-
-        if (distKm <= effectiveRadius) {
-          matches.push({ id: doc.id, distKm });
-        }
-      }
-    }
-
-    if (matches.length === 0) {
-      logger.info(`[matching] nenhum prestador no raio para pedido ${pedidoId}`);
-      return;
-    }
-
-    // Ordena por proximidade (opcional)
-    matches.sort((a, b) => a.distKm - b.distKm);
-
-    // Limit para evitar spam (ex.: top 30)
-    const TOP_N = 30;
-    const targets = matches.slice(0, TOP_N);
-    const targetIds = targets.map((match) => match.id);
-
-    await Promise.all(targets.map((match) => Promise.all([
-      sendPushToUser(match.id, {
-        title: 'ChegaJá - Novo pedido perto de ti',
-        body: safeText(titulo || 'Novo pedido', 120),
-        data: {
-          type: 'novo_pedido',
-          pedidoId,
-        },
-      }),
-      db.collection('provider_opportunities').doc(`${pedidoId}_${match.id}`).set({
-        pedidoId,
-        providerId: match.id,
-        serviceId: servicoId,
-        approximateDistanceKm: Math.round(match.distKm * 10) / 10,
-        channel: 'matching_push',
-        deliveredAt: FieldValue.serverTimestamp(),
-      }, { merge: false }),
-    ])));
-
-    logger.info(`[matching] push enviado para ${targetIds.length} prestadores pedido=${pedidoId}`);
+    await matchPedidoToProvidersCore({ database: db, pedidoId, pedido });
   }
 );
 
@@ -3432,6 +5626,18 @@ async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
 
     if (prestadorId !== actorUid) {
       throw new HttpsError('permission-denied', 'Apenas o prestador atribuido pode propor o valor final.');
+    }
+
+    if (pedidoIsSelfDealing(pedido)) {
+      throw new HttpsError('permission-denied', 'Cliente e prestador devem ser contas diferentes.');
+    }
+
+    if (pedido.providerAccessGranted !== true
+      || cleanString(pedido.providerAccessGrantedTo) !== actorUid
+      || !pedido.providerAccessGrantedAt
+      || typeof pedido.providerAccessGrantedAt.toMillis !== 'function'
+      || pedido.providerAccessGrantedAt.toMillis() <= 0) {
+      throw new HttpsError('failed-precondition', 'A relacao com o prestador ainda nao foi aceite.');
     }
 
     if (estado !== 'em_andamento') {
@@ -3502,6 +5708,18 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
       throw new HttpsError('failed-precondition', 'Pedido sem prestador atribuido.');
     }
 
+    if (pedidoIsSelfDealing(pedido)) {
+      throw new HttpsError('permission-denied', 'Cliente e prestador devem ser contas diferentes.');
+    }
+
+    if (pedido.providerAccessGranted !== true
+      || cleanString(pedido.providerAccessGrantedTo) !== providerId
+      || !pedido.providerAccessGrantedAt
+      || typeof pedido.providerAccessGrantedAt.toMillis !== 'function'
+      || pedido.providerAccessGrantedAt.toMillis() <= 0) {
+      throw new HttpsError('failed-precondition', 'A relacao com o prestador ainda nao foi aceite.');
+    }
+
     paymentMethod = cleanString(pedido.tipoPagamento || 'dinheiro').toLowerCase();
     if (paymentMethod === 'cash') paymentMethod = 'dinheiro';
     const isCash = paymentMethod === 'dinheiro';
@@ -3509,22 +5727,63 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
       if (!paymentMethodEnabled(paymentMethod)) {
         throw new HttpsError('failed-precondition', 'Meio de pagamento digital indisponivel no piloto.');
       }
-      const paymentStatus = cleanString(pedido.paymentStatus).toLowerCase();
-      if (!['paid', 'succeeded'].includes(paymentStatus)) {
+      const paymentIntentId = cleanString(pedido.paymentIntentId);
+      if (!paymentIntentId) {
         throw new HttpsError(
           'failed-precondition',
-          'O pagamento digital deve estar confirmado antes de concluir o trabalho.',
+          'O pedido nao tem um pagamento digital autoritativo.',
         );
       }
-      economics = calculatePedidoEconomics(proposedValue);
+      const paymentSnap = await tx.get(
+        firestore.collection('payments').doc(paymentIntentId),
+      );
+      const payment = paymentSnap.exists ? (paymentSnap.data() || {}) : null;
+      const expectedAmount = moneyToCents(proposedValue);
+      const paymentAmount = Number(payment && payment.amount);
+      const feeAmount = Number(payment && payment.feeAmount);
+      const expectedCurrency = cleanString(
+        pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+      ).toLowerCase();
+      const paymentValid = authoritativeDigitalPaymentMatches(payment, {
+        pedidoId,
+        clienteId: actorUid,
+        prestadorId: providerId,
+        amount: expectedAmount,
+        currency: expectedCurrency,
+      });
+      if (!paymentValid) {
+        throw new HttpsError(
+          'failed-precondition',
+          'O registo autoritativo do pagamento ainda nao confirma este trabalho.',
+        );
+      }
+      economics = calculatePedidoEconomics(proposedValue, {
+        commissionRate: paymentAmount === 0 ? 0 : feeAmount / paymentAmount,
+        currency: expectedCurrency,
+      });
     } else {
+      const pedidoCurrency = cleanString(
+        pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+      ).toUpperCase();
+      const configuredCurrency = cleanString(
+        getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+      ).toUpperCase();
+      if (pedidoCurrency !== configuredCurrency || configuredCurrency !== 'MZN') {
+        throw new HttpsError(
+          'failed-precondition',
+          'A politica de comissao em dinheiro ainda nao suporta esta moeda.',
+        );
+      }
       const providerRef = firestore.collection('provider_private').doc(providerId);
       const providerSnap = await tx.get(providerRef);
       const providerPrivate = providerSnap.exists ? (providerSnap.data() || {}) : {};
       const policy = cashCommissionPolicy({
         completedJobsCount: providerPrivate.completedJobsCount,
       });
-      economics = calculatePedidoEconomics(proposedValue, policy);
+      economics = calculatePedidoEconomics(proposedValue, {
+        ...policy,
+        currency: pedidoCurrency,
+      });
 
       const previousBalance = Math.max(0, roundMoney(providerPrivate.commissionBalanceDue) || 0);
       const nextBalance = roundMoney(previousBalance + economics.commissionPlatform);
@@ -3588,7 +5847,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
     tx.update(pedidoRef, {
       ...economics,
       tipoPagamento: paymentMethod,
-      paymentStatus: isCash ? 'cash_confirmed_by_client' : pedido.paymentStatus,
+      paymentStatus: isCash ? 'cash_confirmed_by_client' : 'succeeded',
       statusConfirmacaoValor: 'confirmado_cliente',
       estado: 'concluido',
       status: 'concluido',
@@ -3745,6 +6004,16 @@ exports.confirmarValorFinalPedido = onCall(
   },
 );
 
+exports.pedidos_applyActionSecure = onCall(
+  {
+    region: REGION,
+  },
+  async (req) => applyPedidoActionSecureCore({
+    auth: req.auth,
+    data: req.data || {},
+  }),
+);
+
 exports.admin_recordCommissionPayment = onCall(
   { region: REGION },
   async (req) => recordCommissionPaymentCore({
@@ -3896,18 +6165,30 @@ exports.admin_reviewKycSubmission = onCall(
 
 exports.storage_finalizePrivateUpload = onCall(
   { region: REGION },
-  async (req) => finalizePrivateStorageUploadCore({
-    auth: req.auth,
-    data: req.data || {},
-  }),
+  async (req) => {
+    if (!authIsAdmin(req.auth)) {
+      const uid = requireVerifiedPhoneAuth(req.auth);
+      await requireCurrentLegalConsent({ uid });
+    }
+    return finalizePrivateStorageUploadCore({
+      auth: req.auth,
+      data: req.data || {},
+    });
+  },
 );
 
 exports.storage_getPrivateReadUrl = onCall(
   { region: REGION },
-  async (req) => getPrivateStorageReadUrlCore({
-    auth: req.auth,
-    data: req.data || {},
-  }),
+  async (req) => {
+    if (!authIsAdmin(req.auth)) {
+      const uid = requireVerifiedPhoneAuth(req.auth);
+      await requireCurrentLegalConsent({ uid });
+    }
+    return getPrivateStorageReadUrlCore({
+      auth: req.auth,
+      data: req.data || {},
+    });
+  },
 );
 
 // ------------------------------------------------------------
@@ -3915,7 +6196,7 @@ exports.storage_getPrivateReadUrl = onCall(
 // ------------------------------------------------------------
 
 function getStripe() {
-  if (!envFlagEnabled('ENABLE_STRIPE') || !envFlagEnabled('STRIPE_MZN_VALIDATED')) {
+  if (!paymentMethodEnabled('stripe')) {
     throw new HttpsError(
       'failed-precondition',
       'Stripe esta desativado ate a integracao em MZN estar validada.',
@@ -3930,16 +6211,412 @@ function getStripe() {
   return Stripe(secret);
 }
 
+function subscriptionsEnabled() {
+  return paymentMethodEnabled('stripe') && envFlagEnabled('ENABLE_SUBSCRIPTIONS');
+}
+
+function requireStripePaymentsEnabled() {
+  if (!paymentMethodEnabled('stripe')) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Stripe esta desativado ate a integracao em MZN estar validada.',
+    );
+  }
+}
+
+function requireSubscriptionsEnabled() {
+  requireStripePaymentsEnabled();
+  if (!subscriptionsEnabled()) {
+    throw new HttpsError(
+      'failed-precondition',
+      'As subscricoes estao desativadas para o piloto.',
+    );
+  }
+}
+
+async function requirePaymentActor({ auth, role, database = db }) {
+  const uid = requireVerifiedPhoneAuth(auth);
+  const userSnapshot = await database.collection('users_private').doc(uid).get();
+  const userPrivate = userSnapshot.exists ? (userSnapshot.data() || {}) : {};
+  assertCurrentLegalConsent(userPrivate.legalConsent);
+  if (!accountAllowsNewWork(userPrivate)) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Esta conta nao pode iniciar operacoes de pagamento.',
+    );
+  }
+  await requirePilotParticipant({
+    database,
+    uid,
+    role,
+    allowEmulatorBypass: false,
+  });
+  return uid;
+}
+
+function paymentIntentSpecFromPedido(pedidoId, pedido) {
+  const clienteId = cleanString(getClienteId(pedido));
+  const prestadorId = cleanString(pedido && pedido.prestadorId);
+  const state = getPedidoEstado(pedido);
+  const confirmationStatus = cleanString(pedido && pedido.statusConfirmacaoValor);
+  if (state !== 'aguarda_confirmacao_valor' || confirmationStatus !== 'pendente_cliente') {
+    throw new HttpsError(
+      'failed-precondition',
+      'O valor final nao esta pendente de confirmacao pelo cliente.',
+    );
+  }
+  if (!clienteId || !prestadorId) {
+    throw new HttpsError('failed-precondition', 'Pedido sem cliente ou prestador atribuido.');
+  }
+  if (pedidoIsSelfDealing(pedido, prestadorId)) {
+    throw new HttpsError('permission-denied', 'Cliente e prestador devem ser contas diferentes.');
+  }
+  if (!providerHasFullPedidoAccess(pedido, prestadorId)) {
+    throw new HttpsError('failed-precondition', 'A relacao com o prestador ainda nao foi aceite.');
+  }
+  if (!pedidoIsApprovedForWork(pedido)) {
+    throw new HttpsError('failed-precondition', 'O pedido ainda nao foi aprovado para pagamento.');
+  }
+  if (cleanString(pedido.tipoPagamento).toLowerCase() !== 'stripe') {
+    throw new HttpsError('failed-precondition', 'Este pedido nao usa Stripe.');
+  }
+
+  const amount = moneyToCents(requirePositiveMoney(
+    pedido.precoPropostoPrestador,
+    'precoPropostoPrestador',
+  ));
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new HttpsError('invalid-argument', 'Valor invalido para pagamento.');
+  }
+  const currency = cleanString(
+    pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+  ).toLowerCase();
+  const configuredCurrency = cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toLowerCase();
+  if (currency !== 'mzn' || configuredCurrency !== 'mzn') {
+    throw new HttpsError('failed-precondition', 'Moeda do pedido invalida para o piloto.');
+  }
+  const commissionRate = requiredCommissionRate('DEFAULT_DIGITAL_COMMISSION_RATE');
+  const feeAmount = Math.max(0, Math.round(amount * commissionRate));
+  const material = `${pedidoId}\n${clienteId}\n${prestadorId}\n${amount}\n${currency}\n${feeAmount}`;
+  const paymentSpecHash = crypto.createHash('sha256').update(material).digest('hex');
+  return {
+    pedidoId,
+    clienteId,
+    prestadorId,
+    amount,
+    currency,
+    feeAmount,
+    paymentSpecHash,
+    idempotencyKey: `chegaja:pedido:${paymentSpecHash}`,
+  };
+}
+
+function paymentRecordMatchesSpec(payment, spec) {
+  if (!payment) return false;
+  const status = cleanString(payment.status).toLowerCase();
+  return !['canceled', 'cancelled'].includes(status)
+    && cleanString(payment.pedidoId) === spec.pedidoId
+    && cleanString(payment.clienteId) === spec.clienteId
+    && cleanString(payment.prestadorId) === spec.prestadorId
+    && Number(payment.amount) === spec.amount
+    && Number(payment.feeAmount) === spec.feeAmount
+    && cleanString(payment.currency).toLowerCase() === spec.currency
+    && (!payment.paymentSpecHash || cleanString(payment.paymentSpecHash) === spec.paymentSpecHash);
+}
+
+function stripeIntentMatchesSpec(intent, spec) {
+  if (!intent || cleanString(intent.id) === '') return false;
+  const metadata = intent.metadata || {};
+  const destination = intent.transfer_data && intent.transfer_data.destination
+    ? cleanString(intent.transfer_data.destination)
+    : '';
+  const applicationFee = intent.application_fee_amount;
+  return !['canceled', 'cancelled'].includes(cleanString(intent.status).toLowerCase())
+    && Number(intent.amount) === spec.amount
+    && cleanString(intent.currency).toLowerCase() === spec.currency
+    && cleanString(metadata.pedidoId) === spec.pedidoId
+    && cleanString(metadata.clienteId) === spec.clienteId
+    && cleanString(metadata.prestadorId) === spec.prestadorId
+    && cleanString(metadata.paymentSpecHash) === spec.paymentSpecHash
+    && (applicationFee === null || applicationFee === undefined
+      || Number(applicationFee) === spec.feeAmount)
+    && (!destination || destination === spec.stripeAccountId);
+}
+
+function paymentLedgerDocumentId(paymentIntentId, eventType, eventId) {
+  const digest = crypto.createHash('sha256')
+    .update(`${cleanString(paymentIntentId)}\n${cleanString(eventType)}\n${cleanString(eventId)}`)
+    .digest('hex');
+  return `evt_${digest}`;
+}
+
+async function readPaymentIntentContextInTransaction({
+  transaction,
+  database,
+  pedidoRef,
+  pedidoId,
+  clienteId,
+  reserve = false,
+}) {
+  const pedidoSnapshot = await transaction.get(pedidoRef);
+  if (!pedidoSnapshot.exists) {
+    throw new HttpsError('not-found', 'Pedido nao encontrado.');
+  }
+  const pedido = pedidoSnapshot.data() || {};
+  const spec = paymentIntentSpecFromPedido(pedidoId, pedido);
+  if (spec.clienteId !== clienteId) {
+    throw new HttpsError('permission-denied', 'Apenas o cliente do pedido pode pagar.');
+  }
+
+  const clientUserSnapshot = await transaction.get(
+    database.collection('users_private').doc(spec.clienteId),
+  );
+  const clientPrivate = clientUserSnapshot.exists ? (clientUserSnapshot.data() || {}) : {};
+  assertCurrentLegalConsent(clientPrivate.legalConsent);
+  if (!accountAllowsNewWork(clientPrivate)) {
+    throw new HttpsError('failed-precondition', 'A conta do cliente nao permite pagamentos.');
+  }
+  const clientParticipantSnapshot = await transaction.get(
+    database.collection('pilot_participants').doc(spec.clienteId),
+  );
+  if (!clientParticipantSnapshot.exists
+    || !pilotParticipantIsActiveForRole(clientParticipantSnapshot.data(), 'cliente')) {
+    throw new HttpsError('permission-denied', 'Cliente fora da coorte ativa do piloto.');
+  }
+
+  await readEligibleProviderForPedido({
+    transaction,
+    database,
+    providerId: spec.prestadorId,
+    pedido,
+    requireAvailableForNewWork: true,
+  });
+  const providerPrivateSnapshot = await transaction.get(
+    database.collection('provider_private').doc(spec.prestadorId),
+  );
+  const providerPrivate = providerPrivateSnapshot.exists
+    ? (providerPrivateSnapshot.data() || {})
+    : {};
+  const stripeAccountId = cleanString(providerPrivate.stripeAccountId);
+  if (!stripeAccountId) {
+    throw new HttpsError('failed-precondition', 'Prestador sem Stripe Connect.');
+  }
+  spec.stripeAccountId = stripeAccountId;
+
+  const existingPaymentIntentId = cleanString(pedido.paymentIntentId);
+  if (existingPaymentIntentId) {
+    const paymentSnapshot = await transaction.get(
+      database.collection('payments').doc(existingPaymentIntentId),
+    );
+    if (!paymentSnapshot.exists || !paymentRecordMatchesSpec(paymentSnapshot.data(), spec)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'O pagamento existente precisa de revisao pelo suporte.',
+      );
+    }
+    return { pedido, spec, existingPaymentIntentId };
+  }
+
+  const paymentsForPedido = await transaction.get(
+    database.collection('payments').where('pedidoId', '==', pedidoId).limit(2),
+  );
+  if (!paymentsForPedido.empty) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Existe um pagamento nao associado que precisa de revisao pelo suporte.',
+    );
+  }
+
+  const reservationKey = cleanString(pedido.paymentIntentReservationKey);
+  if (reservationKey && reservationKey !== spec.idempotencyKey) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Existe uma tentativa de pagamento incompatível que precisa de revisao.',
+    );
+  }
+  if (reserve) {
+    transaction.update(pedidoRef, {
+      paymentIntentReservationKey: spec.idempotencyKey,
+      paymentSpecHash: spec.paymentSpecHash,
+      paymentAmount: spec.amount,
+      paymentCurrency: spec.currency,
+      paymentFeeAmount: spec.feeAmount,
+      paymentStatus: 'creating',
+      paymentIntentReservationAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+  return { pedido, spec, existingPaymentIntentId: '' };
+}
+
+async function createPaymentIntentCore({ database = db, stripe, uid, pedidoId }) {
+  requireStripePaymentsEnabled();
+  const clienteId = requireCallableUid(uid);
+  const cleanPedidoId = strictPedidoDocumentId(pedidoId);
+  const pedidoRef = database.collection('pedidos').doc(cleanPedidoId);
+  const initial = await database.runTransaction((transaction) => (
+    readPaymentIntentContextInTransaction({
+      transaction,
+      database,
+      pedidoRef,
+      pedidoId: cleanPedidoId,
+      clienteId,
+      reserve: true,
+    })
+  ));
+  const spec = initial.spec;
+
+  let stripeAccount;
+  try {
+    stripeAccount = await stripe.accounts.retrieve(spec.stripeAccountId);
+  } catch (_) {
+    throw new HttpsError('failed-precondition', 'Nao foi possivel validar a conta Stripe do prestador.');
+  }
+  if (!stripeAccount
+    || stripeAccount.deleted === true
+    || stripeAccount.charges_enabled !== true
+    || stripeAccount.payouts_enabled !== true) {
+    throw new HttpsError(
+      'failed-precondition',
+      'A conta Stripe do prestador ainda nao pode receber pagamentos.',
+    );
+  }
+
+  let paymentIntent;
+  let createdNow = false;
+  if (initial.existingPaymentIntentId) {
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(initial.existingPaymentIntentId);
+    } catch (_) {
+      throw new HttpsError('failed-precondition', 'Nao foi possivel validar o pagamento existente.');
+    }
+    if (!stripeIntentMatchesSpec(paymentIntent, spec) || !cleanString(paymentIntent.client_secret)) {
+      throw new HttpsError(
+        'failed-precondition',
+        'O pagamento existente e incompatível e precisa de revisao pelo suporte.',
+      );
+    }
+  } else {
+    paymentIntent = await stripe.paymentIntents.create({
+      amount: spec.amount,
+      currency: spec.currency,
+      automatic_payment_methods: { enabled: true },
+      application_fee_amount: spec.feeAmount,
+      transfer_data: { destination: spec.stripeAccountId },
+      metadata: {
+        pedidoId: spec.pedidoId,
+        clienteId: spec.clienteId,
+        prestadorId: spec.prestadorId,
+        paymentSpecHash: spec.paymentSpecHash,
+      },
+    }, { idempotencyKey: spec.idempotencyKey });
+    createdNow = true;
+    if (!stripeIntentMatchesSpec(paymentIntent, spec) || !cleanString(paymentIntent.client_secret)) {
+      throw new HttpsError('internal', 'Stripe devolveu um pagamento incompatível.');
+    }
+  }
+
+  try {
+    await database.runTransaction(async (transaction) => {
+      const current = await readPaymentIntentContextInTransaction({
+        transaction,
+        database,
+        pedidoRef,
+        pedidoId: cleanPedidoId,
+        clienteId,
+        reserve: false,
+      });
+      if (current.spec.paymentSpecHash !== spec.paymentSpecHash
+        || current.spec.stripeAccountId !== spec.stripeAccountId
+        || (current.existingPaymentIntentId
+          && current.existingPaymentIntentId !== cleanString(paymentIntent.id))) {
+        throw new HttpsError(
+          'failed-precondition',
+          'O pedido mudou durante a criacao do pagamento.',
+        );
+      }
+      const now = FieldValue.serverTimestamp();
+      transaction.update(pedidoRef, {
+        paymentIntentId: paymentIntent.id,
+        paymentIntentReservationKey: spec.idempotencyKey,
+        paymentSpecHash: spec.paymentSpecHash,
+        paymentAmount: spec.amount,
+        paymentCurrency: spec.currency,
+        paymentFeeAmount: spec.feeAmount,
+        paymentStatus: paymentIntent.status,
+        updatedAt: now,
+      });
+      transaction.set(database.collection('payments').doc(paymentIntent.id), {
+        paymentIntentId: paymentIntent.id,
+        pedidoId: spec.pedidoId,
+        clienteId: spec.clienteId,
+        prestadorId: spec.prestadorId,
+        stripeAccountId: spec.stripeAccountId,
+        paymentSpecHash: spec.paymentSpecHash,
+        amount: spec.amount,
+        currency: spec.currency,
+        feeAmount: spec.feeAmount,
+        status: paymentIntent.status,
+        createdAt: now,
+        updatedAt: now,
+      }, { merge: true });
+      const ledgerId = paymentLedgerDocumentId(
+        paymentIntent.id,
+        'payment_intent_created',
+        spec.idempotencyKey,
+      );
+      transaction.set(database.collection('payment_ledger').doc(ledgerId), {
+        paymentIntentId: paymentIntent.id,
+        eventType: 'payment_intent_created',
+        eventId: spec.idempotencyKey,
+        pedidoId: spec.pedidoId,
+        clienteId: spec.clienteId,
+        prestadorId: spec.prestadorId,
+        status: paymentIntent.status,
+        amount: spec.amount,
+        feeAmount: spec.feeAmount,
+        currency: spec.currency,
+        source: 'callable',
+        createdAt: now,
+      }, { merge: false });
+    });
+  } catch (error) {
+    if (createdNow && stripe.paymentIntents && typeof stripe.paymentIntents.cancel === 'function') {
+      try {
+        await stripe.paymentIntents.cancel(
+          paymentIntent.id,
+          {},
+          { idempotencyKey: `${spec.idempotencyKey}:cancel` },
+        );
+      } catch (cancelError) {
+        logger.error('[stripe] falha ao cancelar PaymentIntent orfao', {
+          pedidoId: cleanPedidoId,
+          paymentIntentId: paymentIntent.id,
+          error: String(cancelError),
+        });
+      }
+    }
+    throw error;
+  }
+
+  return {
+    clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id,
+    amount: spec.amount,
+    currency: spec.currency,
+  };
+}
+
 exports.payments_createOnboardingLink = onCall(
   {
     region: REGION,
   },
   async (req) => {
-    if (!req.auth) {
-      throw new Error('UNAUTHENTICATED');
-    }
-
-    const uid = req.auth.uid;
+    requireStripePaymentsEnabled();
+    const uid = await requirePaymentActor({
+      auth: req.auth,
+      role: 'prestador',
+    });
     const stripe = getStripe();
 
     const baseUrl = getEnv('APP_BASE_URL', 'http://localhost:5000');
@@ -3995,146 +6672,18 @@ exports.payments_createPaymentIntent = onCall(
     region: REGION,
   },
   async (req) => {
-    if (!req.auth) {
-      throw new Error('UNAUTHENTICATED');
-    }
-
-    const uid = req.auth.uid;
-    const pedidoId = (req.data && req.data.pedidoId) ? String(req.data.pedidoId).trim() : '';
-
-    if (!pedidoId) {
-      throw new Error('pedidoId obrigatório');
-    }
-
-    const pedidoRef = db.collection('pedidos').doc(pedidoId);
-    const pedidoSnap = await pedidoRef.get();
-    if (!pedidoSnap.exists) {
-      throw new Error('Pedido não encontrado');
-    }
-
-    const pedido = pedidoSnap.data() || {};
-    const clienteId = getClienteId(pedido);
-    const prestadorId = String(pedido.prestadorId || '');
-
-    if (clienteId !== uid) {
-      throw new Error('PERMISSION_DENIED');
-    }
-
-    if (!prestadorId) {
-      throw new Error('Pedido ainda sem prestador atribuído');
-    }
-    if (cleanString(pedido.tipoPagamento).toLowerCase() !== 'stripe') {
-      throw new HttpsError('failed-precondition', 'Este pedido nao usa Stripe.');
-    }
-
-    // Valor a cobrar
-    const valor = pedido.precoPropostoPrestador ?? pedido.precoFinal ?? pedido.preco;
-    const amount = moneyToCents(valor);
-    if (amount <= 0) {
-      throw new Error('Valor inválido para pagamento');
-    }
-
-    const currency = String(pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toLowerCase();
-    if (currency !== 'mzn') {
-      throw new HttpsError('failed-precondition', 'Moeda do pedido invalida para o piloto.');
-    }
-
-    // conta do prestador
-    const prestadorSnap = await db.collection('provider_private').doc(prestadorId).get();
-    const prestador = prestadorSnap.exists ? (prestadorSnap.data() || {}) : {};
-
-    const accountId = String(prestador.stripeAccountId || '');
-    const onboardingComplete = prestador.stripeOnboardingComplete === true;
-
-    if (!accountId) {
-      throw new Error('Prestador sem Stripe Connect.');
-    }
-
-    // Podemos permitir pagamento mesmo sem onboarding completo, mas normalmente
-    // o Stripe bloqueia transfers se payouts não estiverem enabled.
-    if (!onboardingComplete) {
-      logger.warn(`[stripe] prestador ${prestadorId} sem onboarding completo (account=${accountId})`);
-    }
-
-    const commissionRate = normalizedRate(getEnv('DEFAULT_DIGITAL_COMMISSION_RATE', '0.15'), 0.15);
-    const feeAmount = Math.max(0, Math.round(amount * commissionRate));
-
+    requireStripePaymentsEnabled();
+    const uid = await requirePaymentActor({
+      auth: req.auth,
+      role: 'cliente',
+    });
     const stripe = getStripe();
-
-    // Reutiliza PaymentIntent se já existir
-    const existingId = String(pedido.paymentIntentId || '');
-    if (existingId) {
-      const existing = await stripe.paymentIntents.retrieve(existingId);
-      if (existing && existing.status && existing.status !== 'canceled') {
-        return {
-          clientSecret: existing.client_secret,
-          paymentIntentId: existing.id,
-          amount,
-          currency,
-        };
-      }
-    }
-
-    const pi = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      automatic_payment_methods: { enabled: true },
-      application_fee_amount: feeAmount,
-      transfer_data: { destination: accountId },
-      metadata: {
-        pedidoId,
-        clienteId,
-        prestadorId,
-      },
+    return createPaymentIntentCore({
+      database: db,
+      stripe,
+      uid,
+      pedidoId: req.data && req.data.pedidoId,
     });
-
-    // Guarda no Firestore
-    await pedidoRef.set(
-      {
-        paymentIntentId: pi.id,
-        paymentAmount: amount,
-        paymentCurrency: currency,
-        paymentFeeAmount: feeAmount,
-        paymentStatus: pi.status,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    await db.collection('payments').doc(pi.id).set(
-      {
-        pedidoId,
-        clienteId,
-        prestadorId,
-        amount,
-        currency,
-        feeAmount,
-        status: pi.status,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    await writeLedgerEntry({
-      paymentIntentId: pi.id,
-      eventType: 'payment_intent_created',
-      pedidoId,
-      clienteId,
-      prestadorId,
-      status: pi.status,
-      amount,
-      feeAmount,
-      currency,
-      source: 'callable',
-    });
-
-    return {
-      clientSecret: pi.client_secret,
-      paymentIntentId: pi.id,
-      amount,
-      currency,
-    };
   }
 );
 
@@ -4143,11 +6692,11 @@ exports.payments_createSubscriptionCheckout = onCall(
     region: REGION,
   },
   async (req) => {
-    if (!req.auth) {
-      throw new HttpsError('unauthenticated', 'UNAUTHENTICATED');
-    }
-
-    const uid = req.auth.uid;
+    requireSubscriptionsEnabled();
+    const uid = await requirePaymentActor({
+      auth: req.auth,
+      role: 'prestador',
+    });
     const planInput = getSubscriptionPlanInput(req.data ? req.data.planId : 'pro');
     const stripe = getStripe();
 
@@ -4259,11 +6808,11 @@ exports.payments_createBillingPortalLink = onCall(
     region: REGION,
   },
   async (req) => {
-    if (!req.auth) {
-      throw new HttpsError('unauthenticated', 'UNAUTHENTICATED');
-    }
-
-    const uid = req.auth.uid;
+    requireSubscriptionsEnabled();
+    const uid = await requirePaymentActor({
+      auth: req.auth,
+      role: 'prestador',
+    });
     const stripe = getStripe();
     const userSnap = await db.collection('users_private').doc(uid).get();
     const user = userSnap.exists ? (userSnap.data() || {}) : {};
@@ -4300,10 +6849,11 @@ exports.payments_getMySubscription = onCall(
     region: REGION,
   },
   async (req) => {
-    if (!req.auth) {
-      throw new HttpsError('unauthenticated', 'UNAUTHENTICATED');
-    }
-    const uid = req.auth.uid;
+    requireSubscriptionsEnabled();
+    const uid = await requirePaymentActor({
+      auth: req.auth,
+      role: 'prestador',
+    });
     const snap = await db.collection('subscriptions').doc(uid).get();
     if (!snap.exists) return { subscription: null };
     return { subscription: { id: snap.id, ...snap.data() } };
@@ -4533,6 +7083,181 @@ exports.directions_route = onRequest(
   }
 );
 
+function safeStripeEventDocumentId(value) {
+  const id = cleanString(value);
+  if (!id || id.length > 200 || id.includes('/')) {
+    throw new HttpsError('invalid-argument', 'Evento Stripe sem identificador valido.');
+  }
+  return id;
+}
+
+async function processStripePaymentEventCore({ database = db, event }) {
+  const eventId = safeStripeEventDocumentId(event && event.id);
+  const eventType = cleanString(event && event.type);
+  if (!['payment_intent.succeeded', 'payment_intent.payment_failed'].includes(eventType)) {
+    return { status: 'ignored', eventId, eventType };
+  }
+  const paymentIntent = event && event.data ? event.data.object : null;
+  const paymentIntentId = cleanString(paymentIntent && paymentIntent.id);
+  if (!paymentIntentId || paymentIntentId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'PaymentIntent invalido no webhook.');
+  }
+  const metadata = paymentIntent.metadata || {};
+  const pedidoId = cleanString(metadata.pedidoId);
+  const clienteId = cleanString(metadata.clienteId);
+  const prestadorId = cleanString(metadata.prestadorId);
+  const paymentSpecHash = cleanString(metadata.paymentSpecHash);
+  const eventCreated = Number(event.created);
+  const receiptRef = database.collection('stripe_webhook_events').doc(eventId);
+
+  return database.runTransaction(async (transaction) => {
+    const receiptSnapshot = await transaction.get(receiptRef);
+    if (receiptSnapshot.exists) {
+      const receipt = receiptSnapshot.data() || {};
+      return {
+        status: cleanString(receipt.status) || 'processed',
+        eventId,
+        idempotent: true,
+      };
+    }
+
+    const reasons = [];
+    if (!pedidoId || pedidoId.includes('/')) reasons.push('metadata_pedido_invalid');
+    if (!clienteId) reasons.push('metadata_cliente_invalid');
+    if (!prestadorId) reasons.push('metadata_prestador_invalid');
+    if (!paymentSpecHash) reasons.push('metadata_spec_hash_missing');
+    if (!Number.isFinite(eventCreated) || eventCreated <= 0) reasons.push('event_created_invalid');
+
+    const pedidoRef = pedidoId && !pedidoId.includes('/')
+      ? database.collection('pedidos').doc(pedidoId)
+      : null;
+    const paymentRef = database.collection('payments').doc(paymentIntentId);
+    const pedidoSnapshot = pedidoRef ? await transaction.get(pedidoRef) : null;
+    const paymentSnapshot = await transaction.get(paymentRef);
+    const pedido = pedidoSnapshot && pedidoSnapshot.exists ? (pedidoSnapshot.data() || {}) : null;
+    const payment = paymentSnapshot.exists ? (paymentSnapshot.data() || {}) : null;
+    if (!pedido) reasons.push('pedido_missing');
+    if (!payment) reasons.push('payment_record_missing');
+
+    let spec = null;
+    if (pedido) {
+      try {
+        spec = paymentIntentSpecFromPedido(pedidoId, pedido);
+      } catch (_) {
+        reasons.push('pedido_state_or_spec_invalid');
+      }
+    }
+    if (spec) {
+      if (spec.clienteId !== clienteId) reasons.push('cliente_mismatch');
+      if (spec.prestadorId !== prestadorId) reasons.push('prestador_mismatch');
+      if (spec.paymentSpecHash !== paymentSpecHash) reasons.push('spec_hash_mismatch');
+      if (cleanString(pedido.paymentIntentId) !== paymentIntentId) {
+        reasons.push('current_intent_mismatch');
+      }
+      if (Number(pedido.paymentAmount) !== spec.amount) reasons.push('pedido_amount_mismatch');
+      if (Number(pedido.paymentFeeAmount) !== spec.feeAmount) reasons.push('pedido_fee_mismatch');
+      if (cleanString(pedido.paymentCurrency).toLowerCase() !== spec.currency) {
+        reasons.push('pedido_currency_mismatch');
+      }
+      if (Number(paymentIntent.amount) !== spec.amount) reasons.push('event_amount_mismatch');
+      if (cleanString(paymentIntent.currency).toLowerCase() !== spec.currency) {
+        reasons.push('event_currency_mismatch');
+      }
+      if (paymentIntent.application_fee_amount !== null
+        && paymentIntent.application_fee_amount !== undefined
+        && Number(paymentIntent.application_fee_amount) !== spec.feeAmount) {
+        reasons.push('event_fee_mismatch');
+      }
+      if (eventType === 'payment_intent.succeeded') {
+        if (cleanString(paymentIntent.status).toLowerCase() !== 'succeeded') {
+          reasons.push('event_status_mismatch');
+        }
+        if (Number(paymentIntent.amount_received) !== spec.amount) {
+          reasons.push('amount_received_mismatch');
+        }
+      } else if (cleanString(paymentIntent.status).toLowerCase() === 'succeeded') {
+        reasons.push('event_status_mismatch');
+      }
+      if (!paymentRecordMatchesSpec(payment, spec)
+        || cleanString(payment && payment.paymentSpecHash) !== spec.paymentSpecHash
+        || cleanString(payment && payment.paymentIntentId) !== paymentIntentId) {
+        reasons.push('payment_record_mismatch');
+      }
+      const previousStripeEventCreated = Number(payment && payment.lastStripeEventCreated);
+      if (Number.isFinite(previousStripeEventCreated)
+        && Number.isFinite(eventCreated)
+        && eventCreated < previousStripeEventCreated) {
+        reasons.push('stale_event');
+      }
+      if (eventType === 'payment_intent.payment_failed'
+        && cleanString(payment && payment.status).toLowerCase() === 'succeeded') {
+        reasons.push('succeeded_payment_cannot_regress');
+      }
+    }
+
+    const now = FieldValue.serverTimestamp();
+    if (reasons.length > 0) {
+      const uniqueReasons = [...new Set(reasons)].sort();
+      transaction.set(database.collection('payment_webhook_quarantine').doc(eventId), {
+        eventId,
+        eventType,
+        paymentIntentId,
+        pedidoId: pedidoId || null,
+        clienteId: clienteId || null,
+        prestadorId: prestadorId || null,
+        reasonCodes: uniqueReasons,
+        receivedAt: now,
+      }, { merge: false });
+      transaction.set(receiptRef, {
+        eventId,
+        eventType,
+        paymentIntentId,
+        status: 'quarantined',
+        reasonCodes: uniqueReasons,
+        processedAt: now,
+      }, { merge: false });
+      return { status: 'quarantined', eventId, reasons: uniqueReasons };
+    }
+
+    const status = cleanString(paymentIntent.status).toLowerCase();
+    transaction.update(pedidoRef, {
+      paymentStatus: status,
+      lastStripeEventId: eventId,
+      lastStripeEventCreated: eventCreated,
+      updatedAt: now,
+    });
+    transaction.update(paymentRef, {
+      status,
+      lastStripeEventId: eventId,
+      lastStripeEventCreated: eventCreated,
+      updatedAt: now,
+    });
+    const ledgerId = paymentLedgerDocumentId(paymentIntentId, eventType, eventId);
+    transaction.set(database.collection('payment_ledger').doc(ledgerId), {
+      paymentIntentId,
+      eventType,
+      eventId,
+      pedidoId,
+      clienteId,
+      prestadorId,
+      status,
+      amount: Number(paymentIntent.amount),
+      feeAmount: spec.feeAmount,
+      currency: spec.currency,
+      source: 'webhook',
+      createdAt: now,
+    }, { merge: false });
+    transaction.set(receiptRef, {
+      eventId,
+      eventType,
+      paymentIntentId,
+      status: 'processed',
+      processedAt: now,
+    }, { merge: false });
+    return { status: 'processed', eventId, paymentIntentId };
+  });
+}
+
 // Webhook Stripe (opcional). Precisa configurar endpoint no painel Stripe.
 exports.payments_stripeWebhook = onRequest(
   {
@@ -4540,6 +7265,10 @@ exports.payments_stripeWebhook = onRequest(
   },
   (req, res) => {
     cors(req, res, async () => {
+      if (!paymentMethodEnabled('stripe')) {
+        res.status(200).json({ received: false, ignored: 'stripe_disabled' });
+        return;
+      }
       let event;
       try {
         const stripe = getStripe();
@@ -4562,50 +7291,10 @@ exports.payments_stripeWebhook = onRequest(
         const type = event.type;
 
         if (type === 'payment_intent.succeeded' || type === 'payment_intent.payment_failed') {
-          const pi = event.data.object;
-          const pedidoId = pi.metadata ? pi.metadata.pedidoId : null;
-          const clienteId = pi.metadata ? pi.metadata.clienteId : null;
-          const prestadorId = pi.metadata ? pi.metadata.prestadorId : null;
-
-          const status = pi.status;
-
-          if (pedidoId) {
-            await db.collection('pedidos').doc(pedidoId).set(
-              {
-                paymentIntentId: pi.id,
-                paymentStatus: status,
-                updatedAt: FieldValue.serverTimestamp(),
-              },
-              { merge: true }
-            );
-          }
-
-          await db.collection('payments').doc(pi.id).set(
-            {
-              pedidoId: pedidoId || null,
-              clienteId: clienteId || null,
-              prestadorId: prestadorId || null,
-              status,
-              updatedAt: FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-
-          await writeLedgerEntry({
-            paymentIntentId: pi.id,
-            eventType: type,
-            pedidoId: pedidoId || null,
-            clienteId: clienteId || null,
-            prestadorId: prestadorId || null,
-            status,
-            amount: pi.amount_received || pi.amount || null,
-            feeAmount: null,
-            currency: pi.currency || null,
-            source: 'webhook',
-          });
+          await processStripePaymentEventCore({ database: db, event });
         }
 
-        if (type === 'checkout.session.completed') {
+        if (subscriptionsEnabled() && type === 'checkout.session.completed') {
           const session = event.data.object;
           if (session && session.mode === 'subscription' && session.subscription) {
             const stripeSubscriptionId = String(session.subscription);
@@ -4615,9 +7304,12 @@ exports.payments_stripeWebhook = onRequest(
         }
 
         if (
+          subscriptionsEnabled()
+          && (
           type === 'customer.subscription.created'
           || type === 'customer.subscription.updated'
           || type === 'customer.subscription.deleted'
+          )
         ) {
           const sub = event.data.object;
           await upsertSubscriptionFromStripe(sub, { source: type });
@@ -4989,7 +7681,16 @@ async function handleReserveProviderHandleCore({ database = db, auth, data = {} 
   const handleRef = database.collection('handles').doc(handle);
 
   await database.runTransaction(async (tx) => {
-    const prestadorSnap = await tx.get(prestadorRef);
+    const [prestadorSnap, userPrivateSnap] = await Promise.all([
+      tx.get(prestadorRef),
+      tx.get(database.collection('users_private').doc(uid)),
+    ]);
+    if (!accountAllowsNewWork(userPrivateSnap.exists ? userPrivateSnap.data() : {})) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Cancela primeiro o pedido de eliminacao para reservar um identificador publico.',
+      );
+    }
     if (!prestadorSnap.exists) {
       throw new HttpsError('failed-precondition', 'Perfil de prestador obrigatorio.');
     }
@@ -5200,28 +7901,39 @@ async function adminReviewSensitiveCategoryRequestCore({ database = db, auth, da
   if (!providerId || !categoryId) {
     throw new HttpsError('failed-precondition', 'Pedido sem providerId ou categoryId.');
   }
+  const providerRef = database.collection('provider_public').doc(providerId);
+  const approvalRef = database
+    .collection('provider_private')
+    .doc(providerId)
+    .collection('categoryApprovals')
+    .doc(categoryId);
+  await database.runTransaction(async (transaction) => {
+    const reads = [
+      transaction.get(database.collection('users_private').doc(providerId)),
+      transaction.get(requestRef),
+    ];
+    if (decision === 'approved') reads.push(transaction.get(approvalRef));
+    const [userPrivate, freshRequest, approvalSnap] = await Promise.all(reads);
+    if (!accountAllowsNewWork(userPrivate.exists ? userPrivate.data() : {})) {
+      throw new HttpsError('failed-precondition', 'A conta do prestador esta em processo de eliminacao.');
+    }
+    if (!freshRequest.exists) {
+      throw new HttpsError('not-found', 'Pedido de comprovativo nao encontrado.');
+    }
+    const freshBeforeStatus = cleanString(freshRequest.data().status || 'pending_review');
+    if (['expired', 'revoked'].includes(freshBeforeStatus)) {
+      throw new HttpsError('failed-precondition', 'Pedido nao pode ser decidido neste estado.');
+    }
+    transaction.set(requestRef, {
+      status: decision,
+      reviewedBy: auth && auth.uid ? String(auth.uid) : '',
+      reviewedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      decisionReason,
+    }, { merge: true });
 
-  const batch = database.batch();
-  const reviewFields = {
-    status: decision,
-    reviewedBy: auth && auth.uid ? String(auth.uid) : '',
-    reviewedAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    decisionReason,
-  };
-  batch.set(requestRef, reviewFields, { merge: true });
-
-  if (decision === 'approved') {
-    const providerRef = database.collection('provider_public').doc(providerId);
-    const approvalRef = database
-      .collection('provider_private')
-      .doc(providerId)
-      .collection('categoryApprovals')
-      .doc(categoryId);
-    const approvalSnap = await approvalRef.get();
-    batch.set(
-      approvalRef,
-      {
+    if (decision === 'approved') {
+      transaction.set(approvalRef, {
         providerId,
         categoryId,
         categoryName,
@@ -5233,42 +7945,30 @@ async function adminReviewSensitiveCategoryRequestCore({ database = db, auth, da
         decisionReason,
         updatedAt: FieldValue.serverTimestamp(),
         ...(approvalSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
-      },
-      { merge: true },
-    );
-
-    batch.set(
-      providerRef,
-      {
+      }, { merge: true });
+      transaction.set(providerRef, {
         approvedSensitiveCategoryIds: FieldValue.arrayUnion(categoryId),
         ...(categoryName
           ? { approvedSensitiveCategoryNames: FieldValue.arrayUnion(categoryName) }
           : {}),
         categoryApprovalsUpdatedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
-  }
+      }, { merge: true });
+    }
 
-  writeAdminAuditLog({
-    database,
-    batch,
-    auth,
-    action: `sensitive_category_request.${decision === 'approved' ? 'approve' : decision === 'rejected' ? 'reject' : 'needs_more_info'}`,
-    targetType: 'sensitive_category_request',
-    targetId: requestId,
-    beforeStatus,
-    afterStatus: decision,
-    reason: decisionReason,
-    metadata: {
-      providerId,
-      categoryId,
-      categoryName,
-    },
+    writeAdminAuditLog({
+      database,
+      batch: transaction,
+      auth,
+      action: `sensitive_category_request.${decision === 'approved' ? 'approve' : decision === 'rejected' ? 'reject' : 'needs_more_info'}`,
+      targetType: 'sensitive_category_request',
+      targetId: requestId,
+      beforeStatus: freshBeforeStatus,
+      afterStatus: decision,
+      reason: decisionReason,
+      metadata: { providerId, categoryId, categoryName },
+    });
   });
-
-  await batch.commit();
 
   return {
     ok: true,
@@ -6180,7 +8880,7 @@ exports.scheduled_executeAccountDeletions = onSchedule(
       .get();
     const results = [];
     for (const doc of due.docs) {
-      if (!['pending', 'pending_active_work'].includes(cleanString(doc.data().status))) continue;
+      if (!['pending', 'pending_active_work', 'executing'].includes(cleanString(doc.data().status))) continue;
       try {
         results.push(await executeAccountDeletionCore({ uid: doc.id }));
       } catch (error) {
@@ -6324,6 +9024,43 @@ exports.scheduled_enforceCommissionDebt = onSchedule(
 // 8) Timeout de pedidos (A6)
 // ------------------------------------------------------------
 
+async function expireRequestsCore({
+  database = db,
+  now = Timestamp.now(),
+  pageSize = 100,
+} = {}) {
+  const boundedPageSize = Math.max(1, Math.min(Number(pageSize) || 100, 400));
+  const cutoff = new Timestamp(now.seconds - 30 * 60, now.nanoseconds);
+  const states = ['criado', 'aguarda_resposta_prestador'];
+  let expired = 0;
+
+  while (true) {
+    const snapshot = await database.collection('pedidos')
+      .where('status', 'in', states)
+      .where('updatedAt', '<', cutoff)
+      .limit(boundedPageSize)
+      .get();
+    if (snapshot.empty) break;
+
+    const batch = database.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, {
+        status: 'cancelado',
+        estado: 'cancelado',
+        providerAccessGranted: false,
+        providerAccessGrantedTo: null,
+        providerAccessGrantedAt: null,
+        cancelReason: 'timeout_sistema',
+        updatedAt: now,
+      });
+    });
+    await batch.commit();
+    expired += snapshot.size;
+    if (snapshot.size < boundedPageSize) break;
+  }
+  return { expired };
+}
+
 exports.scheduled_expireRequests = onSchedule(
   {
     region: REGION,
@@ -6331,38 +9068,9 @@ exports.scheduled_expireRequests = onSchedule(
     timeZone: 'Europe/Lisbon',
   },
   async () => {
-    const now = Timestamp.now();
-    // 30 minutos atrás
-    const cutoff = new Timestamp(now.seconds - 30 * 60, now.nanoseconds);
-
-    // Estados pendentes sujeitos a timeout
-    const states = ['criado', 'aguarda_resposta_prestador'];
-
-    const snapshot = await db.collection('pedidos')
-      .where('status', 'in', states)
-      .where('updatedAt', '<', cutoff)
-      .limit(100)
-      .get();
-
-    if (snapshot.empty) {
-      return;
-    }
-
-    const batch = db.batch();
-    let count = 0;
-
-    snapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, {
-        status: 'cancelado',
-        cancelReason: 'timeout_sistema',
-        updatedAt: now,
-      });
-      count++;
-    });
-
-    await batch.commit();
-    logger.info(`[expireRequests] Cancelados ${count} pedidos expirados.`);
-  }
+    const result = await expireRequestsCore();
+    logger.info(`[expireRequests] Cancelados ${result.expired} pedidos expirados.`);
+  },
 );
 
 exports.__test__ = {
@@ -6376,7 +9084,9 @@ exports.__test__ = {
   },
   pedidos: {
     acceptPedidoDispatchCore,
+    applyPedidoActionSecureCore,
     buildPedidoDispatchProjection,
+    buildPedidoOpportunityNotification,
     buildSecurePedidoData,
     cashCommissionPolicy,
     calculatePedidoEconomics,
@@ -6384,19 +9094,35 @@ exports.__test__ = {
     classifyServerServiceText,
     confirmarValorFinalPedidoCore,
     createSecurePedidoCore,
+    expireRequestsCore,
     isOpenPedido,
+    matchPedidoToProvidersCore,
+    opportunityDocumentId,
     providerMatchesPedido,
+    providerDispatchLocation,
     promotePedidoAttachments,
     proporValorFinalPedidoCore,
+    parsePedidoActionInput,
+    PEDIDO_ACTION_SPECS,
+    reviewPedidoServiceCore,
     sanitizeDispatchText,
     sanitizeDispatchZone,
     syncPedidoDispatch,
+    syncProviderActiveClients,
     updateSecurePedidoCore,
   },
   payments: {
+    authoritativeDigitalPaymentMatches,
+    createPaymentIntentCore,
     enforceCommissionDebtCore,
+    paymentIntentSpecFromPedido,
+    paymentLedgerDocumentId,
     paymentMethodEnabled,
+    processStripePaymentEventCore,
     recordCommissionPaymentCore,
+    requirePaymentActor,
+    stripeIntentMatchesSpec,
+    subscriptionsEnabled,
   },
   providers: {
     sanitizeProviderCustomService,
@@ -6428,12 +9154,19 @@ exports.__test__ = {
   },
   accounts: {
     ACCOUNT_DELETION_GRACE_DAYS,
+    accountAllowsNewWork,
     accountDeletionPseudonym,
+    accountDeletionRequestCanExecute,
+    accountDeletionStoragePrefixes,
     cancelAccountDeletionCore,
+    deleteMatchingDocuments,
     executeAccountDeletionCore,
     findActiveAccountOrders,
     isActiveAccountOrder,
+    pseudonymizeUidInValue,
     requestAccountDeletionCore,
+    requireAccountAllowsNewActivity,
+    updateMatchingDocuments,
   },
   kyc: {
     KYC_CONSENT_VERSION,

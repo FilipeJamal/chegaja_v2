@@ -3,7 +3,7 @@ const {
   assertSucceeds,
   initializeTestEnvironment,
 } = require('@firebase/rules-unit-testing');
-const { serverTimestamp } = require('firebase/firestore');
+const { GeoPoint, serverTimestamp } = require('firebase/firestore');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,7 +14,7 @@ const FIRESTORE_RULES = fs.readFileSync(
 );
 
 describe('Firestore Security Rules — current P1 model', function () {
-  this.timeout(120000);
+  this.timeout(300000);
   let testEnv;
 
   before(async () => {
@@ -84,27 +84,132 @@ describe('Firestore Security Rules — current P1 model', function () {
     await assertSucceeds(visitor.collection('provider_public').doc('provider1').get());
   });
 
-  it('keeps exact provider dispatch data between the provider, active clients and admin', async () => {
+  it('keeps exact provider dispatch data owner/admin-only', async () => {
     await seed((db) => db.collection('provider_dispatch_private').doc('provider1').set({
       providerId: 'provider1',
       lastLocation: { latitude: -25.96, longitude: 32.58 },
       activeClientIds: ['client1'],
     }));
     await assertSucceeds(user('provider1').collection('provider_dispatch_private').doc('provider1').get());
-    await assertSucceeds(user('client1').collection('provider_dispatch_private').doc('provider1').get());
+    await assertFails(user('client1').collection('provider_dispatch_private').doc('provider1').get());
     await assertFails(user('outsider').collection('provider_dispatch_private').doc('provider1').get());
     await assertSucceeds(user('admin1', { admin: true })
       .collection('provider_dispatch_private').doc('provider1').get());
   });
 
-  it('allows participants to read raw orders but denies open-order scraping and direct creation', async () => {
-    await seed((db) => db.collection('pedidos').doc('order1').set({
-      clienteId: 'client1',
-      prestadorId: 'provider1',
-      status: 'aceito',
-      estado: 'aceito',
-      enderecoTexto: 'Rua privada 123',
+  it('allows owner dispatch merges while preserving backend-owned fields', async () => {
+    const provider = user('provider1');
+    const dispatchRef = provider
+      .collection('provider_dispatch_private')
+      .doc('provider1');
+
+    await assertSucceeds(dispatchRef.set({
+      providerId: 'provider1',
+      isOnline: false,
+      lastLocationAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     }));
+    await assertFails(user('provider2')
+      .collection('provider_dispatch_private')
+      .doc('provider2')
+      .set({
+        providerId: 'provider2',
+        activeClientIds: ['client1'],
+      }));
+    await assertFails(user('provider3')
+      .collection('provider_dispatch_private')
+      .doc('provider3')
+      .set({
+        providerId: 'another-provider',
+        isOnline: true,
+      }));
+
+    await seed((db) => db.collection('provider_dispatch_private').doc('provider1').set({
+      providerId: 'provider1',
+      isOnline: false,
+      activeClientIds: ['client1'],
+      acceptingRequests: false,
+      financialStatus: 'suspended_new_jobs',
+      backendDecision: 'manual_review',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await assertSucceeds(dispatchRef.set({
+      providerId: 'provider1',
+      isOnline: true,
+      lastLocation: { lat: -25.96, lng: 32.58 },
+      geo: {
+        geohash: 'ke7zd4k',
+        geopoint: new GeoPoint(-25.96, 32.58),
+      },
+      radiusKm: 12,
+      workingHours: { monday: ['08:00-17:00'] },
+      blockedDates: [],
+      lastSeenAt: serverTimestamp(),
+      lastLocationAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true }));
+
+    await assertFails(dispatchRef.update({ activeClientIds: [] }));
+    await assertFails(dispatchRef.update({ acceptingRequests: true }));
+    await assertFails(dispatchRef.update({ financialStatus: 'active' }));
+    await assertFails(dispatchRef.update({ backendDecision: 'approved' }));
+    await assertFails(dispatchRef.update({ providerId: 'provider2' }));
+    await assertFails(dispatchRef.update({ radiusKm: 51 }));
+    await assertFails(dispatchRef.update({ radiusKm: '12' }));
+    await assertFails(dispatchRef.update({
+      isOnline: true,
+      lastLocation: { lat: -25.96, lng: 32.58 },
+      geo: {
+        geohash: 'ke7zd4k',
+        geopoint: new GeoPoint(-24.00, 31.00),
+      },
+      lastLocationAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(dispatchRef.update({
+      isOnline: true,
+      lastLocation: { lat: -25.96, lng: 32.58 },
+      geo: {
+        geohash: 'bad',
+        geopoint: new GeoPoint(-25.96, 32.58),
+      },
+      lastLocationAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(user('provider2')
+      .collection('provider_dispatch_private')
+      .doc('provider1')
+      .update({ isOnline: false }));
+
+    await assertSucceeds(user('admin1', { admin: true })
+      .collection('provider_dispatch_private')
+      .doc('provider1')
+      .update({ acceptingRequests: true }));
+  });
+
+  it('allows participants to read raw orders but denies open-order scraping and direct creation', async () => {
+    await seed(async (db) => {
+      await db.collection('pedidos').doc('order1').set({
+        clienteId: 'client1',
+        prestadorId: 'provider1',
+        providerAccessGranted: true,
+        providerAccessGrantedTo: 'provider1',
+        providerAccessGrantedAt: new Date(),
+        status: 'aceito',
+        estado: 'aceito',
+        enderecoTexto: 'Rua privada 123',
+      });
+      await db.collection('pilot_participants').doc('client1').set({
+        status: 'active', roles: ['cliente'], city: 'Maputo',
+      });
+      await db.collection('pilot_participants').doc('provider1').set({
+        status: 'active', roles: ['prestador'], city: 'Maputo',
+      });
+    });
     const client = user('client1', { phone_number: '+258840000001' });
     const provider = user('provider1', { phone_number: '+258840000002' });
     const outsider = user('provider2', { phone_number: '+258840000003' });
@@ -125,11 +230,16 @@ describe('Firestore Security Rules — current P1 model', function () {
         uid: 'provider1',
         isSearchable: true,
       });
+      await db.collection('pilot_participants').doc('provider1').set({
+        status: 'active', roles: ['prestador'], city: 'Maputo',
+      });
       await db.collection('pedido_dispatch').doc('order1').set({
         pedidoId: 'order1',
         zoneLabel: 'Matola A',
         approximateDistanceKm: 3.4,
         status: 'criado',
+        prestadorId: null,
+        targetProviderId: null,
       });
     });
     const verified = user('provider1', { phone_number: '+258840000002' });
@@ -146,6 +256,9 @@ describe('Firestore Security Rules — current P1 model', function () {
       await db.collection('pedidos').doc('order1').set({
         clienteId: 'client1',
         prestadorId: 'provider1',
+        providerAccessGranted: true,
+        providerAccessGrantedTo: 'provider1',
+        providerAccessGrantedAt: new Date(),
         status: 'aceito',
         estado: 'aceito',
       });
@@ -153,6 +266,12 @@ describe('Firestore Security Rules — current P1 model', function () {
         pedidoId: 'order1',
         clienteId: 'client1',
         prestadorId: 'provider1',
+      });
+      await db.collection('pilot_participants').doc('client1').set({
+        status: 'active', roles: ['cliente'], city: 'Maputo',
+      });
+      await db.collection('pilot_participants').doc('provider1').set({
+        status: 'active', roles: ['prestador'], city: 'Maputo',
       });
     });
     const client = user('client1', { phone_number: '+258840000001' });
@@ -212,6 +331,25 @@ describe('Firestore Security Rules — current P1 model', function () {
     await assertFails(outsider.collection('chats').doc('order1').get());
     await assertFails(outsider.collection('chats').doc('order1')
       .collection('messages').get());
+
+    await seed((db) => db.collection('pedidos').doc('order1').update({
+      status: 'concluido',
+      estado: 'concluido',
+    }));
+    await assertSucceeds(provider.collection('chats').doc('order1').get());
+    await assertSucceeds(provider.collection('chats').doc('order1')
+      .collection('messages').get());
+    await assertFails(provider.collection('chats').doc('order1')
+      .collection('messages').doc('after-completion').set({
+        pedidoId: 'order1',
+        type: 'text',
+        senderId: 'provider1',
+        senderRole: 'prestador',
+        text: 'Mensagem tardia.',
+        createdAt: serverTimestamp(),
+      }));
+    await assertFails(client.collection('chats').doc('order1')
+      .collection('messages').doc('m1').update({ seenByCliente: true }));
   });
 
   it('allows one server-timestamped review from the owning client only', async () => {

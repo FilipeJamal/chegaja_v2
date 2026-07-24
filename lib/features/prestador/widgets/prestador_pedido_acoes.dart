@@ -1,10 +1,10 @@
 // lib/features/prestador/widgets/prestador_pedido_acoes.dart
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/core/utils/date_time_utils.dart';
+import 'package:chegaja_v2/core/utils/pedido_economics.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
@@ -23,16 +23,30 @@ class PrestadorPedidoAcoes extends StatelessWidget {
   Widget build(BuildContext context) {
     // Se o pedido é por orçamento (ou pedido por proposta), o prestador NÃO deve iniciar
     // enquanto o cliente não aceitar a proposta.
-    final bool isOrcamento = pedido.tipoPreco == 'por_orcamento';
+    final bool isOrcamento = pedido.tipoPreco == 'por_orcamento' ||
+        pedido.modo.toUpperCase() == 'POR_PROPOSTA';
 
     switch (pedido.estado) {
       case 'aguarda_resposta_prestador':
         return _wrapAction(
-          title: 'Responder convite',
-          message: 'Aceita ou recusa o convite direto do cliente.',
+          title: isOrcamento ? 'Responder com estimativa' : 'Responder convite',
+          message: isOrcamento
+              ? 'Envia uma faixa antes de receber morada, anexos ou acesso ao chat.'
+              : 'Aceita ou recusa o convite direto do cliente.',
           icon: Icons.mark_chat_unread_rounded,
           tone: AppStatusTone.warning,
-          child: _AcaoResponderConvite(pedido: pedido),
+          child: isOrcamento
+              ? Column(
+                  children: [
+                    _AcaoEnviarOrcamento(pedido: pedido),
+                    const SizedBox(height: 8),
+                    _AcaoResponderConvite(
+                      pedido: pedido,
+                      allowAccept: false,
+                    ),
+                  ],
+                )
+              : _AcaoResponderConvite(pedido: pedido),
         );
       case 'aguarda_resposta_cliente':
         return _wrapAction(
@@ -114,8 +128,12 @@ class PrestadorPedidoAcoes extends StatelessWidget {
 
 class _AcaoResponderConvite extends StatelessWidget {
   final Pedido pedido;
+  final bool allowAccept;
 
-  const _AcaoResponderConvite({required this.pedido});
+  const _AcaoResponderConvite({
+    required this.pedido,
+    this.allowAccept = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -171,40 +189,43 @@ class _AcaoResponderConvite extends StatelessWidget {
                 child: Text(copy.secondaryActionLabel!),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () async {
-                  try {
-                    await PedidoService.instance.aceitarConvitePrestador(
-                      pedido: pedido,
-                      prestadorId: uid,
-                    );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            PedidoFlowPresenter.successMessage('acceptInvite'),
-                          ),
-                        ),
+            if (allowAccept) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await PedidoService.instance.aceitarConvitePrestador(
+                        pedido: pedido,
+                        prestadorId: uid,
                       );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      debugPrint('Erro ao aceitar convite: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            PedidoFlowPresenter.errorMessage('acceptInvite'),
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              PedidoFlowPresenter.successMessage(
+                                  'acceptInvite'),
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        debugPrint('Erro ao aceitar convite: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              PedidoFlowPresenter.errorMessage('acceptInvite'),
+                            ),
+                          ),
+                        );
+                      }
                     }
-                  }
-                },
-                child: Text(copy.primaryActionLabel),
+                  },
+                  child: Text(copy.primaryActionLabel),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -307,7 +328,8 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                         key: const Key('orcamento_min_field'),
                         controller: minController,
                         keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           hintText: 'Ex.: 20',
                         ),
@@ -319,7 +341,8 @@ class _AcaoEnviarOrcamento extends StatelessWidget {
                         key: const Key('orcamento_max_field'),
                         controller: maxController,
                         keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           hintText: 'Ex.: 35',
                         ),
@@ -454,8 +477,10 @@ class _AcaoIniciarServico extends StatelessWidget {
                   final textoTempo =
                       horas > 0 ? '${horas}h ${minutos}min' : '${minutos}min';
 
-                  final dataFormatada = DateTimeUtils.formatDateTime(agendado,
-                      locale: Localizations.localeOf(context).toString());
+                  final dataFormatada = DateTimeUtils.formatDateTime(
+                    agendado,
+                    locale: Localizations.localeOf(context).toString(),
+                  );
 
                   await showDialog<void>(
                     context: context,
@@ -780,34 +805,43 @@ class _ResumoComissaoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1) Valor bruto
-    final double bruto = totalOverride ??
-        pedido.earningsTotal ??
-        pedido.precoFinal ??
-        pedido.precoPropostoPrestador ??
-        pedido.preco ??
-        0.0;
+    final economics = pedidoAuthoritativeEconomics(pedido);
+    final isCompleted = pedido.estado == 'concluido';
+    final double? bruto = isCompleted
+        ? economics?.total ?? pedidoPersistedGross(pedido)
+        : totalOverride ??
+            economics?.total ??
+            pedido.precoPropostoPrestador ??
+            pedido.preco;
 
-    if (bruto <= 0) {
+    if (bruto == null || !bruto.isFinite || bruto <= 0) {
+      if (isCompleted) {
+        return _PendingCommissionSummary(
+          bruto: null,
+          showTitle: showTitle,
+          reconciliationRequired: true,
+        );
+      }
       return const SizedBox.shrink();
     }
 
-    // 2) Usa campos gravados OU simula (sempre 15%)
-    double? commission = pedido.commissionPlatform;
-    double? liquido = pedido.earningsProvider;
+    final hasAuthoritativeEconomics =
+        isCompleted && totalOverride == null && economics != null;
 
-    if (commission == null || liquido == null) {
-      final sim = PedidoService.simularComissao(bruto);
-      commission ??= sim['commissionPlatform'];
-      liquido ??= sim['earningsProvider'];
+    if (!hasAuthoritativeEconomics) {
+      return _PendingCommissionSummary(
+        bruto: bruto,
+        showTitle: showTitle,
+        reconciliationRequired: isCompleted,
+      );
     }
 
-    // garantimos não-nulo daqui para baixo
-    final double safeCommission = commission ?? 0.0;
-    final double safeLiquido = liquido ?? 0.0;
+    final authoritativeEconomics = economics;
+    final safeCommission = authoritativeEconomics.commission;
+    final safeLiquido = authoritativeEconomics.providerEarnings;
+    final safeTotal = authoritativeEconomics.total;
 
-    // 3) Percentagem dinâmica
-    final double percent = bruto > 0 ? (safeCommission / bruto * 100.0) : 0.0;
+    final double percent = safeCommission / safeTotal * 100.0;
 
     final primary = Theme.of(context).colorScheme.primary;
 
@@ -832,7 +866,7 @@ class _ResumoComissaoCard extends StatelessWidget {
           ],
           _linhaResumo(
             'Valor bruto',
-            CurrencyUtils.format(bruto),
+            CurrencyUtils.format(safeTotal),
           ),
           _linhaResumo(
             'Taxa da plataforma (${percent.toStringAsFixed(0)}%)',
@@ -875,6 +909,73 @@ class _ResumoComissaoCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _PendingCommissionSummary extends StatelessWidget {
+  const _PendingCommissionSummary({
+    required this.bruto,
+    required this.showTitle,
+    required this.reconciliationRequired,
+  });
+
+  final double? bruto;
+  final bool showTitle;
+  final bool reconciliationRequired;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      key: const Key('prestador_commission_pending_summary'),
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showTitle) ...[
+            Text('Resumo do valor', style: _actionPrimaryText(context)),
+            const SizedBox(height: 6),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Valor bruto',
+                style: _actionSecondaryText(
+                  context,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                bruto == null ? 'A reconciliar' : CurrencyUtils.format(bruto!),
+                style: _actionPrimaryText(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            reconciliationRequired
+                ? 'A comissão e o valor líquido ainda não estão disponíveis. '
+                    'O ChegaJá precisa reconciliar este trabalho; nenhum '
+                    'valor foi estimado no dispositivo.'
+                : 'A comissão e o valor líquido exatos serão calculados pelo '
+                    'ChegaJá quando o cliente confirmar. Os primeiros trabalhos '
+                    'podem ter isenção segundo a política ativa do piloto.',
+            style: _actionSecondaryText(
+              context,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -4,14 +4,45 @@ Data: 2026-07-20
 Projeto Firebase: `chegaja-ac88d`
 Decisão atual: **NOT READY para piloto externo**
 
+## Correção U0 de 2026-07-20
+
+Uma auditoria posterior encontrou caminhos Firestore/Storage que não exigiam
+simultaneamente telefone confirmado e pertença ativa à coorte, além de uma
+prévia client-side de comissão divergente da política server-side. A branch U0
+corrige esses contratos e acrescenta testes negativos. Encontrou também que os
+hashes da preparação produtiva não correspondem aos fontes atuais.
+
+A mesma revisão tornou anexos partilhados imutáveis para participantes e
+passou a calcular hashes textuais de forma canónica entre sistemas operativos.
+O fingerprint de Functions inclui também os manifests de dependências. O
+comando `npm run p1:source:hashes` apenas imprime estes hashes; não substitui a
+repetição da migração nem aprova o cutover.
+
+Consequentemente, «implementação concluída» abaixo significa apenas que existe
+uma implementação local em validação. A prova produtiva anterior não pode ser
+reutilizada no cutover; deve ser regenerada sobre o commit exato aprovado.
+O readiness só aceita a nova prova real
+`docs/pilot/evidence/p1-cutover-migration.json`; o ficheiro de exemplo permanece
+inválido e a ausência da prova mantém o gate fechado.
+
+Esta auditoria P1 foi originalmente executada para a baseline Maputo/MZN. A
+decisão posterior é Coimbra/Portugal como primeiro piloto operacional. Por isso,
+as referências a Maputo, MZN e integração local abaixo são evidência histórica,
+não o plano de lançamento vigente. A adaptação Coimbra/EUR requer os contratos
+de mercado definidos em
+`docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md`; não pode ser feita por mera
+substituição de texto.
+
 ## Resultado executivo
 
-As dez frentes P1 têm implementação técnica e procedimentos de operação. A
+As dez frentes P1 têm implementação técnica e procedimentos de operação para a
+baseline histórica Maputo/MZN. A
 preparação produtiva segura já inclui migração aditiva, catálogo server-side,
 TTL, segredo de eliminação, identificador Android final e configuração Play
 Integrity para distribuição fora da Play Store. O promotor individual também
 está identificado sem apresentar o projeto como empresa constituída. O P1
-operacional ainda não está fechado: faltam completar os contactos jurídicos,
+operacional ainda não está fechado e não constitui readiness de Coimbra:
+faltam completar os contactos jurídicos,
 obter validação jurídica, validar um aparelho físico, aplicar enforcement App
 Check e executar o piloto real.
 
@@ -31,10 +62,10 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 | P1.4 KYC seguro | Concluída e desligada | Continua indisponível no piloto até aprovação própria | `kyc.test.js`, `storage.test.js` |
 | P1.5 Catálogo/Trust & Safety | Concluída | 55 políticas semeadas, 11 sujeitas a aprovação adicional | `pedidoSafety.test.js` |
 | P1.6 Endpoints/quotas/App Check | Concluída no código | TTL ativo e Play Integrity preparado; enforcement/deploy pendente | `firebase-app-check-status-2026-07-20.json` |
-| P1.7 Pagamentos/MZN | Concluída | Dinheiro habilitado; M-Pesa, e-Mola e Stripe continuam desligados | `paymentPolicy.test.js` |
+| P1.7 Pagamentos/MZN (baseline histórica) | Concluída | Dinheiro habilitado; M-Pesa, e-Mola e Stripe continuam desligados; EUR/Portugal ainda não adaptado | `paymentPolicy.test.js` |
 | P1.8 Android/permissões | APK e emulador concluídos | Matriz em Android físico pendente | `p1-8-physical-device-validation.md` |
 | P1.9 Legal/eliminação/suporte | Concluída no código | Promotor confirmado; email, morada e parecer jurídico pendentes | `docs/legal/operator-identity.md`, `firebase-account-deletion-secret.json` |
-| P1.10 Piloto Maputo | Produto, backoffice e runbooks concluídos | Participantes e execução real pendentes | `maputo-pilot-runbook.md` |
+| P1.10 Piloto Maputo (baseline histórica) | Produto, backoffice e runbooks concluídos | Não executar como piloto vigente; Coimbra requer runbook próprio e continua pendente | `maputo-pilot-runbook.md` |
 
 ## Produção preparada sem exposição adicional
 
@@ -59,22 +90,30 @@ manutenção deliberada, não pode ser inferida silenciosamente.
 
 ## Provas técnicas
 
-- Flutter: **506 testes aprovados**.
-- Análise estática Flutter: **0 erros**; 20 avisos e 309 informações não fatais.
-- Functions/Firestore/Storage: **94 testes aprovados**; o emulador carregou as
+- Flutter: **522 testes aprovados** em 105 ficheiros.
+- Análise estática Dart/Flutter: **0 erros** e **328 avisos/informações não
+  fatais**; permanecem visíveis no CI.
+- Functions/Firestore/Storage: **167 testes aprovados** em 24 ficheiros; o emulador carregou as
   63 definições locais sem erro de descoberta.
-- Scripts operacionais: **11 grupos de testes aprovados**.
-- APK release: 123074424 bytes, assinatura v2, um signatário RSA 2048.
+- Scripts operacionais: **14 grupos de testes aprovados**.
+- APK release: 123090808 bytes, assinatura v2, um signatário RSA 2048.
 - SHA-256 APK:
-  `f9d29a1d38dca520e9cb68eb83dd72666c177a0442c6012f535bb36d5589ad13`.
-- Fingerprint das 351 entradas de release:
-  `3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3`.
-- Emulador Android 14/API 34: instalação limpa, seletor em português, nenhuma
-  permissão no arranque e zero padrões fatais.
+  `e2be3d862ce6af3f6289b4dc2a84195bd54f0ba1bb0e83c08d5d7e0557503fa6`.
+- Fingerprint de release `android-release-inputs-v2`, calculado sobre 470
+  ficheiros e 1 entrada virtual:
+  `d1e757c6d191a6a2b7a8d8afb99b38768985fde672668460ec9a85c510fd4356`.
+- Emulador temporário Android 15/API 35 x86_64: instalação confirmada pelo
+  Package Manager após timeout do cliente `adb install`, atividade em primeiro
+  plano, processo vivo depois de scroll, seletor limpo em português e zero
+  padrões fatais. Duas mensagens de ciclo de vida do Geolocator e quatro probes
+  DEBUG de frameworks opcionais foram preservadas como diagnósticos não fatais.
 - Identidade Android: `com.chegaja.app`, app Firebase
   `1:767588494857:android:4198384a2a6387055252d8`, certificados release/debug
   registados e App Links ligados ao certificado release.
-- Readiness: **9/14 gates aprovados**.
+- Readiness técnico histórico Maputo/MZN: **9/15 gates aprovados** após a nova
+  prova de runtime e o endurecimento da validação de proveniência; os seis gates
+  externos continuam fechados. Este número não é readiness operacional de
+  Coimbra.
 
 ## Gate fechado nesta etapa
 
@@ -94,17 +133,21 @@ repositório por minimização de dados e porque a natureza dos números deve se
 confirmada privadamente antes de qualquer uso jurídico ou fiscal. A versão de
 consentimento passou a `legal-2026-07-20-pilot-v3`.
 
-## Cinco gates externos em falta
+## Seis gates em falta
 
-1. Configurar email jurídico/privacidade e morada oficial reais do responsável
+1. Repetir a preparação/migração imediatamente antes do cutover e arquivar
+   `p1-cutover-migration.json` com estado `COMPLETED`, execução não dry-run,
+   zero deletes, zero campos públicos sensíveis, zero tokens privados e os
+   hashes exatos de Firestore Rules, Storage Rules e Functions do commit final.
+2. Configurar email jurídico/privacidade e morada oficial reais do responsável
    já identificado.
-2. Obter parecer jurídico versionado para os termos e privacidade.
-3. Executar os 12 casos num Android físico API 33+ com a APK final.
-4. Fazer o corte controlado e comprovar App Check `ENFORCED` em Firestore,
+3. Obter parecer jurídico versionado para os termos e privacidade.
+4. Executar os 12 casos num Android físico API 33+ com a APK final.
+5. Fazer o corte controlado e comprovar App Check `ENFORCED` em Firestore,
    Storage, Authentication e Functions. A evidência tem de corresponder aos
-   hashes exatos da APK, das duas Rules e de `functions/index.js`, além de
-   registar a repetição final da migração.
-5. Executar e encerrar o piloto real com consentimento e métricas agregadas.
+   hashes exatos da APK, das duas Rules e das Functions e referenciar exatamente
+   a mesma janela, referência, repetição da migração e conclusão do deploy.
+6. Executar e encerrar o piloto real com consentimento e métricas agregadas.
 
 ## Ordem obrigatória do corte
 
@@ -115,13 +158,30 @@ consentimento passou a `legal-2026-07-20-pilot-v3`.
 3. Confirmar que a APK física usa o mesmo hash e certificado desta auditoria.
 4. Definir a coorte e a janela de manutenção.
 5. Congelar writes legados e repetir a migração aditiva para capturar alterações
-   posteriores a 2026-07-20.
-6. Fazer deploy de Functions, índices, Firestore Rules e Storage Rules.
+   posteriores a 2026-07-20, sem apagar documentos, expor campos sensíveis ou
+   deixar tokens persistentes em objetos privados.
+6. Capturar a prova da migração e fazer deploy de Functions, índices, Firestore
+   Rules e Storage Rules dentro da mesma janela identificada.
 7. Inscrever a coorte pela operação administrativa auditada e distribuir a APK.
-8. Confirmar tráfego App Check válido e só então ativar enforcement dos serviços.
+8. Confirmar tráfego App Check válido e só então ativar enforcement dos serviços,
+   mantendo a mesma referência de cutover. A sequência completa desde o
+   congelamento de writes até à captura do enforcement não pode exceder 24h.
 9. Executar o piloto, incidentes, suporte, pagamentos e métricas de missão.
-10. Arquivar os quatro artefactos reais em `docs/pilot/evidence/` e exigir
+10. Arquivar os cinco artefactos reais em `docs/pilot/evidence/` e exigir
     `npm run p1:pilot:readiness:strict` com resultado `READY`.
+
+## Contrato cronológico da prova de cutover
+
+O readiness exige, por ordem não decrescente:
+
+`writesFrozenAt` ≤ `migrationStartedAt` ≤ `migrationCompletedAt` ≤ `capturedAt`
+≤ `deploymentCompletedAt` ≤ `firebase-app-check-enforcement.capturedAt`.
+
+`migrationRerunAt` deve ser exatamente o instante de conclusão da migração. O
+`cutoverWindowId`, a referência do cutover, a referência da execução da
+migração, a referência do deploy e esse instante têm de coincidir entre as
+provas de migração e App Check. IDs de
+exemplo, `TODO`, dry-runs e janelas superiores a 24 horas são rejeitados.
 
 Os modelos de evidência são inválidos por defeito. Não devem ser convertidos em
 aprovação ou execução sem a ação humana/operacional correspondente.

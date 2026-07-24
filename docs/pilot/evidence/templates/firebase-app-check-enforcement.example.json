@@ -1,7 +1,14 @@
 {
+  "schemaVersion": "p1-deployment-evidence-v4",
   "projectId": "TODO",
+  "projectNumber": "TODO",
+  "sourceRevision": "TODO_40_HEX_GIT_COMMIT",
   "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "cutoverWindowId": "TODO",
+  "cutoverReference": "TODO",
+  "migrationExecutionReference": "TODO",
   "migrationRerunAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "deploymentCompletedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
   "apkSha256": "TODO",
   "services": {
     "firestore": "UNENFORCED",
@@ -10,9 +17,29 @@
   },
   "functionsCallablesEnforceAppCheck": false,
   "deploymentReference": "TODO",
+  "enforcementReference": "TODO",
+  "backendConfigManifestSha256": "TODO",
+  "enforcementAudit": {
+    "schemaVersion": "p1-audit-reference-v1",
+    "provider": "google-cloud-audit-logs",
+    "logReference": "TODO_PROVIDER_LOG_REFERENCE",
+    "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "artifactPath": "docs/pilot/evidence/audits/TODO.json",
+    "artifactSha256": "TODO_SHA256",
+    "reviewReference": "TODO_REVIEW_REFERENCE",
+    "redacted": true,
+    "containsParticipantIdentifiers": false
+  },
   "deployedArtifacts": {
+    "hashAlgorithm": "sha256-canonical-text-v1",
+    "functionsRuntimeSchema": "functions-runtime-js-v2",
+    "functionsRuntimeFileCount": -1,
     "firestoreRulesSha256": "TODO",
     "storageRulesSha256": "TODO",
-    "functionsIndexSha256": "TODO"
+    "functionsIndexSha256": "TODO",
+    "functionsRuntimeSourceFingerprintSha256": "TODO",
+    "functionsPackageSha256": "TODO",
+    "functionsPackageLockSha256": "TODO",
+    "functionsDeployFingerprintSha256": "TODO"
   }
 }

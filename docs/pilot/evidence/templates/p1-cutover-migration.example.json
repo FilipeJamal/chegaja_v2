@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "p1-deployment-evidence-v4",
+  "status": "PENDING",
+  "dryRun": true,
+  "projectId": "TODO",
+  "projectNumber": "TODO",
+  "sourceRevision": "TODO_40_HEX_GIT_COMMIT",
+  "cutoverWindowId": "TODO",
+  "cutoverReference": "TODO",
+  "migrationExecutionReference": "TODO",
+  "deploymentReference": "TODO",
+  "writesFrozenAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "migrationStartedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "migrationCompletedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "migrationRerunAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "deploymentCompletedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+  "containsParticipantIdentifiers": true,
+  "additiveMigration": {
+    "executed": false,
+    "deletesPerformed": -1,
+    "publicDocumentsWithForbiddenSensitiveFieldNames": -1
+  },
+  "pedidoGrantReconciliation": {
+    "schemaVersion": "pedido-grant-reconciliation-v1",
+    "executed": false,
+    "dryRun": true,
+    "scanned": -1,
+    "collectionTotalObserved": -1,
+    "backfilled": -1,
+    "revoked": -1,
+    "unchanged": -1,
+    "manualReview": -1,
+    "inconsistentAfter": -1,
+    "deletesPerformed": 0,
+    "executionOutputSha256": "TODO_SHA256_OF_REDACTED_EXECUTION_OUTPUT"
+  },
+  "pedidoDispatchReconciliation": {
+    "schemaVersion": "pedido-dispatch-reconciliation-v1",
+    "hashAlgorithm": "sha256-canonical-json-v1",
+    "executed": false,
+    "dryRun": true,
+    "documentIdsIncluded": false,
+    "scanned": -1,
+    "collectionTotalObserved": -1,
+    "dispatchScanned": -1,
+    "eligibleOpen": -1,
+    "eligibleTargeted": -1,
+    "upserted": -1,
+    "deletedTerminalOrStale": -1,
+    "deletedOrphan": -1,
+    "unchanged": -1,
+    "inconsistentBefore": -1,
+    "inconsistentAfter": -1,
+    "executionOutputSha256": "TODO_SHA256_OF_REDACTED_DISPATCH_RECONCILIATION_OUTPUT"
+  },
+  "storageBoundaryMigration": {
+    "executed": false,
+    "objectsDeleted": -1,
+    "restrictedObjectsWithPersistentDownloadTokens": -1,
+    "nonPublicObjectsWithPersistentDownloadTokens": -1
+  },
+  "backendConfigManifest": {
+    "schemaVersion": "p1-effective-backend-config-v1",
+    "projectId": "TODO",
+    "projectNumber": "TODO",
+    "sourceRevision": "TODO_40_HEX_GIT_COMMIT",
+    "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "environment": "production",
+    "pilotRequireAllowlist": true,
+    "riskFlags": {
+      "ENABLE_KYC": false,
+      "ENABLE_STRIPE": false,
+      "STRIPE_MZN_VALIDATED": false,
+      "ENABLE_MPESA": false,
+      "ENABLE_EMOLA": false
+    },
+    "configVersions": {
+      "functionsEnvironment": "TODO_PROJECT_REVISION_REFERENCE",
+      "pilotPolicy": "TODO_POLICY_VERSION_REFERENCE"
+    },
+    "secretVersions": [
+      { "secret": "ACCOUNT_DELETION_PEPPER", "versionId": "TODO", "state": "ENABLED" },
+      { "secret": "GOOGLE_MAPS_API_KEY", "versionId": "TODO", "state": "ENABLED" },
+      { "secret": "GOOGLE_PLACES_API_KEY", "versionId": "TODO", "state": "ENABLED" }
+    ],
+    "redacted": true,
+    "containsSecretValues": false,
+    "containsParticipantIdentifiers": false
+  },
+  "backendConfigManifestSha256": "TODO_SHA256_OF_CANONICAL_MANIFEST",
+  "deploymentAudit": {
+    "schemaVersion": "p1-audit-reference-v1",
+    "provider": "google-cloud-audit-logs",
+    "logReference": "TODO_PROVIDER_LOG_REFERENCE",
+    "capturedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "artifactPath": "docs/pilot/evidence/audits/TODO.json",
+    "artifactSha256": "TODO_SHA256",
+    "reviewReference": "TODO_REVIEW_REFERENCE",
+    "redacted": true,
+    "containsParticipantIdentifiers": false
+  },
+  "firestoreIndexDeployment": {
+    "schemaVersion": "firestore-index-deployment-v3",
+    "projectId": "TODO_PRODUCTION_PROJECT_ID",
+    "checkedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
+    "manifestSha256": "TODO_SHA256_OF_FIRESTORE_INDEXES_JSON",
+    "allDeclaredIndexesReady": false,
+    "allDeclaredFieldOverridesReady": false,
+    "cloudOutputArtifactPath": "docs/pilot/evidence/audits/TODO-firestore-index-cloud-output.json",
+    "cloudOutputArtifactSha256": "TODO_SHA256_OF_EXACT_REDACTED_CLOUD_OUTPUT_ARTIFACT",
+    "declaredIndexes": [],
+    "declaredFieldOverrides": []
+  },
+  "deployedArtifacts": {
+    "hashAlgorithm": "sha256-canonical-text-v1",
+    "functionsRuntimeSchema": "functions-runtime-js-v2",
+    "functionsRuntimeFileCount": -1,
+    "firestoreRulesSha256": "TODO",
+    "storageRulesSha256": "TODO",
+    "functionsIndexSha256": "TODO",
+    "functionsRuntimeSourceFingerprintSha256": "TODO",
+    "functionsPackageSha256": "TODO",
+    "functionsPackageLockSha256": "TODO",
+    "functionsDeployFingerprintSha256": "TODO"
+  }
+}

@@ -286,8 +286,10 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     );
 
     // presença (simples)
-    _setMyPresence(isOnline: true);
-    _listenForIncomingCalls();
+    unawaited(_setMyPresence(isOnline: true));
+    if (AppConfig.callsEnabled) {
+      _listenForIncomingCalls();
+    }
   }
 
   @override
@@ -1332,6 +1334,11 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   }
 
   void _listenForIncomingCalls() {
+    if (!AppConfig.callsEnabled) {
+      _incomingCallSub?.cancel();
+      _incomingCallSub = null;
+      return;
+    }
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
 
@@ -1372,7 +1379,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
     required bool videoEnabled,
     required bool isCaller,
   }) async {
-    if (_callScreenOpen || !mounted) return;
+    if (!AppConfig.callsEnabled || _callScreenOpen || !mounted) return;
     _callScreenOpen = true;
 
     final name = (_lastOtherName ?? widget.otherUserName ?? '').trim();
@@ -1419,6 +1426,7 @@ class _ChatThreadScreenState extends State<ChatThreadScreen> {
   }
 
   Future<void> _startCall({required bool videoEnabled}) async {
+    if (!AppConfig.callsEnabled) return;
     final otherId = widget.otherUserId.trim();
     if (otherId.isEmpty) {
       if (!mounted) return;

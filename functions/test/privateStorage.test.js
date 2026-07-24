@@ -11,16 +11,27 @@ const {
 } = __test__.privateStorage;
 const { promotePedidoAttachments } = __test__.pedidos;
 
-function fakeDatabase(pedidoData) {
+function fakeDatabase(pedidoData, participants = {
+  client: { status: 'active', roles: ['cliente'], city: 'Maputo' },
+  provider: { status: 'active', roles: ['prestador'], city: 'Maputo' },
+}) {
   return {
     collection(name) {
-      assert.strictEqual(name, 'pedidos');
       return {
-        doc() {
+        doc(uid) {
           return {
             async get() {
-              return pedidoData
-                ? { exists: true, data: () => pedidoData }
+              const data = name === 'pedidos'
+                ? pedidoData
+                : (name === 'users_private'
+                  ? { accountStatus: 'active' }
+                  : participants[uid]);
+              assert.ok(
+                ['pedidos', 'pilot_participants', 'users_private'].includes(name),
+                `Colecao inesperada: ${name}`,
+              );
+              return data
+                ? { exists: true, data: () => data }
                 : { exists: false, data: () => undefined };
             },
           };
@@ -68,11 +79,18 @@ assert.throws(() => normalizePrivateStoragePath('../secret'), /Caminho/);
 assert.throws(() => normalizePrivateStoragePath('portfolio/u1/photo.jpg'), /areas privadas/);
 
 async function run() {
-  const database = fakeDatabase({ clienteId: 'client', prestadorId: 'provider' });
+  const database = fakeDatabase({
+    clienteId: 'client',
+    prestadorId: 'provider',
+    providerAccessGranted: true,
+    providerAccessGrantedTo: 'provider',
+    providerAccessGrantedAt: { toMillis: () => Date.now() },
+  });
+  const verified = (uid) => ({ uid, token: { phone_number: '+258840000000' } });
   assert.strictEqual(
     (await authorizePrivateStoragePath({
       database,
-      auth: { uid: 'client', token: {} },
+      auth: verified('client'),
       storagePath: 'chats/p1/files/file.pdf',
     })).pedidoId,
     'p1',
@@ -80,15 +98,31 @@ async function run() {
   await assert.rejects(
     authorizePrivateStoragePath({
       database,
-      auth: { uid: 'attacker', token: {} },
+      auth: { uid: 'client', token: {} },
+      storagePath: 'chats/p1/files/file.pdf',
+    }),
+    /Confirma o telefone/,
+  );
+  await assert.rejects(
+    authorizePrivateStoragePath({
+      database,
+      auth: verified('attacker'),
       storagePath: 'chats/p1/files/file.pdf',
     }),
     /Sem acesso/,
   );
   await assert.rejects(
     authorizePrivateStoragePath({
+      database: fakeDatabase({ clienteId: 'outside', prestadorId: null }, {}),
+      auth: verified('outside'),
+      storagePath: 'chats/p1/files/file.pdf',
+    }),
+    /piloto controlado/,
+  );
+  await assert.rejects(
+    authorizePrivateStoragePath({
       database,
-      auth: { uid: 'u2', token: {} },
+      auth: verified('u2'),
       storagePath: 'temp/u1/anexos/file.pdf',
     }),
     /Sem acesso/,
@@ -98,7 +132,7 @@ async function run() {
   const finalized = await finalizePrivateStorageUploadCore({
     database,
     storage,
-    auth: { uid: 'client', token: {} },
+    auth: verified('client'),
     data: { path: 'chats/p1/files/file.pdf' },
   });
   assert.strictEqual(finalized.persistentDownloadTokenRemoved, true);
@@ -112,7 +146,7 @@ async function run() {
   const signed = await getPrivateStorageReadUrlCore({
     database,
     storage,
-    auth: { uid: 'provider', token: {} },
+    auth: verified('provider'),
     data: { path: 'chats/p1/files/file.pdf' },
   });
   assert.strictEqual(signed.url, 'https://signed.invalid/private');

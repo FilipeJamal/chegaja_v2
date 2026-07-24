@@ -2,6 +2,12 @@
 
 Estado em 20 de julho de 2026: **ensaio técnico executado; piloto com pessoas reais ainda não iniciado**.
 
+> **Baseline histórica:** a decisão operacional atual é preparar primeiro um
+> piloto em Coimbra, Portugal. Este runbook não deve ser executado nem
+> renomeado sem adaptar mercado, moeda, limites geográficos, telefone, legal,
+> pagamentos, suporte e coorte. Ver
+> `docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md`.
+
 Este documento é o procedimento operacional. Não transforma ausência de participantes, validação jurídica ou dispositivo físico em aprovação.
 
 ## Objetivo
@@ -118,13 +124,15 @@ Após 30 dias da primeira coorte, avaliar métrica central, tempo para rendiment
 
 ## Estado real desta máquina
 
-- APK release: construído, assinado, permissões inspecionadas e executado num AVD Android 14.
+- APK release: construído, assinado, permissões inspecionadas e executado num
+  emulador temporário Android 15/API 35 x86_64.
 - Certificado release: SHA-1 e SHA-256 registados na app Firebase atual.
 - Android físico: não ligado; matriz física pendente.
 - Package Android: `com.chegaja.app`, registado na app Firebase de produção
   `1:767588494857:android:4198384a2a6387055252d8` com certificados
   release/debug e Play Integrity preparado.
-- Identidade/revisão jurídica: não fornecidas.
+- Identidade jurídica: promotor individual identificado; email jurídico, morada
+  oficial e parecer jurídico continuam pendentes.
 - App Check console enforcement: não demonstrado por artefacto exportado.
 - Participantes reais e trabalhos reais: não existem como evidência neste workspace.
 - Deploy das mudanças P1: não deve ser feito para o projeto alvo antes de cadastrar a primeira coorte, porque a allowlist de produção bloqueia ações críticas por defeito.

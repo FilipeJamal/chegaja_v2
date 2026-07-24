@@ -1,5 +1,9 @@
 # Android MVP Status
 
+> **Snapshot histórico (maio de 2026).** Não representa o estado atual.
+> Consulte `docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md` e
+> `docs/pilot/p1-completion-audit.md`.
+
 Data: 2026-05-15
 
 ## Estado M2

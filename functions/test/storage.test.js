@@ -29,6 +29,21 @@ async function seedPedido(testEnv, pedidoId, data) {
     });
 }
 
+async function seedPilotParticipant(testEnv, uid, roles) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection("pilot_participants").doc(uid).set({
+            uid,
+            status: "active",
+            roles,
+            city: "Maputo",
+        });
+    });
+}
+
+function verifiedClaims(extra = {}) {
+    return {phone_number: "+258840000000", ...extra};
+}
+
 describe("Storage Security Rules", () => {
     let testEnv;
 
@@ -66,11 +81,16 @@ describe("Storage Security Rules", () => {
         await seedPedido(testEnv, "pedido_1", {
             clienteId: "client1",
             prestadorId: "provider1",
+            providerAccessGranted: true,
+            providerAccessGrantedTo: "provider1",
+            providerAccessGrantedAt: new Date(),
             status: "aceito",
         });
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        await seedPilotParticipant(testEnv, "provider1", ["prestador"]);
 
-        const client = testEnv.authenticatedContext("client1");
-        const provider = testEnv.authenticatedContext("provider1");
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
+        const provider = testEnv.authenticatedContext("provider1", verifiedClaims());
         const storagePath = "pedidos/pedido_1/anexos/foto.jpg";
 
         await assertSucceeds(
@@ -78,6 +98,86 @@ describe("Storage Security Rules", () => {
         );
         await assertSucceeds(upload(client, storagePath));
         await assertSucceeds(provider.storage().ref(storagePath).getDownloadURL());
+
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await context.firestore().collection("pedidos").doc("pedido_1").update({
+                status: "concluido",
+                estado: "concluido",
+            });
+        });
+        await assertSucceeds(provider.storage().ref(storagePath).getDownloadURL());
+        await assertFails(upload(
+            provider,
+            "chats/pedido_1/images/after-completion.jpg"
+        ));
+        await assertFails(upload(
+            client,
+            "pedidos/pedido_1/anexos/after-completion.jpg"
+        ));
+    });
+
+    it("requires an explicit provider grant for pedido and chat attachments", async () => {
+        await seedPedido(testEnv, "pedido_grant", {
+            clienteId: "client1",
+            prestadorId: "provider1",
+            status: "aguarda_resposta_prestador",
+        });
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        await seedPilotParticipant(testEnv, "provider1", ["prestador"]);
+
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
+        const provider = testEnv.authenticatedContext("provider1", verifiedClaims());
+        const pedidoPath = "pedidos/pedido_grant/anexos/client-evidence.jpg";
+        const chatPath = "chats/pedido_grant/images/provider-photo.jpg";
+
+        await assertSucceeds(upload(client, pedidoPath));
+        await assertFails(provider.storage().ref(pedidoPath).getDownloadURL());
+        await assertFails(upload(provider, chatPath));
+
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await context.firestore().collection("pedidos").doc("pedido_grant").update({
+                status: "aceito",
+                estado: "aceito",
+                providerAccessGranted: true,
+                providerAccessGrantedTo: "provider1",
+                providerAccessGrantedAt: new Date(),
+            });
+        });
+
+        await assertSucceeds(provider.storage().ref(pedidoPath).getDownloadURL());
+        await assertSucceeds(upload(provider, chatPath));
+    });
+
+    it("keeps shared pedido evidence immutable for every non-admin participant", async () => {
+        await seedPedido(testEnv, "pedido_immutable", {
+            clienteId: "client1",
+            prestadorId: "provider1",
+            providerAccessGranted: true,
+            providerAccessGrantedTo: "provider1",
+            providerAccessGrantedAt: new Date(),
+            status: "aceito",
+        });
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        await seedPilotParticipant(testEnv, "provider1", ["prestador"]);
+
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
+        const provider = testEnv.authenticatedContext("provider1", verifiedClaims());
+        const admin = testEnv.authenticatedContext("admin1", {admin: true});
+        const sharedObjects = [
+            ["pedidos/pedido_immutable/anexos/evidence.jpg", "image/jpeg"],
+            ["chats/pedido_immutable/images/evidence.jpg", "image/jpeg"],
+            ["chats/pedido_immutable/files/evidence.pdf", "application/pdf"],
+            ["chats/pedido_immutable/audio/evidence.m4a", "audio/mp4"],
+        ];
+
+        for (const [storagePath, contentType] of sharedObjects) {
+            await assertSucceeds(upload(client, storagePath, contentType, "original"));
+            await assertFails(upload(provider, storagePath, contentType, "tampered"));
+            await assertFails(provider.storage().ref(storagePath).delete());
+            await assertFails(upload(client, storagePath, contentType, "replaced"));
+            await assertFails(client.storage().ref(storagePath).delete());
+            await assertSucceeds(admin.storage().ref(storagePath).delete());
+        }
     });
 
     it("denies pedido attachment access to non-participants", async () => {
@@ -87,7 +187,7 @@ describe("Storage Security Rules", () => {
             status: "aceito",
         });
 
-        const attacker = testEnv.authenticatedContext("attacker");
+        const attacker = testEnv.authenticatedContext("attacker", verifiedClaims());
         const storagePath = "pedidos/pedido_2/anexos/foto.jpg";
 
         await assertFails(upload(attacker, storagePath));
@@ -97,14 +197,39 @@ describe("Storage Security Rules", () => {
         await assertFails(attacker.storage().ref(storagePath).getDownloadURL());
     });
 
+    it("requires both verified phone and active pilot membership for private uploads", async () => {
+        await seedPedido(testEnv, "pedido_gate", {
+            clienteId: "client1",
+            prestadorId: null,
+            status: "criado",
+        });
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+
+        const unverifiedParticipant = testEnv.authenticatedContext("client1");
+        const verifiedOutsideCohort = testEnv.authenticatedContext(
+            "client2",
+            verifiedClaims()
+        );
+
+        await assertFails(upload(
+            unverifiedParticipant,
+            "pedidos/pedido_gate/anexos/unverified.jpg"
+        ));
+        await assertFails(upload(
+            verifiedOutsideCohort,
+            "temp/client2/anexos/outside-cohort.jpg"
+        ));
+    });
+
     it("limits pedido attachments to supported content types and size", async () => {
         await seedPedido(testEnv, "pedido_3", {
             clienteId: "client1",
             prestadorId: "provider1",
             status: "aceito",
         });
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
 
-        const client = testEnv.authenticatedContext("client1");
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
         await assertFails(
             upload(client, "pedidos/pedido_3/anexos/app.exe", "application/x-msdownload")
         );
@@ -119,7 +244,8 @@ describe("Storage Security Rules", () => {
     });
 
     it("restricts temporary pedido attachments to the authenticated user folder", async () => {
-        const client = testEnv.authenticatedContext("client1");
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
 
         await assertSucceeds(
             upload(client, "temp/client1/anexos/pre_pedido.jpg")
@@ -138,8 +264,9 @@ describe("Storage Security Rules", () => {
             prestadorId: "provider1",
             status: "aceito",
         });
-        const client = testEnv.authenticatedContext("client1");
-        const attacker = testEnv.authenticatedContext("attacker");
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
+        const attacker = testEnv.authenticatedContext("attacker", verifiedClaims());
         const storagePath = "chats/pedido_audio/audio/message.m4a";
         await assertSucceeds(upload(client, storagePath, "audio/mp4"));
         await assertFails(upload(attacker, storagePath, "audio/mp4"));
@@ -147,8 +274,9 @@ describe("Storage Security Rules", () => {
     });
 
     it("uses dedicated public profile paths and blocks legacy profile uploads", async () => {
-        const client = testEnv.authenticatedContext("client1");
-        const other = testEnv.authenticatedContext("other");
+        await seedPilotParticipant(testEnv, "client1", ["cliente"]);
+        const client = testEnv.authenticatedContext("client1", verifiedClaims());
+        const other = testEnv.authenticatedContext("other", verifiedClaims());
         const publicPath = "profile_public/client1/profile.jpg";
         await assertSucceeds(upload(client, publicPath));
         await assertSucceeds(other.storage().ref(publicPath).getDownloadURL());
@@ -158,11 +286,16 @@ describe("Storage Security Rules", () => {
     });
 
     it("allows KYC upload only in a temporary grant and keeps reads admin-only", async () => {
+        await seedPilotParticipant(testEnv, "provider1", ["prestador"]);
         const provider = testEnv.authenticatedContext("provider1", {
+            ...verifiedClaims(),
             kyc_upload_enabled: true,
         });
-        const providerWithoutClaim = testEnv.authenticatedContext("provider1");
-        const other = testEnv.authenticatedContext("other");
+        const providerWithoutClaim = testEnv.authenticatedContext(
+            "provider1",
+            verifiedClaims()
+        );
+        const other = testEnv.authenticatedContext("other", verifiedClaims());
         const admin = testEnv.authenticatedContext("admin1", {admin: true});
         const storagePath = "kyc_pending/provider1/submission_1/front.jpg";
 
@@ -182,7 +315,9 @@ describe("Storage Security Rules", () => {
     });
 
     it("blocks legacy KYC uploads and expired grants", async () => {
+        await seedPilotParticipant(testEnv, "provider1", ["prestador"]);
         const provider = testEnv.authenticatedContext("provider1", {
+            ...verifiedClaims(),
             kyc_upload_enabled: true,
         });
         await testEnv.withSecurityRulesDisabled(async (context) => {

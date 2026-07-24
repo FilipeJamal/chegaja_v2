@@ -30,6 +30,30 @@ service cloud.firestore {
     function devMode() { return false; }
 
     function isSelf(userId) { return signedIn() && uid() == userId; }
+
+    function activePilotParticipantData() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/pilot_participants/$(uid())).data
+        : null;
+    }
+
+    function isActivePilotParticipantForRole(role) {
+      let participant = activePilotParticipantData();
+      return hasVerifiedPhone()
+        && participant is map
+        && participant.keys().hasAny(['status'])
+        && participant['status'] == 'active'
+        && participant.keys().hasAny(['roles'])
+        && participant['roles'] is list
+        && participant['roles'].hasAny([role]);
+    }
+
+    function accountAllowsPublicActivity(userId) {
+      let account = get(/databases/$(database)/documents/users_private/$(userId));
+      return account.data is map
+        && (!account.data.keys().hasAny(['accountStatus'])
+          || account.data['accountStatus'] == 'active');
+    }
     function clienteIdFromData(data) {
       return data is map
         ? (data.keys().hasAny(['clienteId'])
@@ -46,13 +70,90 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/pedidos/$(pedidoId));
     }
 
+    function providerHasFullPedidoAccess(data) {
+      return signedIn()
+        && data is map
+        && data.keys().hasAll([
+          'prestadorId',
+          'providerAccessGranted',
+          'providerAccessGrantedTo',
+          'providerAccessGrantedAt'
+        ])
+        && data['prestadorId'] == uid()
+        && data['providerAccessGranted'] == true
+        && data['providerAccessGrantedTo'] == uid()
+        && data['providerAccessGrantedAt'] is timestamp
+        && data['providerAccessGrantedAt'] > timestamp.date(1970, 1, 1)
+        && data['providerAccessGrantedAt'] < timestamp.date(2100, 1, 1)
+        && pedidoAllowsProviderHistory(data);
+    }
+
+    function providerHasPedidoListAccess(data) {
+      return signedIn()
+        && data is map
+        && data.keys().hasAll([
+          'prestadorId',
+          'providerAccessGranted',
+          'providerAccessGrantedTo',
+          'providerAccessGrantedAt'
+        ])
+        && data['prestadorId'] == uid()
+        && data['providerAccessGranted'] == true
+        && data['providerAccessGrantedTo'] == uid()
+        && data['providerAccessGrantedAt'] > timestamp.date(1970, 1, 1)
+        && data['providerAccessGrantedAt'] < timestamp.date(2100, 1, 1)
+        // `status` is the authoritative lifecycle field for collection
+        // queries. Requiring cross-field equality with the legacy `estado`
+        // alias makes the query impossible to prove under Firestore Rules,
+        // even when both values are equal. Single-document reads, chat and
+        // Storage retain the stricter status/estado consistency check.
+        && data.keys().hasAny(['status'])
+        && data['status'] in [
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+          'concluido'
+        ];
+    }
+
+    function pedidoAllowsProviderHistory(data) {
+      let hasStatus = data is map && data.keys().hasAny(['status']);
+      let hasEstado = data is map && data.keys().hasAny(['estado']);
+      let status = hasStatus ? data['status'] : null;
+      let estado = hasEstado ? data['estado'] : null;
+      let lifecycle = status is string ? status : estado;
+      return lifecycle in [
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor',
+          'concluido'
+        ]
+        && (!hasStatus || !hasEstado || status == estado);
+    }
+
+    function pedidoAllowsParticipantWrites(data) {
+      let hasStatus = data is map && data.keys().hasAny(['status']);
+      let hasEstado = data is map && data.keys().hasAny(['estado']);
+      let status = hasStatus ? data['status'] : null;
+      let estado = hasEstado ? data['estado'] : null;
+      let lifecycle = status is string ? status : estado;
+      return lifecycle in [
+          'criado',
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito',
+          'em_andamento',
+          'aguarda_confirmacao_valor'
+        ]
+        && (!hasStatus || !hasEstado || status == estado);
+    }
+
     // âœ… Quando estamos fora do match /pedidos, precisamos ler o pedido por ID.
     function isPedidoParticipantById(pedidoId) {
       let p = pedidoSnap(pedidoId).data;
       return signedIn() && p is map
         ? (
-          clienteIdFromData(p) == uid() ||
-          (p.keys().hasAny(['prestadorId']) && p['prestadorId'] == uid())
+          clienteIdFromData(p) == uid() || providerHasFullPedidoAccess(p)
         )
         : false;
     }
@@ -62,15 +163,246 @@ service cloud.firestore {
       return signedIn()
         && data is map
         && (
-          clienteIdFromData(data) == uid() ||
-          (data.keys().hasAny(['prestadorId']) &&
-            data['prestadorId'] == uid())
+          clienteIdFromData(data) == uid() || providerHasFullPedidoAccess(data)
+        );
+    }
+
+    function isActivePilotPedidoParticipantByData(data) {
+      return signedIn()
+        && data is map
+        && (
+          (clienteIdFromData(data) == uid()
+            && isActivePilotParticipantForRole('cliente'))
+          || (
+            providerHasFullPedidoAccess(data)
+            && isActivePilotParticipantForRole('prestador')
+          )
+        );
+    }
+
+    function isActivePilotPedidoListParticipant(data) {
+      return signedIn()
+        && data is map
+        && request.query.limit != null
+        && request.query.limit <= 200
+        && (
+          (clienteIdFromData(data) == uid()
+            && isActivePilotParticipantForRole('cliente'))
+          || (
+            providerHasPedidoListAccess(data)
+            && isActivePilotParticipantForRole('prestador')
+          )
+        );
+    }
+
+    function isActivePilotPedidoParticipantById(pedidoId) {
+      return isActivePilotPedidoParticipantByData(pedidoSnap(pedidoId).data);
+    }
+
+    function isActivePilotPedidoActorForUpdate() {
+      let currentPrestadorId = fieldValueOrNull(resource.data, 'prestadorId');
+      let nextPrestadorId = fieldValueOrNull(request.resource.data, 'prestadorId');
+      return (
+          clienteIdFromData(resource.data) == uid()
+          && isActivePilotParticipantForRole('cliente')
+        ) || (
+          (currentPrestadorId == uid()
+            || (currentPrestadorId == null && nextPrestadorId == uid()))
+          && isActivePilotParticipantForRole('prestador')
+        );
+    }
+
+    function isSanitizedPedidoDispatch(data) {
+      return data is map
+        && data.keys().hasAll([
+          'pedidoId',
+          'status',
+          'prestadorId',
+          'targetProviderId'
+        ])
+        && data.keys().hasOnly([
+          'pedidoId',
+          'servicoId',
+          'servicoNome',
+          'categoria',
+          'modo',
+          'agendadoPara',
+          'tipoPreco',
+          'estado',
+          'status',
+          'prestadorId',
+          'targetProviderId',
+          'valorMinEstimadoPrestador',
+          'valorMaxEstimadoPrestador',
+          'statusProposta',
+          'propostaExpiresAt',
+          'zoneLabel',
+          'enderecoTexto',
+          'latitude',
+          'longitude',
+          'approximateDistanceKm',
+          'categoryApprovalRequired',
+          'categoryRequirementId',
+          'categoryRequirementName',
+          'categoryRiskLevel',
+          'isCustomService',
+          'createdAt',
+          'updatedAt'
+        ])
+        && (!data.keys().hasAny(['valorMinEstimadoPrestador'])
+          || data['valorMinEstimadoPrestador'] == null
+          || data['valorMinEstimadoPrestador'] is number)
+        && (!data.keys().hasAny(['valorMaxEstimadoPrestador'])
+          || data['valorMaxEstimadoPrestador'] == null
+          || data['valorMaxEstimadoPrestador'] is number)
+        && (!data.keys().hasAny(['statusProposta'])
+          || (data['statusProposta'] is string
+            && data['statusProposta'].size() <= 40))
+        && (!data.keys().hasAny(['propostaExpiresAt'])
+          || data['propostaExpiresAt'] == null
+          || data['propostaExpiresAt'] is timestamp)
+        && (!data.keys().hasAny(['enderecoTexto'])
+          || (data.keys().hasAny(['zoneLabel'])
+            && data['enderecoTexto'] is string
+            && data['zoneLabel'] is string
+            && data['enderecoTexto'] == data['zoneLabel']));
+    }
+
+    function canReadPedidoDispatch(data) {
+      let noAssignedProvider = data['prestadorId'] == null;
+      let noTargetProvider = data['targetProviderId'] == null;
+      return isSanitizedPedidoDispatch(data)
+        && noAssignedProvider
+        && (
+          (data['status'] == 'criado' && noTargetProvider)
+          || data['targetProviderId'] == uid()
+        );
+    }
+
+    // LIST queries cannot prove a structural keys().hasOnly() predicate.
+    // Writes stay completely server-only and every GET remains shape-checked;
+    // LIST is therefore constrained to the two relationship-safe views and a
+    // bounded query. The Functions projection builder is the write contract.
+    function canListPedidoDispatch(data) {
+      let noAssignedProvider = data['prestadorId'] == null;
+      let noTargetProvider = data['targetProviderId'] == null;
+      return noAssignedProvider
+        && request.query.limit != null
+        && request.query.limit <= 100
+        && (
+          (data['status'] == 'criado' && noTargetProvider)
+          || data['targetProviderId'] == uid()
         );
     }
 
     function isPrestador() {
       return signedIn()
         && exists(/databases/$(database)/documents/provider_public/$(uid()));
+    }
+
+    function providerMayReceiveDispatch() {
+      let publicData = signedIn()
+        && exists(/databases/$(database)/documents/provider_public/$(uid()))
+        ? get(/databases/$(database)/documents/provider_public/$(uid())).data
+        : {};
+      let userPrivate = signedIn()
+        && exists(/databases/$(database)/documents/users_private/$(uid()))
+        ? get(/databases/$(database)/documents/users_private/$(uid())).data
+        : {};
+      let providerPrivate = signedIn()
+        && exists(/databases/$(database)/documents/provider_private/$(uid()))
+        ? get(/databases/$(database)/documents/provider_private/$(uid())).data
+        : {};
+      let dispatchPrivate = signedIn()
+        && exists(/databases/$(database)/documents/provider_dispatch_private/$(uid()))
+        ? get(/databases/$(database)/documents/provider_dispatch_private/$(uid())).data
+        : {};
+      let accountStatus = userPrivate is map
+        && userPrivate.keys().hasAny(['accountStatus'])
+        ? userPrivate['accountStatus']
+        : '';
+      return publicData is map
+        && publicData.keys().hasAny(['isSearchable'])
+        && publicData['isSearchable'] == true
+        && !(accountStatus in [
+          'deletion_pending',
+          'disabled',
+          'deleted',
+          'suspended',
+          'inactive',
+          'blocked'
+        ])
+        && !(providerPrivate is map
+          && providerPrivate.keys().hasAny(['financialStatus'])
+          && providerPrivate['financialStatus'] == 'suspended_new_jobs')
+        && !(dispatchPrivate is map
+          && dispatchPrivate.keys().hasAny(['acceptingNewJobs'])
+          && dispatchPrivate['acceptingNewJobs'] == false);
+    }
+
+    function providerOpportunityAccountIsEligible() {
+      let publicData = signedIn()
+        && exists(/databases/$(database)/documents/provider_public/$(uid()))
+        ? get(/databases/$(database)/documents/provider_public/$(uid())).data
+        : {};
+      let dispatchPrivate = signedIn()
+        && exists(/databases/$(database)/documents/provider_dispatch_private/$(uid()))
+        ? get(/databases/$(database)/documents/provider_dispatch_private/$(uid())).data
+        : {};
+      return providerMayReceiveDispatch()
+        && dispatchPrivate is map
+        && dispatchPrivate.keys().hasAll([
+          'acceptingRequests',
+          'isOnline',
+          'radiusKm',
+          'lastLocation',
+          'geo',
+          'lastLocationAt'
+        ])
+        && dispatchPrivate['acceptingRequests'] == true
+        && dispatchPrivate['isOnline'] == true
+        && dispatchPrivate['radiusKm'] is number
+        && dispatchPrivate['radiusKm'] >= 1
+        && dispatchPrivate['radiusKm'] <= 50
+        && validProviderDispatchOwnerState(dispatchPrivate, uid());
+    }
+
+    function providerMayGetOpportunity(data) {
+      let publicData = get(
+        /databases/$(database)/documents/provider_public/$(uid())
+      ).data;
+      let services = publicData is map
+        && publicData.keys().hasAny(['servicos'])
+        && publicData['servicos'] is list
+        ? publicData['servicos']
+        : [];
+      return providerOpportunityAccountIsEligible()
+        && data is map
+        && data.keys().hasAll([
+          'providerId',
+          'pedidoId',
+          'serviceId',
+          'status',
+          'expiresAt'
+        ])
+        && data['providerId'] == uid()
+        && data['pedidoId'] is string
+        && data['pedidoId'].size() > 0
+        && data['serviceId'] is string
+        && services.hasAny([data['serviceId']])
+        && data['status'] == 'active'
+        && data['expiresAt'] is timestamp
+        && data['expiresAt'] > request.time;
+    }
+
+    // Collection queries cannot prove structural keys().hasAll() checks. The
+    // backend is the only writer, so LIST is constrained to the owner,
+    // lifecycle, expiry and a strict limit; GET retains the full shape check.
+    function providerMayListOpportunity(data) {
+      return providerOpportunityAccountIsEligible()
+        && data['providerId'] == uid()
+        && data['status'] == 'active'
+        && data['expiresAt'] > request.time;
     }
 
     // -------------------------
@@ -566,6 +898,11 @@ service cloud.firestore {
 
     function validPublicProfileOwnerWrite(profileId) {
       return isSelf(profileId)
+        && (
+          isActivePilotParticipantForRole('cliente')
+          || isActivePilotParticipantForRole('prestador')
+        )
+        && accountAllowsPublicActivity(profileId)
         && request.resource.data.keys().hasOnly([
           'uid',
           'nome',
@@ -586,22 +923,103 @@ service cloud.firestore {
           request.resource.data['uid'] == profileId);
     }
 
-    function validProviderDispatchOwnerWrite(providerId) {
+    function providerDispatchOwnerFields() {
+      return [
+        'providerId',
+        'isOnline',
+        'lastLocation',
+        'geo',
+        'radiusKm',
+        'workingHours',
+        'blockedDates',
+        'lastSeenAt',
+        'lastLocationAt',
+        'createdAt',
+        'updatedAt',
+      ];
+    }
+
+    function validProviderDispatchLocation(data) {
+      let hasLocation = data.keys().hasAny(['lastLocation']);
+      let hasGeo = data.keys().hasAny(['geo']);
+      let location = hasLocation ? data['lastLocation'] : null;
+      let geo = hasGeo ? data['geo'] : null;
+      return (!hasLocation && !hasGeo)
+        || (
+          hasLocation
+          && hasGeo
+          && location is map
+          && location.keys().hasOnly(['lat', 'lng'])
+          && location.keys().hasAll(['lat', 'lng'])
+          && location['lat'] is number
+          && location['lat'] >= -90
+          && location['lat'] <= 90
+          && location['lng'] is number
+          && location['lng'] >= -180
+          && location['lng'] <= 180
+          && geo is map
+          && geo.keys().hasOnly(['geohash', 'geopoint'])
+          && geo.keys().hasAll(['geohash', 'geopoint'])
+          && geo['geohash'] is string
+          && geo['geohash'].size() >= 5
+          && geo['geohash'].size() <= 12
+          && geo['geopoint'] is latlng
+          && geo['geopoint'].latitude() == location['lat']
+          && geo['geopoint'].longitude() == location['lng']
+        );
+    }
+
+    function validProviderDispatchOwnerState(data, providerId) {
+      let online = data.keys().hasAny(['isOnline']) && data['isOnline'] == true;
+      return (!data.keys().hasAny(['providerId']) || data['providerId'] == providerId)
+        && (!data.keys().hasAny(['isOnline']) || data['isOnline'] is bool)
+        && (!data.keys().hasAny(['radiusKm'])
+          || (data['radiusKm'] is number
+            && data['radiusKm'] >= 1
+            && data['radiusKm'] <= 50))
+        && (!data.keys().hasAny(['lastSeenAt']) || data['lastSeenAt'] is timestamp)
+        && (!data.keys().hasAny(['lastLocationAt']) || data['lastLocationAt'] is timestamp)
+        && (!data.keys().hasAny(['createdAt']) || data['createdAt'] is timestamp)
+        && (!data.keys().hasAny(['updatedAt']) || data['updatedAt'] is timestamp)
+        && validProviderDispatchLocation(data)
+        && (!online || (
+          data.keys().hasAll(['lastLocation', 'geo', 'lastLocationAt'])
+          && data['lastLocationAt'] >= request.time - duration.value(30, 'm')
+        ));
+    }
+
+    function validProviderDispatchData(data, providerId) {
+      return data.keys().hasOnly(providerDispatchOwnerFields())
+        && validProviderDispatchOwnerState(data, providerId);
+    }
+
+    function validProviderDispatchOwnerCreate(providerId) {
       return isSelf(providerId)
-        && request.resource.data.keys().hasOnly([
-          'providerId',
-          'isOnline',
-          'lastLocation',
-          'geo',
-          'radiusKm',
-          'workingHours',
-          'blockedDates',
-          'lastSeenAt',
-          'createdAt',
-          'updatedAt',
-        ])
+        && validProviderDispatchData(request.resource.data, providerId)
+        && (!request.resource.data.keys().hasAny(['createdAt'])
+          || request.resource.data['createdAt'] == request.time)
+        && (!request.resource.data.keys().hasAny(['updatedAt'])
+          || request.resource.data['updatedAt'] == request.time)
+        && (!request.resource.data.keys().hasAny(['lastLocationAt'])
+          || request.resource.data['lastLocationAt'] == request.time);
+    }
+
+    function validProviderDispatchOwnerUpdate(providerId) {
+      return isSelf(providerId)
+        && validProviderDispatchOwnerState(request.resource.data, providerId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(providerDispatchOwnerFields())
         && (!request.resource.data.keys().hasAny(['providerId']) ||
-          request.resource.data['providerId'] == providerId);
+          request.resource.data['providerId'] == providerId)
+        && (!resource.data.keys().hasAny(['providerId']) ||
+          (request.resource.data.keys().hasAny(['providerId']) &&
+            request.resource.data['providerId'] == resource.data['providerId']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['updatedAt'])
+          || request.resource.data['updatedAt'] == request.time)
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['lastLocation', 'geo', 'lastLocationAt'])
+          || (request.resource.data['lastLocationAt'] == request.time
+            && request.resource.data['updatedAt'] == request.time));
     }
 
     function userPrivateOwnerFields() {
@@ -788,6 +1206,13 @@ service cloud.firestore {
         fieldValueOrNull(resource.data, field);
     }
 
+    function validPedidoUpdatedAt() {
+      return request.resource.data.keys().hasAny(['updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['updatedAt'])
+        && request.resource.data['updatedAt'] is timestamp
+        && request.resource.data['updatedAt'] == request.time;
+    }
+
     function finalPricingFieldsUnchanged() {
       return fieldUnchanged('precoFinal')
         && fieldUnchanged('preco')
@@ -809,43 +1234,12 @@ service cloud.firestore {
       return !(data is map) || !data.keys().hasAny([field]) || data[field] == null;
     }
 
-    function numberWithin(actual, expected) {
-      return actual is number
-        && expected is number
-        && actual >= expected - 0.01
-        && actual <= expected + 0.01;
-    }
-
     function clearsFinalPricingFields() {
       return fieldNullOrMissing(request.resource.data, 'precoFinal')
         && fieldNullOrMissing(request.resource.data, 'preco')
         && fieldNullOrMissing(request.resource.data, 'commissionPlatform')
         && fieldNullOrMissing(request.resource.data, 'earningsProvider')
         && fieldNullOrMissing(request.resource.data, 'earningsTotal');
-    }
-
-    function validFinalPricingConfirmation() {
-      let finalPrice = fieldValueOrNull(request.resource.data, 'precoFinal');
-      let proposedPrice = fieldValueOrNull(resource.data, 'precoPropostoPrestador');
-      let commission = fieldValueOrNull(request.resource.data, 'commissionPlatform');
-      let providerEarnings = fieldValueOrNull(request.resource.data, 'earningsProvider');
-      let total = fieldValueOrNull(request.resource.data, 'earningsTotal');
-      return isPedidoClienteActor()
-        && pedidoEstado(resource.data) == 'aguarda_confirmacao_valor'
-        && pedidoEstado(request.resource.data) == 'concluido'
-        && request.resource.data['statusConfirmacaoValor'] == 'confirmado_cliente'
-        && request.resource.data.keys().hasAll([
-          'precoFinal',
-          'preco',
-          'commissionPlatform',
-          'earningsProvider',
-          'earningsTotal'
-        ])
-        && numberWithin(finalPrice, proposedPrice)
-        && numberWithin(fieldValueOrNull(request.resource.data, 'preco'), finalPrice)
-        && numberWithin(total, finalPrice)
-        && numberWithin(commission, finalPrice * 0.15)
-        && numberWithin(providerEarnings, finalPrice * 0.85);
     }
 
     function validFinalPricingUpdate() {
@@ -900,12 +1294,10 @@ service cloud.firestore {
     }
 
     function validPedidoEconomicUpdate() {
-      return (
-          pedidoEstado(resource.data) == 'aguarda_confirmacao_valor' &&
-          pedidoEstado(request.resource.data) == 'concluido'
-        )
-        ? validFinalPricingConfirmation()
-        : (validFinalPricingUpdate() && validFinalProposalUpdate());
+      // Escritas cliente/Prestador nunca calculam nem confirmam economia. A
+      // callable autoritativa usa Admin SDK e persiste os valores finais.
+      return finalPricingFieldsUnchanged()
+        && fieldUnchanged('precoPropostoPrestador');
     }
 
     function immutablePedidoIdentity() {
@@ -949,21 +1341,46 @@ service cloud.firestore {
       return false;
     }
 
+    function hasOnlyPedidoClientManualInviteFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'prestadorId',
+        'status',
+        'estado',
+        'updatedAt',
+        'valorMinEstimadoPrestador',
+        'valorMaxEstimadoPrestador',
+        'mensagemPropostaPrestador',
+        'statusProposta',
+        'propostaExpiresAt',
+        'statusConfirmacaoValor'
+      ]);
+    }
+
+    function hasClearedPedidoQuote(statusProposta) {
+      return fieldNullOrMissing(request.resource.data, 'valorMinEstimadoPrestador')
+        && fieldNullOrMissing(request.resource.data, 'valorMaxEstimadoPrestador')
+        && fieldNullOrMissing(request.resource.data, 'mensagemPropostaPrestador')
+        && fieldNullOrMissing(request.resource.data, 'propostaExpiresAt')
+        && fieldValueOrNull(request.resource.data, 'statusProposta') == statusProposta
+        && fieldValueOrNull(request.resource.data, 'statusConfirmacaoValor') == 'nenhum';
+    }
+
     function validPedidoClientManualInvite() {
       return isPedidoClienteActor()
         && pedidoEstado(resource.data) == 'criado'
         && pedidoEstado(request.resource.data) == 'aguarda_resposta_prestador'
         && fieldValueOrNull(resource.data, 'prestadorId') == null
         && fieldValueOrNull(request.resource.data, 'prestadorId') is string
-        && immutablePedidoIdentity();
+        && hasOnlyPedidoClientManualInviteFields()
+        && hasClearedPedidoQuote('nenhuma')
+        && validPedidoUpdatedAt();
     }
 
     function hasOnlyPedidoProviderManualAcceptFields() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         'status',
         'estado',
-        'updatedAt',
-        'historico'
+        'updatedAt'
       ]);
     }
 
@@ -974,6 +1391,8 @@ service cloud.firestore {
     function validPedidoProviderQuoteProposal() {
       let minValue = fieldValueOrNull(request.resource.data, 'valorMinEstimadoPrestador');
       let maxValue = fieldValueOrNull(request.resource.data, 'valorMaxEstimadoPrestador');
+      let message = fieldValueOrNull(request.resource.data, 'mensagemPropostaPrestador');
+      let expiresAt = fieldValueOrNull(request.resource.data, 'propostaExpiresAt');
       return isPedidoPrestadorActorForUpdate()
         && prestadorMatchesPedido(resource.data)
         && hasValidPedidoEstado(request.resource.data)
@@ -987,24 +1406,29 @@ service cloud.firestore {
         && maxValue is number
         && minValue > 0
         && maxValue >= minValue
+        && (message == null || (message is string && message.size() <= 500))
+        && expiresAt is timestamp
+        && expiresAt > request.time
         && request.resource.data['statusProposta'] == 'pendente_cliente'
         && request.resource.data['statusConfirmacaoValor'] == 'nenhum'
-        && fieldNullOrMissing(request.resource.data, 'precoPropostoPrestador')
-        && clearsFinalPricingFields()
-        && immutablePedidoIdentity();
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'prestadorId',
+          'valorMinEstimadoPrestador',
+          'valorMaxEstimadoPrestador',
+          'mensagemPropostaPrestador',
+          'statusProposta',
+          'propostaExpiresAt',
+          'statusConfirmacaoValor',
+          'status',
+          'estado',
+          'updatedAt'
+        ])
+        && validPedidoUpdatedAt();
     }
 
     function validPedidoProviderFinalProposal() {
-      let proposedPrice = fieldValueOrNull(request.resource.data, 'precoPropostoPrestador');
-      return isPedidoPrestadorActorForUpdate()
-        && hasValidPedidoEstado(request.resource.data)
-        && pedidoEstado(resource.data) == 'em_andamento'
-        && pedidoEstado(request.resource.data) == 'aguarda_confirmacao_valor'
-        && proposedPrice is number
-        && proposedPrice > 0
-        && request.resource.data['statusConfirmacaoValor'] == 'pendente_cliente'
-        && finalPricingFieldsUnchanged()
-        && immutablePedidoIdentity();
+      // O valor final e o respetivo histórico são gravados pela callable.
+      return false;
     }
 
     function validPedidoProviderStartService() {
@@ -1012,9 +1436,13 @@ service cloud.firestore {
         && hasValidPedidoEstado(request.resource.data)
         && pedidoEstado(resource.data) == 'aceito'
         && pedidoEstado(request.resource.data) == 'em_andamento'
-        && finalPricingFieldsUnchanged()
-        && finalProposalFieldsUnchanged()
-        && immutablePedidoIdentity();
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'estado',
+          'updatedAt'
+        ])
+        && validPedidoUpdatedAt()
+        && fieldUnchanged('statusConfirmacaoValor');
     }
 
     function validPedidoClientAcceptQuote() {
@@ -1025,9 +1453,14 @@ service cloud.firestore {
         && fieldValueOrNull(request.resource.data, 'prestadorId') ==
           fieldValueOrNull(resource.data, 'prestadorId')
         && request.resource.data['statusProposta'] == 'aceita_cliente'
-        && finalPricingFieldsUnchanged()
-        && finalProposalFieldsUnchanged()
-        && immutablePedidoIdentity();
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'estado',
+          'updatedAt',
+          'statusProposta'
+        ])
+        && validPedidoUpdatedAt()
+        && fieldUnchanged('statusConfirmacaoValor');
     }
 
     function validPedidoClientFinalConfirmation() {
@@ -1041,9 +1474,17 @@ service cloud.firestore {
         'updatedAt',
         'canceladoPor',
         'motivoCancelamento',
-        'tipoReembolso',
-        'historico'
+        'motivoCancelamentoDetalhe'
       ]);
+    }
+
+    function validPedidoCancellationReason() {
+      let reason = fieldValueOrNull(request.resource.data, 'motivoCancelamento');
+      let detail = fieldValueOrNull(request.resource.data, 'motivoCancelamentoDetalhe');
+      return reason is string
+        && reason.size() > 0
+        && reason.size() <= 160
+        && (detail == null || (detail is string && detail.size() <= 500));
     }
 
     function validPedidoClientCancellation() {
@@ -1054,15 +1495,9 @@ service cloud.firestore {
         && isAllowedClientePedidoTransition(currentEstado, nextEstado)
         && hasOnlyPedidoClientCancelFields()
         && fieldValueOrNull(request.resource.data, 'canceladoPor') == 'cliente'
-        && (!request.resource.data.keys().hasAny(['motivoCancelamento']) ||
-          request.resource.data['motivoCancelamento'] is string)
-        && (!request.resource.data.keys().hasAny(['tipoReembolso']) ||
-          request.resource.data['tipoReembolso'] in [
-            'total',
-            'parcial',
-            'nenhum',
-            'analise'
-          ]);
+        && validPedidoCancellationReason()
+        && validPedidoUpdatedAt()
+        && fieldUnchanged('prestadorId');
     }
 
     function hasPedidoNoShowFieldChange() {
@@ -1078,8 +1513,7 @@ service cloud.firestore {
         'noShowReportedBy',
         'noShowReason',
         'noShowAt',
-        'updatedAt',
-        'historico'
+        'updatedAt'
       ]);
     }
 
@@ -1109,22 +1543,116 @@ service cloud.firestore {
         ]
         && (
           fieldNullOrMissing(request.resource.data, 'noShowReason') ||
-          fieldValueOrNull(request.resource.data, 'noShowReason') is string
+          (fieldValueOrNull(request.resource.data, 'noShowReason') is string
+            && fieldValueOrNull(request.resource.data, 'noShowReason').size() <= 500)
         )
-        && finalPricingFieldsUnchanged()
-        && finalProposalFieldsUnchanged()
-        && authoritativePedidoFieldsUnchanged()
-        && immutablePedidoIdentity()
+        && fieldValueOrNull(request.resource.data, 'noShowAt') is timestamp
+        && fieldValueOrNull(request.resource.data, 'noShowAt') == request.time
+        && validPedidoUpdatedAt()
+        && fieldUnchanged('statusConfirmacaoValor')
+        && fieldUnchanged('prestadorId');
+    }
+
+    function validPedidoClientRejectQuote() {
+      return isPedidoClienteActor()
+        && pedidoEstado(resource.data) == 'aguarda_resposta_cliente'
+        && pedidoEstado(request.resource.data) == 'criado'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'prestadorId',
+          'valorMinEstimadoPrestador',
+          'valorMaxEstimadoPrestador',
+          'mensagemPropostaPrestador',
+          'statusProposta',
+          'propostaExpiresAt',
+          'statusConfirmacaoValor',
+          'status',
+          'estado',
+          'updatedAt'
+        ])
+        && fieldValueOrNull(request.resource.data, 'prestadorId') == null
+        && hasClearedPedidoQuote('rejeitada_cliente')
+        && validPedidoUpdatedAt();
+    }
+
+    function validPedidoClientRejectFinalValue() {
+      return isPedidoClienteActor()
+        && pedidoEstado(resource.data) == 'aguarda_confirmacao_valor'
+        && pedidoEstado(request.resource.data) == 'em_andamento'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'estado',
+          'updatedAt',
+          'statusConfirmacaoValor'
+        ])
+        && fieldValueOrNull(request.resource.data, 'statusConfirmacaoValor') ==
+          'rejeitado_cliente'
+        && validPedidoUpdatedAt()
+        && fieldUnchanged('prestadorId');
+    }
+
+    function validPedidoProviderWithdrawal() {
+      let currentEstado = pedidoEstado(resource.data);
+      return isPedidoPrestadorActorForUpdate()
+        && currentEstado in [
+          'aguarda_resposta_prestador',
+          'aguarda_resposta_cliente',
+          'aceito'
+        ]
+        && pedidoEstado(request.resource.data) == 'criado'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'prestadorId',
+          'valorMinEstimadoPrestador',
+          'valorMaxEstimadoPrestador',
+          'mensagemPropostaPrestador',
+          'statusProposta',
+          'propostaExpiresAt',
+          'statusConfirmacaoValor',
+          'status',
+          'estado',
+          'updatedAt',
+          'canceladoPor',
+          'motivoCancelamento',
+          'motivoCancelamentoDetalhe'
+        ])
+        && fieldValueOrNull(request.resource.data, 'prestadorId') == null
+        && hasClearedPedidoQuote('nenhuma')
+        && fieldNullOrMissing(request.resource.data, 'canceladoPor')
+        && fieldNullOrMissing(request.resource.data, 'motivoCancelamento')
+        && fieldNullOrMissing(request.resource.data, 'motivoCancelamentoDetalhe')
+        && validPedidoUpdatedAt();
+    }
+
+    function validPedidoProviderCancellation() {
+      let currentEstado = pedidoEstado(resource.data);
+      return isPedidoPrestadorActorForUpdate()
+        && currentEstado in ['em_andamento', 'aguarda_confirmacao_valor']
+        && pedidoEstado(request.resource.data) == 'cancelado'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'estado',
+          'updatedAt',
+          'canceladoPor',
+          'motivoCancelamento',
+          'motivoCancelamentoDetalhe'
+        ])
+        && fieldValueOrNull(request.resource.data, 'canceladoPor') == 'prestador'
+        && validPedidoCancellationReason()
+        && validPedidoUpdatedAt()
         && fieldUnchanged('prestadorId');
     }
 
     function validPedidoGenericUpdate() {
-      return (isPedidoParticipantByData(resource.data)
-        || (isPrestador() && pedidoAberto(resource.data) && prestadorMatchesPedido(resource.data)))
-        && validPedidoStateTransition()
-        && validPrestadorIdTransition()
-        && validPedidoEconomicUpdate()
-        && immutablePedidoIdentity();
+      let currentEstado = pedidoEstado(resource.data);
+      let nextEstado = pedidoEstado(request.resource.data);
+      return currentEstado == 'aguarda_resposta_cliente' && nextEstado == 'criado'
+        ? validPedidoClientRejectQuote()
+        : (currentEstado == 'aguarda_confirmacao_valor' && nextEstado == 'em_andamento'
+          ? validPedidoClientRejectFinalValue()
+          : (nextEstado == 'criado'
+            ? validPedidoProviderWithdrawal()
+            : (nextEstado == 'cancelado'
+              ? validPedidoProviderCancellation()
+              : false)));
     }
 
     function validPedidoUpdate() {
@@ -1132,9 +1660,10 @@ service cloud.firestore {
       let nextEstado = pedidoEstado(request.resource.data);
       return !hasValidPedidoEstado(request.resource.data)
         ? false
-        : (!authoritativePedidoFieldsUnchanged() || !immutablePedidoRequestDetails()
-          ? false
-          : (
+        : (
+            // Cada ramo permitido abaixo usa affectedKeys().hasOnly(...).
+            // Logo pagamento, economia, histórico, conclusão, identidade e
+            // qualquer campo futuro ficam server-only por defeito.
             hasPedidoNoShowFieldChange()
               ? (
                 hasOnlyPedidoNoShowFields()
@@ -1178,7 +1707,6 @@ service cloud.firestore {
                       )
                   )
               )
-          )
         );
     }
 
@@ -1242,10 +1770,7 @@ service cloud.firestore {
 
     function isPedidoProviderById(pedidoId) {
       let pedido = pedidoSnap(pedidoId).data;
-      return signedIn()
-        && pedido is map
-        && pedido.keys().hasAny(['prestadorId'])
-        && pedido['prestadorId'] == uid();
+      return providerHasFullPedidoAccess(pedido);
     }
 
     function validChatMessageCreate(chatId) {
@@ -1546,14 +2071,11 @@ service cloud.firestore {
 
     match /provider_dispatch_private/{prestadorId} {
       allow read: if isSelf(prestadorId)
-        || isAdmin()
-        || (signedIn()
-          && resource.data is map
-          && resource.data.keys().hasAny(['activeClientIds'])
-          && resource.data['activeClientIds'] is list
-          && resource.data['activeClientIds'].hasAny([uid()]));
-      allow create, update: if isAdmin()
-        || validProviderDispatchOwnerWrite(prestadorId);
+        || isAdmin();
+      allow create: if isAdmin()
+        || validProviderDispatchOwnerCreate(prestadorId);
+      allow update: if isAdmin()
+        || validProviderDispatchOwnerUpdate(prestadorId);
       allow delete: if isAdmin() || devMode();
     }
 
@@ -1653,25 +2175,35 @@ service cloud.firestore {
       // Criação passa exclusivamente pela Function autoritativa.
       allow create: if false;
 
-      // Ler (get + list):
-      // - cliente e prestador (quando atribuÃ­do)
-      // - prestadores podem ler pedidos abertos (Pedidos perto de ti)
-      allow read: if devMode()
+      // Cliente ativo lê o próprio pedido. Prestador ativo só recebe o
+      // documento integral depois do grant autoritativo criado na aceitação.
+      // Descoberta e convites usam exclusivamente pedido_dispatch sanitizado.
+      allow get: if devMode()
         ? true
-        : (isPedidoParticipantByData(resource.data) || isAdmin());
+        : (isActivePilotPedidoParticipantByData(resource.data) || isAdmin());
+      allow list: if devMode()
+        ? true
+        : (isActivePilotPedidoListParticipant(resource.data) || isAdmin());
 
-      // Atualizar:
-      // - cliente/prestador participantes
-      // - prestador pode aceitar/agir num pedido aberto (SÓ se fizer match com o serviço)
-      allow update: if isPedidoParticipantByData(resource.data)
-        && validPedidoUpdate()
-        || isAdmin();
+      // Toda transição de Cliente/Prestador passa por callable autoritativa.
+      // O Admin SDK das Functions ignora Rules; clientes com claim de admin
+      // mantêm acesso operacional explícito para intervenção auditada.
+      allow update: if isAdmin();
 
       allow delete: if isAdmin() || devMode();
     }
 
     match /pedido_dispatch/{pedidoId} {
-      allow read: if (hasVerifiedPhone() && isPrestador()) || isAdmin();
+      allow get: if (
+          providerMayReceiveDispatch()
+          && isActivePilotParticipantForRole('prestador')
+          && canReadPedidoDispatch(resource.data)
+        ) || isAdmin();
+      allow list: if (
+          providerMayReceiveDispatch()
+          && isActivePilotParticipantForRole('prestador')
+          && canListPedidoDispatch(resource.data)
+        ) || isAdmin();
       allow create, update, delete: if false;
     }
 
@@ -1681,35 +2213,43 @@ service cloud.firestore {
     match /chats/{chatId} {
 
       // âœ… GET (doc especÃ­fico): participante via pedido OU via chat
-      allow get: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
+      allow get: if isActivePilotPedidoParticipantById(chatId);
 
       // âœ… LIST (queries): usa sÃ³ os campos do prÃ³prio chat
-      allow list: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
+      allow list: if isActivePilotPedidoParticipantById(chatId);
 
       // Criar meta do chat
-      allow create: if validChatMetaCreate(chatId);
+      allow create: if isActivePilotPedidoParticipantById(chatId)
+        && pedidoAllowsParticipantWrites(pedidoSnap(chatId).data)
+        && validChatMetaCreate(chatId);
 
-      // Update: participante via pedido ou via chat
-      allow update: if validChatMetaUpdate(chatId);
+      // Update: participante ativo comprovado pelo pedido
+      allow update: if isActivePilotPedidoParticipantById(chatId)
+        && pedidoAllowsParticipantWrites(pedidoSnap(chatId).data)
+        && validChatMetaUpdate(chatId);
 
       allow delete: if isAdmin() || devMode();
 
       match /messages/{messageId} {
-        allow get, list: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
+        allow get, list: if isActivePilotPedidoParticipantById(chatId);
 
         // Criar mensagem: participante e senderId tem de ser o prÃ³prio
-        allow create: if validChatMessageCreate(chatId);
+        allow create: if isActivePilotPedidoParticipantById(chatId)
+          && pedidoAllowsParticipantWrites(pedidoSnap(chatId).data)
+          && validChatMessageCreate(chatId);
 
         // delivered/seen/etc.
-        allow update: if validChatMessageUpdate(chatId);
+        allow update: if isActivePilotPedidoParticipantById(chatId)
+          && pedidoAllowsParticipantWrites(pedidoSnap(chatId).data)
+          && validChatMessageUpdate(chatId);
 
         allow delete: if isAdmin() || devMode();
       }
 
       match /typing/{userId} {
-        allow read: if hasVerifiedPhone() && isPedidoParticipantById(chatId);
-        allow create, update, delete: if hasVerifiedPhone()
-          && isPedidoParticipantById(chatId)
+        allow read: if isActivePilotPedidoParticipantById(chatId);
+        allow create, update, delete: if isActivePilotPedidoParticipantById(chatId)
+          && pedidoAllowsParticipantWrites(pedidoSnap(chatId).data)
           && isSelf(userId);
       }
     }
@@ -1761,8 +2301,14 @@ service cloud.firestore {
     }
 
     match /provider_opportunities/{opportunityId} {
-      allow read: if isAdmin()
-        || (signedIn() && resource.data['providerId'] == uid());
+      allow get: if isAdmin()
+        || (isActivePilotParticipantForRole('prestador')
+          && providerMayGetOpportunity(resource.data));
+      allow list: if isAdmin()
+        || (isActivePilotParticipantForRole('prestador')
+          && request.query.limit != null
+          && request.query.limit <= 50
+          && providerMayListOpportunity(resource.data));
       allow create, update, delete: if false;
     }
 

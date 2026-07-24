@@ -2,24 +2,28 @@
 
 ## Estado desta execucao
 
-- Data: 2026-07-20
+- Data: 2026-07-21
 - Android SDK/licencas: pronto; todas as licencas aceites.
 - Assinatura release: `android/key.properties` e ficheiro de keystore presentes.
 - Chave Google Maps Android: configurada em `android/local.properties`.
-- Dispositivos detetados por `flutter devices`: Windows, Chrome e Edge.
+- Antes de iniciar o AVD temporário, `flutter devices` detetou apenas Windows,
+  Chrome e Edge.
 - Dispositivo Android fisico: **nao detetado**.
 - AVDs disponiveis: API 34, 35 e 36.
-- Validacao emulada: **EXECUTADA** num AVD Android 14/API 34 x86_64.
+- Validacao emulada: **EXECUTADA** num AVD temporario Android 15/API 35
+  x86_64, isolado em `build/u0-avd`.
 - Validacao fisica: **NAO EXECUTADA**. Nao substituir por alegacao baseada em
   emulador.
 
 ## Evidencia automatizada desta execucao
 
 - APK: `build/app/outputs/flutter-apk/app-release.apk` (release, `--no-shrink`).
-- Tamanho do APK: `123074424` bytes (release final desta execução).
-- SHA-256 do APK: `F9D29A1D38DCA520E9CB68EB83DD72666C177A0442C6012F535BB36D5589AD13`.
-- Fingerprint das 351 entradas de release:
-  `3e22cfa0c4a5366e6866ba5c011e6da9e4b2e86d708f0b2edd500e2fe2d7cae3`.
+- Tamanho do APK: `123090808` bytes (release final desta execucao).
+- SHA-256 do APK: `E2BE3D862CE6AF3F6289B4DC2A84195BD54F0BA1BB0E83C08D5D7E0557503FA6`.
+- Fingerprint das 470 entradas de release:
+  `d1e757c6d191a6a2b7a8d8afb99b38768985fde672668460ec9a85c510fd4356`.
+- Esquema de proveniencia: `android-release-inputs-v2`; uma entrada virtual
+  representa a presenca da chave Android Maps sem serializar o segredo.
 - Assinatura: APK Signature Scheme v2, um signatario RSA 2048, certificado
   `CN=ChegaJa, OU=App, O=ChegaJa, L=Maputo, ST=Maputo, C=MZ`.
 - SHA-256 do certificado:
@@ -28,20 +32,28 @@
   notificacoes, camara e permissoes operacionais de rede/FCM.
 - Permissoes ausentes e comprovadas: microfone, configuracao de audio,
   Bluetooth, `AD_ID` e Advertising Services.
-- Instalacao ADB: `Success`.
+- Instalacao ADB: o cliente atingiu o timeout de 300 segundos durante o
+  retorno, mas o Package Manager confirmou `com.chegaja.app`, `versionCode=1`,
+  `versionName=1.0.0` e o `base.apk` instalado antes do arranque.
 - Runtime: `com.chegaja.app/.MainActivity` ficou em primeiro plano e
   manteve o processo vivo depois de uma interação de scroll;
   seletor de função em português renderizado; nenhum `FATAL EXCEPTION`,
-  `E/flutter`, `FirebaseException`, `MissingPluginException`,
-  `GeneratedPluginsRegister` ou `ClassNotFoundException` no arranque.
+  `E/flutter` exato, `FirebaseException`, `MissingPluginException`,
+  `GeneratedPluginsRegister`, ANR ou crash do pacote no arranque. Quatro
+  probes `DEBUG` de frameworks opcionais continham `ClassNotFoundException` e
+  duas mensagens de ciclo de vida usaram a tag `E/FlutterGeolocator`; ambas
+  as classes estão registadas separadamente como diagnósticos não fatais.
 - Prompt no arranque: nenhum. A aplicacao abriu diretamente no seletor de
   funcao.
-- Captura: `build/p1_8_launch.png`; hierarquia de acessibilidade:
-  `build/p1_8_ui.xml`.
+- Evidencia versionada: captura, hierarquia de acessibilidade, logcat redigido
+  ligado por SHA-256 e proveniencia em
+  `docs/android/evidence/u0-2026-07-21/`. A pasta `build/` e apenas a origem
+  local e nao constitui a unica prova.
 
-O AVD API 35 listado nesta maquina aponta para arquitetura ARM e nao pode ser
-executado pelo QEMU2 neste host x86. Isso nao afeta a prova API 34, mas reforca
-que a matriz num Android 13+ fisico continua obrigatoria.
+A prova final foi executada num AVD temporario Android 15/API 35 x86_64 criado
+a partir da imagem instalada. Os AVDs pessoais API 35/36 continuavam com
+referencias incompletas e nao foram usados. A prova emulada nao substitui a
+matriz obrigatoria num Android 13+ fisico.
 
 O APK release deve ser gerado com o wrapper reproduzivel:
 
@@ -86,7 +98,7 @@ notificacao; o prompt e disparado por acao explicita.
 ## Matriz obrigatoria no Android fisico
 
 Executar num Android 13 ou superior, preferencialmente um aparelho de gama baixa
-com rede movel mocambicana:
+com rede móvel do mercado-alvo do piloto ou condições equivalentes controladas:
 
 | Caso | Passos | Resultado esperado |
 |---|---|---|

@@ -20,6 +20,9 @@ class Pedido {
   // IDs principais
   final String clienteId;
   final String? prestadorId;
+  final bool providerAccessGranted;
+  final String? providerAccessGrantedTo;
+  final DateTime? providerAccessGrantedAt;
 
   // Serviço / categoria
   final String servicoId;
@@ -92,15 +95,15 @@ class Pedido {
   /// "rejeitado_cliente"  → cliente rejeitou o valor final
   final String statusConfirmacaoValor;
 
-  // ------------- C3 – Métricas de comissão (virtuais) -------------
+  // ------------- Economia autoritativa do pedido -------------
 
-  /// Quanto a PLATAFORMA teria ganho neste pedido (ex.: 15% do valor final).
+  /// Comissão persistida pelo backend depois da confirmação/conclusão.
   final double? commissionPlatform;
 
-  /// Quanto o PRESTADOR teria ficado, depois de descontar a comissão simulada.
+  /// Valor líquido persistido pelo backend para o Prestador.
   final double? earningsProvider;
 
-  /// Total cobrado ao cliente (espelho de precoFinal, para relatórios).
+  /// Total confirmado persistido pelo backend para relatórios/reconciliação.
   final double? earningsTotal;
 
   // ------------- Localização -------------
@@ -155,6 +158,9 @@ class Pedido {
     required this.id,
     required this.clienteId,
     required this.prestadorId,
+    this.providerAccessGranted = false,
+    this.providerAccessGrantedTo,
+    this.providerAccessGrantedAt,
     required this.servicoId,
     this.servicoNome,
     this.categoryApprovalRequired = false,
@@ -205,6 +211,9 @@ class Pedido {
       id: '',
       clienteId: '',
       prestadorId: null,
+      providerAccessGranted: false,
+      providerAccessGrantedTo: null,
+      providerAccessGrantedAt: null,
       servicoId: '',
       servicoNome: null,
       categoryApprovalRequired: false,
@@ -290,7 +299,10 @@ class Pedido {
     return Pedido(
       id: doc.id,
       clienteId: _stringOrEmpty(rawClienteId),
-      prestadorId: data['prestadorId'] as String?,
+      prestadorId: (data['prestadorId'] ?? data['targetProviderId']) as String?,
+      providerAccessGranted: data['providerAccessGranted'] == true,
+      providerAccessGrantedTo: data['providerAccessGrantedTo'] as String?,
+      providerAccessGrantedAt: _tsToDate(data['providerAccessGrantedAt']),
       servicoId: data['servicoId'] as String? ?? '',
       // nome do serviço:
       // 1) servicoNome (novo)
@@ -372,7 +384,10 @@ class Pedido {
     return Pedido(
       id: id,
       clienteId: _stringOrEmpty(rawClienteId),
-      prestadorId: data['prestadorId'] as String?,
+      prestadorId: (data['prestadorId'] ?? data['targetProviderId']) as String?,
+      providerAccessGranted: data['providerAccessGranted'] == true,
+      providerAccessGrantedTo: data['providerAccessGrantedTo'] as String?,
+      providerAccessGrantedAt: _tsToDate(data['providerAccessGrantedAt']),
       servicoId: data['servicoId'] as String? ?? '',
       servicoNome: (data['servicoNome'] ??
           data['categoria'] ??
@@ -446,6 +461,11 @@ class Pedido {
     return {
       'clienteId': clienteId,
       'prestadorId': prestadorId,
+      'providerAccessGranted': providerAccessGranted,
+      'providerAccessGrantedTo': providerAccessGrantedTo,
+      'providerAccessGrantedAt': providerAccessGrantedAt != null
+          ? Timestamp.fromDate(providerAccessGrantedAt!)
+          : null,
       'servicoId': servicoId,
       'servicoNome': servicoNome,
       'categoria': servicoNome, // compatibilidade antiga
@@ -537,6 +557,10 @@ class Pedido {
     String? id,
     String? clienteId,
     String? prestadorId,
+    bool clearProviderAccess = false,
+    bool? providerAccessGranted,
+    String? providerAccessGrantedTo,
+    DateTime? providerAccessGrantedAt,
     String? servicoId,
     String? servicoNome,
     bool? categoryApprovalRequired,
@@ -583,6 +607,15 @@ class Pedido {
       id: id ?? this.id,
       clienteId: clienteId ?? this.clienteId,
       prestadorId: prestadorId ?? this.prestadorId,
+      providerAccessGranted: clearProviderAccess
+          ? false
+          : (providerAccessGranted ?? this.providerAccessGranted),
+      providerAccessGrantedTo: clearProviderAccess
+          ? null
+          : (providerAccessGrantedTo ?? this.providerAccessGrantedTo),
+      providerAccessGrantedAt: clearProviderAccess
+          ? null
+          : (providerAccessGrantedAt ?? this.providerAccessGrantedAt),
       servicoId: servicoId ?? this.servicoId,
       servicoNome: servicoNome ?? this.servicoNome,
       categoryApprovalRequired:
@@ -659,28 +692,20 @@ class Pedido {
   /// Antes havia 'concluidoEm' → usamos updatedAt como aproximação.
   DateTime? get concluidoEm => updatedAt;
 
-  // ---------- Camada de comissão “virtual” ----------
+  // ---------- Economia persistida pelo backend ----------
 
-  /// Taxa padrão de comissão para cálculos automáticos (ex.: 15%).
-  static const double kDefaultCommissionRate = 0.15;
+  /// Estes getters nunca estimam comissão no dispositivo. Campos ausentes
+  /// significam que o trabalho ainda precisa de cálculo ou reconciliação.
+  double? get commissionPlatformEfetiva => commissionPlatform;
+  double? get earningsProviderEfetivo => earningsProvider;
+  double? get earningsTotalEfetivo => earningsTotal;
 
-  /// Valor base usado para cálculo de comissão (igual ao `preco` acima).
-  double? get _valorBaseComissao => preco;
-
-  /// Comissão da plataforma a considerar (se não houver no doc, calcula pela taxa padrão).
-  double? get commissionPlatformEfetiva =>
-      commissionPlatform ??
-      (_valorBaseComissao != null
-          ? _valorBaseComissao! * kDefaultCommissionRate
-          : null);
-
-  /// Ganho líquido do prestador (se não houver no doc, calcula pela taxa padrão).
-  double? get earningsProviderEfetivo =>
-      earningsProvider ??
-      (_valorBaseComissao != null
-          ? _valorBaseComissao! * (1 - kDefaultCommissionRate)
-          : null);
-
-  /// Total cobrado ao cliente (se não houver no doc, usa o preço base).
-  double? get earningsTotalEfetivo => earningsTotal ?? _valorBaseComissao;
+  bool get hasAcceptedProviderAccess =>
+      prestadorId != null &&
+      providerAccessGranted &&
+      providerAccessGrantedTo == prestadorId &&
+      providerAccessGrantedAt != null &&
+      providerAccessGrantedAt!.isAfter(
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      );
 }
