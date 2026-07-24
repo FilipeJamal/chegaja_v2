@@ -167,6 +167,9 @@ describe('pedidos_applyActionSecure', () => {
         estado: 'aceito',
       }),
     ]);
+    const staleOpenPedido = (
+      await db.collection('pedidos').doc('open_accept').get()
+    ).data();
 
     await acceptPedidoDispatchCore({
       database: db,
@@ -178,6 +181,21 @@ describe('pedidos_applyActionSecure', () => {
       auth: phoneAuth('provider1'),
       pedidoId: 'invite_accept',
     });
+    const replayNotifications = [];
+    const staleReplay = await matchPedidoToProvidersCore({
+      database: db,
+      pedidoId: 'open_accept',
+      pedido: staleOpenPedido,
+      now: Timestamp.now(),
+      notifyProvider: async (providerId) => replayNotifications.push(providerId),
+    });
+    assert.strictEqual(staleReplay.reason, 'pedido_not_open');
+    assert.deepStrictEqual(staleReplay.providerIds, []);
+    assert.deepStrictEqual(replayNotifications, []);
+    assert.strictEqual(
+      (await db.collection('pedido_dispatch').doc('open_accept').get()).exists,
+      false,
+    );
 
     for (const pedidoId of ['open_accept', 'invite_accept']) {
       const pedido = (await db.collection('pedidos').doc(pedidoId).get()).data();
@@ -372,6 +390,11 @@ describe('pedidos_applyActionSecure', () => {
     });
 
     assert.deepStrictEqual(result.providerIds, ['eligible']);
+    const eligibleOpportunityRef = db.collection('provider_opportunities')
+      .doc(opportunityDocumentId('matching_filter', 'eligible'));
+    const eligibleOpportunity = await eligibleOpportunityRef.get();
+    assert.strictEqual(eligibleOpportunity.exists, true);
+    assert.strictEqual(eligibleOpportunity.data().status, 'active');
     for (const providerId of ['stale', 'financially_suspended', 'inactive']) {
       assert.strictEqual(
         (await db.collection('provider_opportunities')
@@ -379,6 +402,19 @@ describe('pedidos_applyActionSecure', () => {
         false,
       );
     }
+
+    await eligibleOpportunityRef.update({ status: 'accepted' });
+    const replayNotifications = [];
+    const terminalReplay = await matchPedidoToProvidersCore({
+      database: db,
+      pedidoId: 'matching_filter',
+      pedido,
+      now: Timestamp.now(),
+      notifyProvider: async (providerId) => replayNotifications.push(providerId),
+    });
+    assert.deepStrictEqual(terminalReplay.providerIds, []);
+    assert.deepStrictEqual(replayNotifications, []);
+    assert.strictEqual((await eligibleOpportunityRef.get()).data().status, 'accepted');
   });
 
   it('paginates every valid active-client grant beyond 500 pedidos', async () => {

@@ -659,16 +659,27 @@ function isTargetedDispatchPedido(pedido) {
     && cleanString(pedido?.moderationStatus || 'approved') === 'approved';
 }
 
-async function syncPedidoDispatch(database, pedidoId, pedido) {
-  const dispatchRef = database.collection('pedido_dispatch').doc(pedidoId);
-  const open = isOpenPedido(pedido);
-  const targeted = isTargetedDispatchPedido(pedido);
-  if (!open && !targeted) {
-    await dispatchRef.delete();
-    return { open: false, targeted: false };
-  }
-  await dispatchRef.set(buildPedidoDispatchProjection(pedidoId, pedido), { merge: false });
-  return { open, targeted };
+async function syncPedidoDispatch(database, pedidoId) {
+  const cleanPedidoId = cleanString(pedidoId);
+  if (!cleanPedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
+  const pedidoRef = database.collection('pedidos').doc(cleanPedidoId);
+  const dispatchRef = database.collection('pedido_dispatch').doc(cleanPedidoId);
+  return database.runTransaction(async (transaction) => {
+    const pedidoSnap = await transaction.get(pedidoRef);
+    const pedido = pedidoSnap.exists ? (pedidoSnap.data() || {}) : null;
+    const open = !!pedido && isOpenPedido(pedido);
+    const targeted = !!pedido && isTargetedDispatchPedido(pedido);
+    if (!open && !targeted) {
+      transaction.delete(dispatchRef);
+      return { open: false, targeted: false, pedido };
+    }
+    transaction.set(
+      dispatchRef,
+      buildPedidoDispatchProjection(cleanPedidoId, pedido),
+      { merge: false },
+    );
+    return { open, targeted, pedido };
+  });
 }
 
 async function syncProviderActiveClients(database, providerId, { pageSize = 500 } = {}) {
@@ -828,6 +839,7 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
   const nowMillis = Date.now();
 
   const pedidoRef = database.collection('pedidos').doc(cleanPedidoId);
+  const dispatchRef = database.collection('pedido_dispatch').doc(cleanPedidoId);
   await database.runTransaction(async (tx) => {
     const pedidoSnap = await tx.get(pedidoRef);
     if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
@@ -982,8 +994,8 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
           : 'Prestador aceitou o pedido via dispatch seguro',
       }),
     });
+    tx.delete(dispatchRef);
   });
-  await database.collection('pedido_dispatch').doc(cleanPedidoId).delete();
   await syncProviderActiveClients(database, providerId);
   return { ok: true, pedidoId: cleanPedidoId };
 }
@@ -5309,7 +5321,7 @@ exports.onPedidoUpdated = onDocumentUpdated(
     const before = event.data.before.data() || {};
     const after = event.data.after.data() || {};
 
-    await syncPedidoDispatch(db, pedidoId, after);
+    await syncPedidoDispatch(db, pedidoId);
     const providerIdsToRefresh = new Set([
       cleanString(before.prestadorId),
       cleanString(after.prestadorId),
@@ -5465,23 +5477,23 @@ function providerIsEligibleForInitialMatching({
 async function matchPedidoToProvidersCore({
   database = db,
   pedidoId,
-  pedido = {},
   now = Timestamp.now(),
   notifyProvider = sendPushToUser,
 }) {
   const cleanPedidoId = cleanString(pedidoId);
   if (!cleanPedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
-  await syncPedidoDispatch(database, cleanPedidoId, pedido);
-  if (!isOpenPedido(pedido)) return { providerIds: [], reason: 'pedido_not_open' };
+  const dispatchSync = await syncPedidoDispatch(database, cleanPedidoId);
+  const currentPedido = dispatchSync.pedido || {};
+  if (!dispatchSync.open) return { providerIds: [], reason: 'pedido_not_open' };
 
-  const pedidoLocation = pedidoCoordinates(pedido);
+  const pedidoLocation = pedidoCoordinates(currentPedido);
   if (!pedidoLocation) {
     logger.info(`[matching] pedido sem geo: ${cleanPedidoId} (skip geo matching)`);
     return { providerIds: [], reason: 'pedido_without_location' };
   }
   const nowMillis = toMillis(now) || Date.now();
   const nowTimestamp = Timestamp.fromMillis(nowMillis);
-  const servicoId = cleanString(pedido.servicoId);
+  const servicoId = cleanString(currentPedido.servicoId);
   const center = [pedidoLocation.latitude, pedidoLocation.longitude];
   const maxRadiusKm = 20;
   const bounds = geofire.geohashQueryBounds(center, maxRadiusKm * 1000);
@@ -5537,7 +5549,7 @@ async function matchPedidoToProvidersCore({
     ]);
   const targets = distanceCandidates
     .filter((candidate) => providerIsEligibleForInitialMatching({
-      pedido,
+      pedido: currentPedido,
       dispatchState: candidate.dispatchState,
       providerPublic: publicByProvider.get(candidate.id),
       providerPrivate: privateByProvider.get(candidate.id),
@@ -5559,28 +5571,70 @@ async function matchPedidoToProvidersCore({
   const opportunityExpiresAt = Timestamp.fromMillis(
     nowMillis + opportunityTtlMinutes * 60 * 1000,
   );
-  await Promise.all(targets.map(async (match) => {
+  const pedidoRef = database.collection('pedidos').doc(cleanPedidoId);
+  const publishedProviderIds = await Promise.all(targets.map(async (match) => {
     const opportunityRef = database.collection('provider_opportunities')
       .doc(opportunityDocumentId(cleanPedidoId, match.id));
-    await opportunityRef.set({
-      pedidoId: cleanPedidoId,
-      providerId: match.id,
-      serviceId: servicoId,
-      approximateDistanceKm: Math.round(match.distanceKm * 10) / 10,
-      matchedRadiusKm: match.radiusKm,
-      channel: 'matching_push',
-      idVersion: 'sha256-v1',
-      status: 'active',
-      expiresAt: opportunityExpiresAt,
-      deliveredAt: nowTimestamp,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: false });
+    const publishedPedido = await database.runTransaction(async (transaction) => {
+      const pedidoSnap = await transaction.get(pedidoRef);
+      const opportunitySnap = await transaction.get(opportunityRef);
+      if (!pedidoSnap.exists) return null;
+
+      const livePedido = pedidoSnap.data() || {};
+      if (!isOpenPedido(livePedido)
+        || livePedido.providerAccessGranted === true
+        || !!cleanString(livePedido.providerAccessGrantedTo)) {
+        return null;
+      }
+
+      if (opportunitySnap.exists) {
+        const existingOpportunity = opportunitySnap.data() || {};
+        if (cleanString(existingOpportunity.pedidoId) !== cleanPedidoId
+          || cleanString(existingOpportunity.providerId) !== match.id
+          || cleanString(existingOpportunity.status) !== 'active') {
+          return null;
+        }
+      }
+
+      const livePedidoLocation = pedidoCoordinates(livePedido);
+      const liveProviderLocation = providerDispatchLocation(match.dispatchState, nowMillis);
+      const liveProviderPublic = publicByProvider.get(match.id);
+      if (!livePedidoLocation
+        || !liveProviderLocation
+        || !providerMatchesPedido(liveProviderPublic, livePedido)) {
+        return null;
+      }
+      const liveDistanceKm = geofire.distanceBetween(
+        [liveProviderLocation.latitude, liveProviderLocation.longitude],
+        [livePedidoLocation.latitude, livePedidoLocation.longitude],
+      );
+      if (!Number.isFinite(liveDistanceKm) || liveDistanceKm > liveProviderLocation.radiusKm) {
+        return null;
+      }
+
+      transaction.set(opportunityRef, {
+        pedidoId: cleanPedidoId,
+        providerId: match.id,
+        serviceId: cleanString(livePedido.servicoId),
+        approximateDistanceKm: Math.round(liveDistanceKm * 10) / 10,
+        matchedRadiusKm: liveProviderLocation.radiusKm,
+        channel: 'matching_push',
+        idVersion: 'sha256-v1',
+        status: 'active',
+        expiresAt: opportunityExpiresAt,
+        deliveredAt: nowTimestamp,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: false });
+      return livePedido;
+    });
+    if (!publishedPedido) return null;
     await notifyProvider(
       match.id,
-      buildPedidoOpportunityNotification(cleanPedidoId, pedido),
+      buildPedidoOpportunityNotification(cleanPedidoId, publishedPedido),
     );
+    return match.id;
   }));
-  const providerIds = targets.map((target) => target.id);
+  const providerIds = publishedProviderIds.filter(Boolean);
   logger.info(`[matching] push enviado para ${providerIds.length} prestadores pedido=${cleanPedidoId}`);
   return { providerIds, expiresAt: opportunityExpiresAt };
 }
