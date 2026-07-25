@@ -4,7 +4,8 @@ Data de início: 2026-07-24
 Data de fecho: 2026-07-25
 Branch: `agent/u1-design-system-2`
 Base: `9fcae74`
-Commit de código validado: `770ef41927a00375388a9a4cc8a4f06085fb0fe7`
+Commit da aplicação e dos builds: `770ef41927a00375388a9a4cc8a4f06085fb0fe7`
+Commit de hardening das Rules e da CI: `58890890d6f2fed7f10dc7786e7596120d6b4ef7`
 
 ## Estado
 
@@ -27,10 +28,18 @@ continuam descritos no fim deste documento.
 | --- | --- | --- |
 | Scripts | `npm.cmd run test:scripts` | **PASS** — 14 validadores, 43,695 s |
 | Análise Flutter | `flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos` | **PASS** — exit 0, 310 avisos/info não fatais já existentes, 276,964 s |
-| Rules/Functions | `npx.cmd firebase emulators:exec --only firestore,storage,functions "cd functions && npm.cmd test"` | **PASS** — 179/179, exit 0, 351,1 s |
+| Discovery/trigger Functions | `npx.cmd firebase emulators:exec --only firestore,functions "cd functions && node scripts/ci_smoke_emulators.js"` | **PASS** — trigger real criou projeção sanitizada, callable respondeu com erro controlado, exit 0, 74 s |
+| Rules e cores Functions | `npx.cmd firebase emulators:exec --only firestore,storage "cd functions && npm.cmd test"` | **PASS** — 179/179, exit 0, 182,2 s |
 | Testes Flutter | `flutter test --no-pub` | **PASS** — 666/666, exit 0, 503,522 s |
 | Sintaxe Functions | `node --check functions/index.js` e reconciler | **PASS** |
 | Whitespace | `git diff --check` | **PASS** — apenas avisos locais LF/CRLF |
+
+O primeiro comando combinado com Firestore, Storage e Functions passou
+localmente, mas revelou no runner Linux uma corrida entre os triggers do
+processo do emulador e as fixtures que exercitam os cores diretamente. A CI
+passou a validar separadamente um trigger e uma callable reais em
+`pt-coimbra/EUR`, mantendo os 179 testes determinísticos de Rules, Storage e
+cores Functions. Nenhuma asserção ou regra de autorização foi relaxada.
 
 ## Builds de validação
 
