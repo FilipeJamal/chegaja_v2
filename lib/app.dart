@@ -4,6 +4,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'core/config/app_config.dart';
+import 'core/feature_flags/feature_flag.dart';
+import 'core/feature_flags/feature_flag_service.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/services/locale_service.dart';
 import 'core/services/role_mode_service.dart';
@@ -47,6 +49,7 @@ class ChegaJaApp extends StatefulWidget {
   const ChegaJaApp({
     super.key,
     this.roleModeService,
+    this.featureFlagService,
     this.roleSelectorBuilder,
     this.clienteHomeBuilder,
     this.prestadorHomeBuilder,
@@ -54,6 +57,7 @@ class ChegaJaApp extends StatefulWidget {
   });
 
   final RoleModeService? roleModeService;
+  final FeatureFlagService? featureFlagService;
   final WidgetBuilder? roleSelectorBuilder;
   final WidgetBuilder? clienteHomeBuilder;
   final WidgetBuilder? prestadorHomeBuilder;
@@ -68,6 +72,8 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
 
   RoleModeService get _roleModeService =>
       widget.roleModeService ?? RoleModeService.instance;
+  FeatureFlagService get _featureFlagService =>
+      widget.featureFlagService ?? FeatureFlagService.instance;
 
   @override
   void initState() {
@@ -86,8 +92,12 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
         _roleModeService,
         ThemeModeService.instance,
         UserCountryService.instance,
+        _featureFlagService,
       ]),
       builder: (context, _) {
+        final useU1 = _featureFlagService.isEnabled(
+          FeatureFlag.u1NavigationV2,
+        );
         final publicHandle =
             publicProfileHandleFromRouteName(Uri.base.toString());
         final Widget home = publicHandle != null
@@ -118,8 +128,8 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
           navigatorKey: AppNavigator.navigatorKey,
           scaffoldMessengerKey: AppNavigator.messengerKey,
           onGenerateRoute: buildChegaJaRoute,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
+          theme: useU1 ? AppTheme.u1LightTheme : AppTheme.legacyLightTheme,
+          darkTheme: useU1 ? AppTheme.u1DarkTheme : AppTheme.legacyDarkTheme,
           themeMode: ThemeModeService.instance.themeMode,
           locale: LocaleService.instance.locale,
           localizationsDelegates: const [
@@ -129,7 +139,7 @@ class _ChegaJaAppState extends State<ChegaJaApp> {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppConfig.pilotPortugueseOnly
-              ? const [Locale('pt', 'MZ')]
+              ? [AppConfig.pilotLocale]
               : AppLocalizations.supportedLocales,
           home: home,
         );
@@ -164,24 +174,26 @@ class _PilotPlatformUnavailableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final city = AppConfig.pilotMarket.city;
+    return Scaffold(
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.android, size: 56),
-                SizedBox(height: 16),
-                Text(
+                const Icon(Icons.android, size: 56),
+                const SizedBox(height: 16),
+                const Text(
                   'Piloto disponível apenas em Android',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'As versões Windows, web e outras plataformas não fazem parte do piloto controlado em Maputo.',
+                  'As versões Windows, web e outras plataformas não fazem '
+                  'parte do piloto controlado em $city.',
                   textAlign: TextAlign.center,
                 ),
               ],

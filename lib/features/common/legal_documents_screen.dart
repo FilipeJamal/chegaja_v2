@@ -79,6 +79,7 @@ class _LegalDocumentsScreenState extends State<LegalDocumentsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final documentsAvailable = LegalDocuments.isAvailableForCurrentMarket;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Termos e privacidade'),
@@ -99,6 +100,36 @@ class _LegalDocumentsScreenState extends State<LegalDocumentsScreen>
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          if (!documentsAvailable)
+            Container(
+              key: const Key('legal_market_blocker'),
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Revisão jurídica pendente',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(LegalDocuments.availabilityMessage),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'A versão apresentada abaixo é apenas a referência '
+                    'histórica do piloto de Maputo e não pode ser aceite '
+                    'para Coimbra.',
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -108,7 +139,7 @@ class _LegalDocumentsScreenState extends State<LegalDocumentsScreen>
               ],
             ),
           ),
-          if (widget.requireAcceptance)
+          if (widget.requireAcceptance && documentsAvailable)
             SafeArea(
               top: false,
               child: Material(
@@ -185,6 +216,24 @@ class _LegalDocumentsScreenState extends State<LegalDocumentsScreen>
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+          if (widget.requireAcceptance && !documentsAvailable)
+            SafeArea(
+              top: false,
+              child: Material(
+                elevation: 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonal(
+                      key: const Key('legal_market_blocker_back'),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Voltar em segurança'),
+                    ),
                   ),
                 ),
               ),

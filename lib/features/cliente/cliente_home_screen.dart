@@ -12,9 +12,12 @@ import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/feature_flags/feature_flag.dart';
+import 'package:chegaja_v2/core/feature_flags/feature_flag_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
+import 'package:chegaja_v2/core/theme/app_theme_extension.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_action_panel.dart';
 import 'package:chegaja_v2/core/widgets/app_button.dart';
@@ -37,6 +40,7 @@ import 'package:chegaja_v2/features/common/widgets/settings_list_tile.dart';
 
 import 'package:chegaja_v2/features/cliente/novo_pedido_screen.dart';
 import 'package:chegaja_v2/features/cliente/cliente_perfil_screen.dart';
+import 'package:chegaja_v2/features/cliente/favoritos_screen.dart';
 import 'package:chegaja_v2/features/cliente/pedido_detalhe_screen.dart';
 import 'package:chegaja_v2/features/cliente/widgets/pedido_empty_state.dart';
 import 'package:chegaja_v2/features/cliente/widgets/cliente_home_components.dart';
@@ -52,6 +56,7 @@ import 'package:chegaja_v2/core/widgets/theme_mode_selector_tile.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 import 'package:chegaja_v2/features/common/permission_settings_screen.dart';
 import 'package:chegaja_v2/features/admin/admin_panel_screen.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 
 final GlobalKey _clienteServicesAnchorKey = GlobalKey(
   debugLabel: 'cliente_home_services_anchor',
@@ -63,6 +68,10 @@ const bool _disableClienteHomeMessageStreamsForEmulatorTests =
 /// ---------- HELPERS GERAIS PARA A ABA "PEDIDOS" ----------
 
 Future<String?> _loadRegionLabel() async {
+  if (!AuthService.hasVerifiedPhone) {
+    return AppConfig.pilotMarket.city;
+  }
+
   final code = await AuthService.getUserRegion();
   if (code == null || code.trim().isEmpty) return null;
 
@@ -99,16 +108,6 @@ String _labelTipoPagamentoCliente(String? tipo, AppLocalizations l10n) {
     default:
       return l10n.paymentCash;
   }
-}
-
-String _normalizeServicoMode(String? mode) {
-  final raw = (mode ?? '').toUpperCase().trim();
-  if (raw == 'POR_PROPOSTA' || raw == 'ORCAMENTO' || raw == 'POR_ORCAMENTO') {
-    return 'ORCAMENTO';
-  }
-  if (raw == 'AGENDADO') return 'AGENDADO';
-  if (raw == 'IMEDIATO') return 'IMEDIATO';
-  return 'IMEDIATO';
 }
 
 bool _temAcaoPendente(Pedido p) {
@@ -152,14 +151,54 @@ String _textoAcaoPendente(Pedido p, AppLocalizations l10n) {
 /// ---------- ECRÃ PRINCIPAL ----------
 
 class ClienteHomeScreen extends StatefulWidget {
-  const ClienteHomeScreen({super.key});
+  const ClienteHomeScreen({
+    super.key,
+    this.u1ExperienceOverride,
+  });
+
+  /// Test/debug override. Production rollout remains controlled remotely.
+  final bool? u1ExperienceOverride;
 
   @override
   State<ClienteHomeScreen> createState() => _ClienteHomeScreenState();
 }
 
+enum ClienteHomeDestination { home, orders, messages, saved, profile }
+
+@visibleForTesting
+bool clienteIdentityMayLoadPrivateData({
+  required bool isAnonymous,
+  required String? phoneNumber,
+}) {
+  return AuthService.isVerifiedPhoneIdentity(
+    isAnonymous: isAnonymous,
+    phoneNumber: phoneNumber,
+  );
+}
+
+@visibleForTesting
+bool clienteDestinationRequiresVerifiedPhone(
+  ClienteHomeDestination destination,
+) {
+  return destination == ClienteHomeDestination.orders ||
+      destination == ClienteHomeDestination.messages;
+}
+
+@visibleForTesting
+List<ClienteHomeDestination> clienteHomeDestinationsFor({
+  required bool navigationV2,
+}) {
+  return <ClienteHomeDestination>[
+    ClienteHomeDestination.home,
+    ClienteHomeDestination.orders,
+    ClienteHomeDestination.messages,
+    if (navigationV2) ClienteHomeDestination.saved,
+    ClienteHomeDestination.profile,
+  ];
+}
+
 class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
-  int _currentIndex = 0;
+  ClienteHomeDestination _currentSection = ClienteHomeDestination.home;
   String? _activeClienteUid;
   StreamSubscription<User?>? _authSub;
   bool _isEnsuringClienteSession = false;
@@ -177,7 +216,7 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   void initState() {
     super.initState();
     unawaited(_ensureClienteSession());
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+    _authSub = FirebaseAuth.instance.userChanges().listen((_) {
       if (!mounted) return;
       setState(_syncClienteStreams);
     });
@@ -219,6 +258,28 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
     }
 
     final uid = user.uid;
+    final mayLoadPrivateData = clienteIdentityMayLoadPrivateData(
+      isAnonymous: user.isAnonymous,
+      phoneNumber: user.phoneNumber,
+    );
+
+    if (!mayLoadPrivateData) {
+      if (_activeClienteUid == uid &&
+          _pedidosClienteStream != null &&
+          _pedidosSub == null) {
+        _servicosStream ??= ServicosRepo.streamServicosAtivos();
+        return;
+      }
+
+      _resetClienteStreams();
+      _activeClienteUid = uid;
+      _pedidosClienteStream = Stream<List<Pedido>>.value(
+        const <Pedido>[],
+      );
+      _servicosStream = ServicosRepo.streamServicosAtivos();
+      return;
+    }
+
     if (_activeClienteUid == uid && _pedidosClienteStream != null) {
       _servicosStream ??= ServicosRepo.streamServicosAtivos();
       return;
@@ -339,6 +400,24 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
     setState(() => _hasUnreadMessages = anyUnread);
   }
 
+  Future<void> _openDestination(
+    ClienteHomeDestination destination,
+  ) async {
+    if (clienteDestinationRequiresVerifiedPhone(destination)) {
+      final action = destination == ClienteHomeDestination.orders
+          ? 'consultar os teus pedidos'
+          : 'abrir as tuas mensagens';
+      final allowed = await VerifiedPhoneGate.ensure(
+        context,
+        action: action,
+      );
+      if (!allowed || !mounted) return;
+    }
+
+    if (!mounted) return;
+    setState(() => _currentSection = destination);
+  }
+
   @override
   void dispose() {
     _authSub?.cancel();
@@ -350,41 +429,78 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     _syncClienteStreams();
+    final navigationV2 = widget.u1ExperienceOverride ??
+        FeatureFlagService.instance.isEnabled(
+          FeatureFlag.u1NavigationV2,
+        );
+    final sections = clienteHomeDestinationsFor(navigationV2: navigationV2);
+    final destinations = <AppShellDestination>[
+      for (final section in sections)
+        switch (section) {
+          ClienteHomeDestination.home => AppShellDestination(
+              id: 'cliente.${section.name}',
+              label: l10n.navHome,
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home,
+              child: _ClienteInicioTab(
+                experienceV2: navigationV2,
+                pedidosStream: _pedidosClienteStream,
+                servicosStream: _servicosStream,
+                onOpenOrders: () => unawaited(
+                  _openDestination(ClienteHomeDestination.orders),
+                ),
+                onOpenMessages: () => unawaited(
+                  _openDestination(ClienteHomeDestination.messages),
+                ),
+              ),
+            ),
+          ClienteHomeDestination.orders => AppShellDestination(
+              id: 'cliente.${section.name}',
+              label: l10n.navMyOrders,
+              icon: Icons.list_alt_outlined,
+              selectedIcon: Icons.list_alt,
+              child: _ClientePedidosTab(
+                pedidosStream: _pedidosClienteStream,
+              ),
+            ),
+          ClienteHomeDestination.messages => AppShellDestination(
+              id: 'cliente.${section.name}',
+              label: l10n.navMessages,
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              showBadge: _hasUnreadMessages,
+              child: const MensagensTab(viewerRole: 'cliente'),
+            ),
+          ClienteHomeDestination.saved => AppShellDestination(
+              id: 'cliente.${section.name}',
+              label: l10n.navSaved,
+              icon: Icons.bookmark_border_rounded,
+              selectedIcon: Icons.bookmark_rounded,
+              builder: (_) => FavoritosScreen(
+                embedded: true,
+                experienceV2Override: navigationV2,
+              ),
+            ),
+          ClienteHomeDestination.profile => AppShellDestination(
+              id: 'cliente.${section.name}',
+              label: l10n.navProfile,
+              icon: Icons.person_outline,
+              selectedIcon: Icons.person,
+              child: _ContaPremiumTab(
+                roleLabel: l10n.roleLabelCustomer,
+              ),
+            ),
+        },
+    ];
+    final selectedIndex = sections.indexOf(_currentSection);
+
     return AppShellScaffold(
-      currentIndex: _currentIndex,
-      onDestinationSelected: (index) => setState(() => _currentIndex = index),
-      destinations: [
-        AppShellDestination(
-          label: l10n.navHome,
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          child: _ClienteInicioTab(
-            pedidosStream: _pedidosClienteStream,
-            servicosStream: _servicosStream,
-            onOpenOrders: () => setState(() => _currentIndex = 1),
-            onOpenMessages: () => setState(() => _currentIndex = 2),
-          ),
-        ),
-        AppShellDestination(
-          label: l10n.navMyOrders,
-          icon: Icons.list_alt_outlined,
-          selectedIcon: Icons.list_alt,
-          child: _ClientePedidosTab(pedidosStream: _pedidosClienteStream),
-        ),
-        AppShellDestination(
-          label: l10n.navMessages,
-          icon: Icons.chat_bubble_outline,
-          selectedIcon: Icons.chat_bubble,
-          showBadge: _hasUnreadMessages,
-          child: const MensagensTab(viewerRole: 'cliente'),
-        ),
-        AppShellDestination(
-          label: l10n.navProfile,
-          icon: Icons.person_outline,
-          selectedIcon: Icons.person,
-          child: _ContaPremiumTab(roleLabel: l10n.roleLabelCustomer),
-        ),
-      ],
+      experienceV2Override: navigationV2,
+      currentIndex: selectedIndex < 0 ? 0 : selectedIndex,
+      onDestinationSelected: (index) => unawaited(
+        _openDestination(sections[index]),
+      ),
+      destinations: destinations,
     );
   }
 }
@@ -392,12 +508,14 @@ class _ClienteHomeScreenState extends State<ClienteHomeScreen> {
 /// ---------- ABA "INÍCIO" ----------
 
 class _ClienteInicioTab extends StatelessWidget {
+  final bool experienceV2;
   final Stream<List<Pedido>>? pedidosStream;
   final Stream<List<Servico>>? servicosStream;
   final VoidCallback onOpenOrders;
   final VoidCallback onOpenMessages;
 
   const _ClienteInicioTab({
+    required this.experienceV2,
     this.pedidosStream,
     this.servicosStream,
     required this.onOpenOrders,
@@ -410,6 +528,7 @@ class _ClienteInicioTab extends StatelessWidget {
     return AppPageScaffold(
       width: AppContentWidth.dashboard,
       child: _ClienteHomeDashboard(
+        experienceV2: experienceV2,
         pedidosStream: pedidosStream,
         servicosStream: servicosStream,
         user: user,
@@ -427,8 +546,9 @@ class _ClienteInicioTab extends StatelessWidget {
   }
 }
 
-class _ClienteHomeDashboard extends StatelessWidget {
+class _ClienteHomeDashboard extends StatefulWidget {
   const _ClienteHomeDashboard({
+    required this.experienceV2,
     required this.pedidosStream,
     required this.servicosStream,
     required this.user,
@@ -437,12 +557,20 @@ class _ClienteHomeDashboard extends StatelessWidget {
     required this.onSearch,
   });
 
+  final bool experienceV2;
   final Stream<List<Pedido>>? pedidosStream;
   final Stream<List<Servico>>? servicosStream;
   final User? user;
   final VoidCallback onOpenOrders;
   final VoidCallback onOpenMessages;
   final VoidCallback onSearch;
+
+  @override
+  State<_ClienteHomeDashboard> createState() => _ClienteHomeDashboardState();
+}
+
+class _ClienteHomeDashboardState extends State<_ClienteHomeDashboard> {
+  String _selectedMode = 'IMEDIATO';
 
   @override
   Widget build(BuildContext context) {
@@ -454,40 +582,75 @@ class _ClienteHomeDashboard extends StatelessWidget {
         final mainColumn = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ClienteHomeHero(
-              greeting: l10n.homeGreeting,
-              title: l10n.homeSubtitle,
-              subtitle: AppConfig.pilotMode
-                  ? 'Piloto em Maputo e Matola: limpeza, beleza, alimentação, reparações, tecnologia e eventos em destaque; o catálogo continua aberto.'
-                  : 'Escolhe um servico, acompanha propostas e fala com o prestador sem perder contexto.',
-              primaryActionLabel: 'Escolher servico',
-              onPrimaryAction: () => _scrollToServices(context),
-              onSearch: onSearch,
-            ),
-            ProviderSuggestionsSection(
-              margin: const EdgeInsets.only(
-                top: AppSpacing.x5,
-                bottom: AppSpacing.x5,
+            if (widget.experienceV2)
+              ClienteHomeHero(
+                title: l10n.homeRequestTitle,
+                subtitle: l10n.homeRequestSubtitle,
+                locationLabel: AppConfig.pilotMarket.city,
+                selectedMode: _selectedMode,
+                onModeChanged: (mode) => setState(() => _selectedMode = mode),
+                onContinue: (description) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => NovoPedidoScreen(
+                        modo: _selectedMode,
+                        initialDescription: description,
+                      ),
+                    ),
+                  );
+                },
+                primaryActionLabel: l10n.homeContinue,
+                requestHint: l10n.homeRequestHint,
+                nowLabel: l10n.homeModeNow,
+                scheduleLabel: l10n.homeModeSchedule,
+                quotesLabel: l10n.homeModeQuotes,
+                onSearch: widget.onSearch,
+              )
+            else
+              ClienteLegacyHomeHero(
+                greeting: l10n.homeGreeting,
+                title: l10n.homeSubtitle,
+                subtitle:
+                    'Escolhe um serviço, acompanha propostas e fala com o '
+                    'prestador sem perder contexto.',
+                primaryActionLabel: 'Escolher serviço',
+                onPrimaryAction: () => _scrollToServices(context),
+                onSearch: widget.onSearch,
               ),
-              onOpenSearch: onSearch,
+            const SizedBox(height: AppSpacing.x5),
+            if (!widget.experienceV2)
+              ProviderSuggestionsSection(
+                margin: const EdgeInsets.only(bottom: AppSpacing.x5),
+                onOpenSearch: widget.onSearch,
+              ),
+            _ClienteServicesStreamSection(
+              experienceV2: widget.experienceV2,
+              user: widget.user,
+              servicosStream: widget.servicosStream,
+              pedidosStream: widget.pedidosStream,
+              selectedMode: _selectedMode,
+              onSearchProviders: widget.onSearch,
             ),
             const SizedBox(height: AppSpacing.x5),
+            if (widget.experienceV2)
+              ProviderSuggestionsSection(
+                margin: const EdgeInsets.only(
+                  bottom: AppSpacing.x5,
+                ),
+                onOpenSearch: widget.onSearch,
+              ),
             if (AppConfig.storiesEnabled) ...[
               const StoriesCarouselWidget(),
               const SizedBox(height: AppSpacing.x5),
             ],
-            _ClienteServicesStreamSection(
-              user: user,
-              servicosStream: servicosStream,
-            ),
           ],
         );
 
         final sideColumn = _ClienteHomeSideColumn(
-          user: user,
-          pedidosStream: pedidosStream,
-          onOpenOrders: onOpenOrders,
-          onOpenMessages: onOpenMessages,
+          user: widget.user,
+          pedidosStream: widget.pedidosStream,
+          onOpenOrders: widget.onOpenOrders,
+          onOpenMessages: widget.onOpenMessages,
         );
 
         if (!isDesktop) {
@@ -526,12 +689,20 @@ void _scrollToServices(BuildContext context) {
 
 class _ClienteServicesStreamSection extends StatelessWidget {
   const _ClienteServicesStreamSection({
+    required this.experienceV2,
     required this.user,
     required this.servicosStream,
+    required this.pedidosStream,
+    required this.selectedMode,
+    required this.onSearchProviders,
   });
 
+  final bool experienceV2;
   final User? user;
   final Stream<List<Servico>>? servicosStream;
+  final Stream<List<Pedido>>? pedidosStream;
+  final String selectedMode;
+  final VoidCallback onSearchProviders;
 
   @override
   Widget build(BuildContext context) {
@@ -562,7 +733,11 @@ class _ClienteServicesStreamSection extends StatelessWidget {
 
         return _ClienteServicesCatalog(
           key: _clienteServicesAnchorKey,
+          experienceV2: experienceV2,
           servicos: servicos,
+          pedidosStream: pedidosStream,
+          selectedMode: selectedMode,
+          onSearchProviders: onSearchProviders,
           title: l10n.availableServicesTitle,
           subtitle:
               'Escolhe uma categoria para iniciar um pedido com mais contexto.',
@@ -575,18 +750,43 @@ class _ClienteServicesStreamSection extends StatelessWidget {
 class _ClienteServicesCatalog extends StatefulWidget {
   const _ClienteServicesCatalog({
     super.key,
+    required this.experienceV2,
     required this.servicos,
+    required this.pedidosStream,
+    required this.selectedMode,
+    required this.onSearchProviders,
     required this.title,
     required this.subtitle,
   });
 
+  final bool experienceV2;
   final List<Servico> servicos;
+  final Stream<List<Pedido>>? pedidosStream;
+  final String selectedMode;
+  final VoidCallback onSearchProviders;
   final String title;
   final String subtitle;
 
   @override
   State<_ClienteServicesCatalog> createState() =>
       _ClienteServicesCatalogState();
+}
+
+@visibleForTesting
+Widget buildClienteServicesCatalogForTest({
+  required bool experienceV2,
+  required List<Servico> servicos,
+  String selectedMode = 'ORCAMENTO',
+}) {
+  return _ClienteServicesCatalog(
+    experienceV2: experienceV2,
+    servicos: servicos,
+    pedidosStream: const Stream<List<Pedido>>.empty(),
+    selectedMode: selectedMode,
+    onSearchProviders: () {},
+    title: 'Serviços disponíveis',
+    subtitle: 'Escolhe uma categoria.',
+  );
 }
 
 class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
@@ -597,9 +797,23 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
   final TextEditingController _serviceSearchController =
       TextEditingController();
   Timer? _serviceSearchDebounce;
-  String _selectedMode = 'ORCAMENTO';
+  String _legacySelectedMode = 'ORCAMENTO';
   String _serviceQuery = '';
   int _visibleLimit = _initialVisibleServices;
+
+  @override
+  void didUpdateWidget(covariant _ClienteServicesCatalog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.experienceV2 == widget.experienceV2 &&
+        (!widget.experienceV2 ||
+            oldWidget.selectedMode == widget.selectedMode)) {
+      return;
+    }
+    _serviceSearchDebounce?.cancel();
+    _serviceSearchController.clear();
+    _serviceQuery = '';
+    _visibleLimit = _initialVisibleServices;
+  }
 
   @override
   void dispose() {
@@ -618,9 +832,116 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
       'IMEDIATO': l10n.serviceTabImmediate,
     };
 
+    if (!widget.experienceV2) {
+      return _buildLegacyCatalog(
+        context: context,
+        l10n: l10n,
+        locale: locale,
+        modes: modes,
+      );
+    }
+
     final catalog = visibleClienteCatalogServices(
       services: widget.servicos,
-      selectedMode: _selectedMode,
+      selectedMode: widget.selectedMode,
+      query: _serviceQuery,
+      limit: _visibleLimit,
+    );
+    final visibleServices = catalog.services;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClienteQuickServicesStrip(
+          title: l10n.homeNearbyServices,
+          services: visibleServices,
+          localeCode: locale.languageCode,
+          onSeeAll: widget.onSearchProviders,
+          seeAllLabel: 'Ver todos',
+          onSelect: (servico) => _openNovoPedido(
+            context: context,
+            modo: widget.selectedMode,
+            servico: servico,
+          ),
+        ),
+        _ClienteRecentRequestPreview(pedidosStream: widget.pedidosStream),
+        const SizedBox(height: AppSpacing.x3),
+        ClientePrivacyNotice(message: l10n.homePrivacyNotice),
+        const SizedBox(height: AppSpacing.x6),
+        ClienteServicesSection(
+          title: widget.title,
+          subtitle: widget.subtitle,
+          search: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildServiceSearchField(context, l10n),
+              const SizedBox(height: AppSpacing.x2),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppStatusPill(
+                  key: const Key('cliente_home_catalog_mode_status'),
+                  label: modes[widget.selectedMode] ?? widget.selectedMode,
+                  tone: clienteServiceToneFor(widget.selectedMode),
+                  icon: switch (widget.selectedMode) {
+                    'AGENDADO' => Icons.event_rounded,
+                    'ORCAMENTO' => Icons.request_quote_rounded,
+                    _ => Icons.bolt_rounded,
+                  },
+                ),
+              ),
+              if (catalog.isSearching || catalog.isTruncated) ...[
+                const SizedBox(height: AppSpacing.x2),
+                _ClienteCatalogResultSummary(
+                  query: _serviceQuery,
+                  totalMatched: catalog.totalMatched,
+                  visibleCount: visibleServices.length,
+                  isSearching: catalog.isSearching,
+                ),
+              ],
+            ],
+          ),
+          children: [
+            if (visibleServices.isEmpty)
+              _ClienteCatalogEmptyResult(
+                message: catalog.isSearching
+                    ? l10n.serviceSearchEmpty
+                    : 'Não há serviços disponíveis neste modo.',
+              )
+            else
+              for (final servico in visibleServices)
+                ClienteServiceTile(
+                  servico: servico,
+                  localeCode: locale.languageCode,
+                  modeLabel: modes[widget.selectedMode] ?? widget.selectedMode,
+                  onTap: () => _openNovoPedido(
+                    context: context,
+                    modo: widget.selectedMode,
+                    servico: servico,
+                  ),
+                ),
+            if (catalog.isTruncated)
+              _ClienteCatalogShowMoreCard(
+                visibleCount: visibleServices.length,
+                totalCount: catalog.totalMatched,
+                onPressed: () => setState(
+                  () => _visibleLimit += _visibleServicesStep,
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegacyCatalog({
+    required BuildContext context,
+    required AppLocalizations l10n,
+    required Locale locale,
+    required Map<String, String> modes,
+  }) {
+    final catalog = visibleClienteCatalogServices(
+      services: widget.servicos,
+      selectedMode: _legacySelectedMode,
       query: _serviceQuery,
       limit: _visibleLimit,
     );
@@ -641,9 +962,9 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
               for (final entry in modes.entries)
                 ChoiceChip(
                   label: Text(entry.value),
-                  selected: _selectedMode == entry.key,
+                  selected: _legacySelectedMode == entry.key,
                   onSelected: (_) => setState(() {
-                    _selectedMode = entry.key;
+                    _legacySelectedMode = entry.key;
                     _visibleLimit = _initialVisibleServices;
                     _serviceQuery = '';
                     _serviceSearchController.clear();
@@ -667,17 +988,17 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
           _ClienteCatalogEmptyResult(
             message: catalog.isSearching
                 ? l10n.serviceSearchEmpty
-                : 'Nao ha servicos disponiveis neste modo.',
+                : 'Não há serviços disponíveis neste modo.',
           )
         else
           for (final servico in visibleServices)
             ClienteServiceTile(
               servico: servico,
               localeCode: locale.languageCode,
-              modeLabel: modes[_selectedMode] ?? _selectedMode,
+              modeLabel: modes[_legacySelectedMode] ?? _legacySelectedMode,
               onTap: () => _openNovoPedido(
                 context: context,
-                modo: _selectedMode,
+                modo: _legacySelectedMode,
                 servico: servico,
               ),
             ),
@@ -698,6 +1019,7 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
     AppLocalizations l10n,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final visualTokens = context.chegaJaTheme;
 
     return TextField(
       key: const Key('cliente_home_service_search_field'),
@@ -729,11 +1051,11 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
           vertical: AppSpacing.x3,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(visualTokens.radiusLg),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(visualTokens.radiusLg),
           borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
         ),
       ),
@@ -780,6 +1102,48 @@ class _ClienteServicesCatalogState extends State<_ClienteServicesCatalog> {
           servicoInicial: servico,
         ),
       ),
+    );
+  }
+}
+
+class _ClienteRecentRequestPreview extends StatelessWidget {
+  const _ClienteRecentRequestPreview({required this.pedidosStream});
+
+  final Stream<List<Pedido>>? pedidosStream;
+
+  @override
+  Widget build(BuildContext context) {
+    final stream = pedidosStream;
+    if (stream == null) return const SizedBox.shrink();
+
+    return StreamBuilder<List<Pedido>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+        final pedidos = [...snapshot.data!]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        if (pedidos.isEmpty) return const SizedBox.shrink();
+        final pedido = pedidos.first;
+        final summary = PedidoStatusPresenter.summaryFor(
+          pedido,
+          role: PedidoViewerRole.cliente,
+        );
+
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x4),
+          child: ClienteRecentRequestCard(
+            title: pedido.titulo,
+            status: summary.title,
+            onOpen: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PedidoDetalheScreen(pedidoId: pedido.id),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -938,8 +1302,13 @@ class _ClienteHomeSideColumn extends StatelessWidget {
           onChooseService: () => _scrollToServices(context),
         ),
         const SizedBox(height: AppSpacing.x4),
-        _ClienteMensagensBanner(clienteId: user!.uid),
-        const SizedBox(height: AppSpacing.x4),
+        if (clienteIdentityMayLoadPrivateData(
+          isAnonymous: user!.isAnonymous,
+          phoneNumber: user!.phoneNumber,
+        )) ...[
+          _ClienteMensagensBanner(clienteId: user!.uid),
+          const SizedBox(height: AppSpacing.x4),
+        ],
         _ClienteHomeSupportPanel(onOpenMessages: onOpenMessages),
       ],
     );
@@ -1665,6 +2034,8 @@ class _PedidoClienteCard extends StatelessWidget {
 
 /// ---------- ABA "CONTA" ----------
 
+// Legacy account surface retained for a controlled navigation rollback.
+// ignore: unused_element
 class _ContaTab extends StatelessWidget {
   final String roleLabel;
 

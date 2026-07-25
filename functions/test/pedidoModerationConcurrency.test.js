@@ -8,6 +8,8 @@ const { __test__ } = require('../index');
 describe('Pedido moderation content revisions', function () {
   this.timeout(300000);
 
+  const originalMarketId = process.env.PILOT_MARKET_ID;
+  const originalCurrency = process.env.DEFAULT_CURRENCY_CODE;
   const db = __test__.getDb();
   const {
     createSecurePedidoCore,
@@ -38,6 +40,9 @@ describe('Pedido moderation content revisions', function () {
       isCustomService: true,
       customServiceName: 'Servico personalizado',
       customServiceDescription: 'Atividade local a combinar.',
+      latitude: -25.9692,
+      longitude: 32.5732,
+      zoneId: 'maputo',
       anexos: [],
       ...overrides,
     };
@@ -52,12 +57,21 @@ describe('Pedido moderation content revisions', function () {
   }
 
   beforeEach(async () => {
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
+    process.env.DEFAULT_CURRENCY_CODE = 'MZN';
     for (const collection of collections) {
       const snapshot = await db.collection(collection).get();
       const batch = db.batch();
       snapshot.docs.forEach((doc) => batch.delete(doc.ref));
       await batch.commit();
     }
+  });
+
+  after(() => {
+    if (originalMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = originalMarketId;
+    if (originalCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = originalCurrency;
   });
 
   it('initializes the pedido and moderation queue at the same revision', async () => {

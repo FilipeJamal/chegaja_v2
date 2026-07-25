@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 import 'app_button.dart';
 import 'app_card.dart';
-import 'app_status_pill.dart';
 
 class AppActionPanelAction {
   const AppActionPanelAction({
@@ -42,7 +43,10 @@ class AppActionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = _accentFor(tone, theme);
+    final usesU1 = context.chegaJaTheme.usesU1;
+    final toneColors = AppSemanticColors.status(theme, tone);
+    final visualTokens = context.chegaJaTheme;
+    final legacyAccent = _legacyAccentFor(tone, theme);
 
     return AppCard(
       variant: AppCardVariant.outlined,
@@ -58,10 +62,18 @@ class AppActionPanel extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    color: usesU1
+                        ? toneColors.background
+                        : legacyAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(visualTokens.radiusMd),
+                    border:
+                        usesU1 ? Border.all(color: toneColors.border) : null,
                   ),
-                  child: Icon(icon, color: accent, size: 22),
+                  child: Icon(
+                    icon,
+                    color: usesU1 ? toneColors.foreground : legacyAccent,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.x3),
               ],
@@ -99,19 +111,14 @@ class AppActionPanel extends StatelessWidget {
     );
   }
 
-  Color _accentFor(AppStatusTone tone, ThemeData theme) {
-    switch (tone) {
-      case AppStatusTone.info:
-        return AppPalette.accentBlue;
-      case AppStatusTone.success:
-        return AppPalette.success;
-      case AppStatusTone.warning:
-        return AppPalette.warning;
-      case AppStatusTone.danger:
-        return AppPalette.error;
-      case AppStatusTone.neutral:
-        return theme.colorScheme.onSurfaceVariant;
-    }
+  Color _legacyAccentFor(AppStatusTone tone, ThemeData theme) {
+    return switch (tone) {
+      AppStatusTone.info => AppPalette.accentBlue,
+      AppStatusTone.success => AppPalette.success,
+      AppStatusTone.warning => AppPalette.warning,
+      AppStatusTone.danger => AppPalette.error,
+      AppStatusTone.neutral => theme.colorScheme.onSurfaceVariant,
+    };
   }
 }
 

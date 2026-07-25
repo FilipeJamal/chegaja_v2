@@ -26,6 +26,7 @@ describe('authoritative Stripe payment security', function () {
   function legalConsent() {
     return {
       version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+      marketId: 'mz-maputo',
       termsAccepted: true,
       privacyAccepted: true,
       ageConfirmed: true,
@@ -55,24 +56,32 @@ describe('authoritative Stripe payment security', function () {
         status: 'active',
         roles: ['cliente'],
         city: 'Maputo',
+        marketId: 'mz-maputo',
       }),
       db.collection('pilot_participants').doc('provider-pay').set({
         status: 'active',
         roles: ['prestador'],
         city: 'Maputo',
+        marketId: 'mz-maputo',
       }),
       db.collection('provider_public').doc('provider-pay').set({
         isSearchable: true,
         servicos: ['service-pay'],
+        marketId: 'mz-maputo',
+        currency: 'MZN',
       }),
       db.collection('provider_private').doc('provider-pay').set({
         providerId: 'provider-pay',
         stripeAccountId: 'acct_provider_pay',
         financialStatus: 'active',
+        marketId: 'mz-maputo',
+        currency: 'MZN',
       }),
       db.collection('provider_dispatch_private').doc('provider-pay').set({
         providerId: 'provider-pay',
         acceptingNewJobs: true,
+        marketId: 'mz-maputo',
+        currency: 'MZN',
       }),
     ]);
     await db.collection('pedidos').doc(pedidoId).set({
@@ -87,6 +96,7 @@ describe('authoritative Stripe payment security', function () {
       statusConfirmacaoValor: 'pendente_cliente',
       moderationStatus: 'approved',
       tipoPagamento: 'stripe',
+      marketId: 'mz-maputo',
       currency: 'MZN',
       precoPropostoPrestador: 1000,
       ...overrides,
@@ -135,9 +145,11 @@ describe('authoritative Stripe payment security', function () {
   }
 
   beforeEach(async () => {
-    process.env.ENABLE_STRIPE = 'true';
-    process.env.STRIPE_MZN_VALIDATED = 'true';
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
     process.env.DEFAULT_CURRENCY_CODE = 'MZN';
+    process.env.ENABLE_STRIPE = 'true';
+    process.env.STRIPE_MARKET_VALIDATED = 'false';
+    process.env.STRIPE_MZN_VALIDATED = 'true';
     process.env.DEFAULT_DIGITAL_COMMISSION_RATE = '0.15';
     process.env.PILOT_REQUIRE_ALLOWLIST = 'true';
     await clearCollections();
@@ -145,7 +157,9 @@ describe('authoritative Stripe payment security', function () {
 
   after(() => {
     for (const key of [
+      'PILOT_MARKET_ID',
       'ENABLE_STRIPE',
+      'STRIPE_MARKET_VALIDATED',
       'STRIPE_MZN_VALIDATED',
       'DEFAULT_CURRENCY_CODE',
       'DEFAULT_DIGITAL_COMMISSION_RATE',
@@ -258,6 +272,7 @@ describe('authoritative Stripe payment security', function () {
       prestadorId: 'provider-pay',
       amount: 99999,
       feeAmount: 15000,
+      marketId: 'mz-maputo',
       currency: 'mzn',
       status: 'requires_payment_method',
     });

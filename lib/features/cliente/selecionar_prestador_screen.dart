@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/services/location_service.dart';
 import 'package:chegaja_v2/core/services/favorites_service.dart';
 import 'package:chegaja_v2/features/common/perfil_publico_screen.dart';
@@ -106,6 +107,7 @@ class _SelecionarPrestadorScreenState extends State<SelecionarPrestadorScreen> {
 
       Query<Map<String, dynamic>> query = FirebaseFirestore.instance
           .collection('provider_public')
+          .where('marketId', isEqualTo: AppConfig.pilotMarket.id)
           .where('isSearchable', isEqualTo: true);
 
       final filtro = categoriaId.isNotEmpty

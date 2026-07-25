@@ -154,10 +154,12 @@ apresentar o projeto como empresa constituída.
 - [x] flag de chamadas aplicada ao comportamento;
 - [x] gate de proveniência P1;
 - [x] testes Flutter, Rules/Functions e scripts verdes;
-- [ ] CI verde no pull request;
-- [ ] pull request revisto e mergeado em `main`.
+- [x] CI verde no pull request;
+- [x] pull request revisto e mergeado em `main`.
 
-Os dois últimos itens só podem ser assinalados depois da prova real desta branch.
+Integração concluída pelo
+[`PR #5`](https://github.com/FilipeJamal/chegaja_v2/pull/5), commit de merge
+`9fcae74`.
 
 ## Validação local final
 

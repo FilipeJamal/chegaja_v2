@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chegaja_v2/core/data/firestore_collections.dart';
 import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/config/market_config.dart';
 
 class PhoneVerificationSession {
   const PhoneVerificationSession({
@@ -50,7 +51,10 @@ class AuthService {
 
   /// Garante que existe um utilizador autenticado.
   /// Se ainda nao houver, faz login anonimo.
-  /// Depois grava/actualiza o documento em `users/{uid}`.
+  ///
+  /// A sessao anonima serve apenas para explorar a aplicacao. Ela nao cria
+  /// nem atualiza `users_private`; o perfil privado passa a existir depois
+  /// de uma identidade real ser confirmada.
   static Future<User> ensureSignedInAnonymously() async {
     final pending = _pendingAnonymousEnsure;
     if (pending != null) return pending;
@@ -92,6 +96,10 @@ class AuthService {
 
     await _markUserSeen();
 
+    if (signedUser.isAnonymous) {
+      return signedUser;
+    }
+
     final userDocRef =
         _db.collection(FirestoreCollections.usersPrivate).doc(signedUser.uid);
 
@@ -104,7 +112,7 @@ class AuthService {
           {
             'uid': signedUser.uid,
             'isAnonymous': signedUser.isAnonymous,
-            'region': 'PT',
+            'region': AppConfig.pilotMarket.countryCode,
             'lastLoginAt': FieldValue.serverTimestamp(),
             'createdAt': FieldValue.serverTimestamp(),
           },
@@ -240,7 +248,6 @@ class AuthService {
         phoneNumber: currentUser?.phoneNumber,
       );
 
-  @visibleForTesting
   static bool isVerifiedPhoneIdentity({
     required bool isAnonymous,
     required String? phoneNumber,
@@ -248,14 +255,99 @@ class AuthService {
     return !isAnonymous && (phoneNumber?.trim().isNotEmpty ?? false);
   }
 
+  /// Normalizes a local or international number against the selected market.
+  ///
+  /// An explicit international prefix is preserved so that validation can
+  /// reject a number from another market instead of silently rewriting it.
+  static String normalizePhoneForMarket(
+    String rawPhone, {
+    MarketConfig? market,
+  }) {
+    final selectedMarket = market ?? AppConfig.pilotMarket;
+    final trimmed = rawPhone.trim();
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+
+    if (digits.isEmpty) return selectedMarket.callingCode;
+    if (trimmed.startsWith('+')) return '+$digits';
+    if (trimmed.startsWith('00') && digits.length > 2) {
+      return '+${digits.substring(2)}';
+    }
+
+    final callingCodeDigits = selectedMarket.callingCode.replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
+    if (digits.startsWith(callingCodeDigits)) return '+$digits';
+
+    final nationalDigits =
+        digits.startsWith('0') ? digits.substring(1) : digits;
+    return '${selectedMarket.callingCode}$nationalDigits';
+  }
+
+  static bool isValidPhoneForMarket(
+    String rawPhone, {
+    MarketConfig? market,
+  }) {
+    final selectedMarket = market ?? AppConfig.pilotMarket;
+    final normalized = normalizePhoneForMarket(
+      rawPhone,
+      market: selectedMarket,
+    );
+    if (!normalized.startsWith(selectedMarket.callingCode)) return false;
+
+    final nationalNumber =
+        normalized.substring(selectedMarket.callingCode.length);
+    switch (selectedMarket.countryCode) {
+      case 'PT':
+        // Portuguese mobile-format number suitable for receiving an SMS OTP.
+        // Firebase remains the authority that the number can receive the OTP.
+        return RegExp(r'^9\d{8}$').hasMatch(nationalNumber);
+      case 'MZ':
+        // Historical Maputo adaptation: Mozambican mobile numbers.
+        return RegExp(r'^8\d{8}$').hasMatch(nationalNumber);
+      default:
+        final allDigits = normalized.substring(1);
+        return RegExp(r'^\d{8,15}$').hasMatch(allDigits) &&
+            nationalNumber.isNotEmpty;
+    }
+  }
+
+  static String phoneExampleForMarket([MarketConfig? market]) {
+    final selectedMarket = market ?? AppConfig.pilotMarket;
+    switch (selectedMarket.countryCode) {
+      case 'PT':
+        return '${selectedMarket.callingCode} 912 345 678';
+      case 'MZ':
+        return '${selectedMarket.callingCode} 84 000 0000';
+      default:
+        return '${selectedMarket.callingCode} ...';
+    }
+  }
+
+  static String phoneCountryLabelForMarket([MarketConfig? market]) {
+    final selectedMarket = market ?? AppConfig.pilotMarket;
+    switch (selectedMarket.countryCode) {
+      case 'PT':
+        return 'Portugal';
+      case 'MZ':
+        return 'Moçambique';
+      default:
+        return selectedMarket.countryCode;
+    }
+  }
+
   /// Sends an OTP while preserving the current anonymous account.
   static Future<PhoneVerificationSession> requestPhoneCode(
     String phoneE164, {
     int? forceResendingToken,
   }) async {
-    final phone = phoneE164.trim();
-    if (!phone.startsWith('+') || phone.length < 8) {
-      throw ArgumentError('Numero de telefone invalido. Usa o formato +258...');
+    final market = AppConfig.pilotMarket;
+    final phone = normalizePhoneForMarket(phoneE164, market: market);
+    if (!isValidPhoneForMarket(phone, market: market)) {
+      throw ArgumentError(
+        'Número de telefone inválido. Usa o formato '
+        '${phoneExampleForMarket(market)}.',
+      );
     }
     final user = await ensureSignedInAnonymously();
 
@@ -380,7 +472,13 @@ class AuthService {
   /// Atualiza a regiao do utilizador (ex: 'PT', 'MZ').
   static Future<void> updateUserRegion(String region) async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null ||
+        !isVerifiedPhoneIdentity(
+          isAnonymous: user.isAnonymous,
+          phoneNumber: user.phoneNumber,
+        )) {
+      return;
+    }
 
     await _db.collection(FirestoreCollections.usersPrivate).doc(user.uid).set(
       {
@@ -394,7 +492,13 @@ class AuthService {
   /// Obtem a regiao atual do perfil do utilizador.
   static Future<String?> getUserRegion() async {
     final user = _auth.currentUser;
-    if (user == null) return null;
+    if (user == null ||
+        !isVerifiedPhoneIdentity(
+          isAnonymous: user.isAnonymous,
+          phoneNumber: user.phoneNumber,
+        )) {
+      return null;
+    }
 
     final doc = await _db
         .collection(FirestoreCollections.usersPrivate)
@@ -414,14 +518,34 @@ class AuthService {
     final r = role.trim().toLowerCase();
     if (r != 'cliente' && r != 'prestador') return;
 
-    await _db.collection(FirestoreCollections.usersPrivate).doc(user.uid).set(
-      {
-        'activeRole': r,
-        'roles.$r': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    // A escolha de papel e persistida localmente por RoleModeService. Uma
+    // sessao temporaria nao deve criar perfil privado, perfil publico ou
+    // estado de dispatch no backend.
+    if (!isVerifiedPhoneIdentity(
+      isAnonymous: user.isAnonymous,
+      phoneNumber: user.phoneNumber,
+    )) {
+      return;
+    }
+
+    final userPrivateRef =
+        _db.collection(FirestoreCollections.usersPrivate).doc(user.uid);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(userPrivateRef);
+      final roles = mergeRoleHistory(
+        snapshot.data()?['roles'],
+        activeRole: r,
+      );
+      transaction.set(
+        userPrivateRef,
+        {
+          'activeRole': r,
+          'roles': roles,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    });
 
     // Importante para as regras do Firestore:
     // muitas queries do lado do prestador dependem de
@@ -468,5 +592,29 @@ class AuthService {
         await _syncPhoneIdentity();
       }
     }
+  }
+
+  @visibleForTesting
+  static Map<String, bool> mergeRoleHistory(
+    Object? currentRoles, {
+    required String activeRole,
+  }) {
+    final normalizedRole = activeRole.trim().toLowerCase();
+    if (normalizedRole != 'cliente' && normalizedRole != 'prestador') {
+      throw ArgumentError.value(
+        activeRole,
+        'activeRole',
+        'Must be cliente or prestador.',
+      );
+    }
+
+    final roles = <String, bool>{};
+    if (currentRoles is Map) {
+      for (final role in const ['cliente', 'prestador']) {
+        if (currentRoles[role] == true) roles[role] = true;
+      }
+    }
+    roles[normalizedRole] = true;
+    return Map.unmodifiable(roles);
   }
 }

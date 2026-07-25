@@ -41,6 +41,7 @@ class NovoPedidoScreen extends StatefulWidget {
 
   /// Serviço pré-selecionado (quando o cliente clicou numa categoria)
   final Servico? servicoInicial;
+  final String? initialDescription;
   final Future<List<Servico>> Function()? servicosLoader;
 
   const NovoPedidoScreen({
@@ -48,6 +49,7 @@ class NovoPedidoScreen extends StatefulWidget {
     required this.modo,
     this.pedidoInicial,
     this.servicoInicial,
+    this.initialDescription,
     this.servicosLoader,
   });
 
@@ -135,6 +137,7 @@ class _NovoPedidoScreenState extends State<NovoPedidoScreen> {
     } else {
       // --- NOVO PEDIDO ---
       _entradaOrcamento = widget.modo == 'ORCAMENTO';
+      _descricaoController.text = widget.initialDescription?.trim() ?? '';
 
       // Categoria (se veio do catálogo)
       if (widget.servicoInicial != null) {

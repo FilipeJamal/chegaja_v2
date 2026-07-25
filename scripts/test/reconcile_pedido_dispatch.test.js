@@ -12,6 +12,10 @@ const {
   resolveOptions,
 } = require('../admin/reconcile_pedido_dispatch');
 
+process.env.PILOT_MARKET_ID = 'mz-maputo';
+process.env.DEFAULT_CURRENCY_CODE = 'MZN';
+process.env.RECONCILE_ALLOW_LEGACY_MAPUTO = 'true';
+
 function record(id, updateTime, data) {
   return { id, updateTime, data };
 }
@@ -33,26 +37,53 @@ function restDocument(collection, item) {
 async function main() {
   assert.throws(() => resolveOptions([]), /--project is required/);
   assert.throws(
-    () => resolveOptions(['--project=test-project', '--confirm']),
+    () => resolveOptions([
+      '--project=test-project',
+      '--market=mz-maputo',
+      '--confirm',
+    ]),
     /--confirm-project/,
   );
   assert.throws(
     () => resolveOptions([
       '--project=test-project',
+      '--market=mz-maputo',
       '--confirm',
       '--confirm-project=other-project',
     ]),
     /must match --project exactly/,
   );
-  assert.strictEqual(resolveOptions(['--project=test-project']).dryRun, true);
+  assert.throws(
+    () => resolveOptions(['--project=test-project']),
+    /--market is required/,
+  );
+  assert.throws(
+    () => resolveOptions([
+      '--project=test-project',
+      '--market=pt-coimbra',
+      '--allow-legacy-maputo',
+    ]),
+    /only valid with --market=mz-maputo/,
+  );
   assert.strictEqual(resolveOptions([
     '--project=test-project',
+    '--market=mz-maputo',
+  ]).dryRun, true);
+  assert.strictEqual(resolveOptions([
+    '--project=test-project',
+    '--market=mz-maputo',
+  ]).allowLegacyMaputo, false);
+  assert.strictEqual(resolveOptions([
+    '--project=test-project',
+    '--market=mz-maputo',
     '--confirm',
     '--confirm-project=test-project',
   ]).dryRun, false);
   await assert.rejects(
     reconcileWithClient({}, {
       projectId: 'test-project',
+      marketId: 'mz-maputo',
+      allowLegacyMaputo: true,
       confirmProject: 'wrong-project',
       confirm: true,
       dryRun: false,
@@ -87,6 +118,8 @@ async function main() {
   assert.strictEqual(openProjection.latitude, 40.21);
   assert.strictEqual(openProjection.longitude, -8.41);
   assert.strictEqual(openProjection.updatedAt, SERVER_TIMESTAMP);
+  assert.strictEqual(openProjection.marketId, 'mz-maputo');
+  assert.strictEqual(openProjection.currency, 'MZN');
 
   const targetedProjection = buildPedidoDispatchProjection('targeted-order', {
     status: 'aguarda_resposta_prestador',
@@ -104,6 +137,54 @@ async function main() {
   assert.strictEqual(targetedProjection.targetProviderId, 'provider-1');
   assert.strictEqual(targetedProjection.valorMinEstimadoPrestador, 100);
   assert.strictEqual(targetedProjection.valorMaxEstimadoPrestador, 150);
+
+  const previousMarketId = process.env.PILOT_MARKET_ID;
+  const previousCurrency = process.env.DEFAULT_CURRENCY_CODE;
+  try {
+    process.env.PILOT_MARKET_ID = 'pt-coimbra';
+    process.env.DEFAULT_CURRENCY_CODE = 'EUR';
+    const marketPlan = buildReconciliationPlan([
+      record('active-market', '2026-07-20T10:00:00.000000Z', {
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
+        status: 'criado',
+        moderationStatus: 'approved',
+      }),
+      record('other-market', '2026-07-20T10:00:00.000000Z', {
+        marketId: 'mz-maputo',
+        currency: 'MZN',
+        status: 'criado',
+        moderationStatus: 'approved',
+      }),
+      record('legacy-missing-market', '2026-07-20T10:00:00.000000Z', {
+        status: 'criado',
+        moderationStatus: 'approved',
+      }),
+    ], [
+      record('other-market', '2026-07-20T10:01:00.000000Z', {
+        pedidoId: 'other-market',
+      }),
+      record('legacy-missing-market', '2026-07-20T10:01:00.000000Z', {
+        pedidoId: 'legacy-missing-market',
+      }),
+    ]);
+    assert.strictEqual(marketPlan.counts.eligibleOpen, 1);
+    assert.strictEqual(marketPlan.counts.upserts, 1);
+    assert.strictEqual(marketPlan.counts.deletesTerminalOrStale, 2);
+    const activeProjection = marketPlan.mutations.find(
+      ({ pedidoId }) => pedidoId === 'active-market',
+    ).projection;
+    assert.strictEqual(activeProjection.marketId, 'pt-coimbra');
+    assert.strictEqual(activeProjection.currency, 'EUR');
+    assert(marketPlan.mutations
+      .filter(({ action }) => action === 'delete')
+      .every(({ reason }) => reason === 'terminal_or_stale'));
+  } finally {
+    if (previousMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = previousMarketId;
+    if (previousCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = previousCurrency;
+  }
 
   const conflictingLifecyclePlan = buildReconciliationPlan([record(
     'conflicting-lifecycle',
@@ -267,6 +348,8 @@ async function main() {
   let commits = 0;
   const confirmed = await reconcileWithClient({}, {
     projectId: 'test-project',
+    marketId: 'mz-maputo',
+    allowLegacyMaputo: true,
     confirmProject: 'test-project',
     confirm: true,
     dryRun: false,
@@ -329,6 +412,8 @@ async function main() {
   await assert.rejects(
     reconcileWithClient({}, {
       projectId: 'test-project',
+      marketId: 'mz-maputo',
+      allowLegacyMaputo: true,
       confirmProject: 'test-project',
       confirm: true,
       dryRun: false,

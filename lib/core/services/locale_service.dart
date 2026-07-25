@@ -13,7 +13,7 @@ class LocaleService extends ChangeNotifier {
   final String _storageKey = 'app_locale';
 
   Locale get locale {
-    if (AppConfig.pilotPortugueseOnly) return const Locale('pt', 'MZ');
+    if (AppConfig.pilotPortugueseOnly) return AppConfig.pilotLocale;
     if (_locale != null) return _locale!;
     // Default to system locale
     return ui.PlatformDispatcher.instance.locale;
@@ -24,7 +24,7 @@ class LocaleService extends ChangeNotifier {
   /// Inicializa o serviço carregando a preferência salva
   Future<void> load() async {
     if (AppConfig.pilotPortugueseOnly) {
-      _locale = const Locale('pt', 'MZ');
+      _locale = AppConfig.pilotLocale;
       notifyListeners();
       return;
     }

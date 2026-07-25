@@ -8,6 +8,8 @@ const { __test__ } = require('../index');
 
 describe('pedidos_applyActionSecure', () => {
   const db = __test__.getDb();
+  const originalMarketId = process.env.PILOT_MARKET_ID;
+  const originalCurrency = process.env.DEFAULT_CURRENCY_CODE;
   const {
     acceptPedidoDispatchCore,
     applyPedidoActionSecureCore,
@@ -23,6 +25,7 @@ describe('pedidos_applyActionSecure', () => {
     'provider_dispatch_private',
     'provider_opportunities',
     'provider_acceptance_limits',
+    'pedido_dispatch',
     'pilot_participants',
     'users_private',
   ];
@@ -45,6 +48,7 @@ describe('pedidos_applyActionSecure', () => {
       db.collection('users_private').doc(uid).set({
         legalConsent: {
           version: legalVersion,
+          marketId: 'mz-maputo',
           termsAccepted: true,
           privacyAccepted: true,
           ageConfirmed: true,
@@ -54,6 +58,7 @@ describe('pedidos_applyActionSecure', () => {
         status: 'active',
         roles: Array.isArray(roles) ? roles : [roles],
         city: 'Maputo',
+        marketId: 'mz-maputo',
       }),
     ]);
   }
@@ -66,10 +71,14 @@ describe('pedidos_applyActionSecure', () => {
         uid,
         isSearchable: true,
         servicos: [serviceId],
+        marketId: 'mz-maputo',
+        currency: 'MZN',
       }),
       db.collection('provider_private').doc(uid).set({
         providerId: uid,
         financialStatus: 'active',
+        marketId: 'mz-maputo',
+        currency: 'MZN',
       }),
       db.collection('provider_dispatch_private').doc(uid).set({
         providerId: uid,
@@ -77,6 +86,8 @@ describe('pedidos_applyActionSecure', () => {
         acceptingNewJobs: true,
         isOnline: true,
         servicos: [serviceId],
+        marketId: 'mz-maputo',
+        currency: 'MZN',
         radiusKm: 10,
         lastLocation: { lat: latitude, lng: longitude },
         geo: {
@@ -104,6 +115,8 @@ describe('pedidos_applyActionSecure', () => {
       statusConfirmacaoValor: 'nenhum',
       tipoPreco: 'a_combinar',
       tipoPagamento: 'dinheiro',
+      marketId: 'mz-maputo',
+      currency: 'MZN',
       latitude: -25.9654,
       longitude: 32.5893,
       geo: {
@@ -126,6 +139,8 @@ describe('pedidos_applyActionSecure', () => {
       matchedRadiusKm: 10,
       channel: 'matching_push',
       status: 'active',
+      marketId: 'mz-maputo',
+      currency: 'MZN',
       expiresAt: Timestamp.fromMillis(Date.now() + 15 * 60 * 1000),
       deliveredAt: Timestamp.now(),
       ...overrides,
@@ -142,7 +157,16 @@ describe('pedidos_applyActionSecure', () => {
   }
 
   beforeEach(async () => {
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
+    process.env.DEFAULT_CURRENCY_CODE = 'MZN';
     for (const collection of collections) await clearCollection(collection);
+  });
+
+  after(() => {
+    if (originalMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = originalMarketId;
+    if (originalCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = originalCurrency;
   });
 
   it('grants all private-access fields on open and invited acceptance only', async () => {
@@ -395,6 +419,8 @@ describe('pedidos_applyActionSecure', () => {
     const eligibleOpportunity = await eligibleOpportunityRef.get();
     assert.strictEqual(eligibleOpportunity.exists, true);
     assert.strictEqual(eligibleOpportunity.data().status, 'active');
+    assert.strictEqual(eligibleOpportunity.data().marketId, 'mz-maputo');
+    assert.strictEqual(eligibleOpportunity.data().currency, 'MZN');
     for (const providerId of ['stale', 'financially_suspended', 'inactive']) {
       assert.strictEqual(
         (await db.collection('provider_opportunities')
@@ -417,6 +443,78 @@ describe('pedidos_applyActionSecure', () => {
     assert.strictEqual((await eligibleOpportunityRef.get()).data().status, 'accepted');
   });
 
+  it('blocks dispatch and lifecycle actions for an order from another market', async () => {
+    await Promise.all([
+      seedActor('provider1', 'prestador'),
+      seedActor('client1', 'cliente'),
+      seedProvider('provider1'),
+      seedPedido('foreign_market_order', {
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
+      }),
+      seedOpportunity('foreign_market_order', 'provider1', {
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
+      }),
+    ]);
+
+    await assert.rejects(
+      () => acceptPedidoDispatchCore({
+        database: db,
+        auth: phoneAuth('provider1'),
+        pedidoId: 'foreign_market_order',
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assert.rejects(
+      () => apply('client1', {
+        action: 'client_cancel',
+        pedidoId: 'foreign_market_order',
+        motivo: 'mudanca_de_planos',
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    const pedido = (await db.collection('pedidos').doc('foreign_market_order').get()).data();
+    assert.strictEqual(pedido.status, 'criado');
+    assert.strictEqual(pedido.providerAccessGranted, false);
+  });
+
+  it('does not publish dispatch or matching opportunities for an order without geo', async () => {
+    await Promise.all([
+      seedActor('provider1', 'prestador'),
+      seedProvider('provider1'),
+      seedPedido('missing_geo_order', {
+        latitude: null,
+        longitude: null,
+        geo: null,
+        enderecoTexto: 'Rua privada 123, porta azul, Maputo',
+      }),
+    ]);
+    const pedido = (await db.collection('pedidos').doc('missing_geo_order').get()).data();
+    const notifications = [];
+    const result = await matchPedidoToProvidersCore({
+      database: db,
+      pedidoId: 'missing_geo_order',
+      pedido,
+      now: Timestamp.now(),
+      notifyProvider: async (providerId) => notifications.push(providerId),
+    });
+    assert.deepStrictEqual(result, {
+      providerIds: [],
+      reason: 'pedido_without_validated_location',
+    });
+    assert.deepStrictEqual(notifications, []);
+    assert.strictEqual(
+      (await db.collection('pedido_dispatch').doc('missing_geo_order').get()).exists,
+      false,
+    );
+    assert.strictEqual(
+      (await db.collection('provider_opportunities')
+        .doc(opportunityDocumentId('missing_geo_order', 'provider1')).get()).exists,
+      false,
+    );
+  });
+
   it('paginates every valid active-client grant beyond 500 pedidos', async () => {
     await seedProvider('provider_many');
     for (let page = 0; page < 2; page += 1) {
@@ -432,6 +530,8 @@ describe('pedidos_applyActionSecure', () => {
           providerAccessGrantedAt: Timestamp.now(),
           status: 'aceito',
           estado: 'aceito',
+          marketId: 'mz-maputo',
+          currency: 'MZN',
         });
       }
       await batch.commit();

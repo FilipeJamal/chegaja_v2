@@ -12,6 +12,7 @@ import 'package:chegaja_v2/core/widgets/app_filter_button.dart';
 import 'package:chegaja_v2/core/widgets/app_premium_search_bar.dart';
 import 'package:chegaja_v2/core/widgets/app_product_header.dart';
 import 'package:chegaja_v2/core/widgets/app_segmented_tabs.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 import 'package:chegaja_v2/features/common/mensagens/widgets/conversation_list_card.dart';
 import 'chat_thread_screen.dart';
 import 'package:chegaja_v2/l10n/app_localizations.dart';
@@ -85,6 +86,47 @@ class _MensagensTabState extends State<MensagensTab> {
                       });
                     },
                     child: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (!AuthService.hasVerifiedPhone) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.phonelink_lock_outlined, size: 56),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Confirma o telefone para abrir mensagens',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'A sessao temporaria permite explorar a app, mas nao '
+                    'consulta conversas privadas.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final allowed = await VerifiedPhoneGate.ensure(
+                        context,
+                        action: 'abrir as tuas mensagens',
+                      );
+                      if (allowed && mounted) setState(() {});
+                    },
+                    icon: const Icon(Icons.phone_android_rounded),
+                    label: const Text('Confirmar telefone'),
                   ),
                 ],
               ),
@@ -249,7 +291,8 @@ class _MensagensTabState extends State<MensagensTab> {
                                     hasUnread || unreadCount > 0;
 
                                 final favs = List<String>.from(
-                                    data['favoritedBy'] ?? []);
+                                  data['favoritedBy'] ?? [],
+                                );
                                 final isFav = favs.contains(uid);
 
                                 return _ChatTileData(

@@ -48,6 +48,30 @@ service cloud.firestore {
         && participant['roles'].hasAny([role]);
     }
 
+    function dispatchMatchesActivePilotParticipantMarket(data) {
+      let participant = activePilotParticipantData();
+      let publicData = signedIn()
+        && exists(/databases/$(database)/documents/provider_public/$(uid()))
+        ? get(/databases/$(database)/documents/provider_public/$(uid())).data
+        : {};
+      return data is map
+        && participant is map
+        && publicData is map
+        && data.keys().hasAll(['marketId', 'currency'])
+        && participant.keys().hasAny(['marketId'])
+        && publicData.keys().hasAll(['marketId', 'currency'])
+        && data['marketId'] is string
+        && participant['marketId'] is string
+        && publicData['marketId'] is string
+        && data['marketId'].size() > 0
+        && data['marketId'] == participant['marketId']
+        && publicData['marketId'] == participant['marketId']
+        && data['currency'] is string
+        && publicData['currency'] is string
+        && data['currency'].size() == 3
+        && data['currency'] == publicData['currency'];
+    }
+
     function accountAllowsPublicActivity(userId) {
       let account = get(/databases/$(database)/documents/users_private/$(userId));
       return account.data is map
@@ -216,12 +240,16 @@ service cloud.firestore {
       return data is map
         && data.keys().hasAll([
           'pedidoId',
+          'marketId',
+          'currency',
           'status',
           'prestadorId',
           'targetProviderId'
         ])
         && data.keys().hasOnly([
           'pedidoId',
+          'marketId',
+          'currency',
           'servicoId',
           'servicoNome',
           'categoria',
@@ -249,6 +277,11 @@ service cloud.firestore {
           'createdAt',
           'updatedAt'
         ])
+        && data['marketId'] is string
+        && data['marketId'].size() > 0
+        && data['marketId'].size() <= 80
+        && data['currency'] is string
+        && data['currency'].size() == 3
         && (!data.keys().hasAny(['valorMinEstimadoPrestador'])
           || data['valorMinEstimadoPrestador'] == null
           || data['valorMinEstimadoPrestador'] is number)
@@ -269,12 +302,12 @@ service cloud.firestore {
     }
 
     function canReadPedidoDispatch(data) {
-      let noAssignedProvider = data['prestadorId'] == null;
-      let noTargetProvider = data['targetProviderId'] == null;
-      return isSanitizedPedidoDispatch(data)
-        && noAssignedProvider
+      return data is map
+        && isSanitizedPedidoDispatch(data)
+        && dispatchMatchesActivePilotParticipantMarket(data)
+        && data['prestadorId'] == null
         && (
-          (data['status'] == 'criado' && noTargetProvider)
+          (data['status'] == 'criado' && data['targetProviderId'] == null)
           || data['targetProviderId'] == uid()
         );
     }
@@ -286,7 +319,8 @@ service cloud.firestore {
     function canListPedidoDispatch(data) {
       let noAssignedProvider = data['prestadorId'] == null;
       let noTargetProvider = data['targetProviderId'] == null;
-      return noAssignedProvider
+      return dispatchMatchesActivePilotParticipantMarket(data)
+        && noAssignedProvider
         && request.query.limit != null
         && request.query.limit <= 100
         && (
@@ -866,7 +900,8 @@ service cloud.firestore {
     }
 
     function validPrestadorOwnerCreate(prestadorId) {
-      return isSelf(prestadorId)
+      return hasVerifiedPhone()
+        && isSelf(prestadorId)
         && request.resource.data.keys().hasOnly(providerPublicOwnerFields())
         && (!request.resource.data.keys().hasAny(['uid']) ||
           request.resource.data['uid'] == prestadorId)
@@ -877,7 +912,8 @@ service cloud.firestore {
     }
 
     function validPrestadorOwnerUpdate(prestadorId) {
-      return isSelf(prestadorId)
+      return hasVerifiedPhone()
+        && isSelf(prestadorId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'nome',
           'displayName',
@@ -994,7 +1030,8 @@ service cloud.firestore {
     }
 
     function validProviderDispatchOwnerCreate(providerId) {
-      return isSelf(providerId)
+      return hasVerifiedPhone()
+        && isSelf(providerId)
         && validProviderDispatchData(request.resource.data, providerId)
         && (!request.resource.data.keys().hasAny(['createdAt'])
           || request.resource.data['createdAt'] == request.time)
@@ -1005,7 +1042,8 @@ service cloud.firestore {
     }
 
     function validProviderDispatchOwnerUpdate(providerId) {
-      return isSelf(providerId)
+      return hasVerifiedPhone()
+        && isSelf(providerId)
         && validProviderDispatchOwnerState(request.resource.data, providerId)
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(providerDispatchOwnerFields())
@@ -1046,14 +1084,16 @@ service cloud.firestore {
     }
 
     function validUserPrivateOwnerCreate(userId) {
-      return isSelf(userId)
+      return hasVerifiedPhone()
+        && isSelf(userId)
         && request.resource.data.keys().hasOnly(userPrivateOwnerFields())
         && (!request.resource.data.keys().hasAny(['uid']) ||
           request.resource.data['uid'] == userId);
     }
 
     function validUserPrivateOwnerUpdate(userId) {
-      return isSelf(userId)
+      return hasVerifiedPhone()
+        && isSelf(userId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'region',
           'activeRole',
@@ -1994,7 +2034,8 @@ service cloud.firestore {
       allow delete: if isAdmin() || devMode();
 
       match /fcmTokens/{tokenId} {
-        allow read, write: if isSelf(userId) || isAdmin();
+        allow read: if isSelf(userId) || isAdmin();
+        allow write: if (isSelf(userId) && hasVerifiedPhone()) || isAdmin();
       }
 
       match /notifications/{notificationId} {

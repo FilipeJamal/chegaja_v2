@@ -90,17 +90,171 @@ function envFlagEnabled(key, fallback = false) {
   return ['true', '1', 'yes', 'on'].includes(value);
 }
 
+const PILOT_MARKETS = Object.freeze({
+  'pt-coimbra': Object.freeze({
+    id: 'pt-coimbra',
+    countryCode: 'PT',
+    currency: 'EUR',
+    locale: 'pt_PT',
+    timeZone: 'Europe/Lisbon',
+    callingCode: '+351',
+    primaryCity: 'Coimbra',
+    cities: Object.freeze({
+      coimbra: 'Coimbra',
+    }),
+    serviceAreaLabel: 'Coimbra e zonas proximas',
+    scope: 'Coimbra controlled pilot',
+    defaultCohort: 'pt-coimbra-pilot-1',
+    allowedZones: Object.freeze(['coimbra']),
+    bounds: Object.freeze({
+      minLat: 40.13,
+      maxLat: 40.30,
+      minLng: -8.52,
+      maxLng: -8.30,
+    }),
+  }),
+  'mz-maputo': Object.freeze({
+    id: 'mz-maputo',
+    countryCode: 'MZ',
+    currency: 'MZN',
+    locale: 'pt_MZ',
+    timeZone: 'Africa/Maputo',
+    callingCode: '+258',
+    primaryCity: 'Maputo',
+    cities: Object.freeze({
+      maputo: 'Maputo',
+      matola: 'Matola',
+    }),
+    serviceAreaLabel: 'Maputo e Matola',
+    scope: 'Maputo/Matola controlled pilot',
+    defaultCohort: 'mz-maputo-pilot-1',
+    allowedZones: Object.freeze(['maputo', 'matola']),
+    bounds: Object.freeze({
+      minLat: -26.15,
+      maxLat: -25.75,
+      minLng: 32.35,
+      maxLng: 32.75,
+    }),
+  }),
+});
+
+function configuredPilotMarket() {
+  const explicitId = cleanString(getEnv('PILOT_MARKET_ID')).toLowerCase();
+  if (explicitId) {
+    const explicitMarket = PILOT_MARKETS[explicitId];
+    if (!explicitMarket) {
+      throw new Error(
+        `PILOT_MARKET_ID invalido: ${explicitId}. `
+        + `Valores suportados: ${Object.keys(PILOT_MARKETS).join(', ')}.`,
+      );
+    }
+    return explicitMarket;
+  }
+
+  // O cliente Flutter também resolve omissões para Coimbra. Manter o mesmo
+  // default evita que uma implantação parcialmente configurada crie dados num
+  // mercado/moeda diferente do que a aplicação consulta.
+  return PILOT_MARKETS['pt-coimbra'];
+}
+
+function pilotCurrencyCode() {
+  const market = configuredPilotMarket();
+  const legacyCurrency = cleanString(getEnv('DEFAULT_CURRENCY_CODE')).toUpperCase();
+  if (legacyCurrency && legacyCurrency !== market.currency) {
+    throw new HttpsError(
+      'failed-precondition',
+      `DEFAULT_CURRENCY_CODE deve corresponder ao mercado ${market.id} (${market.currency}).`,
+    );
+  }
+  return market.currency;
+}
+
+function recordBelongsToPilotMarket(record, {
+  market = configuredPilotMarket(),
+  requireCurrency = false,
+  allowLegacyMaputo = false,
+} = {}) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+  const recordMarketId = cleanString(record.marketId).toLowerCase();
+  const recordCurrencies = [record.currency, record.paymentCurrency]
+    .map((value) => cleanString(value).toUpperCase())
+    .filter(Boolean);
+  const legacyMaputoCompatibility = allowLegacyMaputo && market.id === 'mz-maputo';
+
+  if (recordMarketId) {
+    if (recordMarketId !== market.id) return false;
+  } else if (!legacyMaputoCompatibility) {
+    return false;
+  }
+
+  if (requireCurrency) {
+    if (recordCurrencies.length > 0) {
+      if (recordCurrencies.some((currency) => currency !== market.currency)) return false;
+    } else if (!legacyMaputoCompatibility) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function assertRecordBelongsToActiveMarket(record, options = {}) {
+  if (!recordBelongsToPilotMarket(record, options)) {
+    throw new HttpsError(
+      'failed-precondition',
+      `O registo nao pertence ao mercado ativo ${configuredPilotMarket().id}.`,
+    );
+  }
+  return record;
+}
+
+function marketMoneyEnv(genericKey, legacyMznKey, fallback = '') {
+  const genericValue = getEnv(genericKey).trim();
+  if (genericValue) return genericValue;
+  if (configuredPilotMarket().currency === 'MZN') {
+    const legacyValue = getEnv(legacyMznKey).trim();
+    if (legacyValue) return legacyValue;
+  }
+  return fallback;
+}
+
+function calendarDateInTimeZone(timestamp, timeZone = configuredPilotMarket().timeZone) {
+  const millis = timestamp instanceof Date
+    ? timestamp.getTime()
+    : Number(timestamp);
+  if (!Number.isFinite(millis)) {
+    throw new Error('Timestamp invalido para a data operacional do piloto.');
+  }
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(millis));
+  const valueFor = (type) => {
+    const part = parts.find((item) => item.type === type);
+    return part ? part.value : '';
+  };
+  return `${valueFor('year')}-${valueFor('month')}-${valueFor('day')}`;
+}
+
 function paymentMethodEnabled(method) {
   switch (cleanString(method).toLowerCase()) {
     case 'dinheiro':
     case 'cash':
       return true;
     case 'mpesa':
-      return envFlagEnabled('ENABLE_MPESA');
+      return configuredPilotMarket().countryCode === 'MZ'
+        && configuredPilotMarket().currency === 'MZN'
+        && envFlagEnabled('ENABLE_MPESA');
     case 'emola':
-      return envFlagEnabled('ENABLE_EMOLA');
+      return configuredPilotMarket().countryCode === 'MZ'
+        && configuredPilotMarket().currency === 'MZN'
+        && envFlagEnabled('ENABLE_EMOLA');
     case 'stripe':
-      return envFlagEnabled('ENABLE_STRIPE') && envFlagEnabled('STRIPE_MZN_VALIDATED');
+      return envFlagEnabled('ENABLE_STRIPE')
+        && (envFlagEnabled('STRIPE_MARKET_VALIDATED')
+          || (configuredPilotMarket().currency === 'MZN'
+            && envFlagEnabled('STRIPE_MZN_VALIDATED')));
     default:
       return false;
   }
@@ -578,6 +732,8 @@ function dispatchZoneSource(pedido = {}) {
 }
 
 function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
+  const market = configuredPilotMarket();
+  const currency = pilotCurrencyCode();
   const latitude = approximateCoordinate(pedido.latitude ?? pedido.geo?.geopoint?.latitude);
   const longitude = approximateCoordinate(pedido.longitude ?? pedido.geo?.geopoint?.longitude);
   // enderecoTexto is deliberately excluded: it is client-authored and can
@@ -593,6 +749,8 @@ function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
     : '';
   return {
     pedidoId,
+    marketId: market.id,
+    currency,
     servicoId: safeText(pedido.servicoId, 120),
     servicoNome: serviceLabel,
     categoria: serviceLabel,
@@ -667,6 +825,28 @@ async function syncPedidoDispatch(database, pedidoId) {
   return database.runTransaction(async (transaction) => {
     const pedidoSnap = await transaction.get(pedidoRef);
     const pedido = pedidoSnap.exists ? (pedidoSnap.data() || {}) : null;
+    if (pedido && !recordBelongsToPilotMarket(pedido, { requireCurrency: true })) {
+      transaction.delete(dispatchRef);
+      return {
+        open: false,
+        targeted: false,
+        pedido,
+        reason: 'pedido_outside_active_market',
+      };
+    }
+    if (pedido) {
+      try {
+        resolvePilotOrderLocation(pedido);
+      } catch (_) {
+        transaction.delete(dispatchRef);
+        return {
+          open: false,
+          targeted: false,
+          pedido,
+          reason: 'pedido_without_validated_location',
+        };
+      }
+    }
     const open = !!pedido && isOpenPedido(pedido);
     const targeted = !!pedido && isTargetedDispatchPedido(pedido);
     if (!open && !targeted) {
@@ -705,6 +885,7 @@ async function syncProviderActiveClients(database, providerId, { pageSize = 500 
     const snapshot = await query.get();
     snapshot.docs
       .map((doc) => doc.data() || {})
+      .filter((pedido) => recordBelongsToPilotMarket(pedido, { requireCurrency: true }))
       .filter((pedido) => providerHasFullPedidoAccess(pedido, cleanProviderId))
       .map(getClienteId)
       .filter(Boolean)
@@ -844,6 +1025,8 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
     const pedidoSnap = await tx.get(pedidoRef);
     if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
     const pedido = pedidoSnap.data() || {};
+    assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
+    resolvePilotOrderLocation(pedido);
     const invitedProvider = getPedidoEstado(pedido) === 'aguarda_resposta_prestador'
       && cleanString(pedido.prestadorId) === providerId
       && cleanString(pedido.moderationStatus || 'approved') === 'approved';
@@ -882,6 +1065,7 @@ async function acceptPedidoDispatchCore({ database = db, auth, pedidoId }) {
       opportunity = opportunitySnap.exists ? (opportunitySnap.data() || {}) : null;
       const expiresAtMillis = toMillis(opportunity && opportunity.expiresAt);
       if (!opportunity
+        || !recordBelongsToPilotMarket(opportunity, { requireCurrency: true })
         || cleanString(opportunity.pedidoId) !== cleanPedidoId
         || cleanString(opportunity.providerId) !== providerId
         || cleanString(opportunity.status) !== 'active'
@@ -1019,17 +1203,22 @@ async function syncPhoneIdentityCore({ database = db, auth, authAdmin = firebase
   });
 
   const now = FieldValue.serverTimestamp();
+  const market = configuredPilotMarket();
   const privateRef = database.collection('users_private').doc(auth.uid);
   const providerPublicRef = database.collection('provider_public').doc(auth.uid);
+  const providerDispatchRef = database
+    .collection('provider_dispatch_private')
+    .doc(auth.uid);
   const activePilotProvider = await pilotParticipantIsActive({
     database,
     uid: auth.uid,
     role: 'prestador',
   });
   await database.runTransaction(async (transaction) => {
-    const [privateSnap, providerSnap] = await Promise.all([
+    const [privateSnap, providerSnap, dispatchSnap] = await Promise.all([
       transaction.get(privateRef),
       transaction.get(providerPublicRef),
+      transaction.get(providerDispatchRef),
     ]);
     if (!accountAllowsNewWork(privateSnap.exists ? privateSnap.data() : {})) {
       throw new HttpsError(
@@ -1047,8 +1236,19 @@ async function syncPhoneIdentityCore({ database = db, auth, authAdmin = firebase
     }, { merge: true });
     if (providerSnap.exists) {
       transaction.set(providerPublicRef, {
+        marketId: market.id,
+        countryCode: market.countryCode,
+        currency: market.currency,
         isSearchable: activePilotProvider,
         trustSignals: { phoneConfirmed: true },
+        updatedAt: now,
+      }, { merge: true });
+    }
+    if (dispatchSnap.exists) {
+      transaction.set(providerDispatchRef, {
+        marketId: market.id,
+        countryCode: market.countryCode,
+        currency: market.currency,
         updatedAt: now,
       }, { merge: true });
     }
@@ -1339,6 +1539,7 @@ const KYC_CONSENT_VERSION = 'kyc-consent-2026-07-20';
 const KYC_UPLOAD_WINDOW_MINUTES = 30;
 const KYC_RETENTION_DAYS = 90;
 const LEGAL_DOCUMENT_VERSION = 'legal-2026-07-20-pilot-v3';
+const LEGAL_DOCUMENT_MARKET_ID = 'mz-maputo';
 const ACCOUNT_DELETION_GRACE_DAYS = 7;
 const ACCOUNT_DELETION_LEASE_MS = 15 * 60 * 1000;
 const ACCOUNT_DELETION_STORAGE_ROOTS = Object.freeze([
@@ -1361,9 +1562,22 @@ function requireVerifiedPhoneAuth(auth) {
   return uid;
 }
 
-function assertCurrentLegalConsent(consent) {
+function legalDocumentsAvailableForMarket(market = configuredPilotMarket()) {
+  return !!market && market.id === LEGAL_DOCUMENT_MARKET_ID;
+}
+
+function assertCurrentLegalConsent(consent, market = configuredPilotMarket()) {
+  if (!legalDocumentsAvailableForMarket(market)) {
+    throw new HttpsError(
+      'failed-precondition',
+      `Os documentos legais ainda nao estao disponiveis para ${market.id}.`,
+    );
+  }
+  const consentMarketId = cleanString(consent && consent.marketId).toLowerCase();
+  const legacyMaputoConsent = !consentMarketId && market.id === LEGAL_DOCUMENT_MARKET_ID;
   if (!consent
     || cleanString(consent.version) !== LEGAL_DOCUMENT_VERSION
+    || (!legacyMaputoConsent && consentMarketId !== market.id)
     || consent.termsAccepted !== true
     || consent.privacyAccepted !== true
     || consent.ageConfirmed !== true) {
@@ -1392,13 +1606,19 @@ function normalizedPilotRoles(value) {
   return [...new Set(roles)];
 }
 
+function pilotParticipantBelongsToMarket(participant, market = configuredPilotMarket()) {
+  if (!participant) return false;
+  if (!recordBelongsToPilotMarket(participant, { market })) return false;
+  const city = normalizeSafetyText(participant.city);
+  return Object.prototype.hasOwnProperty.call(market.cities, city);
+}
+
 function pilotParticipantIsActiveForRole(participant, role) {
   const roles = normalizedPilotRoles(participant && participant.roles);
-  const city = normalizeSafetyText(participant && participant.city);
   return !!participant
     && participant.status === 'active'
     && roles.includes(role)
-    && ['maputo', 'matola'].includes(city);
+    && pilotParticipantBelongsToMarket(participant);
 }
 
 async function requirePilotParticipant({
@@ -1431,41 +1651,104 @@ async function pilotParticipantIsActive({ database = db, uid, role }) {
   }
 }
 
-function enforcePilotOrderLocation(input = {}) {
-  if (!envFlagEnabled('PILOT_MAPUTO_ONLY', !useEmulators)) return;
+function pilotLocationBounds(market = configuredPilotMarket()) {
+  return {
+    minLat: Number(getEnv('PILOT_MIN_LAT', String(market.bounds.minLat))),
+    maxLat: Number(getEnv('PILOT_MAX_LAT', String(market.bounds.maxLat))),
+    minLng: Number(getEnv('PILOT_MIN_LNG', String(market.bounds.minLng))),
+    maxLng: Number(getEnv('PILOT_MAX_LNG', String(market.bounds.maxLng))),
+  };
+}
+
+function pilotAllowedZoneIds(market = configuredPilotMarket()) {
+  const configured = getEnv('PILOT_ALLOWED_ZONES', market.allowedZones.join(','))
+    .split(',')
+    .map(normalizeSafetyText)
+    .filter((zoneId) => (
+      market.allowedZones.includes(zoneId)
+      && Object.prototype.hasOwnProperty.call(market.cities, zoneId)
+    ));
+  return [...new Set(configured)];
+}
+
+function resolvePilotOrderLocation(input = {}, market = configuredPilotMarket()) {
   const latitude = input.latitude === null || input.latitude === undefined
     ? null
     : Number(input.latitude);
   const longitude = input.longitude === null || input.longitude === undefined
     ? null
     : Number(input.longitude);
-  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-    const minLat = Number(getEnv('PILOT_MIN_LAT', '-26.20'));
-    const maxLat = Number(getEnv('PILOT_MAX_LAT', '-25.60'));
-    const minLng = Number(getEnv('PILOT_MIN_LNG', '32.20'));
-    const maxLng = Number(getEnv('PILOT_MAX_LNG', '33.00'));
-    if (latitude >= minLat && latitude <= maxLat && longitude >= minLng && longitude <= maxLng) {
-      return;
-    }
-    throw new HttpsError('failed-precondition', 'O pedido esta fora da area do piloto Maputo/Matola.');
-  }
-  const address = normalizeSafetyText(input.enderecoTexto || input.zone || input.city || '');
-  const allowedZones = getEnv('PILOT_ALLOWED_ZONES', 'maputo,matola')
-    .split(',')
-    .map(normalizeSafetyText)
-    .filter(Boolean);
-  if (!address || !allowedZones.some((zone) => address.includes(zone))) {
+  if (latitude === null || longitude === null) {
     throw new HttpsError(
       'failed-precondition',
-      'Confirma uma localizacao em Maputo ou Matola para publicar no piloto.',
+      `Ativa a localizacao e confirma coordenadas em ${market.serviceAreaLabel}.`,
     );
   }
+  if (!Number.isFinite(latitude)
+    || !Number.isFinite(longitude)
+    || latitude < -90
+    || latitude > 90
+    || longitude < -180
+    || longitude > 180) {
+    throw new HttpsError('invalid-argument', 'Coordenadas do pedido invalidas.');
+  }
+  const bounds = pilotLocationBounds(market);
+  if (latitude < bounds.minLat
+    || latitude > bounds.maxLat
+    || longitude < bounds.minLng
+    || longitude > bounds.maxLng) {
+    throw new HttpsError(
+      'failed-precondition',
+      `O pedido esta fora da area do piloto ${market.serviceAreaLabel}.`,
+    );
+  }
+
+  const allowedZoneIds = pilotAllowedZoneIds(market);
+  const requestedZoneId = normalizeSafetyText(input.dispatchZoneId || input.zoneId);
+  if (requestedZoneId && !allowedZoneIds.includes(requestedZoneId)) {
+    throw new HttpsError('invalid-argument', 'Zona publica do pedido invalida.');
+  }
+  const primaryZoneId = Object.entries(market.cities)
+    .find(([, city]) => city === market.primaryCity)?.[0]
+    || market.allowedZones[0];
+  const dispatchZoneId = requestedZoneId || primaryZoneId;
+  const dispatchZone = market.cities[dispatchZoneId] || market.primaryCity;
+  return {
+    latitude,
+    longitude,
+    dispatchZoneId,
+    dispatchZone,
+    dispatchZoneSource: requestedZoneId
+      ? 'server_allowlisted_zone_id'
+      : 'server_validated_market_fallback',
+  };
+}
+
+function enforcePilotOrderLocation(input = {}) {
+  return resolvePilotOrderLocation(input);
 }
 
 async function acceptLegalDocumentsCore({ database = db, auth, data = {} }) {
   const uid = requireVerifiedPhoneAuth(auth);
+  const market = configuredPilotMarket();
+  if (!legalDocumentsAvailableForMarket(market)) {
+    throw new HttpsError(
+      'failed-precondition',
+      `Os documentos legais ainda nao estao disponiveis para ${market.id}.`,
+    );
+  }
+  const marketId = cleanString(data.marketId).toLowerCase();
+  if (!marketId) {
+    throw new HttpsError('invalid-argument', 'marketId obrigatorio.');
+  }
+  if (marketId !== market.id || marketId !== LEGAL_DOCUMENT_MARKET_ID) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Os documentos legais apresentados nao pertencem ao mercado ativo.',
+    );
+  }
   const version = cleanString(data.version);
-  const locale = cleanString(data.locale || 'pt_MZ').slice(0, 20);
+  const locale = cleanString(data.locale || market.locale).slice(0, 20);
   if (version !== LEGAL_DOCUMENT_VERSION) {
     throw new HttpsError('failed-precondition', 'A versao dos documentos mudou. Le novamente.');
   }
@@ -1492,6 +1775,7 @@ async function acceptLegalDocumentsCore({ database = db, auth, data = {} }) {
     transaction.set(privateRef, {
       legalConsent: {
         version,
+        marketId,
         locale,
         termsAccepted: true,
         privacyAccepted: true,
@@ -1503,6 +1787,7 @@ async function acceptLegalDocumentsCore({ database = db, auth, data = {} }) {
     transaction.create(auditRef, {
       uid,
       version,
+      marketId,
       locale,
       termsAccepted: true,
       privacyAccepted: true,
@@ -1510,7 +1795,7 @@ async function acceptLegalDocumentsCore({ database = db, auth, data = {} }) {
       acceptedAt,
     });
   });
-  return { ok: true, version };
+  return { ok: true, version, marketId };
 }
 
 const SUPPORT_SUBJECTS = Object.freeze({
@@ -1542,6 +1827,9 @@ async function createSupportTicketCore({ database = db, auth, data = {} }) {
   if (pedidoId) {
     const pedido = await database.collection('pedidos').doc(pedidoId).get();
     const pedidoData = pedido.exists ? pedido.data() : null;
+    if (pedidoData) {
+      assertRecordBelongsToActiveMarket(pedidoData, { requireCurrency: true });
+    }
     const hasPedidoAccess = pedidoData
       && (cleanString(getClienteId(pedidoData)) === uid
         || providerHasFullPedidoAccess(pedidoData, uid));
@@ -1551,8 +1839,11 @@ async function createSupportTicketCore({ database = db, auth, data = {} }) {
   }
 
   const ref = database.collection('support_tickets').doc();
+  const market = configuredPilotMarket();
   await ref.create({
     uid,
+    marketId: market.id,
+    countryCode: market.countryCode,
     userType,
     category,
     subject: SUPPORT_SUBJECTS[category],
@@ -1573,12 +1864,14 @@ async function adminSetPilotParticipantCore({
   authAdmin = firebaseAuth,
 }) {
   ensureAdmin(auth);
+  const market = configuredPilotMarket();
   const participantUid = cleanString(data.uid);
   const status = cleanString(data.status || 'active').toLowerCase();
   const roles = normalizedPilotRoles(data.roles);
-  const city = cleanString(data.city || 'Maputo');
+  const requestedMarketId = cleanString(data.marketId).toLowerCase();
+  const city = cleanString(data.city || market.primaryCity);
   const normalizedCity = normalizeSafetyText(city);
-  const cohort = safeText(data.cohort || 'maputo-pilot-1', 80);
+  const cohort = safeText(data.cohort || market.defaultCohort, 80);
   const note = safeText(data.note, 500);
   if (!participantUid || participantUid.length > 128) {
     throw new HttpsError('invalid-argument', 'UID do participante invalido.');
@@ -1589,9 +1882,19 @@ async function adminSetPilotParticipantCore({
   if (status === 'active' && roles.length === 0) {
     throw new HttpsError('invalid-argument', 'Seleciona Cliente, Prestador ou ambos.');
   }
-  if (!['maputo', 'matola'].includes(normalizedCity)) {
-    throw new HttpsError('invalid-argument', 'O piloto aceita apenas Maputo ou Matola.');
+  if (requestedMarketId && requestedMarketId !== market.id) {
+    throw new HttpsError(
+      'invalid-argument',
+      `O backend esta configurado para o mercado ${market.id}.`,
+    );
   }
+  if (!Object.prototype.hasOwnProperty.call(market.cities, normalizedCity)) {
+    throw new HttpsError(
+      'invalid-argument',
+      `O piloto aceita apenas ${market.serviceAreaLabel}.`,
+    );
+  }
+  const canonicalCity = market.cities[normalizedCity];
   if (status === 'active') {
     try {
       await authAdmin.getUser(participantUid);
@@ -1613,9 +1916,11 @@ async function adminSetPilotParticipantCore({
   const batch = database.batch();
   batch.set(ref, {
     uid: participantUid,
+    marketId: market.id,
+    countryCode: market.countryCode,
     status,
     roles,
-    city: normalizedCity === 'matola' ? 'Matola' : 'Maputo',
+    city: canonicalCity,
     cohort,
     note: note || null,
     enrolledAt: existing.exists
@@ -1625,19 +1930,41 @@ async function adminSetPilotParticipantCore({
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   batch.set(database.collection('users_private').doc(participantUid), {
-    pilot: { status, roles, city, cohort },
+    pilot: {
+      marketId: market.id,
+      countryCode: market.countryCode,
+      status,
+      roles,
+      city: canonicalCity,
+      cohort,
+    },
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
+  if (roles.includes('prestador')) {
+    batch.set(database.collection('provider_private').doc(participantUid), {
+      providerId: participantUid,
+      marketId: market.id,
+      countryCode: market.countryCode,
+      currency: market.currency,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
   if (provider.exists) {
     const hasServices = Array.isArray(provider.data().servicos)
       && provider.data().servicos.length > 0;
     batch.set(provider.ref, {
+      marketId: market.id,
+      countryCode: market.countryCode,
+      currency: market.currency,
       isSearchable: status === 'active' && roles.includes('prestador') && hasServices,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   }
   if (roles.includes('prestador') || provider.exists || dispatch.exists) {
     batch.set(database.collection('provider_dispatch_private').doc(participantUid), {
+      marketId: market.id,
+      countryCode: market.countryCode,
+      currency: market.currency,
       acceptingRequests: status === 'active' && roles.includes('prestador'),
       ...(status === 'inactive' ? { isOnline: false } : {}),
       updatedAt: FieldValue.serverTimestamp(),
@@ -1653,14 +1980,28 @@ async function adminSetPilotParticipantCore({
     beforeStatus,
     afterStatus: status,
     reason: note,
-    metadata: { roles, city, cohort },
+    metadata: {
+      marketId: market.id,
+      roles,
+      city: canonicalCity,
+      cohort,
+    },
   });
   await batch.commit();
-  return { ok: true, uid: participantUid, status, roles, city, cohort };
+  return {
+    ok: true,
+    uid: participantUid,
+    marketId: market.id,
+    status,
+    roles,
+    city: canonicalCity,
+    cohort,
+  };
 }
 
 async function adminListPilotParticipantsCore({ database = db, auth, data = {} }) {
   ensureAdmin(auth);
+  const market = configuredPilotMarket();
   const statusFilter = cleanString(data.status || 'all').toLowerCase();
   if (!['all', 'active', 'inactive'].includes(statusFilter)) {
     throw new HttpsError('invalid-argument', 'Filtro de participantes invalido.');
@@ -1669,6 +2010,7 @@ async function adminListPilotParticipantsCore({ database = db, auth, data = {} }
   const participants = snapshot.docs
     .map((doc) => ({
       uid: doc.id,
+      marketId: cleanString(doc.data().marketId) || null,
       status: cleanString(doc.data().status),
       roles: normalizedPilotRoles(doc.data().roles),
       city: cleanString(doc.data().city),
@@ -1677,9 +2019,15 @@ async function adminListPilotParticipantsCore({ database = db, auth, data = {} }
       enrolledAt: toMillis(doc.data().enrolledAt),
       updatedAt: toMillis(doc.data().updatedAt),
     }))
+    .filter((item) => pilotParticipantBelongsToMarket(item, market))
     .filter((item) => statusFilter === 'all' || item.status === statusFilter)
     .sort((a, b) => (b.enrolledAt || 0) - (a.enrolledAt || 0));
-  return { generatedAt: Date.now(), total: participants.length, participants };
+  return {
+    generatedAt: Date.now(),
+    marketId: market.id,
+    total: participants.length,
+    participants,
+  };
 }
 
 function median(values) {
@@ -1692,6 +2040,8 @@ function median(values) {
 }
 
 async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = {}) {
+  const market = configuredPilotMarket();
+  const currency = pilotCurrencyCode();
   const nowMs = toMillis(now) || Date.now();
   const since30 = nowMs - 30 * 24 * 60 * 60 * 1000;
   const since90 = nowMs - 90 * 24 * 60 * 60 * 1000;
@@ -1707,7 +2057,7 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
 
   const participants = participantsSnap.docs
     .map((doc) => ({ uid: doc.id, ...doc.data() }))
-    .filter((item) => item.status === 'active');
+    .filter((item) => item.status === 'active' && pilotParticipantBelongsToMarket(item, market));
   const participantIds = new Set(participants.map((item) => item.uid));
   const providerParticipants = participants.filter((item) => (
     normalizedPilotRoles(item.roles).includes('prestador')
@@ -1721,6 +2071,7 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
   const providersWithOpportunity = new Set();
   opportunitiesSnap.docs.forEach((doc) => {
     const data = doc.data() || {};
+    if (!recordBelongsToPilotMarket(data, { market, requireCurrency: true })) return;
     const providerId = cleanString(data.providerId);
     if (providerIds.has(providerId)) providersWithOpportunity.add(providerId);
   });
@@ -1729,9 +2080,9 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
   let requestsWithResponse = 0;
   let requestsCompleted = 0;
   let requestsCancelled = 0;
-  let gmvMzn = 0;
-  let providerEarningsMzn = 0;
-  let commissionDueMzn = 0;
+  let gmv = 0;
+  let providerEarnings = 0;
+  let commissionDue = 0;
   let financialRecordsComplete = 0;
   let financialRecordsIncomplete = 0;
   const firstCompletedAtByProvider = new Map();
@@ -1741,6 +2092,7 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
 
   pedidosSnap.docs.forEach((doc) => {
     const data = doc.data() || {};
+    if (!recordBelongsToPilotMarket(data, { market, requireCurrency: true })) return;
     const clientId = cleanString(getClienteId(data));
     const providerId = cleanString(data.prestadorId);
     if (!participantIds.has(clientId) && !providerIds.has(providerId)) return;
@@ -1757,23 +2109,23 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
       && data.earningsProvider !== undefined;
     const hasCommission = data.commissionPlatform !== null
       && data.commissionPlatform !== undefined;
-    const providerEarnings = Number(data.earningsProvider);
-    const commission = Number(data.commissionPlatform);
-    if (Number.isFinite(finalValue) && finalValue > 0) gmvMzn += finalValue;
+    const providerEarningsValue = Number(data.earningsProvider);
+    const commissionValue = Number(data.commissionPlatform);
+    if (Number.isFinite(finalValue) && finalValue > 0) gmv += finalValue;
     const economicsTolerance = Math.max(0.01, Math.abs(finalValue) * 0.001);
     const hasAuthoritativeEconomics = Number.isFinite(finalValue)
       && finalValue > 0
       && hasProviderEarnings
       && hasCommission
-      && Number.isFinite(providerEarnings)
-      && providerEarnings >= 0
-      && Number.isFinite(commission)
-      && commission >= 0
-      && Math.abs((providerEarnings + commission) - finalValue) <= economicsTolerance;
+      && Number.isFinite(providerEarningsValue)
+      && providerEarningsValue >= 0
+      && Number.isFinite(commissionValue)
+      && commissionValue >= 0
+      && Math.abs((providerEarningsValue + commissionValue) - finalValue) <= economicsTolerance;
     if (hasAuthoritativeEconomics) {
       financialRecordsComplete += 1;
-      providerEarningsMzn += providerEarnings;
-      commissionDueMzn += commission;
+      providerEarnings += providerEarningsValue;
+      commissionDue += commissionValue;
     } else {
       financialRecordsIncomplete += 1;
     }
@@ -1800,18 +2152,20 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
     if (hours <= 30 * 24) providersFirstPaid30Days += 1;
   });
 
-  let commissionsCollectedMzn = 0;
+  let commissionsCollected = 0;
   commissionPaymentsSnap.docs.forEach((doc) => {
     const data = doc.data() || {};
+    if (!recordBelongsToPilotMarket(data, { market, requireCurrency: true })) return;
     if (!providerIds.has(cleanString(data.providerId))) return;
     const amount = Number(data.amount || 0);
-    if (Number.isFinite(amount) && amount > 0) commissionsCollectedMzn += amount;
+    if (Number.isFinite(amount) && amount > 0) commissionsCollected += amount;
   });
   const relevantDisputeCategories = new Set(['order', 'payment', 'safety']);
   let disputesOpened = 0;
   let disputesResolved = 0;
   reportsSnap.docs.forEach((doc) => {
     const data = doc.data() || {};
+    if (!recordBelongsToPilotMarket(data, { market })) return;
     if (!participantIds.has(cleanString(data.reporterId))
       && !participantIds.has(cleanString(data.targetOwnerId))) return;
     disputesOpened += 1;
@@ -1821,6 +2175,7 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
   });
   supportSnap.docs.forEach((doc) => {
     const data = doc.data() || {};
+    if (!recordBelongsToPilotMarket(data, { market })) return;
     if (!participantIds.has(cleanString(data.uid))
       || !relevantDisputeCategories.has(cleanString(data.category))) return;
     disputesOpened += 1;
@@ -1830,10 +2185,33 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
   const totalProviders = providerParticipants.length;
   const returningClients = [...completedByClient.values()].filter((count) => count >= 2).length;
   const round2 = (value) => Math.round(value * 100) / 100;
+  const valueMetrics = {
+    gmv: round2(gmv),
+    providerEarnings: round2(providerEarnings),
+    commissionDue: round2(commissionDue),
+    commissionsCollected: round2(commissionsCollected),
+    financialRecordsComplete,
+    financialRecordsIncomplete,
+    commissionCollectionRate: commissionDue > 0
+      ? commissionsCollected / commissionDue
+      : null,
+  };
+  if (currency === 'MZN') {
+    Object.assign(valueMetrics, {
+      gmvMzn: valueMetrics.gmv,
+      providerEarningsMzn: valueMetrics.providerEarnings,
+      commissionDueMzn: valueMetrics.commissionDue,
+      commissionsCollectedMzn: valueMetrics.commissionsCollected,
+    });
+  }
   return {
     generatedAt: nowMs,
-    currency: 'MZN',
-    scope: 'Maputo/Matola controlled pilot',
+    marketId: market.id,
+    countryCode: market.countryCode,
+    currency,
+    locale: market.locale,
+    timeZone: market.timeZone,
+    scope: market.scope,
     mission: {
       metric: 'providers_first_paid_work_within_30_days',
       numerator: providersFirstPaid30Days,
@@ -1858,17 +2236,7 @@ async function buildPilotMetricsCore({ database = db, now = Timestamp.now() } = 
       completionRate: requestsCreated > 0 ? requestsCompleted / requestsCreated : null,
       cancelled: requestsCancelled,
     },
-    value: {
-      gmvMzn: round2(gmvMzn),
-      providerEarningsMzn: round2(providerEarningsMzn),
-      commissionDueMzn: round2(commissionDueMzn),
-      commissionsCollectedMzn: round2(commissionsCollectedMzn),
-      financialRecordsComplete,
-      financialRecordsIncomplete,
-      commissionCollectionRate: commissionDueMzn > 0
-        ? commissionsCollectedMzn / commissionDueMzn
-        : null,
-    },
+    value: valueMetrics,
     clients: { returning: returningClients },
     trustSafety: {
       disputesOpened,
@@ -2972,6 +3340,9 @@ async function authorizePrivateStoragePath({ database = db, auth, storagePath })
   }
   const pedido = await database.collection('pedidos').doc(parsed.pedidoId).get();
   const data = pedido.exists ? (pedido.data() || {}) : null;
+  if (data) {
+    assertRecordBelongsToActiveMarket(data, { requireCurrency: true });
+  }
   const role = data && getClienteId(data) === uid
     ? 'cliente'
     : (data && providerHasFullPedidoAccess(data, uid) ? 'prestador' : '');
@@ -3127,6 +3498,7 @@ function parsePedidoSchedule(value, mode) {
 }
 
 function buildSecurePedidoData({ uid, input, policy, moderationStatus, requestedProviderId = '' }) {
+  const market = configuredPilotMarket();
   const title = cleanString(input.titulo);
   const description = cleanString(input.descricao);
   if (title.length < 4 || title.length > 180 || description.length > 2000) {
@@ -3137,17 +3509,8 @@ function buildSecurePedidoData({ uid, input, policy, moderationStatus, requested
     throw new HttpsError('invalid-argument', 'Modelo de trabalho invalido.');
   }
   const scheduledAt = parsePedidoSchedule(input.agendadoPara, mode);
-  const latitude = input.latitude === null || input.latitude === undefined
-    ? null
-    : Number(input.latitude);
-  const longitude = input.longitude === null || input.longitude === undefined
-    ? null
-    : Number(input.longitude);
-  if ((latitude === null) !== (longitude === null)
-    || (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
-    || (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))) {
-    throw new HttpsError('invalid-argument', 'Localizacao invalida.');
-  }
+  const location = resolvePilotOrderLocation(input, market);
+  const { latitude, longitude } = location;
   const tipoPreco = cleanString(input.tipoPreco || 'a_combinar').toLowerCase();
   if (!['a_combinar', 'fixo', 'por_hora', 'por_orcamento', 'por_tarefa'].includes(tipoPreco)) {
     throw new HttpsError('invalid-argument', 'Modelo de preco invalido.');
@@ -3171,7 +3534,7 @@ function buildSecurePedidoData({ uid, input, policy, moderationStatus, requested
         .map(normalizeSafetyText)
         .filter(Boolean)
     : [];
-  const geo = latitude === null ? null : {
+  const geo = {
     geohash: geofire.geohashForLocation([latitude, longitude]),
     geopoint: new GeoPoint(latitude, longitude),
   };
@@ -3195,12 +3558,17 @@ function buildSecurePedidoData({ uid, input, policy, moderationStatus, requested
     agendadoPara: scheduledAt,
     tipoPreco,
     tipoPagamento: paymentType === 'cash' ? 'dinheiro' : paymentType,
-    currency: cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toUpperCase() || 'MZN',
+    marketId: market.id,
+    countryCode: market.countryCode,
+    currency: pilotCurrencyCode(),
     estado: state,
     status: state,
     latitude,
     longitude,
-    ...(geo ? { geo } : {}),
+    geo,
+    dispatchZoneId: location.dispatchZoneId,
+    dispatchZone: location.dispatchZone,
+    dispatchZoneSource: location.dispatchZoneSource,
     enderecoTexto: safeText(input.enderecoTexto, 300) || null,
     anexos: attachments,
     categoryApprovalRequired: policy.approvalRequired === true,
@@ -3413,6 +3781,7 @@ async function updateSecurePedidoCore({ database = db, auth, data = {} }) {
   const currentSnap = await currentRef.get();
   if (!currentSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
   const current = currentSnap.data() || {};
+  assertRecordBelongsToActiveMarket(current, { requireCurrency: true });
   if (!pedidoIsSecurelyEditableByClient(current, uid)) {
     throw new HttpsError('failed-precondition', 'Este pedido ja nao pode ser editado.');
   }
@@ -3462,6 +3831,7 @@ async function updateSecurePedidoCore({ database = db, auth, data = {} }) {
     }
     if (!freshSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
     const fresh = freshSnap.data() || {};
+    assertRecordBelongsToActiveMarket(fresh, { requireCurrency: true });
     if (!pedidoIsSecurelyEditableByClient(fresh, uid)) {
       throw new HttpsError('failed-precondition', 'Este pedido ja nao pode ser editado.');
     }
@@ -3534,6 +3904,7 @@ async function reviewPedidoServiceCore({ database = db, auth, data = {} }) {
       throw new HttpsError('failed-precondition', 'Fila de moderacao inexistente para este pedido.');
     }
     const pedido = pedidoSnap.data() || {};
+    assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
     const queue = queueSnap.data() || {};
     if (pedido.moderationStatus !== 'pending_review' || queue.status !== 'pending_review') {
       throw new HttpsError('failed-precondition', 'Pedido nao esta pendente de moderacao.');
@@ -3714,6 +4085,9 @@ async function updateProviderServicesCore({ database = db, auth, data = {} }) {
     });
     transaction.set(database.collection('provider_public').doc(uid), {
       uid,
+      marketId: configuredPilotMarket().id,
+      countryCode: configuredPilotMarket().countryCode,
+      currency: pilotCurrencyCode(),
       servicos: serviceIds,
       servicosNomes: serviceNames,
       categories: serviceIds,
@@ -3725,6 +4099,9 @@ async function updateProviderServicesCore({ database = db, auth, data = {} }) {
     }, { merge: true });
     transaction.set(database.collection('provider_dispatch_private').doc(uid), {
       providerId: uid,
+      marketId: configuredPilotMarket().id,
+      countryCode: configuredPilotMarket().countryCode,
+      currency: pilotCurrencyCode(),
       servicos: serviceIds,
       servicosNomes: serviceNames,
       updatedAt: now,
@@ -3931,7 +4308,7 @@ async function onAvaliacaoCreatedCore({ database = db, avaliacaoId, avaliacao })
 
   if (!pedidoId || !clienteId || !prestadorId || estrelas === null) {
     logger.warn('[onAvaliacaoCreated] Avaliacao ignorada por dados invalidos.', {
-      avaliacaoId,
+      avaliacaoId: maskIdentifier(avaliacaoId),
       pedidoId: maskIdentifier(pedidoId),
       clienteId: maskIdentifier(clienteId),
       prestadorId: maskIdentifier(prestadorId),
@@ -3942,8 +4319,8 @@ async function onAvaliacaoCreatedCore({ database = db, avaliacaoId, avaliacao })
   const expectedId = `${pedidoId}_${clienteId}`;
   if (avaliacaoId !== expectedId) {
     logger.warn('[onAvaliacaoCreated] Avaliacao ignorada por docId invalido.', {
-      avaliacaoId,
-      expectedId,
+      avaliacaoId: maskIdentifier(avaliacaoId),
+      expectedId: maskIdentifier(expectedId),
     });
     return { updated: false, reason: 'invalid-review-id' };
   }
@@ -3955,20 +4332,27 @@ async function onAvaliacaoCreatedCore({ database = db, avaliacaoId, avaliacao })
     const pedidoSnap = await tx.get(pedidoRef);
     if (!pedidoSnap.exists) {
       logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: pedido inexistente.', {
-        avaliacaoId,
+        avaliacaoId: maskIdentifier(avaliacaoId),
         pedidoId: maskIdentifier(pedidoId),
       });
       return { updated: false, reason: 'missing-order' };
     }
 
     const pedido = pedidoSnap.data() || {};
+    if (!recordBelongsToPilotMarket(pedido, { requireCurrency: true })) {
+      logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: pedido fora do mercado ativo.', {
+        avaliacaoId: maskIdentifier(avaliacaoId),
+        pedidoId: maskIdentifier(pedidoId),
+      });
+      return { updated: false, reason: 'order-outside-active-market' };
+    }
     if (
       getClienteId(pedido) !== clienteId ||
       cleanString(pedido.prestadorId) !== prestadorId ||
       getPedidoEstado(pedido) !== 'concluido'
     ) {
       logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: pedido nao corresponde.', {
-        avaliacaoId,
+        avaliacaoId: maskIdentifier(avaliacaoId),
         pedidoId: maskIdentifier(pedidoId),
       });
       return { updated: false, reason: 'order-mismatch' };
@@ -3977,7 +4361,7 @@ async function onAvaliacaoCreatedCore({ database = db, avaliacaoId, avaliacao })
     const prestadorSnap = await tx.get(prestadorRef);
     if (!prestadorSnap.exists) {
       logger.warn('[onAvaliacaoCreated] Avaliacao ignorada: prestador inexistente.', {
-        avaliacaoId,
+        avaliacaoId: maskIdentifier(avaliacaoId),
         prestadorId: maskIdentifier(prestadorId),
       });
       return { updated: false, reason: 'missing-provider' };
@@ -4049,7 +4433,8 @@ function authoritativeDigitalPaymentMatches(payment, {
   if (!payment) return false;
   const paymentAmount = Number(payment.amount);
   const feeAmount = Number(payment.feeAmount);
-  return cleanString(payment.status).toLowerCase() === 'succeeded'
+  return recordBelongsToPilotMarket(payment, { requireCurrency: true })
+    && cleanString(payment.status).toLowerCase() === 'succeeded'
     && cleanString(payment.pedidoId) === pedidoId
     && cleanString(payment.clienteId) === clienteId
     && cleanString(payment.prestadorId) === prestadorId
@@ -4064,7 +4449,7 @@ function authoritativeDigitalPaymentMatches(payment, {
 function calculatePedidoEconomics(finalValue, {
   commissionRate = requiredCommissionRate('DEFAULT_DIGITAL_COMMISSION_RATE'),
   commissionCap = null,
-  currency = cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toUpperCase(),
+  currency = pilotCurrencyCode(),
 } = {}) {
   const value = roundMoney(finalValue);
   if (value === null || value <= 0) {
@@ -4100,7 +4485,11 @@ function cashCommissionPolicy({ completedJobsCount = 0 } = {}) {
   const freeJobs = Math.max(0, Math.floor(Number(getEnv('COMMISSION_FREE_FIRST_JOBS', '2')) || 2));
   const completed = Math.max(0, Math.floor(Number(completedJobsCount) || 0));
   const configuredRate = requiredCommissionRate('DEFAULT_CASH_COMMISSION_RATE');
-  const rawCapValue = getEnv('CASH_COMMISSION_CAP_MZN', '').trim();
+  const rawCapValue = marketMoneyEnv(
+    'CASH_COMMISSION_CAP',
+    'CASH_COMMISSION_CAP_MZN',
+    '',
+  );
   const rawCap = rawCapValue ? Number(rawCapValue) : Number.NaN;
   return {
     commissionRate: completed < freeJobs ? 0 : configuredRate,
@@ -4578,6 +4967,7 @@ async function applyPedidoActionSecureCore({
     const pedidoSnap = await transaction.get(pedidoRef);
     if (!pedidoSnap.exists) throw new HttpsError('not-found', 'Pedido nao encontrado.');
     const pedido = pedidoSnap.data() || {};
+    assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
     const state = authoritativePedidoActionState(pedido);
     previousStatus = state;
     const nowMillis = now && typeof now.toMillis === 'function' ? now.toMillis() : Date.now();
@@ -5027,6 +5417,7 @@ async function writeLedgerEntry({
     pedidoId,
     clienteId,
     prestadorId,
+    marketId: configuredPilotMarket().id,
     status,
     amount,
     feeAmount,
@@ -5225,6 +5616,12 @@ exports.onChatMessageCreated = onDocumentCreated(
     if (!pedidoSnap.exists) return;
 
     const pedido = pedidoSnap.data() || {};
+    if (!recordBelongsToPilotMarket(pedido, { requireCurrency: true })) {
+      logger.warn('[chat] mensagem ignorada para pedido fora do mercado ativo', {
+        pedidoId: maskIdentifier(pedidoId),
+      });
+      return;
+    }
     const clienteId = getClienteId(pedido);
     const prestadorId = (pedido.prestadorId || '').toString();
 
@@ -5248,6 +5645,8 @@ exports.onChatMessageCreated = onDocumentCreated(
       pedidoId,
       clienteId,
       prestadorId: prestadorId || null,
+      marketId: configuredPilotMarket().id,
+      currency: pilotCurrencyCode(),
       updatedAt: now,
       lastMessageAt: now,
       lastMessage: safeText(text, 200),
@@ -5484,6 +5883,12 @@ async function matchPedidoToProvidersCore({
   if (!cleanPedidoId) throw new HttpsError('invalid-argument', 'pedidoId obrigatorio.');
   const dispatchSync = await syncPedidoDispatch(database, cleanPedidoId);
   const currentPedido = dispatchSync.pedido || {};
+  if (dispatchSync.reason === 'pedido_outside_active_market') {
+    return { providerIds: [], reason: dispatchSync.reason };
+  }
+  if (dispatchSync.reason === 'pedido_without_validated_location') {
+    return { providerIds: [], reason: dispatchSync.reason };
+  }
   if (!dispatchSync.open) return { providerIds: [], reason: 'pedido_not_open' };
 
   const pedidoLocation = pedidoCoordinates(currentPedido);
@@ -5581,6 +5986,12 @@ async function matchPedidoToProvidersCore({
       if (!pedidoSnap.exists) return null;
 
       const livePedido = pedidoSnap.data() || {};
+      try {
+        assertRecordBelongsToActiveMarket(livePedido, { requireCurrency: true });
+        resolvePilotOrderLocation(livePedido);
+      } catch (_) {
+        return null;
+      }
       if (!isOpenPedido(livePedido)
         || livePedido.providerAccessGranted === true
         || !!cleanString(livePedido.providerAccessGrantedTo)) {
@@ -5615,6 +6026,8 @@ async function matchPedidoToProvidersCore({
       transaction.set(opportunityRef, {
         pedidoId: cleanPedidoId,
         providerId: match.id,
+        marketId: configuredPilotMarket().id,
+        currency: pilotCurrencyCode(),
         serviceId: cleanString(livePedido.servicoId),
         approximateDistanceKm: Math.round(liveDistanceKm * 10) / 10,
         matchedRadiusKm: liveProviderLocation.radiusKm,
@@ -5674,6 +6087,7 @@ async function proporValorFinalPedidoCore({ db: firestore = db, uid, data }) {
     }
 
     const pedido = snap.data() || {};
+    assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
     const prestadorId = cleanString(pedido.prestadorId);
     const estado = getPedidoEstado(pedido);
     previousStatus = estado;
@@ -5740,6 +6154,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
     }
 
     const pedido = snap.data() || {};
+    assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
     const clienteId = cleanString(getClienteId(pedido));
     const providerId = cleanString(pedido.prestadorId);
     const estado = getPedidoEstado(pedido);
@@ -5796,7 +6211,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
       const paymentAmount = Number(payment && payment.amount);
       const feeAmount = Number(payment && payment.feeAmount);
       const expectedCurrency = cleanString(
-        pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+        pedido.currency || pilotCurrencyCode(),
       ).toLowerCase();
       const paymentValid = authoritativeDigitalPaymentMatches(payment, {
         pedidoId,
@@ -5817,12 +6232,10 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
       });
     } else {
       const pedidoCurrency = cleanString(
-        pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+        pedido.currency || pilotCurrencyCode(),
       ).toUpperCase();
-      const configuredCurrency = cleanString(
-        getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
-      ).toUpperCase();
-      if (pedidoCurrency !== configuredCurrency || configuredCurrency !== 'MZN') {
+      const configuredCurrency = pilotCurrencyCode();
+      if (pedidoCurrency !== configuredCurrency) {
         throw new HttpsError(
           'failed-precondition',
           'A politica de comissao em dinheiro ainda nao suporta esta moeda.',
@@ -5856,6 +6269,9 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
 
       tx.set(providerRef, {
         providerId,
+        marketId: configuredPilotMarket().id,
+        countryCode: configuredPilotMarket().countryCode,
+        currency: pedidoCurrency,
         completedJobsCount,
         commissionBalanceDue: nextBalance,
         financialBalance: roundMoney(-nextBalance),
@@ -5872,6 +6288,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
         pedidoId,
         clienteId,
         prestadorId: providerId,
+        marketId: configuredPilotMarket().id,
         method: 'cash',
         currency: economics.currency,
         serviceAmount: economics.precoFinal,
@@ -5887,6 +6304,7 @@ async function confirmarValorFinalPedidoCore({ db: firestore = db, uid, data }) 
       tx.set(providerRef.collection('financialTransactions').doc(cashPaymentId), {
         transactionId: cashPaymentId,
         pedidoId,
+        marketId: configuredPilotMarket().id,
         type: economics.commissionPlatform > 0 ? 'commission_charge' : 'commission_waiver',
         currency: economics.currency,
         serviceAmount: economics.precoFinal,
@@ -5950,6 +6368,7 @@ async function recordCommissionPaymentCore({ database = db, auth, data = {} }) {
       throw new HttpsError('not-found', 'Prestador nao encontrado.');
     }
     const provider = providerSnap.data() || {};
+    assertRecordBelongsToActiveMarket(provider, { requireCurrency: true });
     const currentBalance = Math.max(0, roundMoney(provider.commissionBalanceDue) || 0);
     if (currentBalance <= 0) {
       throw new HttpsError('failed-precondition', 'O prestador nao tem comissao pendente.');
@@ -5979,8 +6398,9 @@ async function recordCommissionPaymentCore({ database = db, auth, data = {} }) {
     tx.set(database.collection('commission_payments').doc(receiptId), {
       receiptId,
       providerId,
+      marketId: configuredPilotMarket().id,
       amount,
-      currency: cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toUpperCase() || 'MZN',
+      currency: pilotCurrencyCode(),
       reference,
       recordedBy: actorId,
       balanceBefore: currentBalance,
@@ -6005,12 +6425,16 @@ async function enforceCommissionDebtCore({ database = db, now = Timestamp.now() 
     .where('financialStatus', '==', 'payment_due')
     .limit(500)
     .get();
-  const maxDebt = Math.max(0, Number(getEnv('MAX_COMMISSION_DEBT_MZN', '100')) || 100);
+  const maxDebt = Math.max(
+    0,
+    Number(marketMoneyEnv('MAX_COMMISSION_DEBT', 'MAX_COMMISSION_DEBT_MZN', '100')) || 100,
+  );
   const nowMillis = now.toMillis();
   const batch = database.batch();
   let suspended = 0;
   for (const doc of snapshot.docs) {
     const provider = doc.data() || {};
+    if (!recordBelongsToPilotMarket(provider, { requireCurrency: true })) continue;
     const balance = Math.max(0, roundMoney(provider.commissionBalanceDue) || 0);
     const dueAt = provider.commissionDueAt;
     const overdue = dueAt && typeof dueAt.toMillis === 'function' && dueAt.toMillis() <= nowMillis;
@@ -6124,6 +6548,9 @@ exports.providers_updateServices = onCall(
     await requirePilotParticipant({ uid, role: 'prestador' });
     const result = await updateProviderServicesCore({ auth: req.auth, data: req.data || {} });
     await db.collection('provider_public').doc(uid).set({
+      marketId: configuredPilotMarket().id,
+      countryCode: configuredPilotMarket().countryCode,
+      currency: pilotCurrencyCode(),
       isSearchable: result.serviceIds.length > 0,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -6253,7 +6680,8 @@ function getStripe() {
   if (!paymentMethodEnabled('stripe')) {
     throw new HttpsError(
       'failed-precondition',
-      'Stripe esta desativado ate a integracao em MZN estar validada.',
+      `Stripe esta desativado ate a integracao em ${configuredPilotMarket().currency} `
+      + 'estar validada.',
     );
   }
   const secret = getEnv('STRIPE_SECRET_KEY');
@@ -6273,7 +6701,8 @@ function requireStripePaymentsEnabled() {
   if (!paymentMethodEnabled('stripe')) {
     throw new HttpsError(
       'failed-precondition',
-      'Stripe esta desativado ate a integracao em MZN estar validada.',
+      `Stripe esta desativado ate a integracao em ${configuredPilotMarket().currency} `
+      + 'estar validada.',
     );
   }
 }
@@ -6309,6 +6738,7 @@ async function requirePaymentActor({ auth, role, database = db }) {
 }
 
 function paymentIntentSpecFromPedido(pedidoId, pedido) {
+  assertRecordBelongsToActiveMarket(pedido, { requireCurrency: true });
   const clienteId = cleanString(getClienteId(pedido));
   const prestadorId = cleanString(pedido && pedido.prestadorId);
   const state = getPedidoEstado(pedido);
@@ -6343,10 +6773,10 @@ function paymentIntentSpecFromPedido(pedidoId, pedido) {
     throw new HttpsError('invalid-argument', 'Valor invalido para pagamento.');
   }
   const currency = cleanString(
-    pedido.currency || getEnv('DEFAULT_CURRENCY_CODE', 'MZN'),
+    pedido.currency || pilotCurrencyCode(),
   ).toLowerCase();
-  const configuredCurrency = cleanString(getEnv('DEFAULT_CURRENCY_CODE', 'MZN')).toLowerCase();
-  if (currency !== 'mzn' || configuredCurrency !== 'mzn') {
+  const configuredCurrency = pilotCurrencyCode().toLowerCase();
+  if (currency !== configuredCurrency) {
     throw new HttpsError('failed-precondition', 'Moeda do pedido invalida para o piloto.');
   }
   const commissionRate = requiredCommissionRate('DEFAULT_DIGITAL_COMMISSION_RATE');
@@ -6368,7 +6798,8 @@ function paymentIntentSpecFromPedido(pedidoId, pedido) {
 function paymentRecordMatchesSpec(payment, spec) {
   if (!payment) return false;
   const status = cleanString(payment.status).toLowerCase();
-  return !['canceled', 'cancelled'].includes(status)
+  return recordBelongsToPilotMarket(payment, { requireCurrency: true })
+    && !['canceled', 'cancelled'].includes(status)
     && cleanString(payment.pedidoId) === spec.pedidoId
     && cleanString(payment.clienteId) === spec.clienteId
     && cleanString(payment.prestadorId) === spec.prestadorId
@@ -6605,6 +7036,7 @@ async function createPaymentIntentCore({ database = db, stripe, uid, pedidoId })
         pedidoId: spec.pedidoId,
         clienteId: spec.clienteId,
         prestadorId: spec.prestadorId,
+        marketId: configuredPilotMarket().id,
         stripeAccountId: spec.stripeAccountId,
         paymentSpecHash: spec.paymentSpecHash,
         amount: spec.amount,
@@ -6626,6 +7058,7 @@ async function createPaymentIntentCore({ database = db, stripe, uid, pedidoId })
         pedidoId: spec.pedidoId,
         clienteId: spec.clienteId,
         prestadorId: spec.prestadorId,
+        marketId: configuredPilotMarket().id,
         status: paymentIntent.status,
         amount: spec.amount,
         feeAmount: spec.feeAmount,
@@ -8912,7 +9345,7 @@ exports.scheduled_cleanupKycRetention = onSchedule(
   {
     region: REGION,
     schedule: 'every day 03:30',
-    timeZone: 'Africa/Maputo',
+    timeZone: configuredPilotMarket().timeZone,
   },
   async () => {
     const result = await cleanupKycRetentionCore({});
@@ -8924,7 +9357,7 @@ exports.scheduled_executeAccountDeletions = onSchedule(
   {
     region: REGION,
     schedule: 'every day 04:00',
-    timeZone: 'Africa/Maputo',
+    timeZone: configuredPilotMarket().timeZone,
     secrets: [ACCOUNT_DELETION_PEPPER],
   },
   async () => {
@@ -8952,25 +9385,26 @@ exports.scheduled_buildPilotMetrics = onSchedule(
   {
     region: REGION,
     schedule: 'every day 05:00',
-    timeZone: 'Africa/Maputo',
+    timeZone: configuredPilotMarket().timeZone,
   },
   async () => {
     const metrics = await buildPilotMetricsCore();
-    const maputoDate = new Date(metrics.generatedAt + 2 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const metricDate = calendarDateInTimeZone(metrics.generatedAt, metrics.timeZone);
     const batch = db.batch();
-    batch.set(db.collection('pilot_metrics_daily').doc(maputoDate), {
+    batch.set(db.collection('pilot_metrics_daily').doc(metricDate), {
       ...metrics,
       collectedAt: FieldValue.serverTimestamp(),
     });
     batch.set(db.collection('pilot_metrics_daily').doc('latest'), {
       ...metrics,
-      metricDate: maputoDate,
+      metricDate,
       collectedAt: FieldValue.serverTimestamp(),
     });
     await batch.commit();
-    logger.info('[pilot-metrics] Snapshot diario criado.', { maputoDate });
+    logger.info('[pilot-metrics] Snapshot diario criado.', {
+      marketId: metrics.marketId,
+      metricDate,
+    });
   },
 );
 
@@ -9008,6 +9442,7 @@ exports.scheduled_orderReminders = onSchedule(
       for (const doc of snap.docs) {
         const pedidoId = doc.id;
         const data = doc.data() || {};
+        if (!recordBelongsToPilotMarket(data, { requireCurrency: true })) continue;
         const clienteId = getClienteId(data);
         const prestadorId = String(data.prestadorId || '');
 
@@ -9021,6 +9456,8 @@ exports.scheduled_orderReminders = onSchedule(
             shouldSend = true;
             tx.set(markerRef, {
               pedidoId,
+              marketId: configuredPilotMarket().id,
+              currency: pilotCurrencyCode(),
               key: w.key,
               createdAt: FieldValue.serverTimestamp(),
             });
@@ -9066,7 +9503,7 @@ exports.scheduled_enforceCommissionDebt = onSchedule(
   {
     region: REGION,
     schedule: 'every 6 hours',
-    timeZone: 'Africa/Maputo',
+    timeZone: configuredPilotMarket().timeZone,
   },
   async () => {
     const result = await enforceCommissionDebtCore();
@@ -9087,17 +9524,24 @@ async function expireRequestsCore({
   const cutoff = new Timestamp(now.seconds - 30 * 60, now.nanoseconds);
   const states = ['criado', 'aguarda_resposta_prestador'];
   let expired = 0;
+  let cursor = null;
 
   while (true) {
-    const snapshot = await database.collection('pedidos')
+    let query = database.collection('pedidos')
       .where('status', 'in', states)
       .where('updatedAt', '<', cutoff)
-      .limit(boundedPageSize)
-      .get();
+      .orderBy('updatedAt')
+      .orderBy(FieldPath.documentId())
+      .limit(boundedPageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
     if (snapshot.empty) break;
 
     const batch = database.batch();
-    snapshot.docs.forEach((doc) => {
+    const eligible = snapshot.docs.filter((doc) => (
+      recordBelongsToPilotMarket(doc.data() || {}, { requireCurrency: true })
+    ));
+    eligible.forEach((doc) => {
       batch.update(doc.ref, {
         status: 'cancelado',
         estado: 'cancelado',
@@ -9108,9 +9552,10 @@ async function expireRequestsCore({
         updatedAt: now,
       });
     });
-    await batch.commit();
-    expired += snapshot.size;
+    if (eligible.length > 0) await batch.commit();
+    expired += eligible.length;
     if (snapshot.size < boundedPageSize) break;
+    cursor = snapshot.docs[snapshot.docs.length - 1];
   }
   return { expired };
 }
@@ -9188,8 +9633,11 @@ exports.__test__ = {
     syncPhoneIdentityCore,
   },
   legal: {
+    LEGAL_DOCUMENT_MARKET_ID,
     LEGAL_DOCUMENT_VERSION,
     acceptLegalDocumentsCore,
+    assertCurrentLegalConsent,
+    legalDocumentsAvailableForMarket,
     requireCurrentLegalConsent,
   },
   support: {
@@ -9197,13 +9645,23 @@ exports.__test__ = {
     createSupportTicketCore,
   },
   pilot: {
+    PILOT_MARKETS,
+    assertRecordBelongsToActiveMarket,
     adminListPilotParticipantsCore,
     adminSetPilotParticipantCore,
     buildPilotMetricsCore,
+    calendarDateInTimeZone,
+    configuredPilotMarket,
     enforcePilotOrderLocation,
     normalizedPilotRoles,
+    pilotAllowedZoneIds,
     pilotAllowlistRequired,
+    pilotCurrencyCode,
+    pilotLocationBounds,
+    pilotParticipantBelongsToMarket,
     pilotParticipantIsActive,
+    recordBelongsToPilotMarket,
+    resolvePilotOrderLocation,
     requirePilotParticipant,
   },
   accounts: {

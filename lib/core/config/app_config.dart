@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import '../feature_flags/feature_flag.dart';
+import '../feature_flags/feature_flag_service.dart';
+import 'market_config.dart';
+
 enum Flavor { dev, staging, prod }
 
 class AppConfig extends InheritedWidget {
@@ -97,42 +101,53 @@ class AppConfig extends InheritedWidget {
 
   static String? get googlePlacesApiKey => dotenv.env['GOOGLE_PLACES_API_KEY'];
 
-  static bool get kycEnabled => _readBool('ENABLE_KYC', defaultValue: false);
+  static bool get kycEnabled =>
+      FeatureFlagService.instance.isEnabled(FeatureFlag.kyc);
 
   static bool get stripeEnabled =>
-      _readBool('ENABLE_STRIPE', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.stripePayments);
 
   static bool get mpesaEnabled =>
-      _readBool('ENABLE_MPESA', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.mpesaPayments);
 
   static bool get emolaEnabled =>
-      _readBool('ENABLE_EMOLA', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.emolaPayments);
 
   static bool get pilotMode => _readBool('PILOT_MODE', defaultValue: true);
 
   static bool get pilotPortugueseOnly =>
       pilotMode && _readBool('PILOT_PORTUGUESE_ONLY', defaultValue: true);
 
+  static bool get pilotMarketLocked =>
+      pilotMode && _readBool('PILOT_MARKET_LOCKED', defaultValue: true);
+
+  static MarketConfig get pilotMarket => MarketConfig.resolve(
+        _readString('PILOT_MARKET_ID', fallback: 'pt-coimbra'),
+      );
+
+  static Locale get pilotLocale => pilotMarket.locale;
+
+  @Deprecated('Use pilotMarketLocked and pilotMarket.countryCode.')
   static bool get pilotMaputoOnly =>
-      pilotMode && _readBool('PILOT_MAPUTO_ONLY', defaultValue: true);
+      pilotMarketLocked && pilotMarket.countryCode == 'MZ';
 
   static bool get storiesEnabled =>
-      _readBool('ENABLE_STORIES', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.stories);
 
   static bool get callsEnabled =>
-      _readBool('ENABLE_CALLS', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.calls);
 
   static bool get noShowReportingEnabled =>
-      _readBool('ENABLE_NO_SHOW_REPORTING', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.noShowReporting);
 
   static bool get subscriptionsEnabled =>
-      _readBool('ENABLE_SUBSCRIPTIONS', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.subscriptions);
 
   static bool get advancedRankingEnabled =>
-      _readBool('ENABLE_ADVANCED_RANKING', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.advancedRanking);
 
   static bool get windowsPublicEnabled =>
-      _readBool('ENABLE_WINDOWS_PUBLIC', defaultValue: false);
+      FeatureFlagService.instance.isEnabled(FeatureFlag.windowsPublic);
 
   static const Set<String> pilotPromotedCategoryIds = {
     'cleaning_maintenance',
@@ -144,13 +159,15 @@ class AppConfig extends InheritedWidget {
   };
 
   static String get currencyCode {
+    if (pilotMarketLocked) return pilotMarket.currencyCode;
+
     String? value;
     try {
       value = dotenv.env['DEFAULT_CURRENCY_CODE']?.trim().toUpperCase();
     } catch (_) {
       value = null;
     }
-    return value == null || value.isEmpty ? 'MZN' : value;
+    return value == null || value.isEmpty ? pilotMarket.currencyCode : value;
   }
 
   static String get legalEntityName =>

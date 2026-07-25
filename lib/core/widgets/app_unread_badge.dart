@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 class AppUnreadBadge extends StatelessWidget {
@@ -7,22 +8,26 @@ class AppUnreadBadge extends StatelessWidget {
     super.key,
     this.count,
     this.dot = false,
-    this.color = AppPalette.accentBlue,
+    this.color,
   });
 
   const AppUnreadBadge.dot({
     super.key,
-    this.color = AppPalette.accentBlue,
+    this.color,
   })  : count = null,
         dot = true;
 
   final int? count;
   final bool dot;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final value = count ?? 0;
+    final resolvedColor = color ??
+        (context.chegaJaTheme.usesU1
+            ? AppPalette.u1AccentBlue
+            : AppPalette.accentBlue);
     if (!dot && value <= 0) return const SizedBox.shrink();
 
     if (dot || count == null) {
@@ -30,7 +35,7 @@ class AppUnreadBadge extends StatelessWidget {
         width: 10,
         height: 10,
         decoration: BoxDecoration(
-          color: color,
+          color: resolvedColor,
           shape: BoxShape.circle,
         ),
       );
@@ -45,9 +50,9 @@ class AppUnreadBadge extends StatelessWidget {
         vertical: AppSpacing.x1,
       ),
       decoration: BoxDecoration(
-        color: color,
+        color: resolvedColor,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: AppShadows.level1,
+        boxShadow: context.chegaJaTheme.shadowLevel1,
       ),
       alignment: Alignment.center,
       child: Text(

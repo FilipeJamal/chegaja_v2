@@ -71,7 +71,9 @@ describe('P1 public/private data boundaries', function () {
   });
 
   it('isolates users_private from every other signed-in user', async () => {
-    const owner = testEnv.authenticatedContext('client1');
+    const owner = testEnv.authenticatedContext('client1', {
+      phone_number: '+351910000001',
+    });
     const outsider = testEnv.authenticatedContext('outsider');
     const ownerDb = owner.firestore();
     const outsiderDb = outsider.firestore();
@@ -84,7 +86,9 @@ describe('P1 public/private data boundaries', function () {
   });
 
   it('keeps exact dispatch location private', async () => {
-    const provider = testEnv.authenticatedContext('provider1');
+    const provider = testEnv.authenticatedContext('provider1', {
+      phone_number: '+351910000002',
+    });
     const outsider = testEnv.authenticatedContext('outsider');
     await assertSucceeds(provider.firestore()
       .collection('provider_dispatch_private')
@@ -106,7 +110,9 @@ describe('P1 public/private data boundaries', function () {
   });
 
   it('rejects private fields in provider_public', async () => {
-    const provider = testEnv.authenticatedContext('provider1');
+    const provider = testEnv.authenticatedContext('provider1', {
+      phone_number: '+351910000002',
+    });
     const providerDb = provider.firestore();
     await assertSucceeds(providerDb.collection('provider_public').doc('provider1').set({
       uid: 'provider1',
@@ -126,6 +132,40 @@ describe('P1 public/private data boundaries', function () {
     }));
   });
 
+  it('requires a verified phone before private or provider owner writes', async () => {
+    const anonymous = testEnv.authenticatedContext('temporary-session').firestore();
+
+    await assertFails(
+      anonymous.collection('users_private').doc('temporary-session').set({
+        uid: 'temporary-session',
+        isAnonymous: true,
+      }),
+    );
+    await assertFails(
+      anonymous.collection('provider_public').doc('temporary-session').set({
+        uid: 'temporary-session',
+        isSearchable: false,
+      }),
+    );
+    await assertFails(
+      anonymous
+        .collection('provider_dispatch_private')
+        .doc('temporary-session')
+        .set({
+          providerId: 'temporary-session',
+          isOnline: false,
+        }),
+    );
+    await assertFails(
+      anonymous
+        .collection('users_private')
+        .doc('temporary-session')
+        .collection('fcmTokens')
+        .doc('token')
+        .set({ token: 'not-authorized' }),
+    );
+  });
+
   it('denies both legacy mixed collections', async () => {
     const user = testEnv.authenticatedContext('user1');
     const userDb = user.firestore();
@@ -142,18 +182,22 @@ describe('P1 public/private data boundaries', function () {
         displayName: 'Marta',
         isSearchable: true,
         servicos: ['plumbing'],
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('provider_public').doc('provider2').set({
         uid: 'provider2',
         displayName: 'Jose',
         isSearchable: true,
         servicos: ['plumbing'],
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('pilot_participants').doc('provider1').set({
-        status: 'active', roles: ['prestador'], city: 'Maputo',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('pilot_participants').doc('provider2').set({
-        status: 'active', roles: ['prestador'], city: 'Maputo',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('pedidos').doc('pedido1').set({
         clienteId: 'client1',
@@ -166,6 +210,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('pedido1').set({
         pedidoId: 'pedido1',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'criado',
         estado: 'criado',
         prestadorId: null,
@@ -176,6 +222,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('directed_provider1').set({
         pedidoId: 'directed_provider1',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'aguarda_resposta_prestador',
         estado: 'aguarda_resposta_prestador',
         prestadorId: null,
@@ -189,6 +237,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('directed_provider2').set({
         pedidoId: 'directed_provider2',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'aguarda_resposta_prestador',
         estado: 'aguarda_resposta_prestador',
         prestadorId: null,
@@ -202,6 +252,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('unsafe_targeted_message').set({
         pedidoId: 'unsafe_targeted_message',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'aguarda_resposta_prestador',
         prestadorId: null,
         targetProviderId: 'provider1',
@@ -215,6 +267,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('unsafe_targeted_address').set({
         pedidoId: 'unsafe_targeted_address',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'aguarda_resposta_prestador',
         prestadorId: null,
         targetProviderId: 'provider1',
@@ -227,11 +281,36 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('unsafe_projection').set({
         pedidoId: 'unsafe_projection',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'criado',
         prestadorId: null,
         targetProviderId: null,
         zoneLabel: 'Matola A',
         clienteId: 'client-secret',
+      });
+      await db.collection('pedido_dispatch').doc('other_market').set({
+        pedidoId: 'other_market',
+        marketId: 'mz-maputo',
+        currency: 'MZN',
+        status: 'criado',
+        prestadorId: null,
+        targetProviderId: null,
+      });
+      await db.collection('pedido_dispatch').doc('missing_market').set({
+        pedidoId: 'missing_market',
+        currency: 'EUR',
+        status: 'criado',
+        prestadorId: null,
+        targetProviderId: null,
+      });
+      await db.collection('pedido_dispatch').doc('wrong_currency').set({
+        pedidoId: 'wrong_currency',
+        marketId: 'pt-coimbra',
+        currency: 'MZN',
+        status: 'criado',
+        prestadorId: null,
+        targetProviderId: null,
       });
     });
 
@@ -257,6 +336,14 @@ describe('P1 public/private data boundaries', function () {
       .doc('unsafe_targeted_address').get());
     await assertFails(providerDb.collection('pedido_dispatch')
       .doc('unsafe_projection').get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .doc('other_market').get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .doc('missing_market').get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .doc('wrong_currency').get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .doc('missing_projection').get());
     await assertSucceeds(adminDb.collection('pedido_dispatch')
       .doc('unsafe_projection').get());
     await assertFails(providerDb.collection('pedidos').doc('pedido1').get());
@@ -270,27 +357,33 @@ describe('P1 public/private data boundaries', function () {
         displayName: 'Marta',
         isSearchable: true,
         servicos: ['plumbing'],
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('provider_public').doc('provider_offboarded').set({
         uid: 'provider_offboarded',
         displayName: 'Perfil desativado',
         isSearchable: false,
         servicos: ['plumbing'],
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('provider_public').doc('provider_suspended').set({
         uid: 'provider_suspended',
         displayName: 'Perfil suspenso',
         isSearchable: true,
         servicos: ['plumbing'],
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('pilot_participants').doc('provider1').set({
-        status: 'active', roles: ['prestador'], city: 'Maputo',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('pilot_participants').doc('provider_offboarded').set({
-        status: 'active', roles: ['prestador'], city: 'Coimbra',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('pilot_participants').doc('provider_suspended').set({
-        status: 'active', roles: ['prestador'], city: 'Coimbra',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('provider_private').doc('provider_suspended').set({
         providerId: 'provider_suspended',
@@ -298,6 +391,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('open_query').set({
         pedidoId: 'open_query',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'criado',
         estado: 'criado',
         prestadorId: null,
@@ -308,6 +403,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('target_query').set({
         pedidoId: 'target_query',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'aguarda_resposta_prestador',
         estado: 'aguarda_resposta_prestador',
         prestadorId: null,
@@ -320,6 +417,8 @@ describe('P1 public/private data boundaries', function () {
       });
       await db.collection('pedido_dispatch').doc('created_target_other').set({
         pedidoId: 'created_target_other',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         status: 'criado',
         estado: 'criado',
         prestadorId: null,
@@ -340,6 +439,8 @@ describe('P1 public/private data boundaries', function () {
       phone_number: '+351910000004',
     }).firestore();
     const exactQuery = providerDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'pt-coimbra')
+      .where('currency', '==', 'EUR')
       .where('status', '==', 'criado')
       .where('prestadorId', '==', null)
       .where('targetProviderId', '==', null)
@@ -347,6 +448,8 @@ describe('P1 public/private data boundaries', function () {
       .limit(100);
     await assertSucceeds(exactQuery.get());
     await assertFails(offboardedDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'pt-coimbra')
+      .where('currency', '==', 'EUR')
       .where('status', '==', 'criado')
       .where('prestadorId', '==', null)
       .where('targetProviderId', '==', null)
@@ -354,6 +457,8 @@ describe('P1 public/private data boundaries', function () {
       .limit(100)
       .get());
     await assertFails(suspendedDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'pt-coimbra')
+      .where('currency', '==', 'EUR')
       .where('status', '==', 'criado')
       .where('prestadorId', '==', null)
       .where('targetProviderId', '==', null)
@@ -361,17 +466,38 @@ describe('P1 public/private data boundaries', function () {
       .limit(100)
       .get());
     await assertSucceeds(providerDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'pt-coimbra')
+      .where('currency', '==', 'EUR')
       .where('targetProviderId', '==', 'provider1')
       .where('prestadorId', '==', null)
       .limit(100)
       .get());
 
     const underConstrained = providerDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'pt-coimbra')
+      .where('currency', '==', 'EUR')
       .where('status', '==', 'criado')
       .where('prestadorId', '==', null)
       .orderBy('createdAt', 'desc')
       .limit(100);
     await assertFails(underConstrained.get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .where('currency', '==', 'EUR')
+      .where('status', '==', 'criado')
+      .where('prestadorId', '==', null)
+      .where('targetProviderId', '==', null)
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .where('marketId', '==', 'mz-maputo')
+      .where('currency', '==', 'MZN')
+      .where('status', '==', 'criado')
+      .where('prestadorId', '==', null)
+      .where('targetProviderId', '==', null)
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get());
   });
 
   it('authorizes only the exact bounded private pedido queries used by the app', async () => {

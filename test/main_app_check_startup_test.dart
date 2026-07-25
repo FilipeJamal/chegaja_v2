@@ -5,6 +5,106 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:chegaja_v2/main.dart';
 
 void main() {
+  group('preview local U1', () {
+    test('pode ser usado em builds nao distribuiveis', () {
+      expect(
+        shouldApplyLocalU1Preview(
+          isReleaseMode: false,
+          previewRequested: true,
+        ),
+        isTrue,
+      );
+    });
+
+    test('nunca pode ser forçado numa build de release', () {
+      expect(
+        shouldApplyLocalU1Preview(
+          isReleaseMode: true,
+          previewRequested: true,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldApplyLocalU1Preview(
+          isReleaseMode: false,
+          previewRequested: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('Firebase Messaging em segundo plano', () {
+    test('fica ativo apenas em mobile de producao', () {
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: true,
+          isWeb: false,
+          emulatorTests: false,
+          fastDevMode: false,
+          useFirebaseEmulators: false,
+        ),
+        isTrue,
+      );
+    });
+
+    test('fica desativado no modo rapido e nos emuladores', () {
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: true,
+          isWeb: false,
+          emulatorTests: false,
+          fastDevMode: true,
+          useFirebaseEmulators: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: true,
+          isWeb: false,
+          emulatorTests: false,
+          fastDevMode: false,
+          useFirebaseEmulators: true,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: true,
+          isWeb: false,
+          emulatorTests: true,
+          fastDevMode: false,
+          useFirebaseEmulators: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('fica desativado na web e em plataformas sem FCM', () {
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: true,
+          isWeb: true,
+          emulatorTests: false,
+          fastDevMode: false,
+          useFirebaseEmulators: false,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldConfigureBackgroundMessaging(
+          supportsFcm: false,
+          isWeb: false,
+          emulatorTests: false,
+          fastDevMode: false,
+          useFirebaseEmulators: false,
+        ),
+        isFalse,
+      );
+    });
+  });
+
   test('App Check concluido permite continuar o arranque', () async {
     final activated = await activateAppCheckWithTimeout(
       () async {},

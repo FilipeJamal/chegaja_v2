@@ -4,6 +4,21 @@ process.env.FUNCTIONS_EMULATOR = 'true';
 const { __test__ } = require('../index');
 
 describe('server-side catalogue and Trust & Safety', () => {
+  const originalMarketId = process.env.PILOT_MARKET_ID;
+  const originalCurrency = process.env.DEFAULT_CURRENCY_CODE;
+
+  beforeEach(() => {
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
+    process.env.DEFAULT_CURRENCY_CODE = 'MZN';
+  });
+
+  after(() => {
+    if (originalMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = originalMarketId;
+    if (originalCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = originalCurrency;
+  });
+
   it('blocks prohibited services even when client-side validation is bypassed', () => {
     const blocked = [
       'Quero comprar droga',
@@ -43,6 +58,9 @@ describe('server-side catalogue and Trust & Safety', () => {
         modo: 'IMEDIATO',
         tipoPreco: 'a_combinar',
         tipoPagamento: 'dinheiro',
+        latitude: -25.9692,
+        longitude: 32.5732,
+        zoneId: 'maputo',
         categoryApprovalRequired: false,
         categoryRiskLevel: 'normal',
       },

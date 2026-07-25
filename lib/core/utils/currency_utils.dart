@@ -5,7 +5,8 @@ import '../services/locale_service.dart';
 class CurrencyUtils {
   /// Formata um valor double como string de moeda.
   ///
-  /// No piloto usa MZN; o locale do telemóvel controla a formatação numérica.
+  /// O piloto usa a moeda do mercado bloqueado; o locale do telemóvel controla
+  /// apenas a formatação numérica.
   ///
   /// Exemplo (PT, Angola): "1.000,00 Kz"
   /// Exemplo (EN, Angola): "Kz 1,000.00"
@@ -20,9 +21,14 @@ class CurrencyUtils {
   static NumberFormat formatter({String? localeName}) {
     final currencyCode = AppConfig.currencyCode;
     final resolvedLocale = localeName ?? _defaultLocaleName();
+    final symbol = switch (currencyCode) {
+      'MZN' => 'MT',
+      'EUR' => '€',
+      _ => currencyCode,
+    };
     return NumberFormat.currency(
       name: currencyCode,
-      symbol: currencyCode == 'MZN' ? 'MT' : currencyCode,
+      symbol: symbol,
       locale: resolvedLocale,
       decimalDigits: 2,
     );

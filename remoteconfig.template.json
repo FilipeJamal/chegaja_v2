@@ -1,0 +1,193 @@
+{
+  "parameters": {
+    "feature_contract_version": {
+      "defaultValue": {
+        "value": "1"
+      },
+      "description": "Versao do contrato tipado de feature flags. Versoes incompativeis falham fechadas.",
+      "valueType": "NUMBER"
+    },
+    "feature_release_id": {
+      "defaultValue": {
+        "value": "bundled-defaults-v1"
+      },
+      "description": "Identificador auditavel e sem dados pessoais da publicacao de flags.",
+      "valueType": "STRING"
+    },
+    "global_kill_switch": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Desliga todas as funcionalidades governadas pelo contrato.",
+      "valueType": "BOOLEAN"
+    },
+    "maintenance_mode": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Compatibilidade com o gate de manutencao existente; tambem atua como kill switch global.",
+      "valueType": "BOOLEAN"
+    },
+    "min_android_version": {
+      "defaultValue": {
+        "value": "21"
+      },
+      "description": "Valor legado preservado por compatibilidade. Nao representa o versionCode minimo da app.",
+      "valueType": "NUMBER"
+    },
+    "feature_kyc_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "KYC. Exige gates local, backend e plataforma.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_stripe_payments_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Pagamentos Stripe. Exige gates local, backend e plataforma.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_mpesa_payments_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Pagamentos M-Pesa. Exige gates local, backend e plataforma.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_emola_payments_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Pagamentos e-Mola. Exige gates local, backend e plataforma.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_stories_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Stories fora do piloto.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_calls_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Chamadas fora do piloto.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_no_show_reporting_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Fluxo de no-show controlado por backend.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_subscriptions_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Subscricoes com impacto financeiro.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_advanced_ranking_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Ranking avancado fora do piloto.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_windows_public_enabled": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Distribuicao publica Windows fora do piloto.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u1_navigation_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Rollout da navegacao U1.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u2_adaptive_request": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Descoberta e pedido adaptativos U2.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u3_matching_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Matching e dispatch explicaveis U3.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u4_pricing_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Preco e propostas U4.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u5_job_orchestration_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Orquestracao da execucao U5.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u6_payments_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Pagamentos, carteira e reconciliacao U6.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u7_trust_passport_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Confianca e Passaporte de Competencias U7.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u8_safety_support_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Seguranca, suporte e garantia U8.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u9_provider_operating_system_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Sistema operacional do Prestador U9.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u10_growth_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Retencao e crescimento U10.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u11_analytics_experiments": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Analytics e experimentacao U11.",
+      "valueType": "BOOLEAN"
+    },
+    "feature_u12_internationalization_v2": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Internacionalizacao e adaptacao africana U12.",
+      "valueType": "BOOLEAN"
+    }
+  }
+}

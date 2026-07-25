@@ -30,9 +30,9 @@ class UserCountryService extends ChangeNotifier {
 
   /// Initialize and detect country.
   Future<void> init() async {
-    if (AppConfig.pilotMaputoOnly) {
-      _countryCode = 'MZ';
-      _currencyCode = 'MZN';
+    if (AppConfig.pilotMarketLocked) {
+      _countryCode = AppConfig.pilotMarket.countryCode;
+      _currencyCode = AppConfig.pilotMarket.currencyCode;
       _isManualOverride = false;
       notifyListeners();
       return;
@@ -147,8 +147,9 @@ class UserCountryService extends ChangeNotifier {
   }
 
   Future<void> setManualCountry(String countryCode) async {
-    final normalized =
-        AppConfig.pilotMaputoOnly ? 'MZ' : countryCode.trim().toUpperCase();
+    final normalized = AppConfig.pilotMarketLocked
+        ? AppConfig.pilotMarket.countryCode
+        : countryCode.trim().toUpperCase();
     if (normalized.isEmpty) return;
 
     _countryCode = normalized;
@@ -189,10 +190,12 @@ class UserCountryService extends ChangeNotifier {
     await init();
   }
 
-  String get countryCode =>
-      AppConfig.pilotMaputoOnly ? 'MZ' : (_countryCode ?? 'US');
-  String get currencyCode =>
-      AppConfig.pilotMaputoOnly ? 'MZN' : (_currencyCode ?? 'USD');
+  String get countryCode => AppConfig.pilotMarketLocked
+      ? AppConfig.pilotMarket.countryCode
+      : (_countryCode ?? 'US');
+  String get currencyCode => AppConfig.pilotMarketLocked
+      ? AppConfig.pilotMarket.currencyCode
+      : (_currencyCode ?? 'USD');
   bool get isManualOverride => _isManualOverride;
 
   String? _fetchCountryFromSystemLocale() {

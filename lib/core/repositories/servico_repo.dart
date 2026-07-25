@@ -42,7 +42,7 @@ class ServicosRepo {
     //
     // Como o catálogo é pequeno (~80 serviços), é seguro escutar a coleção toda
     // e filtrar no lado da app (com compatibilidade v1/v2 no modelo Servico).
-    return _col.snapshots().map((snapshot) {
+    final remoteStream = _col.snapshots().map((snapshot) {
       final lista = snapshot.docs
           .map((doc) => Servico.fromMap(doc.data(), doc.id))
           .where((s) => s.isActive)
@@ -57,6 +57,15 @@ class ServicosRepo {
 
       return lista;
     });
+
+    if (!AppConfig.useFirebaseEmulators) return remoteStream;
+
+    // A app nunca escreve o catalogo. Em QA local, apresenta imediatamente o
+    // snapshot empacotado e substitui-o quando o emulador fornecer dados.
+    return (() async* {
+      yield _fallbackServicosAtivos();
+      yield* remoteStream;
+    })();
   }
 
   /// Versão Future: obtém uma lista de serviços ativos uma única vez.

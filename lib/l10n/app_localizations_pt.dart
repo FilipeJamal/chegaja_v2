@@ -223,19 +223,63 @@ class AppLocalizationsPt extends AppLocalizations {
   String get navHome => 'Início';
 
   @override
-  String get navMyOrders => 'Meus pedidos';
+  String get navMyOrders => 'Pedidos';
 
   @override
   String get navMessages => 'Mensagens';
 
   @override
+  String get navSaved => 'Guardados';
+
+  @override
   String get navProfile => 'Perfil';
+
+  @override
+  String get navProviderOpportunities => 'Oportunidades';
+
+  @override
+  String get navProviderSchedule => 'Agenda';
+
+  @override
+  String get navProviderJobs => 'Trabalhos';
+
+  @override
+  String get navProviderBusiness => 'Negócio';
 
   @override
   String get homeGreeting => 'Olá';
 
   @override
   String get homeSubtitle => 'Do que precisas hoje?';
+
+  @override
+  String get homeRequestTitle => 'De que serviço precisa?';
+
+  @override
+  String get homeRequestSubtitle =>
+      'Encontre prestadores de confiança perto de si e resolva já.';
+
+  @override
+  String get homeRequestHint => 'Descreva o que precisa';
+
+  @override
+  String get homeContinue => 'Continuar';
+
+  @override
+  String get homeModeNow => 'Agora';
+
+  @override
+  String get homeModeSchedule => 'Agendar';
+
+  @override
+  String get homeModeQuotes => 'Orçamentos';
+
+  @override
+  String get homeNearbyServices => 'Serviços perto de si';
+
+  @override
+  String get homePrivacyNotice =>
+      'A sua morada exata fica privada até existir um prestador atribuído.';
 
   @override
   String get homePendingTitle => 'Tens algo para decidir';

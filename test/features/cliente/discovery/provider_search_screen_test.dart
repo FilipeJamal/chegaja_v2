@@ -250,6 +250,15 @@ void main() {
       'servicosNomes': ['Bolos personalizados'],
       'city': 'Coimbra',
       'country': 'Portugal',
+      'marketId': 'pt-coimbra',
+      'isSearchable': true,
+    });
+    await db.collection('provider_public').doc('p2').set({
+      'nome': 'Joao Maputo',
+      'servicosNomes': ['Bolos personalizados'],
+      'city': 'Maputo',
+      'country': 'Moçambique',
+      'marketId': 'mz-maputo',
       'isSearchable': true,
     });
     await db.collection('users_private').doc('u1').set({
@@ -262,6 +271,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Joao Bolos'), findsOneWidget);
+    expect(find.text('Joao Maputo'), findsNothing);
     expect(find.text('Utilizador Prestador Legado'), findsNothing);
   });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
+import 'app_brand_wordmark.dart';
 import 'app_unread_badge.dart';
 
 class AppProductHeader extends StatelessWidget {
@@ -97,8 +99,12 @@ class _BrandLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (label == 'ChegaJa') {
+    if (label == 'ChegaJa' || label == 'ChegaJá') {
+      if (context.chegaJaTheme.usesU1) {
+        return const AppBrandWordmark(size: AppBrandSize.compact);
+      }
       return RichText(
+        key: const Key('app_product_header_legacy_brand'),
         text: TextSpan(
           style: theme.textTheme.titleLarge?.copyWith(
             fontStyle: FontStyle.italic,
@@ -154,10 +160,14 @@ class _NotificationButton extends StatelessWidget {
           ),
         ),
         if (showDot)
-          const Positioned(
+          Positioned(
             right: 9,
             top: 9,
-            child: AppUnreadBadge.dot(color: AppPalette.success),
+            child: AppUnreadBadge.dot(
+              color: context.chegaJaTheme.usesU1
+                  ? AppPalette.u1Success
+                  : AppPalette.success,
+            ),
           ),
       ],
     );

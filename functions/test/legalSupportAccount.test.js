@@ -7,6 +7,8 @@ const { __test__ } = require('../index');
 
 describe('legal consent, support and account deletion', () => {
   const db = __test__.getDb();
+  const originalMarketId = process.env.PILOT_MARKET_ID;
+  const originalCurrency = process.env.DEFAULT_CURRENCY_CODE;
   const phoneAuth = { uid: 'legal-user', token: { phone_number: '+258840000001' } };
   const anonymousAuth = { uid: 'support-user', token: {} };
   const collections = [
@@ -34,6 +36,8 @@ describe('legal consent, support and account deletion', () => {
   ];
 
   beforeEach(async () => {
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
+    process.env.DEFAULT_CURRENCY_CODE = 'MZN';
     for (const collection of collections) {
       const snapshot = await db.collection(collection).get();
       const batch = db.batch();
@@ -48,6 +52,7 @@ describe('legal consent, support and account deletion', () => {
         database: db,
         auth: phoneAuth,
         data: {
+          marketId: 'mz-maputo',
           version: 'stale',
           termsAccepted: true,
           privacyAccepted: true,
@@ -62,6 +67,7 @@ describe('legal consent, support and account deletion', () => {
         database: db,
         auth: phoneAuth,
         data: {
+          marketId: 'mz-maputo',
           version: __test__.legal.LEGAL_DOCUMENT_VERSION,
           termsAccepted: true,
           privacyAccepted: true,
@@ -75,6 +81,7 @@ describe('legal consent, support and account deletion', () => {
       database: db,
       auth: phoneAuth,
       data: {
+        marketId: 'mz-maputo',
         version: __test__.legal.LEGAL_DOCUMENT_VERSION,
         locale: 'pt_MZ',
         termsAccepted: true,
@@ -84,11 +91,115 @@ describe('legal consent, support and account deletion', () => {
     });
     const privateUser = (await db.collection('users_private').doc(phoneAuth.uid).get()).data();
     assert.strictEqual(privateUser.legalConsent.version, __test__.legal.LEGAL_DOCUMENT_VERSION);
+    assert.strictEqual(privateUser.legalConsent.marketId, 'mz-maputo');
     assert.strictEqual(privateUser.legalConsent.termsAccepted, true);
     assert.strictEqual(privateUser.legalConsent.privacyAccepted, true);
     assert.strictEqual(privateUser.legalConsent.ageConfirmed, true);
     const audits = await db.collection('legal_consent_audit').where('uid', '==', phoneAuth.uid).get();
     assert.strictEqual(audits.size, 1);
+    assert.strictEqual(audits.docs[0].data().marketId, 'mz-maputo');
+  });
+
+  it('stamps the active market on provider records after phone confirmation', async () => {
+    await Promise.all([
+      db.collection('pilot_participants').doc(phoneAuth.uid).set({
+        marketId: 'mz-maputo',
+        status: 'active',
+        roles: ['prestador'],
+        city: 'Maputo',
+      }),
+      db.collection('provider_public').doc(phoneAuth.uid).set({
+        uid: phoneAuth.uid,
+        isSearchable: false,
+      }),
+      db.collection('provider_dispatch_private').doc(phoneAuth.uid).set({
+        providerId: phoneAuth.uid,
+        isOnline: false,
+      }),
+    ]);
+
+    await __test__.auth.syncPhoneIdentityCore({
+      database: db,
+      auth: phoneAuth,
+      authAdmin: {
+        getUser: async () => ({
+          uid: phoneAuth.uid,
+          phoneNumber: '+258840000001',
+        }),
+      },
+    });
+
+    const provider = (
+      await db.collection('provider_public').doc(phoneAuth.uid).get()
+    ).data();
+    const dispatch = (
+      await db.collection('provider_dispatch_private').doc(phoneAuth.uid).get()
+    ).data();
+    assert.strictEqual(provider.marketId, 'mz-maputo');
+    assert.strictEqual(provider.countryCode, 'MZ');
+    assert.strictEqual(provider.currency, 'MZN');
+    assert.strictEqual(dispatch.marketId, 'mz-maputo');
+    assert.strictEqual(dispatch.currency, 'MZN');
+  });
+
+  it('fails closed when legal documents are unavailable for the active market', async () => {
+    process.env.PILOT_MARKET_ID = 'pt-coimbra';
+    process.env.DEFAULT_CURRENCY_CODE = 'EUR';
+    assert.strictEqual(__test__.legal.legalDocumentsAvailableForMarket(), false);
+    await assert.rejects(
+      () => __test__.legal.acceptLegalDocumentsCore({
+        database: db,
+        auth: { uid: phoneAuth.uid, token: { phone_number: '+351910000001' } },
+        data: {
+          marketId: 'pt-coimbra',
+          version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+          termsAccepted: true,
+          privacyAccepted: true,
+          ageConfirmed: true,
+        },
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    assert.throws(
+      () => __test__.legal.assertCurrentLegalConsent({
+        marketId: 'mz-maputo',
+        version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+        termsAccepted: true,
+        privacyAccepted: true,
+        ageConfirmed: true,
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+  });
+
+  it('requires a market on new consent and limits missing-market compatibility to Maputo', async () => {
+    await assert.rejects(
+      () => __test__.legal.acceptLegalDocumentsCore({
+        database: db,
+        auth: phoneAuth,
+        data: {
+          version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+          termsAccepted: true,
+          privacyAccepted: true,
+          ageConfirmed: true,
+        },
+      }),
+      (error) => error.code === 'invalid-argument',
+    );
+    const legacyConsent = {
+      version: __test__.legal.LEGAL_DOCUMENT_VERSION,
+      termsAccepted: true,
+      privacyAccepted: true,
+      ageConfirmed: true,
+    };
+    assert.strictEqual(__test__.legal.assertCurrentLegalConsent(legacyConsent), legacyConsent);
+    assert.throws(
+      () => __test__.legal.assertCurrentLegalConsent({
+        ...legacyConsent,
+        marketId: 'pt-coimbra',
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
   });
 
   it('creates support state only from authoritative values and keeps support accessible', async () => {
@@ -105,6 +216,7 @@ describe('legal consent, support and account deletion', () => {
     });
     const ticket = (await db.collection('support_tickets').doc(result.ticketId).get()).data();
     assert.strictEqual(ticket.uid, anonymousAuth.uid);
+    assert.strictEqual(ticket.marketId, 'mz-maputo');
     assert.strictEqual(ticket.status, 'open');
     assert.strictEqual(ticket.subject, 'Conta e acesso');
     assert.strictEqual(ticket.source, 'callable');
@@ -115,6 +227,7 @@ describe('legal consent, support and account deletion', () => {
       database: db,
       auth: phoneAuth,
       data: {
+        marketId: 'mz-maputo',
         version: __test__.legal.LEGAL_DOCUMENT_VERSION,
         termsAccepted: true,
         privacyAccepted: true,
@@ -164,6 +277,7 @@ describe('legal consent, support and account deletion', () => {
       database: db,
       auth: phoneAuth,
       data: {
+        marketId: 'mz-maputo',
         version: __test__.legal.LEGAL_DOCUMENT_VERSION,
         termsAccepted: true,
         privacyAccepted: true,
@@ -194,6 +308,7 @@ describe('legal consent, support and account deletion', () => {
       database: db,
       auth: phoneAuth,
       data: {
+        marketId: 'mz-maputo',
         version: __test__.legal.LEGAL_DOCUMENT_VERSION,
         termsAccepted: true,
         privacyAccepted: true,
@@ -285,6 +400,13 @@ describe('legal consent, support and account deletion', () => {
       (await db.collection('account_deletion_requests').doc(phoneAuth.uid).get()).exists,
       false,
     );
+  });
+
+  after(() => {
+    if (originalMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = originalMarketId;
+    if (originalCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = originalCurrency;
   });
 
   it('resumes an interrupted executing deletion and removes every owned storage prefix before Auth', async () => {

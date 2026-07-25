@@ -9,8 +9,20 @@ const TARGETED_STATUSES = new Set([
   'aguarda_resposta_prestador',
   'aguarda_resposta_cliente',
 ]);
+const PILOT_MARKETS = Object.freeze({
+  'pt-coimbra': Object.freeze({
+    id: 'pt-coimbra',
+    currency: 'EUR',
+  }),
+  'mz-maputo': Object.freeze({
+    id: 'mz-maputo',
+    currency: 'MZN',
+  }),
+});
 const ALLOWED_DISPATCH_FIELDS = Object.freeze([
   'pedidoId',
+  'marketId',
+  'currency',
   'servicoId',
   'servicoNome',
   'categoria',
@@ -40,6 +52,64 @@ const ALLOWED_DISPATCH_FIELDS = Object.freeze([
 
 function cleanString(value) {
   return (value || '').toString().trim();
+}
+
+function configuredPilotMarket() {
+  const explicitId = cleanString(process.env.PILOT_MARKET_ID).toLowerCase();
+  if (!explicitId) {
+    throw new Error(
+      'PILOT_MARKET_ID obrigatorio para reconciliar pedido_dispatch.',
+    );
+  }
+  const explicitMarket = PILOT_MARKETS[explicitId];
+  if (!explicitMarket) {
+    throw new Error(
+      `PILOT_MARKET_ID invalido: ${explicitId}. `
+      + `Valores suportados: ${Object.keys(PILOT_MARKETS).join(', ')}.`,
+    );
+  }
+  return explicitMarket;
+}
+
+function pilotCurrencyCode() {
+  const market = configuredPilotMarket();
+  const legacyCurrency = cleanString(process.env.DEFAULT_CURRENCY_CODE).toUpperCase();
+  if (legacyCurrency && legacyCurrency !== market.currency) {
+    throw new Error(
+      `DEFAULT_CURRENCY_CODE deve corresponder ao mercado ${market.id} (${market.currency}).`,
+    );
+  }
+  return market.currency;
+}
+
+function recordBelongsToPilotMarket(record, {
+  market = configuredPilotMarket(),
+  requireCurrency = false,
+  allowLegacyMaputo =
+    cleanString(process.env.RECONCILE_ALLOW_LEGACY_MAPUTO).toLowerCase()
+      === 'true',
+} = {}) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+  const recordMarketId = cleanString(record.marketId).toLowerCase();
+  const recordCurrencies = [record.currency, record.paymentCurrency]
+    .map((value) => cleanString(value).toUpperCase())
+    .filter(Boolean);
+  const legacyMaputoCompatibility = allowLegacyMaputo && market.id === 'mz-maputo';
+
+  if (recordMarketId) {
+    if (recordMarketId !== market.id) return false;
+  } else if (!legacyMaputoCompatibility) {
+    return false;
+  }
+
+  if (requireCurrency) {
+    if (recordCurrencies.length > 0) {
+      if (recordCurrencies.some((currency) => currency !== market.currency)) return false;
+    } else if (!legacyMaputoCompatibility) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function safeText(value, maxLength = 120) {
@@ -141,6 +211,8 @@ function dispatchZoneSource(pedido = {}) {
 // buildPedidoDispatchProjection. The two server timestamps are represented by
 // a local sentinel and converted to Firestore REQUEST_TIME transforms at write.
 function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
+  const market = configuredPilotMarket();
+  const currency = pilotCurrencyCode();
   const latitude = approximateCoordinate(
     pedido.latitude ?? pedido.geo?.geopoint?.latitude,
   );
@@ -158,6 +230,8 @@ function buildPedidoDispatchProjection(pedidoId, pedido = {}) {
     : '';
   return {
     pedidoId,
+    marketId: market.id,
+    currency,
     servicoId: safeText(pedido.servicoId, 120),
     servicoNome: serviceLabel,
     categoria: serviceLabel,
@@ -297,8 +371,12 @@ function buildReconciliationPlan(pedidos = [], dispatchDocuments = []) {
 
   for (const pedido of pedidos) {
     const data = pedido.data || {};
-    const open = isOpenPedido(data);
-    const targeted = isTargetedDispatchPedido(data);
+    const belongsToActiveMarket = recordBelongsToPilotMarket(
+      data,
+      { requireCurrency: true },
+    );
+    const open = belongsToActiveMarket && isOpenPedido(data);
+    const targeted = belongsToActiveMarket && isTargetedDispatchPedido(data);
     if (!open && !targeted) continue;
     eligibleIds.add(pedido.id);
     if (open) counts.eligibleOpen += 1;
@@ -554,7 +632,9 @@ async function readDocumentInTransaction(
 
 function currentMutationForDocuments(pedidoId, pedido, dispatch) {
   const source = pedido?.data || null;
-  if (source && (isOpenPedido(source) || isTargetedDispatchPedido(source))) {
+  if (source
+    && recordBelongsToPilotMarket(source, { requireCurrency: true })
+    && (isOpenPedido(source) || isTargetedDispatchPedido(source))) {
     const projection = buildPedidoDispatchProjection(pedidoId, source);
     if (dispatch && dispatchMatchesProjection(dispatch.data || {}, projection)) return null;
     return {
@@ -726,9 +806,11 @@ function buildReconciliationEvidence(plan, {
 function resolveOptions(argv = process.argv.slice(2)) {
   const options = {
     projectId: '',
+    marketId: '',
     confirmProject: '',
     confirm: false,
     dryRun: true,
+    allowLegacyMaputo: false,
     pageSize: 500,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -744,6 +826,12 @@ function resolveOptions(argv = process.argv.slice(2)) {
       options.projectId = arg.slice('--project='.length);
     } else if (arg === '--project') {
       options.projectId = argv[++index] || '';
+    } else if (arg.startsWith('--market=')) {
+      options.marketId = arg.slice('--market='.length);
+    } else if (arg === '--market') {
+      options.marketId = argv[++index] || '';
+    } else if (arg === '--allow-legacy-maputo') {
+      options.allowLegacyMaputo = true;
     } else if (arg.startsWith('--confirm-project=')) {
       options.confirmProject = arg.slice('--confirm-project='.length);
     } else if (arg === '--confirm-project') {
@@ -763,6 +851,19 @@ function resolveOptions(argv = process.argv.slice(2)) {
 function validateOptions(options) {
   if (!cleanString(options.projectId)) {
     throw new Error('--project is required, including for dry-run.');
+  }
+  const marketId = cleanString(options.marketId).toLowerCase();
+  if (!marketId) {
+    throw new Error('--market is required, including for dry-run.');
+  }
+  if (!PILOT_MARKETS[marketId]) {
+    throw new Error(
+      `--market invalido: ${marketId}. `
+      + `Valores suportados: ${Object.keys(PILOT_MARKETS).join(', ')}.`,
+    );
+  }
+  if (options.allowLegacyMaputo && marketId !== 'mz-maputo') {
+    throw new Error('--allow-legacy-maputo is only valid with --market=mz-maputo.');
   }
   if (!Number.isInteger(options.pageSize) || options.pageSize < 1 || options.pageSize > 1000) {
     throw new Error('--page-size must be an integer between 1 and 1000.');
@@ -792,49 +893,68 @@ async function firestoreRestClient(projectId) {
 
 async function reconcileWithClient(client, options, dependencies = {}) {
   validateOptions(options);
-  const readState = dependencies.readState || readReconciliationState;
-  const buildPlan = dependencies.buildPlan || buildReconciliationPlan;
-  const commitPlan = dependencies.commitPlan || commitReconciliationPlan;
-  const beforeState = await readState(client, options.projectId, {
-    pageSize: options.pageSize,
-  });
-  const plan = buildPlan(beforeState.pedidos, beforeState.dispatchDocuments);
-  let afterPlan = plan;
-  let execution = null;
-
-  if (options.confirm) {
-    if (plan.counts.pedidosScanned < 1) {
-      throw new Error('Refusing confirmed reconciliation with zero pedidos scanned.');
-    }
-    execution = await commitPlan(client, options.projectId, plan);
-    // A full second scan is mandatory. It proves idempotence and catches any
-    // concurrent write that happened after an earlier atomic batch committed.
-    const afterState = await readState(client, options.projectId, {
+  const previousMarketId = process.env.PILOT_MARKET_ID;
+  const previousLegacyCompatibility =
+    process.env.RECONCILE_ALLOW_LEGACY_MAPUTO;
+  process.env.PILOT_MARKET_ID = cleanString(options.marketId).toLowerCase();
+  process.env.RECONCILE_ALLOW_LEGACY_MAPUTO =
+    options.allowLegacyMaputo === true ? 'true' : 'false';
+  try {
+    const readState = dependencies.readState || readReconciliationState;
+    const buildPlan = dependencies.buildPlan || buildReconciliationPlan;
+    const commitPlan = dependencies.commitPlan || commitReconciliationPlan;
+    const beforeState = await readState(client, options.projectId, {
       pageSize: options.pageSize,
     });
-    afterPlan = buildPlan(afterState.pedidos, afterState.dispatchDocuments);
-    if (afterPlan.counts.inconsistencies !== 0) {
-      throw new Error(
-        `Post-write verification failed: ${afterPlan.counts.inconsistencies} inconsistencies remain.`,
-      );
+    const plan = buildPlan(beforeState.pedidos, beforeState.dispatchDocuments);
+    let afterPlan = plan;
+    let execution = null;
+
+    if (options.confirm) {
+      if (plan.counts.pedidosScanned < 1) {
+        throw new Error('Refusing confirmed reconciliation with zero pedidos scanned.');
+      }
+      execution = await commitPlan(client, options.projectId, plan);
+      // A full second scan is mandatory. It proves idempotence and catches any
+      // concurrent write that happened after an earlier atomic batch committed.
+      const afterState = await readState(client, options.projectId, {
+        pageSize: options.pageSize,
+      });
+      afterPlan = buildPlan(afterState.pedidos, afterState.dispatchDocuments);
+      if (afterPlan.counts.inconsistencies !== 0) {
+        throw new Error(
+          `Post-write verification failed: ${afterPlan.counts.inconsistencies} inconsistencies remain.`,
+        );
+      }
+    }
+
+    return {
+      projectId: options.projectId,
+      marketId: options.marketId,
+      legacyMaputoCompatibility: options.allowLegacyMaputo === true,
+      dryRun: options.dryRun,
+      collections: ['pedidos', 'pedido_dispatch'],
+      reconciliationVersion: RECONCILIATION_VERSION,
+      documentIdsIncluded: false,
+      planned: { ...plan.counts },
+      ...(execution ? { executed: execution } : {}),
+      pedidoDispatchReconciliation: buildReconciliationEvidence(plan, {
+        executed: options.confirm,
+        dryRun: options.dryRun,
+        afterPlan,
+        execution,
+      }),
+    };
+  } finally {
+    if (previousMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = previousMarketId;
+    if (previousLegacyCompatibility === undefined) {
+      delete process.env.RECONCILE_ALLOW_LEGACY_MAPUTO;
+    } else {
+      process.env.RECONCILE_ALLOW_LEGACY_MAPUTO =
+        previousLegacyCompatibility;
     }
   }
-
-  return {
-    projectId: options.projectId,
-    dryRun: options.dryRun,
-    collections: ['pedidos', 'pedido_dispatch'],
-    reconciliationVersion: RECONCILIATION_VERSION,
-    documentIdsIncluded: false,
-    planned: { ...plan.counts },
-    ...(execution ? { executed: execution } : {}),
-    pedidoDispatchReconciliation: buildReconciliationEvidence(plan, {
-      executed: options.confirm,
-      dryRun: options.dryRun,
-      afterPlan,
-      execution,
-    }),
-  };
 }
 
 async function reconcile(options, dependencies = {}) {
@@ -845,8 +965,11 @@ async function reconcile(options, dependencies = {}) {
 
 function printHelp() {
   console.log(`Usage:
-  node scripts/admin/reconcile_pedido_dispatch.js --project=PROJECT_ID --dry-run
-  node scripts/admin/reconcile_pedido_dispatch.js --project=PROJECT_ID --confirm --confirm-project=PROJECT_ID
+  node scripts/admin/reconcile_pedido_dispatch.js --project=PROJECT_ID --market=pt-coimbra --dry-run
+  node scripts/admin/reconcile_pedido_dispatch.js --project=PROJECT_ID --market=pt-coimbra --confirm --confirm-project=PROJECT_ID
+
+For the one-time historical Maputo migration only, add
+--market=mz-maputo --allow-legacy-maputo explicitly.
 
 Dry-run is the default and never writes. Confirm mode scans every page of both
 collections, upserts only the sanitized projection for open/valid targeted
@@ -884,12 +1007,15 @@ module.exports = {
   decodeFirestoreFields,
   dispatchMatchesProjection,
   encodeFirestoreValue,
+  configuredPilotMarket,
   isOpenPedido,
   isTargetedDispatchPedido,
+  pilotCurrencyCode,
   readCollection,
   readReconciliationState,
   reconcile,
   reconcileWithClient,
+  recordBelongsToPilotMarket,
   resolveOptions,
   sanitizeDispatchText,
   sanitizeDispatchZone,

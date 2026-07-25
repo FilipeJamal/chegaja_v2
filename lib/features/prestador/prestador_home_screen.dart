@@ -11,6 +11,8 @@ import 'package:chegaja_v2/l10n/app_localizations.dart';
 
 import 'package:chegaja_v2/core/models/pedido.dart';
 import 'package:chegaja_v2/core/repositories/pedido_repo.dart';
+import 'package:chegaja_v2/core/feature_flags/feature_flag.dart';
+import 'package:chegaja_v2/core/feature_flags/feature_flag_service.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/services/pedido_service.dart';
 import 'package:chegaja_v2/core/services/chat_service.dart';
@@ -45,6 +47,7 @@ import 'package:chegaja_v2/features/common/account_privacy_screen.dart';
 import 'package:chegaja_v2/features/common/suporte_screen.dart';
 
 import 'package:chegaja_v2/features/prestador/prestador_perfil_screen.dart';
+import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_settings_screen.dart';
 import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 import 'package:chegaja_v2/features/prestador/prestador_pagamentos_screen.dart';
@@ -57,6 +60,74 @@ const bool _disablePrestadorTrackingForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
 const bool _disablePrestadorHomeMessageStreamsForEmulatorTests =
     bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+
+typedef PrestadorVerifiedPhoneGate = Future<bool> Function(
+  BuildContext context, {
+  required String action,
+});
+
+typedef PrestadorAvailabilityWriter = Future<void> Function({
+  required String prestadorId,
+  required bool isOnline,
+});
+
+const String _prestadorAvailabilityPhoneGateAction =
+    'alterar a disponibilidade e partilhar a localização operacional';
+
+@visibleForTesting
+Future<bool> runPrestadorVerifiedPhoneAction(
+  BuildContext context, {
+  required PrestadorVerifiedPhoneGate verifiedPhoneGate,
+  required String action,
+  required FutureOr<void> Function() onAllowed,
+}) async {
+  final allowed = await verifiedPhoneGate(
+    context,
+    action: action,
+  );
+  if (!allowed || !context.mounted) return false;
+
+  await onAllowed();
+  return true;
+}
+
+@visibleForTesting
+Future<bool> requestPrestadorAgendaAccess(
+  BuildContext context, {
+  required PrestadorVerifiedPhoneGate verifiedPhoneGate,
+  required FutureOr<void> Function() onAllowed,
+}) {
+  return runPrestadorVerifiedPhoneAction(
+    context,
+    verifiedPhoneGate: verifiedPhoneGate,
+    action: prestadorAgendaPhoneGateAction,
+    onAllowed: onAllowed,
+  );
+}
+
+@visibleForTesting
+Future<bool> requestPrestadorAvailabilityChange(
+  BuildContext context, {
+  required PrestadorVerifiedPhoneGate verifiedPhoneGate,
+  required bool isOnline,
+  required FutureOr<void> Function(bool isOnline) onAllowed,
+}) async {
+  // Ficar offline é sempre uma ação de segurança permitida. Em particular,
+  // nunca devemos obrigar alguém a confirmar o telefone para deixar de
+  // partilhar a localização operacional.
+  if (!isOnline) {
+    if (!context.mounted) return false;
+    await onAllowed(false);
+    return true;
+  }
+
+  return runPrestadorVerifiedPhoneAction(
+    context,
+    verifiedPhoneGate: verifiedPhoneGate,
+    action: _prestadorAvailabilityPhoneGateAction,
+    onAllowed: () => onAllowed(isOnline),
+  );
+}
 
 @visibleForTesting
 Set<String> prestadorSafeServiceIdsFromData(Map<String, dynamic> data) {
@@ -211,16 +282,63 @@ String _textoAcaoPendentePrestador(Pedido p) {
 }
 
 class PrestadorHomeScreen extends StatefulWidget {
-  const PrestadorHomeScreen({super.key});
+  const PrestadorHomeScreen({
+    super.key,
+    this.u1ExperienceOverride,
+    this.verifiedPhoneGate,
+    this.availabilityWriter,
+  });
+
+  /// Test/debug override. Production rollout remains controlled remotely.
+  final bool? u1ExperienceOverride;
+
+  /// Narrow test seam. Production always falls back to [VerifiedPhoneGate].
+  final PrestadorVerifiedPhoneGate? verifiedPhoneGate;
+
+  /// Narrow test seam. Production always writes through [LocationService].
+  final PrestadorAvailabilityWriter? availabilityWriter;
 
   @override
   State<PrestadorHomeScreen> createState() => _PrestadorHomeScreenState();
 }
 
+enum PrestadorHomeDestination {
+  opportunities,
+  schedule,
+  jobs,
+  messages,
+  business,
+}
+
+@visibleForTesting
+List<PrestadorHomeDestination> prestadorHomeDestinationsFor({
+  required bool navigationV2,
+}) {
+  return <PrestadorHomeDestination>[
+    PrestadorHomeDestination.opportunities,
+    if (navigationV2) PrestadorHomeDestination.schedule,
+    PrestadorHomeDestination.jobs,
+    PrestadorHomeDestination.messages,
+    PrestadorHomeDestination.business,
+  ];
+}
+
+@visibleForTesting
+bool prestadorDestinationRequiresVerifiedPhone(
+  PrestadorHomeDestination destination,
+) {
+  return destination != PrestadorHomeDestination.opportunities;
+}
+
 class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
-  int _currentIndex = 0;
+  PrestadorHomeDestination _currentSection =
+      PrestadorHomeDestination.opportunities;
   bool _online = false;
   bool _roleReady = false;
+  bool _sessionResolved = false;
+  bool _phoneReady = false;
+  int _authGeneration = 0;
+  String? _privateSessionUid;
   StreamSubscription<User?>? _authSub;
 
   // ✅ Badge sem ChatMessage / sem streamMessagesForPedido
@@ -237,7 +355,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _authSub = FirebaseAuth.instance.authStateChanges().listen((_) {
+    _authSub = FirebaseAuth.instance.userChanges().listen((_) {
       if (!mounted) return;
       unawaited(_initPrestador());
     });
@@ -245,53 +363,135 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   }
 
   Future<void> _initPrestador() async {
+    final generation = ++_authGeneration;
+
     try {
       await AuthService.ensureSignedInAnonymously();
     } catch (_) {}
 
+    final user = AuthService.currentUser;
+    if (!mounted || generation != _authGeneration) return;
+
+    if (user == null || !AuthService.hasVerifiedPhone) {
+      await _clearPrivateSession();
+      if (!mounted || generation != _authGeneration) return;
+      setState(() {
+        _sessionResolved = true;
+        _phoneReady = false;
+        _roleReady = false;
+        _online = false;
+        _currentSection = PrestadorHomeDestination.opportunities;
+      });
+      return;
+    }
+
     try {
       await AuthService.setActiveRole('prestador');
     } catch (_) {}
+    if (!mounted || generation != _authGeneration) return;
 
-    final user = AuthService.currentUser;
-    if (!mounted) return;
-    if (user == null) {
-      if (_roleReady) {
-        setState(() => _roleReady = false);
-      }
+    final refreshedUser = AuthService.currentUser;
+    if (refreshedUser == null || !AuthService.hasVerifiedPhone) {
+      await _clearPrivateSession();
+      if (!mounted || generation != _authGeneration) return;
+      setState(() {
+        _sessionResolved = true;
+        _phoneReady = false;
+        _roleReady = false;
+        _online = false;
+        _currentSection = PrestadorHomeDestination.opportunities;
+      });
       return;
     }
+
+    if (_privateSessionUid != refreshedUser.uid) {
+      await _clearPrivateSession();
+      if (!mounted || generation != _authGeneration) return;
+    }
+    _privateSessionUid = refreshedUser.uid;
 
     // O estado operacional e a localizacao exata nunca ficam no perfil publico.
     _prestadorDocSub ??= FirebaseFirestore.instance
         .collection('provider_dispatch_private')
-        .doc(user.uid)
+        .doc(refreshedUser.uid)
         .snapshots()
-        .listen((snap) {
-      final data = snap.data();
-      final onlineFromDb = (data?['isOnline'] as bool?) ?? false;
-      if (!mounted) return;
+        .listen(
+      (snap) {
+        final data = snap.data();
+        final onlineFromDb = (data?['isOnline'] as bool?) ?? false;
+        if (!mounted ||
+            _privateSessionUid != AuthService.currentUser?.uid ||
+            !AuthService.hasVerifiedPhone) {
+          return;
+        }
+        if (_online != onlineFromDb) {
+          setState(() => _online = onlineFromDb);
+        }
+        unawaited(_manageTracking(onlineFromDb));
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('[PrestadorHome] dispatch privado indisponível: $error');
+        if (kDebugMode) debugPrintStack(stackTrace: stackTrace);
+      },
+    );
 
-      // Se houver mudança de estado, atualiza UI e Tracking
-      if (_online != onlineFromDb) {
-        setState(() => _online = onlineFromDb);
-      }
+    _pedidosSub ??= PedidosRepo.streamPedidosDoPrestador(
+      refreshedUser.uid,
+    ).listen(
+      _onPedidosUpdate,
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('[PrestadorHome] pedidos privados indisponíveis: $error');
+        if (kDebugMode) debugPrintStack(stackTrace: stackTrace);
+      },
+    );
 
-      // Garante que o tracking reflete o estado do DB (single source of truth)
-      _manageTracking(onlineFromDb);
-    });
-
-    _pedidosSub ??=
-        PedidosRepo.streamPedidosDoPrestador(user.uid).listen(_onPedidosUpdate);
-
-    if (!_roleReady) {
-      setState(() => _roleReady = true);
+    if (!_roleReady || !_phoneReady || !_sessionResolved) {
+      setState(() {
+        _sessionResolved = true;
+        _phoneReady = true;
+        _roleReady = true;
+      });
     }
+  }
+
+  Future<void> _clearPrivateSession() async {
+    final prestadorDocSub = _prestadorDocSub;
+    final pedidosSub = _pedidosSub;
+    final trackingSub = _trackingSub;
+    final chatSubs = _chatSubs.values.toList(growable: false);
+
+    _prestadorDocSub = null;
+    _pedidosSub = null;
+    _trackingSub = null;
+    _privateSessionUid = null;
+    _chatSubs.clear();
+    _unreadPorPedido.clear();
+    _hasUnreadMessages = false;
+
+    await Future.wait<void>([
+      if (prestadorDocSub != null) prestadorDocSub.cancel(),
+      if (pedidosSub != null) pedidosSub.cancel(),
+      if (trackingSub != null) trackingSub.cancel(),
+      for (final subscription in chatSubs) subscription.cancel(),
+    ]);
+  }
+
+  Future<void> _confirmPrestadorPhone() async {
+    final allowed = await _verifiedPhoneGate(
+      context,
+      action: 'aceder às oportunidades e ferramentas privadas de Prestador',
+    );
+    if (!allowed || !mounted) return;
+    await _initPrestador();
   }
 
   Future<void> _ensureChatMetaForPrestador(Pedido pedido) async {
     final user = AuthService.currentUser;
-    if (user == null) return;
+    if (user == null ||
+        !AuthService.hasVerifiedPhone ||
+        _privateSessionUid != user.uid) {
+      return;
+    }
 
     await ChatService.instance.ensureChatMetaForPedido(pedido.id);
 
@@ -326,6 +526,10 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
   }
 
   void _onPedidosUpdate(List<Pedido> pedidos) {
+    if (!AuthService.hasVerifiedPhone ||
+        _privateSessionUid != AuthService.currentUser?.uid) {
+      return;
+    }
     if (_disablePrestadorHomeMessageStreamsForEmulatorTests) {
       for (final id in _chatSubs.keys.toList()) {
         _cancelChatSub(id);
@@ -430,7 +634,7 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
 
   Future<void> _manageTracking(bool shouldBeOnline) async {
     final user = AuthService.currentUser;
-    if (user == null) {
+    if (user == null || !AuthService.hasVerifiedPhone) {
       await _trackingSub?.cancel();
       _trackingSub = null;
       return;
@@ -461,44 +665,216 @@ class _PrestadorHomeScreenState extends State<PrestadorHomeScreen> {
     }
   }
 
+  PrestadorVerifiedPhoneGate get _verifiedPhoneGate =>
+      widget.verifiedPhoneGate ?? VerifiedPhoneGate.ensure;
+
+  Future<void> _writeAvailability({
+    required String prestadorId,
+    required bool isOnline,
+  }) {
+    final writer = widget.availabilityWriter;
+    if (writer != null) {
+      return writer(
+        prestadorId: prestadorId,
+        isOnline: isOnline,
+      );
+    }
+    return LocationService.instance.updatePrestadorLastLocation(
+      prestadorId: prestadorId,
+      isOnline: isOnline,
+    );
+  }
+
+  Future<void> _openDestination(
+    PrestadorHomeDestination destination,
+  ) async {
+    if (!prestadorDestinationRequiresVerifiedPhone(destination)) {
+      if (!mounted) return;
+      setState(() => _currentSection = destination);
+      return;
+    }
+
+    if (destination == PrestadorHomeDestination.schedule) {
+      await requestPrestadorAgendaAccess(
+        context,
+        verifiedPhoneGate: _verifiedPhoneGate,
+        onAllowed: () {
+          if (!mounted) return;
+          setState(() => _currentSection = destination);
+        },
+      );
+      return;
+    }
+
+    final action = switch (destination) {
+      PrestadorHomeDestination.jobs => 'consultar os teus trabalhos privados',
+      PrestadorHomeDestination.messages => 'consultar as tuas mensagens',
+      PrestadorHomeDestination.business =>
+        'gerir o teu perfil e atividade profissional',
+      PrestadorHomeDestination.opportunities ||
+      PrestadorHomeDestination.schedule =>
+        'aceder às ferramentas privadas de Prestador',
+    };
+    await runPrestadorVerifiedPhoneAction(
+      context,
+      verifiedPhoneGate: _verifiedPhoneGate,
+      action: action,
+      onAllowed: () {
+        if (!mounted || !AuthService.hasVerifiedPhone) return;
+        setState(() => _currentSection = destination);
+      },
+    );
+  }
+
+  Future<void> _changeAvailability(bool isOnline) async {
+    try {
+      await requestPrestadorAvailabilityChange(
+        context,
+        verifiedPhoneGate: _verifiedPhoneGate,
+        isOnline: isOnline,
+        onAllowed: (allowedOnline) async {
+          final user = AuthService.currentUser;
+          if (user == null) return;
+
+          if (!allowedOnline) {
+            // Interrompe imediatamente qualquer stream local de localização,
+            // mesmo que a escrita remota venha a falhar.
+            await _manageTracking(false);
+          }
+
+          // A interface só confirma o novo estado depois de a fonte de verdade
+          // aceitar a escrita. Assim nunca mostramos "Online" sem persistência.
+          await _writeAvailability(
+            prestadorId: user.uid,
+            isOnline: allowedOnline,
+          );
+          if (!mounted) return;
+          setState(() => _online = allowedOnline);
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[PrestadorHome] disponibilidade falhou: $error');
+      if (kDebugMode) {
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível atualizar a disponibilidade. Tenta novamente.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final navigationV2 = widget.u1ExperienceOverride ??
+        FeatureFlagService.instance.isEnabled(
+          FeatureFlag.u1NavigationV2,
+        );
+    final sections = prestadorHomeDestinationsFor(
+      navigationV2: navigationV2,
+    );
+    final destinations = <AppShellDestination>[
+      for (final section in sections)
+        switch (section) {
+          PrestadorHomeDestination.opportunities => AppShellDestination(
+              id: 'prestador.${section.name}',
+              label:
+                  navigationV2 ? l10n.navProviderOpportunities : l10n.navHome,
+              icon: navigationV2 ? Icons.explore_outlined : Icons.home_outlined,
+              selectedIcon: navigationV2 ? Icons.explore_rounded : Icons.home,
+              child: !_sessionResolved
+                  ? const AppLoadingView(
+                      label: 'A preparar a sessão de Prestador...',
+                    )
+                  : !_phoneReady
+                      ? _PrestadorPhoneConfirmationView(
+                          onConfirm: () => unawaited(
+                            _confirmPrestadorPhone(),
+                          ),
+                        )
+                      : _PrestadorInicioTab(
+                          online: _online,
+                          roleReady: _roleReady,
+                          onToggleOnline: (value) => unawaited(
+                            _changeAvailability(value),
+                          ),
+                        ),
+            ),
+          PrestadorHomeDestination.schedule => AppShellDestination(
+              id: 'prestador.${section.name}',
+              label: l10n.navProviderSchedule,
+              icon: Icons.calendar_month_outlined,
+              selectedIcon: Icons.calendar_month_rounded,
+              builder: (_) => PrestadorAgendaScreen(
+                embedded: true,
+                accessPreauthorized: true,
+                experienceV2Override: navigationV2,
+              ),
+            ),
+          PrestadorHomeDestination.jobs => AppShellDestination(
+              id: 'prestador.${section.name}',
+              label: navigationV2 ? l10n.navProviderJobs : l10n.navMyJobs,
+              icon: Icons.work_outline,
+              selectedIcon: Icons.work,
+              child: const _PrestadorPedidosTab(),
+            ),
+          PrestadorHomeDestination.messages => AppShellDestination(
+              id: 'prestador.${section.name}',
+              label: l10n.navMessages,
+              icon: Icons.chat_bubble_outline,
+              selectedIcon: Icons.chat_bubble,
+              showBadge: _hasUnreadMessages,
+              child: const MensagensTab(viewerRole: 'prestador'),
+            ),
+          PrestadorHomeDestination.business => AppShellDestination(
+              id: 'prestador.${section.name}',
+              label: navigationV2 ? l10n.navProviderBusiness : l10n.navProfile,
+              icon: navigationV2
+                  ? Icons.storefront_outlined
+                  : Icons.person_outline,
+              selectedIcon:
+                  navigationV2 ? Icons.storefront_rounded : Icons.person,
+              child: _ContaPremiumTab(
+                roleLabel: l10n.roleLabelProvider,
+              ),
+            ),
+        },
+    ];
+    final selectedIndex = sections.indexOf(_currentSection);
 
     return AppShellScaffold(
-      currentIndex: _currentIndex,
-      onDestinationSelected: (index) => setState(() => _currentIndex = index),
-      destinations: [
-        AppShellDestination(
-          label: l10n.navHome,
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          child: _PrestadorInicioTab(
-            online: _online,
-            roleReady: _roleReady,
-            onToggleOnline: (value) => setState(() => _online = value),
-          ),
-        ),
-        AppShellDestination(
-          label: l10n.navMyJobs,
-          icon: Icons.work_outline,
-          selectedIcon: Icons.work,
-          child: const _PrestadorPedidosTab(),
-        ),
-        AppShellDestination(
-          label: l10n.navMessages,
-          icon: Icons.chat_bubble_outline,
-          selectedIcon: Icons.chat_bubble,
-          showBadge: _hasUnreadMessages,
-          child: const MensagensTab(viewerRole: 'prestador'),
-        ),
-        AppShellDestination(
-          label: l10n.navProfile,
-          icon: Icons.person_outline,
-          selectedIcon: Icons.person,
-          child: _ContaPremiumTab(roleLabel: l10n.roleLabelProvider),
-        ),
-      ],
+      experienceV2Override: navigationV2,
+      currentIndex: selectedIndex < 0 ? 0 : selectedIndex,
+      onDestinationSelected: (index) => unawaited(
+        _openDestination(sections[index]),
+      ),
+      destinations: destinations,
+    );
+  }
+}
+
+class _PrestadorPhoneConfirmationView extends StatelessWidget {
+  const _PrestadorPhoneConfirmationView({
+    required this.onConfirm,
+  });
+
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppEmptyView(
+      key: const Key('prestador_phone_confirmation_required'),
+      title: 'Confirma o telefone',
+      message:
+          'Confirma o teu número antes de receber pedidos, consultar trabalhos, mensagens ou dados operacionais privados.',
+      icon: Icons.phone_android_outlined,
+      actionLabel: 'Confirmar telefone',
+      onAction: onConfirm,
     );
   }
 }
@@ -536,12 +912,17 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
     super.didUpdateWidget(oldWidget);
     if (!oldWidget.roleReady && widget.roleReady) {
       _maybeInitSettingsStream();
+    } else if (oldWidget.roleReady && !widget.roleReady) {
+      _settingsStream = null;
+      _pedidosSettingsStream = null;
+      _resetDisponiveis();
     }
   }
 
   void _maybeInitSettingsStream() {
     if (_settingsStream != null) return;
     if (!widget.roleReady) return;
+    if (!AuthService.hasVerifiedPhone) return;
     final user = AuthService.currentUser;
     if (user == null) return;
     final publicRef =
@@ -1078,16 +1459,18 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
   @override
   Widget build(BuildContext context) {
     if (!widget.roleReady) {
-      unawaited(AuthService.ensureSignedInAnonymously());
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView(
+        label: 'A preparar a área privada de Prestador...',
+      );
     }
 
     final l10n = AppLocalizations.of(context)!;
     final user = AuthService.currentUser;
 
     if (user == null) {
-      unawaited(AuthService.ensureSignedInAnonymously());
-      return const Center(child: Text('A recuperar sessão...'));
+      return const AppErrorView(
+        message: 'A sessão de Prestador deixou de estar disponível.',
+      );
     }
 
     final df = DateFormat('dd/MM HH:mm');
@@ -1154,16 +1537,7 @@ class _PrestadorInicioTabState extends State<_PrestadorInicioTab> {
           width: AppContentWidth.wide,
           child: _PrestadorInicioDashboard(
             online: widget.online,
-            onToggleOnline: (value) async {
-              widget.onToggleOnline(value);
-              final user = AuthService.currentUser;
-              if (user != null) {
-                await LocationService.instance.updatePrestadorLastLocation(
-                  prestadorId: user.uid,
-                  isOnline: value,
-                );
-              }
-            },
+            onToggleOnline: widget.onToggleOnline,
             liquidoHojeStr: liquidoHojeStr,
             brutoHojeStr: brutoHojeStr,
             taxaHojeStr: taxaHojeStr,
@@ -1576,43 +1950,22 @@ class _PrestadorPedidosTab extends StatefulWidget {
 }
 
 class _PrestadorPedidosTabState extends State<_PrestadorPedidosTab> {
-  late final Future<User> _signedInFuture;
   int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    final existingUser = AuthService.currentUser;
-    _signedInFuture = existingUser != null
-        ? Future<User>.value(existingUser)
-        : AuthService.ensureSignedInAnonymously();
-  }
 
   @override
   Widget build(BuildContext context) {
     final user = AuthService.currentUser;
 
-    if (user == null) {
-      return FutureBuilder<User>(
-        future: _signedInFuture,
-        builder: (context, snapshot) {
-          final signedUser = snapshot.data ?? AuthService.currentUser;
-          if (signedUser != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() {});
-            });
-            return const AppLoadingView(label: 'A preparar trabalhos...');
-          }
-
-          if (snapshot.hasError) {
-            return const AppErrorView(
-              message:
-                  'Nao conseguimos preparar a sessao do prestador agora. Tenta novamente daqui a pouco.',
-            );
-          }
-
-          return const AppLoadingView(label: 'A preparar sessao...');
-        },
+    if (user == null || !AuthService.hasVerifiedPhone) {
+      return _PrestadorPhoneConfirmationView(
+        onConfirm: () => unawaited(
+          VerifiedPhoneGate.ensure(
+            context,
+            action: 'consultar os teus trabalhos privados',
+          ).then((allowed) {
+            if (allowed && mounted) setState(() {});
+          }),
+        ),
       );
     }
 
@@ -2052,6 +2405,8 @@ class _PrestadorPedidoCard extends StatelessWidget {
   }
 }
 
+// Legacy account surface retained for a controlled navigation rollback.
+// ignore: unused_element
 class _ContaTab extends StatelessWidget {
   final String roleLabel;
 

@@ -219,7 +219,7 @@ class _SectionSelector extends StatelessWidget {
 
 enum _AdminPanelSection {
   overview('Visao geral'),
-  pilot('Piloto Maputo'),
+  pilot('Piloto controlado'),
   moderation('Moderacao'),
   credentials('Comprovativos'),
   support('Suporte'),

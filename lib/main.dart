@@ -5,7 +5,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -16,12 +15,15 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
+import 'core/config/product_capabilities.dart';
+import 'core/feature_flags/feature_flag.dart';
+import 'core/feature_flags/feature_flag_service.dart';
+import 'core/feature_flags/feature_flag_snapshot.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/locale_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/remote_config_service.dart';
-import 'core/services/servico_seed.dart';
 import 'core/services/theme_mode_service.dart';
 import 'core/services/user_country_service.dart';
 import 'core/utils/platform_caps.dart';
@@ -33,10 +35,43 @@ const bool kRunFirebaseEmulatorTests =
 const bool kFastDevMode =
     bool.fromEnvironment('FAST_DEV_MODE', defaultValue: false);
 
+const bool kU1Preview = bool.fromEnvironment('U1_PREVIEW', defaultValue: false);
+
 const bool kForceWebSemantics =
     bool.fromEnvironment('FORCE_WEB_SEMANTICS', defaultValue: false);
 
 SemanticsHandle? _webSemanticsHandle;
+
+void _applyDebugU1Preview() {
+  if (!shouldApplyLocalU1Preview(
+    isReleaseMode: kReleaseMode,
+    previewRequested: kU1Preview,
+  )) {
+    return;
+  }
+  final defaults = FeatureFlagSnapshot.defaults();
+  FeatureFlagService.instance.applySnapshot(
+    FeatureFlagSnapshot(
+      contractVersion: FeatureFlagContract.version,
+      releaseId: 'debug-u1-preview',
+      source: FeatureFlagSnapshotSource.cachedRemote,
+      fetchStatus: FeatureFlagFetchStatus.success,
+      fetchedAt: DateTime.now().toUtc(),
+      remoteValues: <FeatureFlag, bool>{
+        ...defaults.remoteValues,
+        FeatureFlag.u1NavigationV2: true,
+      },
+    ),
+  );
+}
+
+@visibleForTesting
+bool shouldApplyLocalU1Preview({
+  required bool isReleaseMode,
+  required bool previewRequested,
+}) {
+  return !isReleaseMode && previewRequested;
+}
 
 bool _shouldForceWebSemantics() {
   if (kForceWebSemantics) return true;
@@ -63,9 +98,30 @@ bool _supportsFcm() {
 }
 
 void _configureBackgroundMessaging() {
-  if (_supportsFcm() && !kIsWeb && !kRunFirebaseEmulatorTests) {
+  if (shouldConfigureBackgroundMessaging(
+    supportsFcm: _supportsFcm(),
+    isWeb: kIsWeb,
+    emulatorTests: kRunFirebaseEmulatorTests,
+    fastDevMode: kFastDevMode,
+    useFirebaseEmulators: AppConfig.useFirebaseEmulators,
+  )) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
+}
+
+@visibleForTesting
+bool shouldConfigureBackgroundMessaging({
+  required bool supportsFcm,
+  required bool isWeb,
+  required bool emulatorTests,
+  required bool fastDevMode,
+  required bool useFirebaseEmulators,
+}) {
+  return supportsFcm &&
+      !isWeb &&
+      !emulatorTests &&
+      !fastDevMode &&
+      !useFirebaseEmulators;
 }
 
 @pragma('vm:entry-point')
@@ -143,20 +199,6 @@ Future<void> _runDeferredStartupTasks() async {
       }
     }),
   );
-
-  if (AppConfig.useFirebaseEmulators) {
-    try {
-      unawaited(
-        ServicoSeed.ensureSeeded().catchError((e, st) {
-          // ignore: avoid_print
-          print('Erro ao fazer seed de servicos: $e\n$st');
-        }),
-      );
-    } catch (e, st) {
-      // ignore: avoid_print
-      print('Erro ao fazer seed de servicos: $e\n$st');
-    }
-  }
 
   if (!kRunFirebaseEmulatorTests &&
       !kFastDevMode &&
@@ -248,6 +290,9 @@ Future<void> mainCommon(AppConfig config) async {
           await dotenv.load(fileName: '.env');
         } catch (_) {}
 
+        FeatureFlagService.instance.updateGates(ProductCapabilities.resolve());
+        _applyDebugU1Preview();
+
         if (kIsWeb && _shouldForceWebSemantics()) {
           _webSemanticsHandle ??= WidgetsBinding.instance.ensureSemantics();
           if (kDebugMode) {
@@ -261,16 +306,6 @@ Future<void> mainCommon(AppConfig config) async {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
-
-        if (PlatformCaps.supportsCrashlytics && !kRunFirebaseEmulatorTests) {
-          FlutterError.onError =
-              FirebaseCrashlytics.instance.recordFlutterFatalError;
-
-          PlatformDispatcher.instance.onError = (error, stack) {
-            FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-            return true;
-          };
-        }
 
         if (AppConfig.useFirebaseEmulators) {
           final host = AppConfig.emulatorHost;

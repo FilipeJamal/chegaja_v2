@@ -1,3 +1,5 @@
+import 'package:chegaja_v2/core/theme/app_theme_extension.dart';
+import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/service_visuals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -88,11 +90,35 @@ void main() {
         serviceAssetFor('Retratista a lápis'),
         'assets/icons/services/service_portrait.svg',
       );
-      expect(serviceIconFor('categoria desconhecida'),
-          Icons.home_repair_service_rounded);
+      expect(
+        serviceIconFor('categoria desconhecida'),
+        Icons.home_repair_service_rounded,
+      );
       expect(
         serviceAssetFor('categoria desconhecida'),
         'assets/icons/services/service_default.svg',
+      );
+    });
+
+    test('resolve acentos legacy e U1 sem alterar o asset', () {
+      final legacy = serviceVisualFor(
+        'categoria desconhecida',
+        theme: ChegaJaTheme.legacyLight,
+      );
+      final u1 = serviceVisualFor(
+        'categoria desconhecida',
+        theme: ChegaJaTheme.u1Light,
+      );
+
+      expect(legacy.assetPath, u1.assetPath);
+      expect(legacy.accent, AppPalette.primary);
+      expect(u1.accent, AppPalette.u1Primary);
+      expect(
+        serviceAccentFor(
+          'canalizacao',
+          theme: ChegaJaTheme.u1Light,
+        ),
+        AppPalette.u1AccentBlue,
       );
     });
   });

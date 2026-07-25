@@ -229,13 +229,57 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navMessages => 'Mensajes';
 
   @override
+  String get navSaved => 'Saved';
+
+  @override
   String get navProfile => 'Perfil';
+
+  @override
+  String get navProviderOpportunities => 'Opportunities';
+
+  @override
+  String get navProviderSchedule => 'Schedule';
+
+  @override
+  String get navProviderJobs => 'Jobs';
+
+  @override
+  String get navProviderBusiness => 'Business';
 
   @override
   String get homeGreeting => 'Hola';
 
   @override
   String get homeSubtitle => '¿Qué necesitas hoy?';
+
+  @override
+  String get homeRequestTitle => 'What service do you need?';
+
+  @override
+  String get homeRequestSubtitle =>
+      'Describe it in your own words. You will confirm the details before publishing.';
+
+  @override
+  String get homeRequestHint => 'Describe what you need';
+
+  @override
+  String get homeContinue => 'Continue';
+
+  @override
+  String get homeModeNow => 'Now';
+
+  @override
+  String get homeModeSchedule => 'Schedule';
+
+  @override
+  String get homeModeQuotes => 'Quotes';
+
+  @override
+  String get homeNearbyServices => 'Services near you';
+
+  @override
+  String get homePrivacyNotice =>
+      'Your exact address stays private until a provider is assigned.';
 
   @override
   String get homePendingTitle => 'Tienes algo que decidir';
