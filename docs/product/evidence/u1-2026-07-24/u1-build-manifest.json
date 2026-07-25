@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "u1-build-evidence-v1",
+  "generatedAtUtc": "2026-07-25T05:47:08.9584558Z",
+  "source": {
+    "branch": "agent/u1-design-system-2",
+    "baseCommit": "9fcae74",
+    "commit": "770ef41927a00375388a9a4cc8a4f06085fb0fe7",
+    "workingTreeFrozen": true
+  },
+  "configuration": {
+    "u1Preview": true,
+    "fastDevMode": false,
+    "productionDeploy": false,
+    "androidApplicationId": "com.chegaja.app",
+    "plannedApplicationId": "com.pontosegaja.app"
+  },
+  "artifacts": {
+    "androidProfileApk": {
+      "path": "build/app/outputs/flutter-apk/app-profile.apk",
+      "bytes": 168528212,
+      "sha256": "CFD7CBA5332DECA86E17F7690239D566080B73111E9F9A99C967416B099F5BC2",
+      "builtAtUtc": "2026-07-25T05:24:03.8141121Z",
+      "durationSeconds": 478.498
+    },
+    "webProfile": {
+      "path": "build/web",
+      "files": 102,
+      "bytes": 79855319,
+      "treeSha256": "C50B1434D70C2A60A947A39DE3A54F150AD0A6CA753C87F6B04EA0351A6679AD",
+      "treeHashFormat": "sorted relative-path:size:file-sha256 lines, UTF-8",
+      "latestModifiedAtUtc": "2026-07-25T05:23:03.9924054Z",
+      "durationSeconds": 414.425
+    },
+    "windowsProfile": {
+      "path": "build/windows/x64/runner/Profile/chegaja_v2.exe",
+      "bytes": 14495744,
+      "sha256": "3ABE6254929A564C1E63773C97F8F53DA60003BDAD569BE20F6028B65970219E",
+      "builtAtUtc": "2026-07-25T05:42:09.4439415Z",
+      "durationSeconds": 104.545
+    }
+  },
+  "runtimeEvidence": {
+    "reference": {
+      "capture": "u1-selected-visual.png",
+      "sha256": "359D31DC8081F85D820D41960E4EE8A3235CEB60467A8F4F7EBDE6805470BFAE"
+    },
+    "reference390x844": {
+      "capture": "u1-selected-visual-390x844.png",
+      "sha256": "25C23944C8CC9287D244CB3B5094BC7C71B6870FB66301168F7C51650BBA8EA4"
+    },
+    "finalWidget": {
+      "capture": "u1-client-home-widget-final.png",
+      "sha256": "F87B18B1CF36822CF419D22696C1CAE714D2F52E795744B73AA72920CC43E9D4"
+    },
+    "sideBySide": {
+      "capture": "u1-home-side-by-side.png",
+      "sha256": "BA13FE04E8C3DF07A1AC257C3F55DD3465C598FC490ECC0F4EA9C6F8A87DBC38"
+    },
+    "androidEmulator": {
+      "available": true,
+      "latestCaptureIncludesFinalVisualTweaks": false,
+      "capture": "u1-client-home-android.png",
+      "sha256": "5BAC45CABEDFE36F64D9461D7D63C34A7E838B0354542C26069D28F5D0657D05",
+      "note": "Prova complementar; a captura final usa os componentes de produção no mesmo viewport e estado."
+    },
+    "roleSelectorAndroid": {
+      "capture": "u1-role-selector-android.png",
+      "sha256": "B5F2B03CE2AD916C683C6F5C1FFE91735AA481CF84491648889878CFE57B73A9"
+    },
+    "androidPhysical": {
+      "available": false,
+      "blockingExternalGate": true
+    }
+  }
+}
