@@ -1,52 +1,274 @@
 import 'package:flutter/material.dart';
 
+import '../feature_flags/feature_flag.dart';
+import '../feature_flags/feature_flag_service.dart';
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
+import 'app_brand_wordmark.dart';
 import 'app_unread_badge.dart';
 
 class AppShellDestination {
   const AppShellDestination({
+    this.id,
     required this.label,
     required this.icon,
     this.selectedIcon,
-    required this.child,
+    this.child,
+    this.builder,
     this.showBadge = false,
-  });
+  }) : assert(
+          (child == null) != (builder == null),
+          'Provide exactly one of child or builder.',
+        );
 
+  /// Stable identifier used to preserve the destination state.
+  ///
+  /// Existing callers may omit it while they migrate. New shell definitions
+  /// should always provide a role-scoped value such as `cliente.saved`.
+  final String? id;
   final String label;
   final IconData icon;
   final IconData? selectedIcon;
-  final Widget child;
+  final Widget? child;
+  final WidgetBuilder? builder;
   final bool showBadge;
+
+  String resolvedId(int index) {
+    final normalized = id?.trim();
+    if (normalized != null && normalized.isNotEmpty) return normalized;
+    return 'legacy-$index-$label';
+  }
+
+  Widget buildPage(BuildContext context) {
+    return builder?.call(context) ?? child!;
+  }
 }
 
-class AppShellScaffold extends StatelessWidget {
+class AppShellScaffold extends StatefulWidget {
   const AppShellScaffold({
     super.key,
     required this.currentIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.experienceV2Override,
   });
 
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AppShellDestination> destinations;
+  final bool? experienceV2Override;
+
+  @override
+  State<AppShellScaffold> createState() => _AppShellScaffoldState();
+}
+
+class _AppShellScaffoldState extends State<AppShellScaffold> {
+  final Set<String> _visitedDestinationIds = <String>{};
+  final List<String> _stablePageOrderIds = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _syncStablePageOrder();
+    _rememberCurrentDestination();
+  }
+
+  @override
+  void didUpdateWidget(covariant AppShellScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncStablePageOrder();
+    _rememberCurrentDestination();
+    final currentIds = <String>{
+      for (var index = 0; index < widget.destinations.length; index += 1)
+        widget.destinations[index].resolvedId(index),
+    };
+    _visitedDestinationIds.removeWhere(
+      (destinationId) => !currentIds.contains(destinationId),
+    );
+  }
+
+  void _syncStablePageOrder() {
+    final currentIds = <String>[
+      for (var index = 0; index < widget.destinations.length; index += 1)
+        widget.destinations[index].resolvedId(index),
+    ];
+    final currentIdSet = currentIds.toSet();
+    _stablePageOrderIds.removeWhere(
+      (destinationId) => !currentIdSet.contains(destinationId),
+    );
+    for (final destinationId in currentIds) {
+      if (!_stablePageOrderIds.contains(destinationId)) {
+        _stablePageOrderIds.add(destinationId);
+      }
+    }
+  }
+
+  void _rememberCurrentDestination() {
+    if (widget.destinations.isEmpty) return;
+    final safeIndex =
+        widget.currentIndex.clamp(0, widget.destinations.length - 1);
+    _visitedDestinationIds.add(
+      widget.destinations[safeIndex].resolvedId(safeIndex),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    assert(destinations.isNotEmpty);
+    assert(widget.destinations.isNotEmpty);
+    assert(
+      widget.currentIndex >= 0 &&
+          widget.currentIndex < widget.destinations.length,
+      'currentIndex must reference an existing destination.',
+    );
+    assert(
+      _hasUniqueDestinationIds(widget.destinations),
+      'AppShellDestination ids must be unique.',
+    );
 
+    if (widget.destinations.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final safeCurrentIndex =
+        widget.currentIndex.clamp(0, widget.destinations.length - 1);
+    final experienceV2 = widget.experienceV2Override ??
+        FeatureFlagService.instance.isEnabled(
+          FeatureFlag.u1NavigationV2,
+        );
+
+    if (!experienceV2) {
+      return _buildLegacyShell(context, safeCurrentIndex);
+    }
+
+    final currentDestinationId =
+        widget.destinations[safeCurrentIndex].resolvedId(safeCurrentIndex);
+    _visitedDestinationIds.add(currentDestinationId);
+    final destinationById = <String, AppShellDestination>{
+      for (var index = 0; index < widget.destinations.length; index += 1)
+        widget.destinations[index].resolvedId(index):
+            widget.destinations[index],
+    };
+    final currentPageIndex = _stablePageOrderIds.indexOf(currentDestinationId);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useDesktopSidebar =
+            constraints.maxWidth >= AppBreakpoints.desktopMin;
+        final useTabletRail =
+            constraints.maxWidth >= AppBreakpoints.tabletMin &&
+                constraints.maxWidth < AppBreakpoints.desktopMin;
+        final content = IndexedStack(
+          index: currentPageIndex,
+          children: [
+            for (final destinationId in _stablePageOrderIds)
+              _buildDestinationPage(
+                context,
+                destinationId,
+                destinationById[destinationId]!,
+              ),
+          ],
+        );
+
+        if (useDesktopSidebar) {
+          return Scaffold(
+            body: SafeArea(
+              child: Row(
+                children: [
+                  _DesktopSidebar(
+                    key: const Key('app_shell_desktop_sidebar'),
+                    experienceV2: true,
+                    currentIndex: safeCurrentIndex,
+                    onDestinationSelected: widget.onDestinationSelected,
+                    destinations: widget.destinations,
+                    iconBuilder: _buildIcon,
+                  ),
+                  Expanded(child: content),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (useTabletRail) {
+          return Scaffold(
+            body: SafeArea(
+              child: Row(
+                children: [
+                  _TabletNavigationRail(
+                    key: const Key('app_shell_tablet_navigation'),
+                    currentIndex: safeCurrentIndex,
+                    onDestinationSelected: widget.onDestinationSelected,
+                    destinations: widget.destinations,
+                    iconBuilder: _buildIcon,
+                  ),
+                  Expanded(child: content),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
+        final showAllLabels = constraints.maxWidth >= 360 && textScale <= 1.3;
+
+        return Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: content,
+          ),
+          bottomNavigationBar: Container(
+            key: const Key('app_shell_mobile_navigation'),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: context.chegaJaTheme.shadowLevel3,
+            ),
+            child: SafeArea(
+              top: false,
+              child: NavigationBar(
+                height: AppSizes.compactNavigationHeight,
+                selectedIndex: safeCurrentIndex,
+                onDestinationSelected: widget.onDestinationSelected,
+                labelBehavior: showAllLabels
+                    ? NavigationDestinationLabelBehavior.alwaysShow
+                    : NavigationDestinationLabelBehavior.onlyShowSelected,
+                destinations: [
+                  for (var index = 0;
+                      index < widget.destinations.length;
+                      index += 1)
+                    NavigationDestination(
+                      icon: _buildIcon(
+                        widget.destinations[index],
+                        selected: false,
+                      ),
+                      selectedIcon: _buildIcon(
+                        widget.destinations[index],
+                        selected: true,
+                      ),
+                      label: widget.destinations[index].label,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLegacyShell(BuildContext context, int safeCurrentIndex) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= AppBreakpoints.desktopMin;
         final content = IndexedStack(
-          index: currentIndex,
+          index: safeCurrentIndex,
           children: [
-            for (var index = 0; index < destinations.length; index += 1)
+            for (var index = 0; index < widget.destinations.length; index += 1)
               KeyedSubtree(
                 key: ValueKey(
-                  'app-shell-page-$index-${destinations[index].label}',
+                  'app-shell-page-$index-'
+                  '${widget.destinations[index].label}',
                 ),
-                child: destinations[index].child,
+                child: widget.destinations[index].buildPage(context),
               ),
           ],
         );
@@ -58,9 +280,10 @@ class AppShellScaffold extends StatelessWidget {
                 children: [
                   _DesktopSidebar(
                     key: const Key('app_shell_desktop_sidebar'),
-                    currentIndex: currentIndex,
-                    onDestinationSelected: onDestinationSelected,
-                    destinations: destinations,
+                    experienceV2: false,
+                    currentIndex: safeCurrentIndex,
+                    onDestinationSelected: widget.onDestinationSelected,
+                    destinations: widget.destinations,
                     iconBuilder: _buildIcon,
                   ),
                   Expanded(child: content),
@@ -85,16 +308,23 @@ class AppShellScaffold extends StatelessWidget {
               top: false,
               child: NavigationBar(
                 height: 76,
-                selectedIndex: currentIndex,
-                onDestinationSelected: onDestinationSelected,
+                selectedIndex: safeCurrentIndex,
+                onDestinationSelected: widget.onDestinationSelected,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 destinations: [
-                  for (var index = 0; index < destinations.length; index += 1)
+                  for (var index = 0;
+                      index < widget.destinations.length;
+                      index += 1)
                     NavigationDestination(
-                      icon: _buildIcon(destinations[index], selected: false),
-                      selectedIcon:
-                          _buildIcon(destinations[index], selected: true),
-                      label: destinations[index].label,
+                      icon: _buildIcon(
+                        widget.destinations[index],
+                        selected: false,
+                      ),
+                      selectedIcon: _buildIcon(
+                        widget.destinations[index],
+                        selected: true,
+                      ),
+                      label: widget.destinations[index].label,
                     ),
                 ],
               ),
@@ -103,6 +333,34 @@ class AppShellScaffold extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _buildDestinationPage(
+    BuildContext context,
+    String destinationId,
+    AppShellDestination destination,
+  ) {
+    final pageKey = ValueKey('app-shell-page-$destinationId');
+
+    if (!_visitedDestinationIds.contains(destinationId)) {
+      return KeyedSubtree(
+        key: pageKey,
+        child: const SizedBox.shrink(),
+      );
+    }
+
+    return KeyedSubtree(
+      key: pageKey,
+      child: destination.buildPage(context),
+    );
+  }
+
+  bool _hasUniqueDestinationIds(List<AppShellDestination> destinations) {
+    final ids = <String>{};
+    for (var index = 0; index < destinations.length; index += 1) {
+      if (!ids.add(destinations[index].resolvedId(index))) return false;
+    }
+    return true;
   }
 
   Widget _buildIcon(
@@ -129,8 +387,8 @@ class AppShellScaffold extends StatelessWidget {
   }
 }
 
-class _DesktopSidebar extends StatelessWidget {
-  const _DesktopSidebar({
+class _TabletNavigationRail extends StatelessWidget {
+  const _TabletNavigationRail({
     super.key,
     required this.currentIndex,
     required this.onDestinationSelected,
@@ -141,22 +399,84 @@ class _DesktopSidebar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<AppShellDestination> destinations;
-  final Widget Function(AppShellDestination destination,
-      {required bool selected}) iconBuilder;
+  final Widget Function(
+    AppShellDestination destination, {
+    required bool selected,
+  }) iconBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final visualTokens = context.chegaJaTheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+          right: BorderSide(color: scheme.outlineVariant),
+        ),
+        boxShadow: visualTokens.shadowLevel1,
+      ),
+      child: NavigationRail(
+        backgroundColor: Colors.transparent,
+        selectedIndex: currentIndex,
+        onDestinationSelected: onDestinationSelected,
+        labelType: NavigationRailLabelType.all,
+        groupAlignment: -0.75,
+        destinations: [
+          for (final destination in destinations)
+            NavigationRailDestination(
+              icon: iconBuilder(destination, selected: false),
+              selectedIcon: iconBuilder(destination, selected: true),
+              label: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopSidebar extends StatelessWidget {
+  const _DesktopSidebar({
+    super.key,
+    required this.experienceV2,
+    required this.currentIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+    required this.iconBuilder,
+  });
+
+  final bool experienceV2;
+  final int currentIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<AppShellDestination> destinations;
+  final Widget Function(
+    AppShellDestination destination, {
+    required bool selected,
+  }) iconBuilder;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final visualTokens = context.chegaJaTheme;
 
     return Container(
       width: 248,
       decoration: BoxDecoration(
         color: scheme.surface,
         border: Border(
-          right: BorderSide(color: scheme.outline.withValues(alpha: 0.45)),
+          right: BorderSide(
+            color: experienceV2
+                ? scheme.outlineVariant
+                : scheme.outline.withValues(alpha: 0.45),
+          ),
         ),
-        boxShadow: AppShadows.level1,
+        boxShadow: experienceV2 ? visualTokens.shadowLevel1 : AppShadows.level1,
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -168,7 +488,7 @@ class _DesktopSidebar extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _ShellBrand(),
+            _ShellBrand(experienceV2: experienceV2),
             const SizedBox(height: AppSpacing.x2),
             Text(
               'Servicos perto de ti',
@@ -189,7 +509,7 @@ class _DesktopSidebar extends StatelessWidget {
                 const SizedBox(height: AppSpacing.x2),
             ],
             const Spacer(),
-            const _DesktopSidebarSessionStatus(),
+            _DesktopSidebarSessionStatus(experienceV2: experienceV2),
           ],
         ),
       ),
@@ -207,18 +527,22 @@ class _DesktopSidebarItem extends StatelessWidget {
 
   final AppShellDestination destination;
   final bool selected;
-  final Widget Function(AppShellDestination destination,
-      {required bool selected}) iconBuilder;
+  final Widget Function(
+    AppShellDestination destination, {
+    required bool selected,
+  }) iconBuilder;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final selectedBackground = AppPalette.primary.withValues(
+    final visualTokens = context.chegaJaTheme;
+    final selectedBackground = visualTokens.primary.withValues(
       alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14,
     );
-    final foreground = selected ? AppPalette.primary : scheme.onSurfaceVariant;
+    final foreground =
+        selected ? visualTokens.primary : scheme.onSurfaceVariant;
 
     return Semantics(
       button: true,
@@ -226,7 +550,7 @@ class _DesktopSidebarItem extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(visualTokens.radiusLg),
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
@@ -240,10 +564,10 @@ class _DesktopSidebarItem extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: selected ? selectedBackground : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderRadius: BorderRadius.circular(visualTokens.radiusLg),
               border: Border.all(
                 color: selected
-                    ? AppPalette.primary.withValues(alpha: 0.38)
+                    ? visualTokens.primary.withValues(alpha: 0.38)
                     : Colors.transparent,
               ),
             ),
@@ -281,19 +605,28 @@ class _DesktopSidebarItem extends StatelessWidget {
 }
 
 class _DesktopSidebarSessionStatus extends StatelessWidget {
-  const _DesktopSidebarSessionStatus();
+  const _DesktopSidebarSessionStatus({
+    required this.experienceV2,
+  });
+
+  final bool experienceV2;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final visualTokens = context.chegaJaTheme;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(visualTokens.radiusLg),
+        border: Border.all(
+          color: experienceV2
+              ? scheme.outlineVariant
+              : scheme.outline.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         children: [
@@ -302,7 +635,7 @@ class _DesktopSidebarSessionStatus extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: AppPalette.success.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderRadius: BorderRadius.circular(visualTokens.radiusMd),
             ),
             child: const Icon(
               Icons.verified_user_outlined,
@@ -343,31 +676,50 @@ class _DesktopSidebarSessionStatus extends StatelessWidget {
 }
 
 class _ShellBrand extends StatelessWidget {
-  const _ShellBrand();
+  const _ShellBrand({
+    required this.experienceV2,
+  });
+
+  final bool experienceV2;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SizedBox(
-      key: const Key('app_shell_desktop_brand'),
-      child: RichText(
-        textAlign: TextAlign.start,
-        text: TextSpan(
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w900,
+    if (!experienceV2) {
+      final theme = Theme.of(context);
+      return SizedBox(
+        key: const Key('app_shell_desktop_brand'),
+        child: RichText(
+          textAlign: TextAlign.start,
+          text: TextSpan(
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w900,
+            ),
+            children: const [
+              TextSpan(
+                text: 'Chega',
+                style: TextStyle(color: AppPalette.accentBlue),
+              ),
+              TextSpan(
+                text: 'Ja',
+                style: TextStyle(color: AppPalette.success),
+              ),
+            ],
           ),
-          children: const [
-            TextSpan(
-              text: 'Chega',
-              style: TextStyle(color: AppPalette.accentBlue),
-            ),
-            TextSpan(
-              text: 'Ja',
-              style: TextStyle(color: AppPalette.success),
-            ),
-          ],
+        ),
+      );
+    }
+
+    return const SizedBox(
+      key: Key('app_shell_desktop_brand'),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: AppBrandWordmark(
+            size: AppBrandSize.regular,
+          ),
         ),
       ),
     );

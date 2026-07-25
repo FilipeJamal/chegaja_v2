@@ -45,7 +45,7 @@ describe('Firestore Security Rules — current P1 model', function () {
   }
 
   it('isolates private identity and permanently closes mixed legacy documents', async () => {
-    const alice = user('alice');
+    const alice = user('alice', { phone_number: '+351910000010' });
     const bob = user('bob');
     const anonymous = testEnv.unauthenticatedContext().firestore();
 
@@ -61,7 +61,9 @@ describe('Firestore Security Rules — current P1 model', function () {
   });
 
   it('exposes only deliberately public profiles and rejects private fields', async () => {
-    const provider = user('provider1');
+    const provider = user('provider1', {
+      phone_number: '+351910000011',
+    });
     const visitor = testEnv.unauthenticatedContext().firestore();
 
     await assertSucceeds(provider.collection('provider_public').doc('provider1').set({
@@ -98,7 +100,9 @@ describe('Firestore Security Rules — current P1 model', function () {
   });
 
   it('allows owner dispatch merges while preserving backend-owned fields', async () => {
-    const provider = user('provider1');
+    const provider = user('provider1', {
+      phone_number: '+351910000011',
+    });
     const dispatchRef = provider
       .collection('provider_dispatch_private')
       .doc('provider1');
@@ -229,12 +233,16 @@ describe('Firestore Security Rules — current P1 model', function () {
       await db.collection('provider_public').doc('provider1').set({
         uid: 'provider1',
         isSearchable: true,
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
       });
       await db.collection('pilot_participants').doc('provider1').set({
-        status: 'active', roles: ['prestador'], city: 'Maputo',
+        status: 'active', roles: ['prestador'], city: 'Coimbra', marketId: 'pt-coimbra',
       });
       await db.collection('pedido_dispatch').doc('order1').set({
         pedidoId: 'order1',
+        marketId: 'pt-coimbra',
+        currency: 'EUR',
         zoneLabel: 'Matola A',
         approximateDistanceKm: 3.4,
         status: 'criado',

@@ -20,6 +20,7 @@ import 'package:chegaja_v2/core/models/servico.dart';
 import 'package:chegaja_v2/core/repositories/servico_repo.dart';
 import 'package:chegaja_v2/core/services/user_country_service.dart';
 import 'package:chegaja_v2/core/trust_safety/service_safety_guard.dart';
+import 'package:chegaja_v2/features/auth/phone_verification_screen.dart';
 import 'package:chegaja_v2/features/prestador/agenda/prestador_agenda_screen.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_service_taxonomy_selector.dart';
 import 'package:chegaja_v2/features/prestador/widgets/prestador_sensitive_categories_section.dart';
@@ -63,6 +64,8 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _loadingSensitiveCategories = false;
+  bool _accessChecking = true;
+  bool _accessGranted = false;
 
   List<Servico> _todosServicos = [];
   final Set<String> _servicosSelecionados = {};
@@ -106,7 +109,29 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_requestPrivateAccess());
+    });
+  }
+
+  Future<void> _requestPrivateAccess() async {
+    if (_accessGranted) return;
+    if (mounted) setState(() => _accessChecking = true);
+    var allowed = false;
+    try {
+      allowed = await VerifiedPhoneGate.ensure(
+        context,
+        action: 'gerir os teus serviços e dados operacionais privados',
+      );
+    } catch (error) {
+      debugPrint('[PrestadorSettings] verificação de acesso falhou: $error');
+    }
+    if (!mounted) return;
+    setState(() {
+      _accessChecking = false;
+      _accessGranted = allowed;
+    });
+    if (allowed) await _carregarDados();
   }
 
   @override
@@ -1239,6 +1264,45 @@ class _PrestadorSettingsScreenState extends State<PrestadorSettingsScreen> {
     final hasStates = _statesForCountry.isNotEmpty;
     final stateLabel = _stateLabelForCountry(_selectedCountry);
     final cities = hasStates ? _citiesForState : _citiesForCountry;
+
+    if (!_accessGranted) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.serviceAreaTitle)),
+        body: _accessChecking
+            ? const Center(child: CircularProgressIndicator())
+            : Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.phonelink_lock_outlined, size: 56),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Confirma o telefone',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Os serviços, a área e a localização operacional são '
+                        'dados privados do Prestador.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: () => unawaited(_requestPrivateAccess()),
+                        icon: const Icon(Icons.phone_android_rounded),
+                        label: const Text('Confirmar telefone'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

@@ -59,7 +59,6 @@ class NotificationService {
 
   Future<void> init() async {
     if (_initialized) return;
-    _initialized = true;
 
     // ✅ Testes
     if (kRunFirebaseEmulatorTests) return;
@@ -75,7 +74,8 @@ class NotificationService {
     }
 
     final user = AuthService.currentUser;
-    if (user == null) return;
+    if (user == null || !AuthService.hasVerifiedPhone) return;
+    _initialized = true;
 
     // 0) Configurar Notificações Locais (Canais) - Universal
     await _setupLocalNotifications();
@@ -103,7 +103,11 @@ class NotificationService {
   }
 
   void _startListeners(User user) {
-    if (_listenersInitialized) return;
+    if (_listenersInitialized ||
+        !AuthService.hasVerifiedPhone ||
+        AuthService.currentUser?.uid != user.uid) {
+      return;
+    }
     _listenersInitialized = true;
 
     _tokenSub = _messaging.onTokenRefresh.listen((newToken) {
@@ -117,6 +121,9 @@ class NotificationService {
 
   Future<NotificationSettings> requestUserPermission() async {
     await init();
+    if (!AuthService.hasVerifiedPhone) {
+      return _messaging.getNotificationSettings();
+    }
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,

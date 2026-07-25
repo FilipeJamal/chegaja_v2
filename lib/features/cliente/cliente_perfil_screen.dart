@@ -8,7 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/data/firestore_collections.dart';
+import 'package:chegaja_v2/core/services/auth_service.dart';
 import 'package:chegaja_v2/core/widgets/app_status_pill.dart';
 import 'package:chegaja_v2/core/services/location_data_service.dart';
 import 'package:chegaja_v2/core/services/google_places_service.dart';
@@ -401,7 +403,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Precisas estar autenticado para guardar.')),
+          content: Text('Precisas estar autenticado para guardar.'),
+        ),
       );
       return;
     }
@@ -497,7 +500,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Precisas estar autenticado para alterar a foto.')),
+          content: Text('Precisas estar autenticado para alterar a foto.'),
+        ),
       );
       return;
     }
@@ -601,7 +605,9 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
                         Text(
                           title,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -766,7 +772,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                    builder: (_) => const SuporteScreen(userType: 'cliente')),
+                  builder: (_) => const SuporteScreen(userType: 'cliente'),
+                ),
               );
             },
           ),
@@ -793,8 +800,12 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           const SizedBox(height: 8),
           _field('Nome', _nomeCtrl, onChanged: (_) => setState(() {})),
           const SizedBox(height: 12),
-          _field('Bio', _bioCtrl,
-              maxLines: 3, onChanged: (_) => setState(() {})),
+          _field(
+            'Bio',
+            _bioCtrl,
+            maxLines: 3,
+            onChanged: (_) => setState(() {}),
+          ),
           const SizedBox(height: 20),
           _sectionTitle('Contacto'),
           const SizedBox(height: 8),
@@ -825,6 +836,8 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
     );
   }
 
+  // Legacy header retained while the account profile summary rolls out.
+  // ignore: unused_element
   Widget _header() {
     final name = _nomeCtrl.text.trim();
     final initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'C';
@@ -912,9 +925,11 @@ class _ClientePerfilScreenState extends State<ClientePerfilScreen> {
           ],
           decoration: InputDecoration(
             labelText: 'Telefone',
-            hintText: _dialCode.isNotEmpty
-                ? 'Ex: $_dialCode 82 123 4567'
-                : 'Ex: +258 82 123 4567',
+            hintText: _dialCode == AppConfig.pilotMarket.callingCode
+                ? 'Ex: ${AuthService.phoneExampleForMarket()}'
+                : _dialCode.isNotEmpty
+                    ? 'Ex: $_dialCode ...'
+                    : 'Ex: ${AuthService.phoneExampleForMarket()}',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),

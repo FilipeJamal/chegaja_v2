@@ -1,7 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/config/market_config.dart';
 import 'package:chegaja_v2/core/services/auth_service.dart';
+import 'package:chegaja_v2/core/services/role_mode_service.dart';
 import 'package:chegaja_v2/features/common/legal_documents_screen.dart';
 
 class VerifiedPhoneGate {
@@ -11,6 +15,7 @@ class VerifiedPhoneGate {
     BuildContext context, {
     required String action,
   }) async {
+    var identityConfirmedNow = false;
     if (!AuthService.hasVerifiedPhone) {
       final result = await Navigator.of(context).push<bool>(
         MaterialPageRoute(
@@ -20,7 +25,24 @@ class VerifiedPhoneGate {
       if (result != true || !AuthService.hasVerifiedPhone || !context.mounted) {
         return false;
       }
+      identityConfirmedNow = true;
     }
+
+    if (identityConfirmedNow) {
+      final activeRole = RoleModeService.instance.currentRole;
+      if (activeRole != null) {
+        try {
+          await AuthService.setActiveRole(activeRole);
+        } catch (error, stackTrace) {
+          debugPrint('[PhoneGate] sincronizacao do papel falhou: $error');
+          if (kDebugMode) {
+            debugPrintStack(stackTrace: stackTrace);
+          }
+          return false;
+        }
+      }
+    }
+    if (!context.mounted) return false;
     return LegalConsentGate.ensure(context, action: action);
   }
 }
@@ -36,11 +58,19 @@ class PhoneVerificationScreen extends StatefulWidget {
 }
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
-  final _phoneController = TextEditingController(text: '+258');
+  late final MarketConfig _market;
+  late final TextEditingController _phoneController;
   final _codeController = TextEditingController();
   PhoneVerificationSession? _session;
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _market = AppConfig.pilotMarket;
+    _phoneController = TextEditingController(text: _market.callingCode);
+  }
 
   @override
   void dispose() {
@@ -50,10 +80,16 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   String _normalizedPhone() {
-    final compact = _phoneController.text.replaceAll(RegExp(r'[^+\d]'), '');
-    if (compact.startsWith('+')) return compact;
-    if (compact.length == 9 && compact.startsWith('8')) return '+258$compact';
-    return compact;
+    return AuthService.normalizePhoneForMarket(
+      _phoneController.text,
+      market: _market,
+    );
+  }
+
+  String get _phoneFormatMessage {
+    final country = AuthService.phoneCountryLabelForMarket(_market);
+    final example = AuthService.phoneExampleForMarket(_market);
+    return 'Confirma um número móvel de $country no formato $example.';
   }
 
   Future<void> _sendCode() async {
@@ -63,8 +99,16 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       _error = null;
     });
     try {
+      final normalizedPhone = _normalizedPhone();
+      if (!AuthService.isValidPhoneForMarket(
+        normalizedPhone,
+        market: _market,
+      )) {
+        if (mounted) setState(() => _error = _phoneFormatMessage);
+        return;
+      }
       final session = await AuthService.requestPhoneCode(
-        _normalizedPhone(),
+        normalizedPhone,
         forceResendingToken: _session?.resendToken,
       );
       if (!mounted) return;
@@ -111,7 +155,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
       case 'too-many-requests':
         return 'Muitas tentativas. Aguarda alguns minutos e tenta novamente.';
       case 'invalid-phone-number':
-        return 'Confirma o numero e usa o formato +258...';
+        return _phoneFormatMessage;
       case 'quota-exceeded':
         return 'O envio de SMS esta temporariamente indisponivel.';
       default:
@@ -136,8 +180,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'O numero e privado. Serve para proteger contas, pedidos, pagamentos e suporte.',
+            Text(
+              'O número é privado. Serve para proteger contas, pedidos, '
+              'pagamentos e suporte. Neste piloto, confirma um número móvel '
+              'de ${AuthService.phoneCountryLabelForMarket(_market)}.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -146,10 +192,10 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
               controller: _phoneController,
               enabled: !_busy && !codeSent,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Telefone',
-                hintText: '+258 84 000 0000',
-                border: OutlineInputBorder(),
+                hintText: AuthService.phoneExampleForMarket(_market),
+                border: const OutlineInputBorder(),
               ),
             ),
             if (codeSent) ...[

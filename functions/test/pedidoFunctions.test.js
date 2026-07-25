@@ -5,6 +5,7 @@ const originalCommissionEnv = {
     DEFAULT_CASH_COMMISSION_RATE: process.env.DEFAULT_CASH_COMMISSION_RATE,
     COMMISSION_FREE_FIRST_JOBS: process.env.COMMISSION_FREE_FIRST_JOBS,
     DEFAULT_CURRENCY_CODE: process.env.DEFAULT_CURRENCY_CODE,
+    PILOT_MARKET_ID: process.env.PILOT_MARKET_ID,
 };
 process.env.DEFAULT_CASH_COMMISSION_RATE = "0.10";
 process.env.COMMISSION_FREE_FIRST_JOBS = "2";
@@ -44,6 +45,8 @@ describe("Pedido value Functions", () => {
             completedJobsCount: 0,
             commissionBalanceDue: 0,
             financialStatus: "active",
+            marketId: "mz-maputo",
+            currency: "MZN",
         }, { merge: true });
         await db.collection("pedidos").doc(id).set({
             clienteId: "client1",
@@ -53,6 +56,8 @@ describe("Pedido value Functions", () => {
             providerAccessGrantedAt: new Date(),
             status: "em_andamento",
             estado: "em_andamento",
+            marketId: "mz-maputo",
+            currency: "MZN",
             createdAt: new Date(),
             historico: [],
             ...data,
@@ -66,6 +71,7 @@ describe("Pedido value Functions", () => {
         process.env.DEFAULT_CASH_COMMISSION_RATE = "0.10";
         process.env.COMMISSION_FREE_FIRST_JOBS = "2";
         process.env.DEFAULT_CURRENCY_CODE = "MZN";
+        process.env.PILOT_MARKET_ID = "mz-maputo";
         await clearPedidos();
     });
 
@@ -180,6 +186,7 @@ describe("Pedido value Functions", () => {
         assert.strictEqual(provider.financialStatus, "payment_due");
         assert.strictEqual(payment.method, "cash");
         assert.strictEqual(payment.status, "commission_due");
+        assert.strictEqual(payment.marketId, "mz-maputo");
     });
 
     it("suspends only new work after the commission deadline and restores it after payment", async () => {
@@ -189,6 +196,8 @@ describe("Pedido value Functions", () => {
             financialBalance: -75,
             financialStatus: "payment_due",
             commissionDueAt: new Date(Date.now() - 60_000),
+            marketId: "mz-maputo",
+            currency: "MZN",
         });
         await db.collection("provider_dispatch_private").doc("provider1").set({
             providerId: "provider1",
@@ -220,6 +229,7 @@ describe("Pedido value Functions", () => {
                 accountStatus: "active",
                 legalConsent: {
                     version: legalVersion,
+                    marketId: "mz-maputo",
                     termsAccepted: true,
                     privacyAccepted: true,
                     ageConfirmed: true,
@@ -229,21 +239,28 @@ describe("Pedido value Functions", () => {
                 status: "active",
                 roles: ["prestador"],
                 city: "Maputo",
+                marketId: "mz-maputo",
             }),
         ]);
         await db.collection("provider_public").doc("provider1").set({
             uid: "provider1",
             servicos: ["plumbing"],
             isSearchable: true,
+            marketId: "mz-maputo",
+            currency: "MZN",
         });
         await db.collection("provider_private").doc("provider1").set({
             providerId: "provider1",
             financialStatus: "suspended_new_jobs",
+            marketId: "mz-maputo",
+            currency: "MZN",
         });
         await db.collection("provider_dispatch_private").doc("provider1").set({
             providerId: "provider1",
             acceptingNewJobs: true,
             isOnline: true,
+            marketId: "mz-maputo",
+            currency: "MZN",
         });
         await db.collection("pedidos").doc("blocked_accept").set({
             clienteId: "client1",
@@ -252,6 +269,8 @@ describe("Pedido value Functions", () => {
             status: "criado",
             estado: "criado",
             moderationStatus: "approved",
+            marketId: "mz-maputo",
+            currency: "MZN",
         });
         await db.collection("provider_opportunities").doc("blocked_accept_provider1").set({
             pedidoId: "blocked_accept",
@@ -259,6 +278,8 @@ describe("Pedido value Functions", () => {
             approximateDistanceKm: 1,
             matchedRadiusKm: 10,
             status: "active",
+            marketId: "mz-maputo",
+            currency: "MZN",
             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
         });
 
@@ -305,6 +326,32 @@ describe("Pedido value Functions", () => {
                 data: { pedidoId: "order_confirm_bad_state" },
             }),
             (err) => err.code === "failed-precondition"
+        );
+    });
+
+    it("blocks final-value and cash-payment actions for another market", async () => {
+        await seedPedido("order_foreign_market", {
+            marketId: "pt-coimbra",
+            currency: "EUR",
+            status: "aguarda_confirmacao_valor",
+            estado: "aguarda_confirmacao_valor",
+            precoPropostoPrestador: 100,
+            statusConfirmacaoValor: "pendente_cliente",
+        });
+
+        await assert.rejects(
+            () => confirmarValorFinalPedidoCore({
+                db,
+                uid: "client1",
+                data: { pedidoId: "order_foreign_market" },
+            }),
+            (err) => err.code === "failed-precondition"
+        );
+        const pedido = (await db.collection("pedidos").doc("order_foreign_market").get()).data();
+        assert.strictEqual(pedido.status, "aguarda_confirmacao_valor");
+        assert.strictEqual(
+            (await db.collection("payments").doc("cash_order_foreign_market").get()).exists,
+            false
         );
     });
 });

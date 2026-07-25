@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/config/app_config.dart';
+import 'package:chegaja_v2/core/utils/currency_utils.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_formatters.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_metric_group_card.dart';
 import 'package:chegaja_v2/features/admin/widgets/admin_metric_tile.dart';
@@ -34,12 +36,14 @@ class AdminPilotSection extends StatefulWidget {
 
 class _AdminPilotSectionState extends State<AdminPilotSection> {
   final _uidController = TextEditingController();
-  final _cohortController = TextEditingController(text: 'maputo-pilot-1');
+  final _cohortController = TextEditingController(
+    text: '${AppConfig.pilotMarket.id}-pilot-1',
+  );
   final _noteController = TextEditingController();
   bool _cliente = true;
   bool _prestador = false;
   bool _saving = false;
-  String _city = 'Maputo';
+  String _city = AppConfig.pilotMarket.city;
 
   @override
   void dispose() {
@@ -118,7 +122,8 @@ class _AdminPilotSectionState extends State<AdminPilotSection> {
         ),
         AdminMetricGroupCard(
           title: 'Liquidez e valor',
-          subtitle: 'Agregados do piloto em MZN, sem dados pessoais.',
+          subtitle:
+              'Agregados do piloto em ${AppConfig.currencyCode}, sem dados pessoais.',
           children: [
             AdminMetricTile(
               label: 'Pedidos com resposta',
@@ -135,12 +140,17 @@ class _AdminPilotSectionState extends State<AdminPilotSection> {
             ),
             AdminMetricTile(
               label: 'Valor gerado aos Prestadores',
-              value: _mzn(value['providerEarningsMzn']),
+              value: _money(
+                value['providerEarnings'] ?? value['providerEarningsMzn'],
+              ),
               icon: Icons.payments_outlined,
             ),
             AdminMetricTile(
               label: 'Comissões cobradas',
-              value: _mzn(value['commissionsCollectedMzn']),
+              value: _money(
+                value['commissionsCollected'] ??
+                    value['commissionsCollectedMzn'],
+              ),
               helper: adminPercentRatio(value['commissionCollectionRate']),
               icon: Icons.account_balance_wallet_outlined,
             ),
@@ -199,9 +209,12 @@ class _AdminPilotSectionState extends State<AdminPilotSection> {
                     labelText: 'Área',
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'Maputo', child: Text('Maputo')),
-                    DropdownMenuItem(value: 'Matola', child: Text('Matola')),
+                  items: [
+                    for (final city in AppConfig.pilotMarket.supportedCities)
+                      DropdownMenuItem(
+                        value: city,
+                        child: Text(city),
+                      ),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => _city = value);
@@ -271,9 +284,10 @@ class _AdminPilotSectionState extends State<AdminPilotSection> {
                     uid: participant['uid']?.toString() ?? '',
                     status: active ? 'inactive' : 'active',
                     roles: roles,
-                    city: participant['city']?.toString() ?? 'Maputo',
-                    cohort:
-                        participant['cohort']?.toString() ?? 'maputo-pilot-1',
+                    city: participant['city']?.toString() ??
+                        AppConfig.pilotMarket.city,
+                    cohort: participant['cohort']?.toString() ??
+                        '${AppConfig.pilotMarket.id}-pilot-1',
                     note: active
                         ? 'Desativado no backoffice'
                         : 'Reativado no backoffice',
@@ -288,9 +302,9 @@ class _AdminPilotSectionState extends State<AdminPilotSection> {
       ? value.map((key, item) => MapEntry(key.toString(), item))
       : <String, dynamic>{};
 
-  static String _mzn(dynamic value) {
+  static String _money(dynamic value) {
     final amount = adminAsDouble(value);
-    return '${amount.toStringAsFixed(2)} MT';
+    return CurrencyUtils.format(amount);
   }
 
   static String _hours(dynamic value) {

@@ -59,7 +59,7 @@ class AdminService {
     required String status,
     required List<String> roles,
     required String city,
-    String cohort = 'maputo-pilot-1',
+    String? cohort,
     String? note,
   }) async {
     await _callable('admin_setPilotParticipant').call({
@@ -67,7 +67,7 @@ class AdminService {
       'status': status,
       'roles': roles,
       'city': city,
-      'cohort': cohort.trim(),
+      'cohort': (cohort ?? '${AppConfig.pilotMarket.id}-pilot-1').trim(),
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     });
   }

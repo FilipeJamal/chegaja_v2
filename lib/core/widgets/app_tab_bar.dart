@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 class AppTabBar extends StatelessWidget implements PreferredSizeWidget {
@@ -22,7 +23,7 @@ class AppTabBar extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(context.chegaJaTheme.radiusMd),
       ),
       child: TabBar(
         controller: controller,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
-enum AppStatusTone { neutral, info, success, warning, danger }
+export '../theme/app_semantic_colors.dart' show AppStatusTone;
 
 enum AppStatusPillSize { sm, md }
 
@@ -23,7 +25,9 @@ class AppStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = _colorsFor(theme, tone);
+    final colors = context.chegaJaTheme.usesU1
+        ? AppSemanticColors.status(theme, tone)
+        : _legacyColorsFor(theme, tone);
     final verticalPadding = size == AppStatusPillSize.sm ? 5.0 : 7.0;
     final iconSize = size == AppStatusPillSize.sm ? 14.0 : 16.0;
 
@@ -61,51 +65,34 @@ class AppStatusPill extends StatelessWidget {
     );
   }
 
-  _StatusPillColors _colorsFor(ThemeData theme, AppStatusTone tone) {
+  AppToneColors _legacyColorsFor(ThemeData theme, AppStatusTone tone) {
     final scheme = theme.colorScheme;
-    switch (tone) {
-      case AppStatusTone.info:
-        return _StatusPillColors(
+    return switch (tone) {
+      AppStatusTone.info => AppToneColors(
           background: AppPalette.accentBlue.withValues(alpha: 0.10),
           border: AppPalette.accentBlue.withValues(alpha: 0.28),
           foreground: AppPalette.accentBlue,
-        );
-      case AppStatusTone.success:
-        return _StatusPillColors(
+        ),
+      AppStatusTone.success => AppToneColors(
           background: AppPalette.success.withValues(alpha: 0.12),
           border: AppPalette.success.withValues(alpha: 0.30),
           foreground: AppPalette.success,
-        );
-      case AppStatusTone.warning:
-        return _StatusPillColors(
+        ),
+      AppStatusTone.warning => AppToneColors(
           background: AppPalette.warning.withValues(alpha: 0.12),
           border: AppPalette.warning.withValues(alpha: 0.30),
           foreground: AppPalette.warning,
-        );
-      case AppStatusTone.danger:
-        return _StatusPillColors(
+        ),
+      AppStatusTone.danger => AppToneColors(
           background: AppPalette.error.withValues(alpha: 0.10),
           border: AppPalette.error.withValues(alpha: 0.28),
           foreground: AppPalette.error,
-        );
-      case AppStatusTone.neutral:
-        return _StatusPillColors(
+        ),
+      AppStatusTone.neutral => AppToneColors(
           background: scheme.surfaceContainerHighest,
           border: scheme.outline,
           foreground: scheme.onSurfaceVariant,
-        );
-    }
+        ),
+    };
   }
-}
-
-class _StatusPillColors {
-  const _StatusPillColors({
-    required this.background,
-    required this.border,
-    required this.foreground,
-  });
-
-  final Color background;
-  final Color border;
-  final Color foreground;
 }

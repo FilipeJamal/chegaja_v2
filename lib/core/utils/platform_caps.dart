@@ -36,6 +36,15 @@ class PlatformCaps {
   static bool get supportsRemoteConfig =>
       kIsWeb || isAndroid || isIOS || isMacOS;
 
+  /// Firebase Analytics: Web + Android + iOS + macOS. Desktop Windows/Linux
+  /// uses the no-op analytics sink to avoid MissingPluginException.
+  static bool get supportsAnalytics =>
+      !isTestMode && (kIsWeb || isAndroid || isIOS || isMacOS);
+
+  /// WebRTC calls are not offered on Windows/Linux in the controlled pilot.
+  static bool get supportsCalls =>
+      !isTestMode && (kIsWeb || isAndroid || isIOS || isMacOS);
+
   /// Stripe: Android + iOS (não Web / não Windows / não Linux)
   static bool get supportsStripe => isAndroid || isIOS;
 

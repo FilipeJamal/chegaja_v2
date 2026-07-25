@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/services/favorites_service.dart';
 import 'package:chegaja_v2/features/cliente/discovery/provider_search_matcher.dart';
@@ -132,6 +133,7 @@ class _ProviderSearchScreenState extends State<ProviderSearchScreen> {
     final db = widget.firestore ?? FirebaseFirestore.instance;
     return db
         .collection('provider_public')
+        .where('marketId', isEqualTo: AppConfig.pilotMarket.id)
         .where('isSearchable', isEqualTo: true)
         .limit(widget.limit)
         .snapshots()

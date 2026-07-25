@@ -3,6 +3,19 @@ import 'package:chegaja_v2/core/config/app_config.dart';
 abstract final class LegalDocuments {
   static const version = 'legal-2026-07-20-pilot-v3';
   static const effectiveDate = '20 de julho de 2026';
+  static const marketId = 'mz-maputo';
+
+  /// The current version was written for the historical Mozambique pilot.
+  ///
+  /// It must never be accepted for another market by merely replacing labels:
+  /// legal review, contacts and jurisdiction are market-specific.
+  static bool get isAvailableForCurrentMarket =>
+      AppConfig.pilotMarket.id == marketId;
+
+  static String get availabilityMessage =>
+      'Os documentos jurídicos ainda não foram aprovados para '
+      '${AppConfig.pilotMarket.city}. As ações reais do piloto permanecem '
+      'bloqueadas até à revisão jurídica e à configuração do contacto oficial.';
 
   static String get _responsibleContactText {
     final pendingContact = AppConfig.legalContactConfigured

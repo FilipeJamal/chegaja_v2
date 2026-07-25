@@ -32,29 +32,29 @@ void main() {
 
     await LocaleService.instance.setLocale(const Locale('en'));
     expect(LocaleService.instance.locale.languageCode, 'pt');
-    expect(LocaleService.instance.locale.countryCode, 'MZ');
+    expect(LocaleService.instance.locale.countryCode, 'PT');
   });
 
-  test('pilot currency stays MZN while number formatting follows locale',
+  test('Coimbra pilot currency stays EUR while formatting follows locale',
       () async {
     await LocaleService.instance.setLocale(const Locale('en'));
 
     await UserCountryService.instance.setManualCountry('US');
-    expect(UserCountryService.instance.countryCode, 'MZ');
-    expect(UserCountryService.instance.currencyCode, 'MZN');
+    expect(UserCountryService.instance.countryCode, 'PT');
+    expect(UserCountryService.instance.currencyCode, 'EUR');
     final us = CurrencyUtils.format(1.5, localeName: 'en_US');
 
     await UserCountryService.instance.setManualCountry('BR');
-    expect(UserCountryService.instance.countryCode, 'MZ');
-    expect(UserCountryService.instance.currencyCode, 'MZN');
+    expect(UserCountryService.instance.countryCode, 'PT');
+    expect(UserCountryService.instance.currencyCode, 'EUR');
     final br = CurrencyUtils.format(1.5, localeName: 'pt_BR');
 
-    expect(CurrencyUtils.format(1, localeName: 'pt_PT'), contains('MT'));
+    expect(CurrencyUtils.format(1, localeName: 'pt_PT'), contains('€'));
     expect(us, isNotEmpty);
     expect(br, isNotEmpty);
     expect(us, isNot(equals(br)));
-    expect(us, contains('MT'));
-    expect(br, contains('MT'));
+    expect(us, contains('€'));
+    expect(br, contains('€'));
     expect(br, contains(','));
     expect(CurrencyUtils.currencySymbol(localeName: 'pt_BR'), isNotEmpty);
   });

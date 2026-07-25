@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 import '../models/pedido.dart';
 import '../services/analytics_service.dart';
@@ -231,16 +232,33 @@ class PedidosRepo {
   }
 
   static Stream<List<Pedido>> streamPedidosDisponiveis() {
-    return _db
-        .collection('pedido_dispatch')
+    return availableDispatchQuery(_db)
         // Projecao sanitizada: nunca contem cliente, morada ou GPS exato.
+        .snapshots()
+        .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
+  }
+
+  @visibleForTesting
+  static Query<Map<String, dynamic>> availableDispatchQuery(
+    FirebaseFirestore database, {
+    String? marketId,
+    String? currency,
+  }) {
+    return database
+        .collection('pedido_dispatch')
+        .where(
+          'marketId',
+          isEqualTo: marketId ?? AppConfig.pilotMarket.id,
+        )
+        .where(
+          'currency',
+          isEqualTo: currency ?? AppConfig.pilotMarket.currencyCode,
+        )
         .where('status', isEqualTo: 'criado')
         .where('prestadorId', isNull: true)
         .where('targetProviderId', isNull: true)
         .orderBy('createdAt', descending: true)
-        .limit(100)
-        .snapshots()
-        .map((s) => s.docs.map((d) => Pedido.fromMap(d.id, d.data())).toList());
+        .limit(100);
   }
 
   static Future<void> aceitarPedido({
@@ -329,11 +347,7 @@ class PedidosRepo {
               },
               onError: controller.addError,
             );
-        targetedSub = _db
-            .collection('pedido_dispatch')
-            .where('targetProviderId', isEqualTo: prestadorId)
-            .where('prestadorId', isNull: true)
-            .limit(100)
+        targetedSub = targetedDispatchQuery(_db, prestadorId)
             .snapshots()
             .listen(
           (snapshot) {
@@ -351,6 +365,28 @@ class PedidosRepo {
       },
     );
     return controller.stream;
+  }
+
+  @visibleForTesting
+  static Query<Map<String, dynamic>> targetedDispatchQuery(
+    FirebaseFirestore database,
+    String prestadorId, {
+    String? marketId,
+    String? currency,
+  }) {
+    return database
+        .collection('pedido_dispatch')
+        .where(
+          'marketId',
+          isEqualTo: marketId ?? AppConfig.pilotMarket.id,
+        )
+        .where(
+          'currency',
+          isEqualTo: currency ?? AppConfig.pilotMarket.currencyCode,
+        )
+        .where('targetProviderId', isEqualTo: prestadorId)
+        .where('prestadorId', isNull: true)
+        .limit(100);
   }
 
   /// Cancela o pedido (Cliente ou Prestador).

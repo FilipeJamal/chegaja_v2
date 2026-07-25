@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:chegaja_v2/core/theme/app_theme_extension.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 
 class ServiceVisual {
@@ -12,6 +13,24 @@ class ServiceVisual {
   final String assetPath;
   final Color accent;
   final IconData fallbackIcon;
+
+  ServiceVisual forTheme(ChegaJaTheme? theme) {
+    if (theme == null || !theme.usesU1) return this;
+
+    final themedAccent = switch (accent) {
+      AppPalette.primary => AppPalette.u1Primary,
+      AppPalette.accentBlue => AppPalette.u1AccentBlue,
+      AppPalette.success => AppPalette.u1AccentTeal,
+      AppPalette.warning => AppPalette.u1AccentSun,
+      _ => accent,
+    };
+    if (themedAccent == accent) return this;
+    return ServiceVisual(
+      assetPath: assetPath,
+      accent: themedAccent,
+      fallbackIcon: fallbackIcon,
+    );
+  }
 }
 
 const _assetsBasePath = 'assets/icons/services';
@@ -305,20 +324,27 @@ const List<_ServiceVisualRule> _serviceVisualRules = [
   ),
 ];
 
-ServiceVisual serviceVisualFor(String? seed) {
+ServiceVisual serviceVisualFor(
+  String? seed, {
+  ChegaJaTheme? theme,
+}) {
   final normalized = normalizeServiceVisualSeed(seed);
-  if (normalized.isEmpty) return _defaultServiceVisual;
+  if (normalized.isEmpty) return _defaultServiceVisual.forTheme(theme);
 
   for (final rule in _serviceVisualRules) {
-    if (rule.matches(normalized)) return rule.visual;
+    if (rule.matches(normalized)) return rule.visual.forTheme(theme);
   }
 
-  return _defaultServiceVisual;
+  return _defaultServiceVisual.forTheme(theme);
 }
 
 String serviceAssetFor(String? seed) => serviceVisualFor(seed).assetPath;
 
-Color serviceAccentFor(String? seed) => serviceVisualFor(seed).accent;
+Color serviceAccentFor(
+  String? seed, {
+  ChegaJaTheme? theme,
+}) =>
+    serviceVisualFor(seed, theme: theme).accent;
 
 IconData serviceIconFor(String? seed) => serviceVisualFor(seed).fallbackIcon;
 

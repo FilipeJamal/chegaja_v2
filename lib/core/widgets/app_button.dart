@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
-enum AppButtonVariant { primary, secondary, ghost }
+enum AppButtonVariant { primary, brand, secondary, ghost }
 
 enum AppButtonSize { sm, md, lg }
 
@@ -30,11 +32,12 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visualTokens = context.chegaJaTheme;
     final bool isDisabled = onPressed == null || loading;
     final buttonHeight = switch (size) {
-      AppButtonSize.sm => AppSizes.buttonSm,
-      AppButtonSize.md => AppSizes.buttonMd,
-      AppButtonSize.lg => AppSizes.buttonLg,
+      AppButtonSize.sm => visualTokens.buttonSm,
+      AppButtonSize.md => visualTokens.buttonMd,
+      AppButtonSize.lg => visualTokens.buttonLg,
     };
 
     final child = Row(
@@ -42,10 +45,16 @@ class AppButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (loading)
-          const SizedBox(
+          SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: variant == AppButtonVariant.secondary ||
+                      variant == AppButtonVariant.ghost
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.white,
+            ),
           )
         else if (leadingIcon != null)
           Icon(leadingIcon, size: 18),
@@ -71,6 +80,25 @@ class AppButton extends StatelessWidget {
           style: style,
           child: child,
         ),
+      AppButtonVariant.brand => DecoratedBox(
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? visualTokens.primaryDisabled
+                : visualTokens.brandGradientEnabled
+                    ? null
+                    : visualTokens.primary,
+            gradient: isDisabled || !visualTokens.brandGradientEnabled
+                ? null
+                : visualTokens.actionGradient,
+            borderRadius: BorderRadius.circular(visualTokens.radiusMd),
+            boxShadow: isDisabled ? const [] : visualTokens.shadowLevel2,
+          ),
+          child: ElevatedButton(
+            onPressed: isDisabled ? null : onPressed,
+            style: style,
+            child: child,
+          ),
+        ),
       AppButtonVariant.secondary => OutlinedButton(
           onPressed: isDisabled ? null : onPressed,
           style: style,
@@ -83,15 +111,23 @@ class AppButton extends StatelessWidget {
         ),
     };
 
-    if (!expanded) return button;
-    return SizedBox(
-      width: double.infinity,
+    final semanticButton = Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: true,
+      enabled: !isDisabled,
+      label: loading ? '$label, a carregar' : label,
+      onTap: isDisabled ? null : onPressed,
       child: button,
     );
+    if (!expanded) return semanticButton;
+    return SizedBox(width: double.infinity, child: semanticButton);
   }
 
   ButtonStyle _style(BuildContext context, double buttonHeight) {
-    final textStyle = Theme.of(context).textTheme.labelLarge;
+    final theme = Theme.of(context);
+    final visualTokens = context.chegaJaTheme;
+    final textStyle = theme.textTheme.labelLarge;
 
     switch (variant) {
       case AppButtonVariant.primary:
@@ -100,42 +136,70 @@ class AppButton extends StatelessWidget {
           textStyle: WidgetStatePropertyAll(textStyle),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(visualTokens.radiusSm),
             ),
           ),
           foregroundColor: const WidgetStatePropertyAll(Colors.white),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return AppPalette.primaryDisabled;
+              return visualTokens.primaryDisabled;
             }
             if (states.contains(WidgetState.pressed)) {
-              return AppPalette.primaryPressed;
+              return visualTokens.primaryPressed;
             }
             if (states.contains(WidgetState.hovered)) {
-              return AppPalette.primaryHover;
+              return visualTokens.primaryHover;
             }
-            return AppPalette.primary;
+            return visualTokens.primary;
+          }),
+        );
+      case AppButtonVariant.brand:
+        return ButtonStyle(
+          minimumSize: WidgetStatePropertyAll(Size(0, buttonHeight)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(
+              horizontal: AppSpacing.x5,
+              vertical: AppSpacing.x3,
+            ),
+          ),
+          textStyle: WidgetStatePropertyAll(textStyle),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(visualTokens.radiusMd),
+            ),
+          ),
+          elevation: const WidgetStatePropertyAll(0),
+          shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+          foregroundColor: const WidgetStatePropertyAll(Colors.white),
+          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return Colors.black.withValues(alpha: 0.16);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white.withValues(alpha: 0.08);
+            }
+            return Colors.transparent;
           }),
         );
       case AppButtonVariant.secondary:
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final enabledColor =
-            isDark ? AppPalette.accentBlue : AppPalette.secondary;
+            AppSemanticColors.secondaryActionForeground(Theme.of(context));
         final hoverColor =
-            isDark ? const Color(0xFF60A5FA) : AppPalette.secondaryHover;
+            AppSemanticColors.secondaryActionHover(Theme.of(context));
         final pressedColor =
-            isDark ? const Color(0xFF3B82F6) : AppPalette.secondaryPressed;
+            AppSemanticColors.secondaryActionPressed(Theme.of(context));
         return ButtonStyle(
           minimumSize: WidgetStatePropertyAll(Size(0, buttonHeight)),
           textStyle: WidgetStatePropertyAll(textStyle),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(visualTokens.radiusSm),
             ),
           ),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return const BorderSide(color: AppPalette.secondaryDisabled);
+              return BorderSide(color: visualTokens.secondaryDisabled);
             }
             if (states.contains(WidgetState.pressed)) {
               return BorderSide(color: pressedColor);
@@ -147,7 +211,7 @@ class AppButton extends StatelessWidget {
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return AppPalette.secondaryDisabled;
+              return visualTokens.secondaryDisabled;
             }
             if (states.contains(WidgetState.pressed)) {
               return pressedColor;
@@ -159,12 +223,16 @@ class AppButton extends StatelessWidget {
           }),
         );
       case AppButtonVariant.ghost:
+        final enabledColor =
+            AppSemanticColors.ghostActionForeground(Theme.of(context));
+        final pressedColor =
+            AppSemanticColors.ghostActionPressed(Theme.of(context));
         return ButtonStyle(
           minimumSize: WidgetStatePropertyAll(Size(0, buttonHeight)),
           textStyle: WidgetStatePropertyAll(textStyle),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(visualTokens.radiusSm),
             ),
           ),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -172,9 +240,9 @@ class AppButton extends StatelessWidget {
               return Theme.of(context).colorScheme.onSurfaceVariant;
             }
             if (states.contains(WidgetState.pressed)) {
-              return AppPalette.primaryPressed;
+              return pressedColor;
             }
-            return AppPalette.primary;
+            return enabledColor;
           }),
         );
     }

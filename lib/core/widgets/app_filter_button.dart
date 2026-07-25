@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 class AppFilterButton extends StatelessWidget {
@@ -19,6 +20,7 @@ class AppFilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visualTokens = context.chegaJaTheme;
     final color =
         active ? theme.colorScheme.primary : theme.colorScheme.surface;
     final foreground =
@@ -28,16 +30,16 @@ class AppFilterButton extends StatelessWidget {
       message: tooltip,
       child: Material(
         color: color,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(visualTokens.radiusLg),
         elevation: active ? AppElevation.level2 : AppElevation.level1,
         shadowColor: Colors.black.withValues(alpha: 0.16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(visualTokens.radiusLg),
           onTap: onPressed,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: AppSizes.inputLg,
-              minHeight: AppSizes.inputLg,
+            constraints: BoxConstraints(
+              minWidth: visualTokens.inputLg,
+              minHeight: visualTokens.inputLg,
             ),
             child: Icon(
               icon,

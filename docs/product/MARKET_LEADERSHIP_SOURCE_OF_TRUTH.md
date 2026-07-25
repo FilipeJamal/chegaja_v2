@@ -2,7 +2,9 @@
 
 Data da decisão: 2026-07-20
 
-Estado: programa U0–U12 ativo; U0 em execução
+Última atualização de execução: 2026-07-25
+
+Estado: programa U0–U12 ativo; U0 integrado; U1 em validação final
 
 Responsável atual: Filipe Bento Jamal, pessoa singular e promotor do projeto
 
@@ -84,10 +86,10 @@ Clientes, margem do Prestador e comissão efetivamente cobrada.
 
 ## Programa U0–U12
 
-| Bloco | Objetivo | Estado em 2026-07-20 |
+| Bloco | Objetivo | Estado em 2026-07-25 |
 | --- | --- | --- |
-| U0 | proteger e normalizar a base | ativo |
-| U1 | Design System 2.0, navegação, flags, analytics e contratos de motores | pendente de U0 e direção visual validada |
+| U0 | proteger e normalizar a base | integrado na `main` pelo PR #5 |
+| U1 | Design System 2.0, navegação, flags, analytics e contratos de motores | implementação concluída; validações e integração em curso |
 | U2 | descoberta e pedido adaptativos | pendente |
 | U3 | matching e dispatch explicáveis | pendente |
 | U4 | preço e propostas | pendente |

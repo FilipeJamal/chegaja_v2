@@ -490,11 +490,41 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get navMessages;
 
+  /// No description provided for @navSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get navSaved;
+
   /// No description provided for @navProfile.
   ///
   /// In en, this message translates to:
   /// **'Profile'**
   String get navProfile;
+
+  /// No description provided for @navProviderOpportunities.
+  ///
+  /// In en, this message translates to:
+  /// **'Opportunities'**
+  String get navProviderOpportunities;
+
+  /// No description provided for @navProviderSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get navProviderSchedule;
+
+  /// No description provided for @navProviderJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Jobs'**
+  String get navProviderJobs;
+
+  /// No description provided for @navProviderBusiness.
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get navProviderBusiness;
 
   /// No description provided for @homeGreeting.
   ///
@@ -507,6 +537,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What do you need today?'**
   String get homeSubtitle;
+
+  /// No description provided for @homeRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What service do you need?'**
+  String get homeRequestTitle;
+
+  /// No description provided for @homeRequestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe it in your own words. You will confirm the details before publishing.'**
+  String get homeRequestSubtitle;
+
+  /// No description provided for @homeRequestHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what you need'**
+  String get homeRequestHint;
+
+  /// No description provided for @homeContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get homeContinue;
+
+  /// No description provided for @homeModeNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get homeModeNow;
+
+  /// No description provided for @homeModeSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get homeModeSchedule;
+
+  /// No description provided for @homeModeQuotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotes'**
+  String get homeModeQuotes;
+
+  /// No description provided for @homeNearbyServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Services near you'**
+  String get homeNearbyServices;
+
+  /// No description provided for @homePrivacyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Your exact address stays private until a provider is assigned.'**
+  String get homePrivacyNotice;
 
   /// No description provided for @homePendingTitle.
   ///

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 class AppSegmentedTab {
@@ -94,14 +95,15 @@ class _TabsContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visualTokens = context.chegaJaTheme;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x1),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(visualTokens.radiusLg),
         border: Border.all(color: theme.colorScheme.outline),
-        boxShadow: AppShadows.level1,
+        boxShadow: visualTokens.shadowLevel1,
       ),
       child: child,
     );
@@ -124,21 +126,23 @@ class _SegmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visualTokens = context.chegaJaTheme;
     final selectedColor = theme.colorScheme.primary;
-    final foreground =
-        selected ? Colors.white : theme.colorScheme.onSurfaceVariant;
+    final foreground = selected
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurfaceVariant;
     final background = selected ? selectedColor : Colors.transparent;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 2),
       child: Material(
         color: background,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(visualTokens.radiusMd),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(visualTokens.radiusMd),
           onTap: onTap,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSizes.buttonMd),
+            constraints: BoxConstraints(minHeight: visualTokens.buttonMd),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: compact ? AppSpacing.x1 : AppSpacing.x4,
@@ -208,7 +212,7 @@ class _SegmentCount extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: compact ? 5 : AppSpacing.x2),
       decoration: BoxDecoration(
         color: selected
-            ? Colors.white.withValues(alpha: 0.20)
+            ? theme.colorScheme.onPrimary.withValues(alpha: 0.20)
             : theme.colorScheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
@@ -216,7 +220,9 @@ class _SegmentCount extends StatelessWidget {
       child: Text(
         label,
         style: theme.textTheme.labelMedium?.copyWith(
-          color: selected ? Colors.white : theme.colorScheme.primary,
+          color: selected
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.primary,
           fontSize: compact ? 11 : null,
           fontWeight: FontWeight.w800,
         ),

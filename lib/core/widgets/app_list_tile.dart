@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 enum AppListTileVariant { defaultTile, withLeading, withTrailingAction }
@@ -30,7 +31,7 @@ class AppListTile extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: AppSizes.listTileMin),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(context.chegaJaTheme.radiusMd),
         border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: ListTile(

@@ -29,7 +29,9 @@ void main() {
       );
 
       expect(
-          find.byKey(const Key('app_avatar_online_indicator')), findsOneWidget);
+        find.byKey(const Key('app_avatar_online_indicator')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('AppUnreadBadge renders counter', (tester) async {

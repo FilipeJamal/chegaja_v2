@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 class AppPremiumSearchBar extends StatelessWidget {
@@ -23,14 +24,15 @@ class AppPremiumSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visualTokens = context.chegaJaTheme;
 
     return Container(
-      height: AppSizes.inputLg,
+      height: visualTokens.inputLg,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(visualTokens.radiusLg),
         border: Border.all(color: theme.colorScheme.outline),
-        boxShadow: AppShadows.level1,
+        boxShadow: visualTokens.shadowLevel1,
       ),
       child: Row(
         children: [

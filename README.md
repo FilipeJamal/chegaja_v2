@@ -1,8 +1,10 @@
 ﻿# ChegaJá v2.5 (Flutter + Firebase)
 
-> **Estado canónico U0:** o primeiro piloto operacional é Android-only em
-> Coimbra/Portugal. Web, iOS, Stripe e outros pagamentos digitais permanecem
-> fora do piloto e desativados. Consulte
+> **Estado canónico U1:** a base U0 está integrada e o Design System 2.0,
+> navegação responsiva, feature flags tipadas, analytics sem recolha e contratos
+> dos motores estão versionados. O primeiro piloto operacional continua
+> Android-only em Coimbra/Portugal. Web, iOS, Stripe e outros pagamentos
+> digitais permanecem fora do piloto e desativados. Consulte
 > [`docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md`](docs/product/MARKET_LEADERSHIP_SOURCE_OF_TRUTH.md)
 > antes de interpretar documentação histórica.
 

@@ -29,6 +29,12 @@ set(CMAKE_SHARED_LINKER_FLAGS_PROFILE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
+# FlutterFire's prebuilt Firebase C++ SDK exposes Debug and Release imported
+# configurations, but not Flutter's custom Profile configuration. Without an
+# explicit mapping CMake falls back to the Debug libraries while the Profile
+# runner uses the release CRT (/MD), which causes unresolved debug-CRT symbols.
+set(CMAKE_MAP_IMPORTED_CONFIG_PROFILE "Release")
+
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 

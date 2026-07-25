@@ -8,6 +8,8 @@ const { __test__ } = require('../index');
 describe('pedidos_createSecure targeted provider eligibility', function () {
   this.timeout(300000);
 
+  const originalMarketId = process.env.PILOT_MARKET_ID;
+  const originalCurrency = process.env.DEFAULT_CURRENCY_CODE;
   const db = __test__.getDb();
   const { createSecurePedidoCore, reviewPedidoServiceCore } = __test__.pedidos;
   const legalVersion = __test__.legal.LEGAL_DOCUMENT_VERSION;
@@ -51,22 +53,29 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
         uid,
         isSearchable: true,
         servicos: ['plumbing'],
+        marketId: 'mz-maputo',
+        currency: 'MZN',
         ...publicOverrides,
       }),
       db.collection('provider_private').doc(uid).set({
         providerId: uid,
         financialStatus: 'active',
+        marketId: 'mz-maputo',
+        currency: 'MZN',
         ...privateOverrides,
       }),
       db.collection('provider_dispatch_private').doc(uid).set({
         providerId: uid,
         acceptingNewJobs: true,
+        marketId: 'mz-maputo',
+        currency: 'MZN',
         ...dispatchOverrides,
       }),
       db.collection('pilot_participants').doc(uid).set({
         status: 'active',
         roles: ['prestador'],
         city: 'Maputo',
+        marketId: 'mz-maputo',
         ...participantOverrides,
       }),
       db.collection('users_private').doc(uid).set({
@@ -74,6 +83,7 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
         accountStatus: 'active',
         legalConsent: {
           version: legalVersion,
+          marketId: 'mz-maputo',
           termsAccepted: true,
           privacyAccepted: true,
           ageConfirmed: true,
@@ -92,6 +102,11 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
       modo: 'IMEDIATO',
       tipoPreco: 'a_combinar',
       tipoPagamento: 'dinheiro',
+      latitude: -25.9692,
+      longitude: 32.5732,
+      zoneId: 'maputo',
+      dispatchZone: 'Rua privada 123, porta azul',
+      enderecoTexto: 'Rua privada 123, porta azul, Maputo',
       anexos: [],
     };
   }
@@ -110,6 +125,8 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
   }
 
   beforeEach(async () => {
+    process.env.PILOT_MARKET_ID = 'mz-maputo';
+    process.env.DEFAULT_CURRENCY_CODE = 'MZN';
     for (const collection of collections) await clearCollection(collection);
     await db.collection('service_catalog_policies').doc('plumbing').set({
       isActive: true,
@@ -117,6 +134,13 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
       riskLevel: 'normal',
       approvalRequired: false,
     });
+  });
+
+  after(() => {
+    if (originalMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+    else process.env.PILOT_MARKET_ID = originalMarketId;
+    if (originalCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+    else process.env.DEFAULT_CURRENCY_CODE = originalCurrency;
   });
 
   it('creates the targeted invitation only for a fully eligible provider', async () => {
@@ -128,6 +152,28 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
     assert.strictEqual(pedido.prestadorId, 'provider-eligible');
     assert.strictEqual(pedido.status, 'aguarda_resposta_prestador');
     assert.strictEqual(pedido.moderationStatus, 'approved');
+    assert.strictEqual(pedido.dispatchZoneId, 'maputo');
+    assert.strictEqual(pedido.dispatchZone, 'Maputo');
+    assert.strictEqual(pedido.dispatchZoneSource, 'server_allowlisted_zone_id');
+    const projection = __test__.pedidos.buildPedidoDispatchProjection(result.pedidoId, pedido);
+    assert.strictEqual(projection.zoneLabel, 'Maputo');
+    assert.strictEqual(JSON.stringify(projection).includes('Rua privada'), false);
+  });
+
+  it('rejects a text-only address before creating or dispatching a pedido', async () => {
+    const data = pedidoData('');
+    delete data.latitude;
+    delete data.longitude;
+    delete data.zoneId;
+    await assert.rejects(
+      () => createSecurePedidoCore({
+        database: db,
+        auth: clientAuth,
+        data,
+      }),
+      (error) => error.code === 'failed-precondition',
+    );
+    await assertNoPedidoCreated();
   });
 
   it('does not create an invitation for an offboarded pilot provider', async () => {
@@ -217,6 +263,9 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
         isCustomService: true,
         customServiceName: 'Servico personalizado',
         customServiceDescription: 'Atividade local a combinar.',
+        latitude: -25.9692,
+        longitude: 32.5732,
+        zoneId: 'maputo',
         anexos: [],
       },
     });
@@ -261,6 +310,9 @@ describe('pedidos_createSecure targeted provider eligibility', function () {
         isCustomService: true,
         customServiceName: 'Servico personalizado',
         customServiceDescription: 'Atividade local a combinar.',
+        latitude: -25.9692,
+        longitude: 32.5732,
+        zoneId: 'maputo',
         anexos: [],
       },
     });

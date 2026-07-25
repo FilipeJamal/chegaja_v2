@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 enum AppChipVariant { filter, choice, status }
@@ -28,13 +30,79 @@ class AppChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!context.chegaJaTheme.usesU1) {
+      return _buildLegacy(context);
+    }
+
     final theme = Theme.of(context);
-    final chipHeight = switch (size) {
+    final visualHeight = switch (size) {
       AppChipSize.sm => 28.0,
       AppChipSize.md => 32.0,
     };
 
     final style = _resolveStyle(theme);
+
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      button: onTap != null,
+      selected: selected,
+      enabled: enabled,
+      label: label,
+      onTap: enabled ? onTap : null,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: AppSizes.minTapTarget,
+          minHeight: AppSizes.minTapTarget,
+        ),
+        child: Center(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: enabled ? onTap : null,
+            child: AnimatedContainer(
+              duration: AppMotion.fast,
+              constraints: BoxConstraints(minHeight: visualHeight),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3),
+              decoration: BoxDecoration(
+                color: style.background,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: style.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (leading != null) ...[
+                    IconTheme(
+                      data: IconThemeData(size: 14, color: style.foreground),
+                      child: leading!,
+                    ),
+                    const SizedBox(width: AppSpacing.x1),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: style.foreground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegacy(BuildContext context) {
+    final theme = Theme.of(context);
+    final chipHeight = switch (size) {
+      AppChipSize.sm => 28.0,
+      AppChipSize.md => 32.0,
+    };
+    final style = _resolveLegacyStyle(theme);
 
     return InkWell(
       borderRadius: BorderRadius.circular(999),
@@ -70,6 +138,43 @@ class AppChip extends StatelessWidget {
     );
   }
 
+  _ChipStyle _resolveLegacyStyle(ThemeData theme) {
+    if (!enabled) {
+      return _ChipStyle(
+        background: theme.disabledColor.withValues(alpha: 0.12),
+        border: theme.disabledColor.withValues(alpha: 0.24),
+        foreground: theme.disabledColor,
+      );
+    }
+
+    return switch (variant) {
+      AppChipVariant.filter when selected => _ChipStyle(
+          background: AppPalette.primary.withValues(alpha: 0.15),
+          border: AppPalette.primary.withValues(alpha: 0.45),
+          foreground: AppPalette.primaryPressed,
+        ),
+      AppChipVariant.filter => _ChipStyle(
+          background: theme.colorScheme.surface,
+          border: theme.colorScheme.outline,
+          foreground: theme.colorScheme.onSurfaceVariant,
+        ),
+      AppChipVariant.choice => _ChipStyle(
+          background: selected
+              ? AppPalette.secondary.withValues(alpha: 0.20)
+              : theme.colorScheme.surfaceContainerHighest,
+          border: selected ? AppPalette.secondary : theme.colorScheme.outline,
+          foreground: selected
+              ? AppPalette.secondaryPressed
+              : theme.colorScheme.onSurfaceVariant,
+        ),
+      AppChipVariant.status => _ChipStyle(
+          background: AppPalette.success.withValues(alpha: 0.12),
+          border: AppPalette.success.withValues(alpha: 0.4),
+          foreground: AppPalette.success,
+        ),
+    };
+  }
+
   _ChipStyle _resolveStyle(ThemeData theme) {
     if (!enabled) {
       return _ChipStyle(
@@ -82,10 +187,11 @@ class AppChip extends StatelessWidget {
     switch (variant) {
       case AppChipVariant.filter:
         if (selected) {
+          final colors = AppSemanticColors.primarySelection(theme);
           return _ChipStyle(
-            background: AppPalette.primary.withValues(alpha: 0.15),
-            border: AppPalette.primary.withValues(alpha: 0.45),
-            foreground: AppPalette.primaryPressed,
+            background: colors.background,
+            border: colors.border,
+            foreground: colors.foreground,
           );
         }
         return _ChipStyle(
@@ -94,20 +200,24 @@ class AppChip extends StatelessWidget {
           foreground: theme.colorScheme.onSurfaceVariant,
         );
       case AppChipVariant.choice:
+        final colors = AppSemanticColors.secondarySelection(theme);
         return _ChipStyle(
           background: selected
-              ? AppPalette.secondary.withValues(alpha: 0.20)
+              ? colors.background
               : theme.colorScheme.surfaceContainerHighest,
-          border: selected ? AppPalette.secondary : theme.colorScheme.outline,
-          foreground: selected
-              ? AppPalette.secondaryPressed
-              : theme.colorScheme.onSurfaceVariant,
+          border: selected ? colors.border : theme.colorScheme.outline,
+          foreground:
+              selected ? colors.foreground : theme.colorScheme.onSurfaceVariant,
         );
       case AppChipVariant.status:
+        final colors = AppSemanticColors.status(
+          theme,
+          AppStatusTone.success,
+        );
         return _ChipStyle(
-          background: AppPalette.success.withValues(alpha: 0.12),
-          border: AppPalette.success.withValues(alpha: 0.4),
-          foreground: AppPalette.success,
+          background: colors.background,
+          border: colors.border,
+          foreground: colors.foreground,
         );
     }
   }

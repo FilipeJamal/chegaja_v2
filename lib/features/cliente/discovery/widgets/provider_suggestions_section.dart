@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:chegaja_v2/core/config/app_config.dart';
 import 'package:chegaja_v2/core/theme/app_tokens.dart';
 import 'package:chegaja_v2/core/widgets/app_button.dart';
 import 'package:chegaja_v2/core/widgets/app_card.dart';
@@ -89,6 +90,7 @@ class ProviderSuggestionsSection extends StatelessWidget {
     final db = firestore ?? FirebaseFirestore.instance;
     return db
         .collection('provider_public')
+        .where('marketId', isEqualTo: AppConfig.pilotMarket.id)
         .where('isSearchable', isEqualTo: true)
         .limit(queryLimit)
         .snapshots()

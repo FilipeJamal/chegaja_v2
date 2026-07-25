@@ -117,6 +117,27 @@
       ]
     },
     {
+      "collectionGroup": "provider_public",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "isSearchable", "order": "ASCENDING" },
+        { "fieldPath": "categories", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "provider_public",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "isSearchable", "order": "ASCENDING" },
+        {
+          "fieldPath": "approvedSensitiveCategoryIds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    },
+    {
       "collectionGroup": "provider_opportunities",
       "queryScope": "COLLECTION",
       "fields": [
@@ -129,10 +150,22 @@
       "collectionGroup": "pedido_dispatch",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "currency", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "prestadorId", "order": "ASCENDING" },
         { "fieldPath": "targetProviderId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedido_dispatch",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "marketId", "order": "ASCENDING" },
+        { "fieldPath": "currency", "order": "ASCENDING" },
+        { "fieldPath": "targetProviderId", "order": "ASCENDING" },
+        { "fieldPath": "prestadorId", "order": "ASCENDING" }
       ]
     }
   ],

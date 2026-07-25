@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme_extension.dart';
 import '../theme/app_tokens.dart';
 
 enum AppBottomSheetLevel { collapsed, half, full }
@@ -35,7 +36,7 @@ class AppBottomSheetFrame extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppRadius.sheetTop),
           ),
-          boxShadow: AppShadows.level3,
+          boxShadow: context.chegaJaTheme.shadowLevel3,
         ),
         child: Padding(
           padding: padding,

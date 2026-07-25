@@ -3,11 +3,29 @@ const assert = require("assert");
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || "chegaja-ac88d";
 
 const functions = require("../index");
+const ACTIVE_MARKET_ID = "mz-maputo";
+const ACTIVE_CURRENCY = "MZN";
 
 describe("Avaliacao rating aggregate Function", () => {
     const {
         onAvaliacaoCreatedCore,
     } = functions.__test__.avaliacoes;
+    let previousMarketId;
+    let previousCurrency;
+
+    beforeEach(() => {
+        previousMarketId = process.env.PILOT_MARKET_ID;
+        previousCurrency = process.env.DEFAULT_CURRENCY_CODE;
+        process.env.PILOT_MARKET_ID = ACTIVE_MARKET_ID;
+        process.env.DEFAULT_CURRENCY_CODE = ACTIVE_CURRENCY;
+    });
+
+    afterEach(() => {
+        if (previousMarketId === undefined) delete process.env.PILOT_MARKET_ID;
+        else process.env.PILOT_MARKET_ID = previousMarketId;
+        if (previousCurrency === undefined) delete process.env.DEFAULT_CURRENCY_CODE;
+        else process.env.DEFAULT_CURRENCY_CODE = previousCurrency;
+    });
 
     function createFakeDatabase(initialData = {}) {
         const store = new Map(Object.entries(initialData));
@@ -48,6 +66,8 @@ describe("Avaliacao rating aggregate Function", () => {
         return {
             clienteId: "client1",
             prestadorId: "provider1",
+            marketId: ACTIVE_MARKET_ID,
+            currency: ACTIVE_CURRENCY,
             status: "concluido",
             estado: "concluido",
             createdAt: new Date(),
