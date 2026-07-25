@@ -302,13 +302,12 @@ service cloud.firestore {
     }
 
     function canReadPedidoDispatch(data) {
-      let noAssignedProvider = data['prestadorId'] == null;
-      let noTargetProvider = data['targetProviderId'] == null;
-      return isSanitizedPedidoDispatch(data)
+      return data is map
+        && isSanitizedPedidoDispatch(data)
         && dispatchMatchesActivePilotParticipantMarket(data)
-        && noAssignedProvider
+        && data['prestadorId'] == null
         && (
-          (data['status'] == 'criado' && noTargetProvider)
+          (data['status'] == 'criado' && data['targetProviderId'] == null)
           || data['targetProviderId'] == uid()
         );
     }

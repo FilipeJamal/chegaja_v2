@@ -342,6 +342,8 @@ describe('P1 public/private data boundaries', function () {
       .doc('missing_market').get());
     await assertFails(providerDb.collection('pedido_dispatch')
       .doc('wrong_currency').get());
+    await assertFails(providerDb.collection('pedido_dispatch')
+      .doc('missing_projection').get());
     await assertSucceeds(adminDb.collection('pedido_dispatch')
       .doc('unsafe_projection').get());
     await assertFails(providerDb.collection('pedidos').doc('pedido1').get());
